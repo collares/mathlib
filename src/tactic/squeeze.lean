@@ -176,10 +176,10 @@ do v ← target >>= mk_meta_var,
    { g ← main_goal,
      tac no_dflt args,
      instantiate_mvars g },
-   let vs := g.list_constant,
+   let vs := g.list_constant',
    vs ← vs.mfilter is_simp_lemma,
    vs ← vs.mmap strip_prefix,
-   vs ← vs.to_list.mmap name.to_simp_args,
+   vs ← vs.mmap name.to_simp_args,
    with_local_goals' [v] (filter_simp_set tac args vs)
      >>= mk_suggestion,
    tac no_dflt args
@@ -365,3 +365,16 @@ add_tactic_doc
     ``squeeze_scope],
   tags       := ["simplification", "Try this"],
   inherit_description_from := ``squeeze_simp }
+
+def a := 0
+def b := 0
+def c := 0
+def f : ℕ → ℕ := default
+
+@[simp] lemma k (x) : f x = b := rfl
+@[simp] lemma l : f b = c := rfl
+
+-- "Try this" suggestion does not work
+example : f (f a) = c := by squeeze_simp
+-- `squeeze_simp?` doesn't make a difference either,
+-- apart from also failing the goal
