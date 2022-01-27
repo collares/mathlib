@@ -117,17 +117,26 @@ meta def same_result (pr : proof_state) (tac : tactic unit) : tactic bool :=
 do s ← get_proof_state_after tac,
    pure $ some pr = s
 
+/--
+Consumes the first list of `simp` arguments, accumulating required arguments
+on the second one and unnecessary arguments on the third one.
+
+Patch: No longer using the `list` constructor on the recursive calls because
+`xs` and `ds` were being accumulated in reverse order. And the calls to
+`same_result` were inconsistent because the order of the `simp` arguments
+matter.
+-/
 private meta def filter_simp_set_aux
   (tac : bool → list simp_arg_type → tactic unit)
   (args : list simp_arg_type) (pr : proof_state) :
   list simp_arg_type → list simp_arg_type →
   list simp_arg_type → tactic (list simp_arg_type × list simp_arg_type)
-| [] ys ds := pure (ys.reverse, ds.reverse)
+| [] ys ds := pure (ys, ds)
 | (x :: xs) ys ds :=
   do b ← same_result pr (tac tt (args ++ xs ++ ys)),
      if b
-       then filter_simp_set_aux xs ys (x:: ds)
-       else filter_simp_set_aux xs (x :: ys) ds
+       then filter_simp_set_aux xs ys (ds.concat x)
+       else filter_simp_set_aux xs (ys.concat x) ds
 
 declare_trace squeeze.deleted
 
@@ -159,7 +168,6 @@ argument list.
  * `no_dflt`: did the user use the `only` keyword?
  * `args`:    list of `simp` arguments
  * `tac`:     how to invoke the underlying `simp` tactic
-
 -/
 meta def squeeze_simp_core
   (slow no_dflt : bool) (args : list simp_arg_type)
@@ -365,16 +373,3 @@ add_tactic_doc
     ``squeeze_scope],
   tags       := ["simplification", "Try this"],
   inherit_description_from := ``squeeze_simp }
-
-def a := 0
-def b := 0
-def c := 0
-def f : ℕ → ℕ := default
-
-@[simp] lemma k (x) : f x = b := rfl
-@[simp] lemma l : f b = c := rfl
-
--- "Try this" suggestion does not work
-example : f (f a) = c := by squeeze_simp
--- `squeeze_simp?` doesn't make a difference either,
--- apart from also failing the goal
