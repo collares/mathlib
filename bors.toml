@@ -4,6 +4,7 @@
 # comment out the first line and uncomment the line below
 status = ["Build mathlib (fork)", "Lint mathlib (fork)", "Lint style (fork)"]
 pr_status = ["Build mathlib (fork)", "Lint mathlib (fork)", "Lint style (fork)"]
+
 use_squash_merge = true
 timeout_sec = 28800
 prerun_timeout_sec = 28800
