@@ -3,7 +3,7 @@ Copyright (c) 2020 Joseph Myers. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Joseph Myers
 -/
-import algebra.add_torsor
+import Mathbin.Algebra.AddTorsor
 
 /-!
 # Affine space
@@ -37,4 +37,7 @@ Some key definitions are not yet present.
   coordinates, with appropriate proofs of existence when `k` is a field.
  -/
 
-localized "notation `affine_space` := add_torsor" in affine
+
+-- mathport name: «expraffine_space»
+localized [Affine] notation "affine_space" => AddTorsor
+

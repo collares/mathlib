@@ -3,9 +3,9 @@ Copyright (c) 2020 Anne Baanen. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Anne Baanen
 -/
-import data.matrix.basic
-import data.fin.vec_notation
-import tactic.fin_cases
+import Mathbin.Data.Matrix.Basic
+import Mathbin.Data.Fin.VecNotation
+import Mathbin.Tactic.FinCases
 
 /-!
 # Matrix and vector notation
@@ -31,12 +31,14 @@ the `matrix` locale.
 Examples of usage can be found in the `test/matrix.lean` file.
 -/
 
-namespace matrix
+
+namespace Matrix
 
 universe u
-variables {α : Type u} {o n m : ℕ} {m' n' o' : Type*}
 
-open_locale matrix
+variable {α : Type u} {o n m : ℕ} {m' n' o' : Type _}
+
+open_locale Matrix
 
 /-- Use `![...]` notation for displaying a `fin`-indexed matrix, for example:
 
@@ -44,276 +46,312 @@ open_locale matrix
 #eval ![![1, 2], ![3, 4]] + ![![3, 4], ![5, 6]] -- ![![4, 6], ![8, 10]]
 ```
 -/
-instance [has_repr α] : has_repr (matrix (fin m) (fin n) α) := pi_fin.has_repr
+instance [HasRepr α] : HasRepr (Matrix (Finₓ m) (Finₓ n) α) :=
+  pi_fin.has_repr
 
-@[simp] lemma cons_val' (v : n' → α) (B : matrix (fin m) n' α) (i j) :
-  vec_cons v B i j = vec_cons (v j) (λ i, B i j) i :=
-by { refine fin.cases _ _ i; simp }
+@[simp]
+theorem cons_val' (v : n' → α) (B : Matrix (Finₓ m) n' α) i j : vecCons v B i j = vecCons (v j) (fun i => B i j) i := by
+  refine' Finₓ.cases _ _ i <;> simp
 
-@[simp] lemma head_val' (B : matrix (fin m.succ) n' α) (j : n') :
-  vec_head (λ i, B i j) = vec_head B j := rfl
+@[simp]
+theorem head_val' (B : Matrix (Finₓ m.succ) n' α) (j : n') : (vecHead fun i => B i j) = vecHead B j :=
+  rfl
 
-@[simp] lemma tail_val' (B : matrix (fin m.succ) n' α) (j : n') :
-  vec_tail (λ i, B i j) = λ i, vec_tail B i j :=
-by { ext, simp [vec_tail] }
+@[simp]
+theorem tail_val' (B : Matrix (Finₓ m.succ) n' α) (j : n') : (vecTail fun i => B i j) = fun i => vecTail B i j := by
+  ext
+  simp [vec_tail]
 
-section dot_product
+section DotProduct
 
-variables [add_comm_monoid α] [has_mul α]
+variable [AddCommMonoidₓ α] [Mul α]
 
-@[simp] lemma dot_product_empty (v w : fin 0 → α) :
-  dot_product v w = 0 := finset.sum_empty
+@[simp]
+theorem dot_product_empty (v w : Finₓ 0 → α) : dotProduct v w = 0 :=
+  Finset.sum_empty
 
-@[simp] lemma cons_dot_product (x : α) (v : fin n → α) (w : fin n.succ → α) :
-  dot_product (vec_cons x v) w = x * vec_head w + dot_product v (vec_tail w) :=
-by simp [dot_product, fin.sum_univ_succ, vec_head, vec_tail]
+@[simp]
+theorem cons_dot_product (x : α) (v : Finₓ n → α) (w : Finₓ n.succ → α) :
+    dotProduct (vecCons x v) w = x * vecHead w + dotProduct v (vecTail w) := by
+  simp [dot_product, Finₓ.sum_univ_succ, vec_head, vec_tail]
 
-@[simp] lemma dot_product_cons (v : fin n.succ → α) (x : α) (w : fin n → α) :
-  dot_product v (vec_cons x w) = vec_head v * x + dot_product (vec_tail v) w :=
-by simp [dot_product, fin.sum_univ_succ, vec_head, vec_tail]
+@[simp]
+theorem dot_product_cons (v : Finₓ n.succ → α) (x : α) (w : Finₓ n → α) :
+    dotProduct v (vecCons x w) = vecHead v * x + dotProduct (vecTail v) w := by
+  simp [dot_product, Finₓ.sum_univ_succ, vec_head, vec_tail]
 
-@[simp] lemma cons_dot_product_cons (x : α) (v : fin n → α) (y : α) (w : fin n → α) :
-  dot_product (vec_cons x v) (vec_cons y w) = x * y + dot_product v w :=
-by simp
+@[simp]
+theorem cons_dot_product_cons (x : α) (v : Finₓ n → α) (y : α) (w : Finₓ n → α) :
+    dotProduct (vecCons x v) (vecCons y w) = x * y + dotProduct v w := by
+  simp
 
-end dot_product
+end DotProduct
 
-section col_row
+section ColRow
 
-@[simp] lemma col_empty (v : fin 0 → α) : col v = vec_empty :=
-empty_eq _
+@[simp]
+theorem col_empty (v : Finₓ 0 → α) : colₓ v = vec_empty :=
+  empty_eq _
 
-@[simp] lemma col_cons (x : α) (u : fin m → α) :
-  col (vec_cons x u) = vec_cons (λ _, x) (col u) :=
-by { ext i j, refine fin.cases _ _ i; simp [vec_head, vec_tail] }
+@[simp]
+theorem col_cons (x : α) (u : Finₓ m → α) : colₓ (vecCons x u) = vecCons (fun _ => x) (colₓ u) := by
+  ext i j
+  refine' Finₓ.cases _ _ i <;> simp [vec_head, vec_tail]
 
-@[simp] lemma row_empty : row (vec_empty : fin 0 → α) = λ _, vec_empty :=
-by { ext, refl }
+@[simp]
+theorem row_empty : rowₓ (vecEmpty : Finₓ 0 → α) = fun _ => vecEmpty := by
+  ext
+  rfl
 
-@[simp] lemma row_cons (x : α) (u : fin m → α) :
-  row (vec_cons x u) = λ _, vec_cons x u :=
-by { ext, refl }
+@[simp]
+theorem row_cons (x : α) (u : Finₓ m → α) : rowₓ (vecCons x u) = fun _ => vecCons x u := by
+  ext
+  rfl
 
-end col_row
+end ColRow
 
-section transpose
+section Transpose
 
-@[simp] lemma transpose_empty_rows (A : matrix m' (fin 0) α) : Aᵀ = ![] := empty_eq _
+@[simp]
+theorem transpose_empty_rows (A : Matrix m' (Finₓ 0) α) : Aᵀ = ![] :=
+  empty_eq _
 
-@[simp] lemma transpose_empty_cols : (![] : matrix (fin 0) m' α)ᵀ = λ i, ![] :=
-funext (λ i, empty_eq _)
+@[simp]
+theorem transpose_empty_cols : (![] : Matrix (Finₓ 0) m' α)ᵀ = fun i => ![] :=
+  funext fun i => empty_eq _
 
-@[simp] lemma cons_transpose (v : n' → α) (A : matrix (fin m) n' α) :
-  (vec_cons v A)ᵀ = λ i, vec_cons (v i) (Aᵀ i) :=
-by { ext i j, refine fin.cases _ _ j; simp }
+@[simp]
+theorem cons_transpose (v : n' → α) (A : Matrix (Finₓ m) n' α) : (vecCons v A)ᵀ = fun i => vecCons (v i) (Aᵀ i) := by
+  ext i j
+  refine' Finₓ.cases _ _ j <;> simp
 
-@[simp] lemma head_transpose (A : matrix m' (fin n.succ) α) : vec_head (Aᵀ) = vec_head ∘ A :=
-rfl
+@[simp]
+theorem head_transpose (A : Matrix m' (Finₓ n.succ) α) : vecHead Aᵀ = vec_head ∘ A :=
+  rfl
 
-@[simp] lemma tail_transpose (A : matrix m' (fin n.succ) α) : vec_tail (Aᵀ) = (vec_tail ∘ A)ᵀ :=
-by { ext i j, refl }
+@[simp]
+theorem tail_transpose (A : Matrix m' (Finₓ n.succ) α) : vecTail Aᵀ = (vec_tail ∘ A)ᵀ := by
+  ext i j
+  rfl
 
-end transpose
+end Transpose
 
-section mul
+section Mul
 
-variables [semiring α]
+variable [Semiringₓ α]
 
-@[simp] lemma empty_mul [fintype n'] (A : matrix (fin 0) n' α) (B : matrix n' o' α) :
-  A ⬝ B = ![] :=
-empty_eq _
+@[simp]
+theorem empty_mul [Fintype n'] (A : Matrix (Finₓ 0) n' α) (B : Matrix n' o' α) : A ⬝ B = ![] :=
+  empty_eq _
 
-@[simp] lemma empty_mul_empty (A : matrix m' (fin 0) α) (B : matrix (fin 0) o' α) :
-  A ⬝ B = 0 :=
-rfl
+@[simp]
+theorem empty_mul_empty (A : Matrix m' (Finₓ 0) α) (B : Matrix (Finₓ 0) o' α) : A ⬝ B = 0 :=
+  rfl
 
-@[simp] lemma mul_empty [fintype n'] (A : matrix m' n' α) (B : matrix n' (fin 0) α) :
-  A ⬝ B = λ _, ![] :=
-funext (λ _, empty_eq _)
+@[simp]
+theorem mul_empty [Fintype n'] (A : Matrix m' n' α) (B : Matrix n' (Finₓ 0) α) : A ⬝ B = fun _ => ![] :=
+  funext fun _ => empty_eq _
 
-lemma mul_val_succ [fintype n']
-  (A : matrix (fin m.succ) n' α) (B : matrix n' o' α) (i : fin m) (j : o') :
-  (A ⬝ B) i.succ j = (vec_tail A ⬝ B) i j := rfl
+theorem mul_val_succ [Fintype n'] (A : Matrix (Finₓ m.succ) n' α) (B : Matrix n' o' α) (i : Finₓ m) (j : o') :
+    (A ⬝ B) i.succ j = (vecTail A ⬝ B) i j :=
+  rfl
 
-@[simp] lemma cons_mul [fintype n'] (v : n' → α) (A : matrix (fin m) n' α) (B : matrix n' o' α) :
-  vec_cons v A ⬝ B = vec_cons (vec_mul v B) (A  ⬝ B) :=
-by { ext i j, refine fin.cases _ _ i, { refl }, simp [mul_val_succ] }
+@[simp]
+theorem cons_mul [Fintype n'] (v : n' → α) (A : Matrix (Finₓ m) n' α) (B : Matrix n' o' α) :
+    vecCons v A ⬝ B = vecCons (vecMulₓ v B) (A ⬝ B) := by
+  ext i j
+  refine' Finₓ.cases _ _ i
+  · rfl
+    
+  simp [mul_val_succ]
 
-end mul
+end Mul
 
-section vec_mul
+section VecMul
 
-variables [semiring α]
+variable [Semiringₓ α]
 
-@[simp] lemma empty_vec_mul (v : fin 0 → α) (B : matrix (fin 0) o' α) :
-  vec_mul v B = 0 :=
-rfl
+@[simp]
+theorem empty_vec_mul (v : Finₓ 0 → α) (B : Matrix (Finₓ 0) o' α) : vecMulₓ v B = 0 :=
+  rfl
 
-@[simp] lemma vec_mul_empty [fintype n'] (v : n' → α) (B : matrix n' (fin 0) α) :
-  vec_mul v B = ![] :=
-empty_eq _
+@[simp]
+theorem vec_mul_empty [Fintype n'] (v : n' → α) (B : Matrix n' (Finₓ 0) α) : vecMulₓ v B = ![] :=
+  empty_eq _
 
-@[simp] lemma cons_vec_mul (x : α) (v : fin n → α) (B : matrix (fin n.succ) o' α) :
-  vec_mul (vec_cons x v) B = x • (vec_head B) + vec_mul v (vec_tail B) :=
-by { ext i, simp [vec_mul] }
+@[simp]
+theorem cons_vec_mul (x : α) (v : Finₓ n → α) (B : Matrix (Finₓ n.succ) o' α) :
+    vecMulₓ (vecCons x v) B = x • vecHead B + vecMulₓ v (vecTail B) := by
+  ext i
+  simp [vec_mul]
 
-@[simp] lemma vec_mul_cons (v : fin n.succ → α) (w : o' → α) (B : matrix (fin n) o' α) :
-  vec_mul v (vec_cons w B) = vec_head v • w + vec_mul (vec_tail v) B :=
-by { ext i, simp [vec_mul] }
+@[simp]
+theorem vec_mul_cons (v : Finₓ n.succ → α) (w : o' → α) (B : Matrix (Finₓ n) o' α) :
+    vecMulₓ v (vecCons w B) = vecHead v • w + vecMulₓ (vecTail v) B := by
+  ext i
+  simp [vec_mul]
 
-end vec_mul
+end VecMul
 
-section mul_vec
+section MulVec
 
-variables [semiring α]
+variable [Semiringₓ α]
 
-@[simp] lemma empty_mul_vec [fintype n'] (A : matrix (fin 0) n' α) (v : n' → α) :
-  mul_vec A v = ![] :=
-empty_eq _
+@[simp]
+theorem empty_mul_vec [Fintype n'] (A : Matrix (Finₓ 0) n' α) (v : n' → α) : mulVecₓ A v = ![] :=
+  empty_eq _
 
-@[simp] lemma mul_vec_empty (A : matrix m' (fin 0) α) (v : fin 0 → α) :
-  mul_vec A v = 0 :=
-rfl
+@[simp]
+theorem mul_vec_empty (A : Matrix m' (Finₓ 0) α) (v : Finₓ 0 → α) : mulVecₓ A v = 0 :=
+  rfl
 
-@[simp] lemma cons_mul_vec [fintype n'] (v : n' → α) (A : fin m → n' → α) (w : n' → α) :
-  mul_vec (vec_cons v A) w = vec_cons (dot_product v w) (mul_vec A w) :=
-by { ext i, refine fin.cases _ _ i; simp [mul_vec] }
+@[simp]
+theorem cons_mul_vec [Fintype n'] (v : n' → α) (A : Finₓ m → n' → α) (w : n' → α) :
+    mulVecₓ (vecCons v A) w = vecCons (dotProduct v w) (mulVecₓ A w) := by
+  ext i
+  refine' Finₓ.cases _ _ i <;> simp [mul_vec]
 
-@[simp] lemma mul_vec_cons {α} [comm_semiring α] (A : m' → (fin n.succ) → α) (x : α)
-  (v : fin n → α) :
-  mul_vec A (vec_cons x v) = (x • vec_head ∘ A) + mul_vec (vec_tail ∘ A) v :=
-by { ext i, simp [mul_vec, mul_comm] }
+@[simp]
+theorem mul_vec_cons {α} [CommSemiringₓ α] (A : m' → Finₓ n.succ → α) (x : α) (v : Finₓ n → α) :
+    mulVecₓ A (vecCons x v) = x • vec_head ∘ A + mulVecₓ (vec_tail ∘ A) v := by
+  ext i
+  simp [mul_vec, mul_comm]
 
-end mul_vec
+end MulVec
 
-section vec_mul_vec
+section VecMulVec
 
-variables [semiring α]
+variable [Semiringₓ α]
 
-@[simp] lemma empty_vec_mul_vec (v : fin 0 → α) (w : n' → α) :
-  vec_mul_vec v w = ![] :=
-empty_eq _
+@[simp]
+theorem empty_vec_mul_vec (v : Finₓ 0 → α) (w : n' → α) : vecMulVecₓ v w = ![] :=
+  empty_eq _
 
-@[simp] lemma vec_mul_vec_empty (v : m' → α) (w : fin 0 → α) :
-  vec_mul_vec v w = λ _, ![] :=
-funext (λ i, empty_eq _)
+@[simp]
+theorem vec_mul_vec_empty (v : m' → α) (w : Finₓ 0 → α) : vecMulVecₓ v w = fun _ => ![] :=
+  funext fun i => empty_eq _
 
-@[simp] lemma cons_vec_mul_vec (x : α) (v : fin m → α) (w : n' → α) :
-  vec_mul_vec (vec_cons x v) w = vec_cons (x • w) (vec_mul_vec v w) :=
-by { ext i, refine fin.cases _ _ i; simp [vec_mul_vec] }
+@[simp]
+theorem cons_vec_mul_vec (x : α) (v : Finₓ m → α) (w : n' → α) :
+    vecMulVecₓ (vecCons x v) w = vecCons (x • w) (vecMulVecₓ v w) := by
+  ext i
+  refine' Finₓ.cases _ _ i <;> simp [vec_mul_vec]
 
-@[simp] lemma vec_mul_vec_cons (v : m' → α) (x : α) (w : fin n → α) :
-  vec_mul_vec v (vec_cons x w) = λ i, v i • vec_cons x w :=
-by { ext i j, rw [vec_mul_vec, pi.smul_apply, smul_eq_mul] }
+@[simp]
+theorem vec_mul_vec_cons (v : m' → α) (x : α) (w : Finₓ n → α) :
+    vecMulVecₓ v (vecCons x w) = fun i => v i • vecCons x w := by
+  ext i j
+  rw [vec_mul_vec, Pi.smul_apply, smul_eq_mul]
 
-end vec_mul_vec
+end VecMulVec
 
-section smul
+section Smul
 
-variables [semiring α]
+variable [Semiringₓ α]
 
-@[simp] lemma smul_mat_empty {m' : Type*} (x : α) (A : fin 0 → m' → α) : x • A = ![] := empty_eq _
+@[simp]
+theorem smul_mat_empty {m' : Type _} (x : α) (A : Finₓ 0 → m' → α) : x • A = ![] :=
+  empty_eq _
 
-@[simp] lemma smul_mat_cons (x : α) (v : n' → α) (A : matrix (fin m) n' α) :
-  x • vec_cons v A = vec_cons (x • v) (x • A) :=
-by { ext i, refine fin.cases _ _ i; simp }
+@[simp]
+theorem smul_mat_cons (x : α) (v : n' → α) (A : Matrix (Finₓ m) n' α) : x • vecCons v A = vecCons (x • v) (x • A) := by
+  ext i
+  refine' Finₓ.cases _ _ i <;> simp
 
-end smul
+end Smul
 
-section minor
+section Minor
 
-@[simp] lemma minor_empty (A : matrix m' n' α) (row : fin 0 → m') (col : o' → n') :
-  minor A row col = ![] :=
-empty_eq _
+@[simp]
+theorem minor_empty (A : Matrix m' n' α) (row : Finₓ 0 → m') (col : o' → n') : minor A row col = ![] :=
+  empty_eq _
 
-@[simp] lemma minor_cons_row (A : matrix m' n' α) (i : m') (row : fin m → m') (col : o' → n') :
-  minor A (vec_cons i row) col = vec_cons (λ j, A i (col j)) (minor A row col) :=
-by { ext i j, refine fin.cases _ _ i; simp [minor] }
+@[simp]
+theorem minor_cons_row (A : Matrix m' n' α) (i : m') (row : Finₓ m → m') (col : o' → n') :
+    minor A (vecCons i row) col = vecCons (fun j => A i (col j)) (minor A row col) := by
+  ext i j
+  refine' Finₓ.cases _ _ i <;> simp [minor]
 
-end minor
+end Minor
 
-section vec2_and_vec3
+section Vec2AndVec3
 
-section one
+section One
 
-variables [has_zero α] [has_one α]
+variable [Zero α] [One α]
 
-lemma one_fin_two : (1 : matrix (fin 2) (fin 2) α) = ![![1, 0], ![0, 1]] :=
-by { ext i j, fin_cases i; fin_cases j; refl }
+-- ././Mathport/Syntax/Translate/Tactic/Basic.lean:29:26: unsupported: too many args
+-- ././Mathport/Syntax/Translate/Tactic/Basic.lean:29:26: unsupported: too many args
+theorem one_fin_two : (1 : Matrix (Finₓ 2) (Finₓ 2) α) = ![![1, 0], ![0, 1]] := by
+  ext i j
+  fin_cases i <;> fin_cases j <;> rfl
 
-lemma one_fin_three : (1 : matrix (fin 3) (fin 3) α) = ![![1, 0, 0], ![0, 1, 0], ![0, 0, 1]] :=
-by { ext i j, fin_cases i; fin_cases j; refl }
+-- ././Mathport/Syntax/Translate/Tactic/Basic.lean:29:26: unsupported: too many args
+-- ././Mathport/Syntax/Translate/Tactic/Basic.lean:29:26: unsupported: too many args
+theorem one_fin_three : (1 : Matrix (Finₓ 3) (Finₓ 3) α) = ![![1, 0, 0], ![0, 1, 0], ![0, 0, 1]] := by
+  ext i j
+  fin_cases i <;> fin_cases j <;> rfl
 
-end one
+end One
 
-lemma mul_fin_two [add_comm_monoid α] [has_mul α] (a₁₁ a₁₂ a₂₁ a₂₂ b₁₁ b₁₂ b₂₁ b₂₂ : α) :
-  ![![a₁₁, a₁₂],
-    ![a₂₁, a₂₂]] ⬝ ![![b₁₁, b₁₂],
-                     ![b₂₁, b₂₂]] = ![![a₁₁ * b₁₁ + a₁₂ * b₂₁, a₁₁ * b₁₂ + a₁₂ * b₂₂],
-                                      ![a₂₁ * b₁₁ + a₂₂ * b₂₁, a₂₁ * b₁₂ + a₂₂ * b₂₂]] :=
-begin
-  ext i j,
-  fin_cases i; fin_cases j; simp [matrix.mul, dot_product, fin.sum_univ_succ]
-end
+-- ././Mathport/Syntax/Translate/Tactic/Basic.lean:29:26: unsupported: too many args
+-- ././Mathport/Syntax/Translate/Tactic/Basic.lean:29:26: unsupported: too many args
+theorem mul_fin_two [AddCommMonoidₓ α] [Mul α] (a₁₁ a₁₂ a₂₁ a₂₂ b₁₁ b₁₂ b₂₁ b₂₂ : α) :
+    ![![a₁₁, a₁₂], ![a₂₁, a₂₂]] ⬝ ![![b₁₁, b₁₂], ![b₂₁, b₂₂]] =
+      ![![a₁₁ * b₁₁ + a₁₂ * b₂₁, a₁₁ * b₁₂ + a₁₂ * b₂₂], ![a₂₁ * b₁₁ + a₂₂ * b₂₁, a₂₁ * b₁₂ + a₂₂ * b₂₂]] :=
+  by
+  ext i j
+  fin_cases i <;> fin_cases j <;> simp [Matrix.mul, dot_product, Finₓ.sum_univ_succ]
 
-lemma mul_fin_three [add_comm_monoid α] [has_mul α]
-  (a₁₁ a₁₂ a₁₃ a₂₁ a₂₂ a₂₃ a₃₁ a₃₂ a₃₃ b₁₁ b₁₂ b₁₃ b₂₁ b₂₂ b₂₃ b₃₁ b₃₂ b₃₃ : α) :
-  ![![a₁₁, a₁₂, a₁₃],
-    ![a₂₁, a₂₂, a₂₃],
-    ![a₃₁, a₃₂, a₃₃]] ⬝ ![![b₁₁, b₁₂, b₁₃],
-                          ![b₂₁, b₂₂, b₂₃],
-                          ![b₃₁, b₃₂, b₃₃]] =
-  ![![a₁₁*b₁₁ + a₁₂*b₂₁ + a₁₃*b₃₁, a₁₁*b₁₂ + a₁₂*b₂₂ + a₁₃*b₃₂, a₁₁*b₁₃ + a₁₂*b₂₃ + a₁₃*b₃₃],
-    ![a₂₁*b₁₁ + a₂₂*b₂₁ + a₂₃*b₃₁, a₂₁*b₁₂ + a₂₂*b₂₂ + a₂₃*b₃₂, a₂₁*b₁₃ + a₂₂*b₂₃ + a₂₃*b₃₃],
-    ![a₃₁*b₁₁ + a₃₂*b₂₁ + a₃₃*b₃₁, a₃₁*b₁₂ + a₃₂*b₂₂ + a₃₃*b₃₂, a₃₁*b₁₃ + a₃₂*b₂₃ + a₃₃*b₃₃]] :=
-begin
-  ext i j,
-  fin_cases i; fin_cases j; simp [matrix.mul, dot_product, fin.sum_univ_succ, ←add_assoc],
-end
+-- ././Mathport/Syntax/Translate/Tactic/Basic.lean:29:26: unsupported: too many args
+-- ././Mathport/Syntax/Translate/Tactic/Basic.lean:29:26: unsupported: too many args
+theorem mul_fin_three [AddCommMonoidₓ α] [Mul α]
+    (a₁₁ a₁₂ a₁₃ a₂₁ a₂₂ a₂₃ a₃₁ a₃₂ a₃₃ b₁₁ b₁₂ b₁₃ b₂₁ b₂₂ b₂₃ b₃₁ b₃₂ b₃₃ : α) :
+    ![![a₁₁, a₁₂, a₁₃], ![a₂₁, a₂₂, a₂₃], ![a₃₁, a₃₂, a₃₃]] ⬝ ![![b₁₁, b₁₂, b₁₃], ![b₂₁, b₂₂, b₂₃], ![b₃₁, b₃₂, b₃₃]] =
+      ![![a₁₁ * b₁₁ + a₁₂ * b₂₁ + a₁₃ * b₃₁, a₁₁ * b₁₂ + a₁₂ * b₂₂ + a₁₃ * b₃₂, a₁₁ * b₁₃ + a₁₂ * b₂₃ + a₁₃ * b₃₃],
+        ![a₂₁ * b₁₁ + a₂₂ * b₂₁ + a₂₃ * b₃₁, a₂₁ * b₁₂ + a₂₂ * b₂₂ + a₂₃ * b₃₂, a₂₁ * b₁₃ + a₂₂ * b₂₃ + a₂₃ * b₃₃],
+        ![a₃₁ * b₁₁ + a₃₂ * b₂₁ + a₃₃ * b₃₁, a₃₁ * b₁₂ + a₃₂ * b₂₂ + a₃₃ * b₃₂, a₃₁ * b₁₃ + a₃₂ * b₂₃ + a₃₃ * b₃₃]] :=
+  by
+  ext i j
+  fin_cases i <;> fin_cases j <;> simp [Matrix.mul, dot_product, Finₓ.sum_univ_succ, ← add_assocₓ]
 
-lemma vec2_eq {a₀ a₁ b₀ b₁ : α} (h₀ : a₀ = b₀) (h₁ : a₁ = b₁) :
-  ![a₀, a₁] = ![b₀, b₁] :=
-by subst_vars
+theorem vec2_eq {a₀ a₁ b₀ b₁ : α} (h₀ : a₀ = b₀) (h₁ : a₁ = b₁) : ![a₀, a₁] = ![b₀, b₁] := by
+  subst_vars
 
-lemma vec3_eq {a₀ a₁ a₂ b₀ b₁ b₂ : α} (h₀ : a₀ = b₀) (h₁ : a₁ = b₁) (h₂ : a₂ = b₂) :
-  ![a₀, a₁, a₂] = ![b₀, b₁, b₂] :=
-by subst_vars
+theorem vec3_eq {a₀ a₁ a₂ b₀ b₁ b₂ : α} (h₀ : a₀ = b₀) (h₁ : a₁ = b₁) (h₂ : a₂ = b₂) : ![a₀, a₁, a₂] = ![b₀, b₁, b₂] :=
+  by
+  subst_vars
 
-lemma vec2_add [has_add α] (a₀ a₁ b₀ b₁ : α) :
-  ![a₀, a₁] + ![b₀, b₁] = ![a₀ + b₀, a₁ + b₁] :=
-by rw [cons_add_cons, cons_add_cons, empty_add_empty]
+theorem vec2_add [Add α] (a₀ a₁ b₀ b₁ : α) : ![a₀, a₁] + ![b₀, b₁] = ![a₀ + b₀, a₁ + b₁] := by
+  rw [cons_add_cons, cons_add_cons, empty_add_empty]
 
-lemma vec3_add [has_add α] (a₀ a₁ a₂ b₀ b₁ b₂ : α) :
-  ![a₀, a₁, a₂] + ![b₀, b₁, b₂] = ![a₀ + b₀, a₁ + b₁, a₂ + b₂] :=
-by rw [cons_add_cons, cons_add_cons, cons_add_cons, empty_add_empty]
+theorem vec3_add [Add α] (a₀ a₁ a₂ b₀ b₁ b₂ : α) : ![a₀, a₁, a₂] + ![b₀, b₁, b₂] = ![a₀ + b₀, a₁ + b₁, a₂ + b₂] := by
+  rw [cons_add_cons, cons_add_cons, cons_add_cons, empty_add_empty]
 
-lemma smul_vec2 {R : Type*} [has_scalar R α] (x : R) (a₀ a₁ : α) :
-  x • ![a₀, a₁] = ![x • a₀, x • a₁] :=
-by rw [smul_cons, smul_cons, smul_empty]
+theorem smul_vec2 {R : Type _} [HasScalar R α] (x : R) (a₀ a₁ : α) : x • ![a₀, a₁] = ![x • a₀, x • a₁] := by
+  rw [smul_cons, smul_cons, smul_empty]
 
-lemma smul_vec3 {R : Type*} [has_scalar R α] (x : R) (a₀ a₁ a₂ : α) :
-  x • ![a₀, a₁, a₂] = ![x • a₀, x • a₁, x • a₂] :=
-by rw [smul_cons, smul_cons, smul_cons, smul_empty]
+theorem smul_vec3 {R : Type _} [HasScalar R α] (x : R) (a₀ a₁ a₂ : α) : x • ![a₀, a₁, a₂] = ![x • a₀, x • a₁, x • a₂] :=
+  by
+  rw [smul_cons, smul_cons, smul_cons, smul_empty]
 
-variables [add_comm_monoid α] [has_mul α]
+variable [AddCommMonoidₓ α] [Mul α]
 
-lemma vec2_dot_product' {a₀ a₁ b₀ b₁ : α} :
-  ![a₀, a₁] ⬝ᵥ ![b₀, b₁] = a₀ * b₀ + a₁ * b₁ :=
-by rw [cons_dot_product_cons, cons_dot_product_cons, dot_product_empty, add_zero]
+theorem vec2_dot_product' {a₀ a₁ b₀ b₁ : α} : ![a₀, a₁] ⬝ᵥ ![b₀, b₁] = a₀ * b₀ + a₁ * b₁ := by
+  rw [cons_dot_product_cons, cons_dot_product_cons, dot_product_empty, add_zeroₓ]
 
-@[simp] lemma vec2_dot_product (v w : fin 2 → α) :
-  v ⬝ᵥ w = v 0 * w 0 + v 1 * w 1 :=
-vec2_dot_product'
+@[simp]
+theorem vec2_dot_product (v w : Finₓ 2 → α) : v ⬝ᵥ w = v 0 * w 0 + v 1 * w 1 :=
+  vec2_dot_product'
 
-lemma vec3_dot_product' {a₀ a₁ a₂ b₀ b₁ b₂ : α} :
-  ![a₀, a₁, a₂] ⬝ᵥ ![b₀, b₁, b₂] = a₀ * b₀ + a₁ * b₁ + a₂ * b₂ :=
-by rw [cons_dot_product_cons, cons_dot_product_cons, cons_dot_product_cons,
-       dot_product_empty, add_zero, add_assoc]
+theorem vec3_dot_product' {a₀ a₁ a₂ b₀ b₁ b₂ : α} : ![a₀, a₁, a₂] ⬝ᵥ ![b₀, b₁, b₂] = a₀ * b₀ + a₁ * b₁ + a₂ * b₂ := by
+  rw [cons_dot_product_cons, cons_dot_product_cons, cons_dot_product_cons, dot_product_empty, add_zeroₓ, add_assocₓ]
 
-@[simp] lemma vec3_dot_product (v w : fin 3 → α) :
-  v ⬝ᵥ w = v 0 * w 0 + v 1 * w 1 + v 2 * w 2 :=
-vec3_dot_product'
+@[simp]
+theorem vec3_dot_product (v w : Finₓ 3 → α) : v ⬝ᵥ w = v 0 * w 0 + v 1 * w 1 + v 2 * w 2 :=
+  vec3_dot_product'
 
-end vec2_and_vec3
+end Vec2AndVec3
 
-end matrix
+end Matrix
+

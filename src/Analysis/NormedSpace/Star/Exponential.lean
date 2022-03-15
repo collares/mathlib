@@ -3,9 +3,9 @@ Copyright (c) 2022 Jireh Loreaux. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jireh Loreaux
 -/
-import analysis.normed_space.star.basic
-import algebra.star.module
-import analysis.special_functions.exponential
+import Mathbin.Analysis.NormedSpace.Star.Basic
+import Mathbin.Algebra.Star.Module
+import Mathbin.Analysis.SpecialFunctions.Exponential
 
 /-! # The exponential map from selfadjoint to unitary
 In this file, we establish various propreties related to the map `λ a, exp ℂ A (I • a)` between the
@@ -20,44 +20,42 @@ subtypes `self_adjoint A` and `unitary A`.
   unitaries.
 -/
 
-section star
 
-variables {A : Type*}
-[normed_ring A] [normed_algebra ℂ A] [star_ring A] [cstar_ring A] [complete_space A]
-[star_module ℂ A]
+section Star
 
-open complex
+variable {A : Type _} [NormedRing A] [NormedAlgebra ℂ A] [StarRing A] [CstarRing A] [CompleteSpace A] [StarModule ℂ A]
 
-lemma self_adjoint.exp_i_smul_unitary {a : A} (ha : a ∈ self_adjoint A) :
-  exp ℂ A (I • a) ∈ unitary A :=
-begin
-  rw [unitary.mem_iff, star_exp],
-  simp only [star_smul, is_R_or_C.star_def, self_adjoint.mem_iff.mp ha, conj_I, neg_smul],
-  rw ←@exp_add_of_commute ℂ A _ _ _ _ _ _ ((commute.refl (I • a)).neg_left),
-  rw ←@exp_add_of_commute ℂ A _ _ _ _ _ _ ((commute.refl (I • a)).neg_right),
-  simpa only [add_right_neg, add_left_neg, and_self] using (exp_zero : exp ℂ A 0 = 1),
-end
+open Complex
+
+theorem selfAdjoint.exp_i_smul_unitary {a : A} (ha : a ∈ selfAdjoint A) : exp ℂ A (I • a) ∈ unitary A := by
+  rw [unitary.mem_iff, star_exp]
+  simp only [star_smul, IsROrC.star_def, self_adjoint.mem_iff.mp ha, conj_I, neg_smul]
+  rw [← @exp_add_of_commute ℂ A _ _ _ _ _ _ (Commute.refl (I • a)).neg_left]
+  rw [← @exp_add_of_commute ℂ A _ _ _ _ _ _ (Commute.refl (I • a)).neg_right]
+  simpa only [add_right_negₓ, add_left_negₓ, and_selfₓ] using (exp_zero : exp ℂ A 0 = 1)
 
 /-- The map from the selfadjoint real subspace to the unitary group. This map only makes sense
 over ℂ. -/
 @[simps]
-noncomputable def self_adjoint.exp_unitary (a : self_adjoint A) : unitary A :=
-⟨exp ℂ A (I • a), self_adjoint.exp_i_smul_unitary (a.property)⟩
+noncomputable def selfAdjoint.expUnitary (a : selfAdjoint A) : unitary A :=
+  ⟨exp ℂ A (I • a), selfAdjoint.exp_i_smul_unitary a.property⟩
 
-open self_adjoint
+open selfAdjoint
 
-lemma commute.exp_unitary_add {a b : self_adjoint A} (h : commute (a : A) (b : A)) :
-  exp_unitary (a + b) = exp_unitary a * exp_unitary b :=
-begin
-  ext,
-  have hcomm : commute (I • (a : A)) (I • (b : A)),
-  calc _ = _ : by simp only [h.eq, algebra.smul_mul_assoc, algebra.mul_smul_comm],
-  simpa only [exp_unitary_coe, add_subgroup.coe_add, smul_add] using exp_add_of_commute hcomm,
-end
+theorem Commute.exp_unitary_add {a b : selfAdjoint A} (h : Commute (a : A) (b : A)) :
+    expUnitary (a + b) = expUnitary a * expUnitary b := by
+  ext
+  have hcomm : Commute (I • (a : A)) (I • (b : A))
+  calc _ = _ := by
+      simp only [h.eq, Algebra.smul_mul_assoc, Algebra.mul_smul_comm]
+  simpa only [exp_unitary_coe, AddSubgroup.coe_add, smul_add] using exp_add_of_commute hcomm
 
-lemma commute.exp_unitary {a b : self_adjoint A} (h : commute (a : A) (b : A)) :
-  commute (exp_unitary a) (exp_unitary b) :=
-calc (exp_unitary a) * (exp_unitary b) = (exp_unitary b) * (exp_unitary a)
-  : by rw [←h.exp_unitary_add, ←h.symm.exp_unitary_add, add_comm]
+theorem Commute.exp_unitary {a b : selfAdjoint A} (h : Commute (a : A) (b : A)) :
+    Commute (expUnitary a) (expUnitary b) :=
+  calc
+    expUnitary a * expUnitary b = expUnitary b * expUnitary a := by
+      rw [← h.exp_unitary_add, ← h.symm.exp_unitary_add, add_commₓ]
+    
 
-end star
+end Star
+

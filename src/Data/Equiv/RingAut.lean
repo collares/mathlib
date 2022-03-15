@@ -3,8 +3,8 @@ Copyright (c) 2018 Johannes Hölzl. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johannes Hölzl, Callum Sutton, Yury Kudryashov
 -/
-import data.equiv.mul_add_aut
-import data.equiv.ring
+import Mathbin.Data.Equiv.MulAddAut
+import Mathbin.Data.Equiv.Ring
 
 /-!
 # Ring automorphisms
@@ -25,39 +25,45 @@ equivalences (and other files that use them) before the group structure is defin
 ring_aut
 -/
 
+
 /-- The group of ring automorphisms. -/
-@[reducible] def ring_aut (R : Type*) [has_mul R] [has_add R] := ring_equiv R R
+@[reducible]
+def RingAut (R : Type _) [Mul R] [Add R] :=
+  RingEquiv R R
 
-namespace ring_aut
-variables (R : Type*) [has_mul R] [has_add R]
+namespace RingAut
 
-/--
-The group operation on automorphisms of a ring is defined by
+variable (R : Type _) [Mul R] [Add R]
+
+/-- The group operation on automorphisms of a ring is defined by
 `λ g h, ring_equiv.trans h g`.
 This means that multiplication agrees with composition, `(g*h)(x) = g (h x)`.
 -/
-instance : group (ring_aut R) :=
-by refine_struct
-{ mul := λ g h, ring_equiv.trans h g,
-  one := ring_equiv.refl R,
-  inv := ring_equiv.symm,
-  div := _,
-  npow := @npow_rec _ ⟨ring_equiv.refl R⟩ ⟨λ g h, ring_equiv.trans h g⟩,
-  zpow := @zpow_rec _ ⟨ring_equiv.refl R⟩ ⟨λ g h, ring_equiv.trans h g⟩ ⟨ring_equiv.symm⟩ };
-intros; ext; try { refl }; apply equiv.left_inv
+instance : Groupₓ (RingAut R) := by
+  refine_struct
+      { mul := fun g h => RingEquiv.trans h g, one := RingEquiv.refl R, inv := RingEquiv.symm, div := _,
+        npow := @npowRec _ ⟨RingEquiv.refl R⟩ ⟨fun g h => RingEquiv.trans h g⟩,
+        zpow := @zpowRec _ ⟨RingEquiv.refl R⟩ ⟨fun g h => RingEquiv.trans h g⟩ ⟨RingEquiv.symm⟩ } <;>
+    intros <;>
+      ext <;>
+        try
+            rfl <;>
+          apply Equivₓ.left_inv
 
-instance : inhabited (ring_aut R) := ⟨1⟩
+instance : Inhabited (RingAut R) :=
+  ⟨1⟩
 
 /-- Monoid homomorphism from ring automorphisms to additive automorphisms. -/
-def to_add_aut : ring_aut R →* add_aut R :=
-by refine_struct { to_fun := ring_equiv.to_add_equiv }; intros; refl
+def toAddAut : RingAut R →* AddAut R := by
+  refine_struct { toFun := RingEquiv.toAddEquiv } <;> intros <;> rfl
 
 /-- Monoid homomorphism from ring automorphisms to multiplicative automorphisms. -/
-def to_mul_aut : ring_aut R →* mul_aut R :=
-by refine_struct { to_fun := ring_equiv.to_mul_equiv }; intros; refl
+def toMulAut : RingAut R →* MulAut R := by
+  refine_struct { toFun := RingEquiv.toMulEquiv } <;> intros <;> rfl
 
 /-- Monoid homomorphism from ring automorphisms to permutations. -/
-def to_perm : ring_aut R →* equiv.perm R :=
-by refine_struct { to_fun := ring_equiv.to_equiv }; intros; refl
+def toPerm : RingAut R →* Equivₓ.Perm R := by
+  refine_struct { toFun := RingEquiv.toEquiv } <;> intros <;> rfl
 
-end ring_aut
+end RingAut
+

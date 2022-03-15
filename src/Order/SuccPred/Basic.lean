@@ -3,11 +3,11 @@ Copyright (c) 2021 Yaël Dillies. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yaël Dillies
 -/
-import order.bounded_order
-import order.complete_lattice
-import order.cover
-import order.iterate
-import tactic.monotonicity
+import Mathbin.Order.BoundedOrder
+import Mathbin.Order.CompleteLattice
+import Mathbin.Order.Cover
+import Mathbin.Order.Iterate
+import Mathbin.Tactic.Monotonicity.Default
 
 /-!
 # Successor and predecessor
@@ -53,535 +53,578 @@ class succ_pred_order (α : Type*) [preorder α] extends succ_order α, pred_ord
 `covby` should help here.
 -/
 
-open function
+
+open Function
 
 /-! ### Successor order -/
 
-variables {α : Type*}
+
+variable {α : Type _}
 
 /-- Order equipped with a sensible successor function. -/
-@[ext] class succ_order (α : Type*) [preorder α] :=
-(succ : α → α)
-(le_succ : ∀ a, a ≤ succ a)
-(maximal_of_succ_le : ∀ ⦃a⦄, succ a ≤ a → ∀ ⦃b⦄, ¬a < b)
-(succ_le_of_lt : ∀ {a b}, a < b → succ a ≤ b)
-(le_of_lt_succ : ∀ {a b}, a < succ b → a ≤ b)
+@[ext]
+class SuccOrder (α : Type _) [Preorderₓ α] where
+  succ : α → α
+  le_succ : ∀ a, a ≤ succ a
+  maximal_of_succ_le : ∀ ⦃a⦄, succ a ≤ a → ∀ ⦃b⦄, ¬a < b
+  succ_le_of_lt : ∀ {a b}, a < b → succ a ≤ b
+  le_of_lt_succ : ∀ {a b}, a < succ b → a ≤ b
 
-namespace succ_order
-section preorder
-variables [preorder α]
+namespace SuccOrder
+
+section Preorderₓ
+
+variable [Preorderₓ α]
 
 /-- A constructor for `succ_order α` usable when `α` has no maximal element. -/
-def of_succ_le_iff_of_le_lt_succ (succ : α → α)
-  (hsucc_le_iff : ∀ {a b}, succ a ≤ b ↔ a < b)
-  (hle_of_lt_succ : ∀ {a b}, a < succ b → a ≤ b) :
-  succ_order α :=
-{ succ := succ,
-  le_succ := λ a, (hsucc_le_iff.1 le_rfl).le,
-  maximal_of_succ_le := λ a ha, (lt_irrefl a (hsucc_le_iff.1 ha)).elim,
-  succ_le_of_lt := λ a b, hsucc_le_iff.2,
-  le_of_lt_succ := λ a b, hle_of_lt_succ }
+def ofSuccLeIffOfLeLtSucc (succ : α → α) (hsucc_le_iff : ∀ {a b}, succ a ≤ b ↔ a < b)
+    (hle_of_lt_succ : ∀ {a b}, a < succ b → a ≤ b) : SuccOrder α :=
+  { succ, le_succ := fun a => (hsucc_le_iff.1 le_rfl).le,
+    maximal_of_succ_le := fun a ha => (lt_irreflₓ a (hsucc_le_iff.1 ha)).elim,
+    succ_le_of_lt := fun a b => hsucc_le_iff.2, le_of_lt_succ := fun a b => hle_of_lt_succ }
 
-variables [succ_order α]
+variable [SuccOrder α]
 
-@[simp, mono] lemma succ_le_succ {a b : α} (h : a ≤ b) : succ a ≤ succ b :=
-begin
-  by_cases ha : ∀ ⦃c⦄, ¬a < c,
-  { have hba : succ b ≤ a,
-    { by_contra H,
-      exact ha ((h.trans (le_succ b)).lt_of_not_le H) },
-    by_contra H,
-    exact ha ((h.trans (le_succ b)).trans_lt ((hba.trans (le_succ a)).lt_of_not_le H)) },
-  { push_neg at ha,
-    obtain ⟨c, hc⟩ := ha,
-    exact succ_le_of_lt ((h.trans (le_succ b)).lt_of_not_le $ λ hba,
-      maximal_of_succ_le (hba.trans h) (((le_succ b).trans hba).trans_lt hc)) }
-end
+@[simp, mono]
+theorem succ_le_succ {a b : α} (h : a ≤ b) : succ a ≤ succ b := by
+  by_cases' ha : ∀ ⦃c⦄, ¬a < c
+  · have hba : succ b ≤ a := by
+      by_contra H
+      exact ha ((h.trans (le_succ b)).lt_of_not_le H)
+    by_contra H
+    exact ha ((h.trans (le_succ b)).trans_lt ((hba.trans (le_succ a)).lt_of_not_le H))
+    
+  · push_neg  at ha
+    obtain ⟨c, hc⟩ := ha
+    exact
+      succ_le_of_lt
+        ((h.trans (le_succ b)).lt_of_not_le fun hba =>
+          maximal_of_succ_le (hba.trans h) (((le_succ b).trans hba).trans_lt hc))
+    
 
-lemma succ_mono : monotone (succ : α → α) := λ a b, succ_le_succ
+theorem succ_mono : Monotone (succ : α → α) := fun a b => succ_le_succ
 
-lemma lt_succ_of_not_maximal {a b : α} (h : a < b) : a < succ a :=
-(le_succ a).lt_of_not_le (λ ha, maximal_of_succ_le ha h)
+theorem lt_succ_of_not_maximal {a b : α} (h : a < b) : a < succ a :=
+  (le_succ a).lt_of_not_le fun ha => maximal_of_succ_le ha h
 
-alias lt_succ_of_not_maximal ← has_lt.lt.lt_succ
+alias lt_succ_of_not_maximal ← LT.lt.lt_succ
 
-protected lemma _root_.has_lt.lt.covby_succ {a b : α} (h : a < b) : a ⋖ succ a :=
-⟨h.lt_succ, λ c hc, (succ_le_of_lt hc).not_lt⟩
+protected theorem _root_.has_lt.lt.covby_succ {a b : α} (h : a < b) : a ⋖ succ a :=
+  ⟨h.lt_succ, fun c hc => (succ_le_of_lt hc).not_lt⟩
 
-@[simp] lemma covby_succ_of_nonempty_Ioi {a : α} (h : (set.Ioi a).nonempty) : a ⋖ succ a :=
-has_lt.lt.covby_succ h.some_mem
+@[simp]
+theorem covby_succ_of_nonempty_Ioi {a : α} (h : (Set.Ioi a).Nonempty) : a ⋖ succ a :=
+  LT.lt.covby_succ h.some_mem
 
-lemma lt_succ_of_not_is_max {a : α} (ha : ¬ is_max a) : a < succ_order.succ a :=
-(le_succ a).lt_of_not_le (λ h, not_exists.2 (maximal_of_succ_le h) (not_is_max_iff.mp ha))
+theorem lt_succ_of_not_is_max {a : α} (ha : ¬IsMax a) : a < SuccOrder.succ a :=
+  (le_succ a).lt_of_not_le fun h => not_exists.2 (maximal_of_succ_le h) (not_is_max_iff.mp ha)
 
-lemma lt_succ_iff_of_not_is_max {a b : α} (ha : ¬ is_max a) : b < succ_order.succ a ↔ b ≤ a :=
-⟨le_of_lt_succ, λ h_le, h_le.trans_lt (lt_succ_of_not_is_max ha)⟩
+theorem lt_succ_iff_of_not_is_max {a b : α} (ha : ¬IsMax a) : b < SuccOrder.succ a ↔ b ≤ a :=
+  ⟨le_of_lt_succ, fun h_le => h_le.trans_lt (lt_succ_of_not_is_max ha)⟩
 
-lemma succ_le_iff_of_not_is_max {a b : α} (ha : ¬ is_max a) : succ a ≤ b ↔ a < b :=
-⟨(lt_succ_of_not_is_max ha).trans_le, succ_le_of_lt⟩
+theorem succ_le_iff_of_not_is_max {a b : α} (ha : ¬IsMax a) : succ a ≤ b ↔ a < b :=
+  ⟨(lt_succ_of_not_is_max ha).trans_le, succ_le_of_lt⟩
 
-section no_max_order
-variables [no_max_order α] {a b : α}
+section NoMaxOrder
 
-lemma lt_succ (a : α) : a < succ a :=
-lt_succ_of_not_is_max (not_is_max a)
+variable [NoMaxOrder α] {a b : α}
 
-lemma lt_succ_iff : a < succ b ↔ a ≤ b :=
-lt_succ_iff_of_not_is_max (not_is_max b)
+theorem lt_succ (a : α) : a < succ a :=
+  lt_succ_of_not_is_max (not_is_max a)
 
-lemma succ_le_iff : succ a ≤ b ↔ a < b :=
-succ_le_iff_of_not_is_max (not_is_max a)
+theorem lt_succ_iff : a < succ b ↔ a ≤ b :=
+  lt_succ_iff_of_not_is_max (not_is_max b)
 
-@[simp] lemma succ_le_succ_iff : succ a ≤ succ b ↔ a ≤ b :=
-⟨λ h, le_of_lt_succ $ (lt_succ a).trans_le h, λ h, succ_le_of_lt $ h.trans_lt $ lt_succ b⟩
+theorem succ_le_iff : succ a ≤ b ↔ a < b :=
+  succ_le_iff_of_not_is_max (not_is_max a)
+
+@[simp]
+theorem succ_le_succ_iff : succ a ≤ succ b ↔ a ≤ b :=
+  ⟨fun h => le_of_lt_succ <| (lt_succ a).trans_le h, fun h => succ_le_of_lt <| h.trans_lt <| lt_succ b⟩
 
 alias succ_le_succ_iff ↔ le_of_succ_le_succ _
 
-lemma succ_lt_succ_iff : succ a < succ b ↔ a < b :=
-by simp_rw [lt_iff_le_not_le, succ_le_succ_iff]
+theorem succ_lt_succ_iff : succ a < succ b ↔ a < b := by
+  simp_rw [lt_iff_le_not_leₓ, succ_le_succ_iff]
 
 alias succ_lt_succ_iff ↔ lt_of_succ_lt_succ succ_lt_succ
 
-lemma succ_strict_mono : strict_mono (succ : α → α) := λ a b, succ_lt_succ
+theorem succ_strict_mono : StrictMono (succ : α → α) := fun a b => succ_lt_succ
 
-lemma covby_succ (a : α) : a ⋖ succ a := ⟨lt_succ a, λ c hc, (succ_le_of_lt hc).not_lt⟩
+theorem covby_succ (a : α) : a ⋖ succ a :=
+  ⟨lt_succ a, fun c hc => (succ_le_of_lt hc).not_lt⟩
 
-end no_max_order
+end NoMaxOrder
 
-end preorder
+end Preorderₓ
 
-section partial_order
-variables [partial_order α]
+section PartialOrderₓ
+
+variable [PartialOrderₓ α]
 
 /-- There is at most one way to define the successors in a `partial_order`. -/
-instance : subsingleton (succ_order α) :=
-begin
-  refine subsingleton.intro (λ h₀ h₁, _),
-  ext a,
-  by_cases ha : @succ _ _ h₀ a ≤ a,
-  { refine (ha.trans (@le_succ _ _ h₁ a)).antisymm _,
-    by_contra H,
-    exact @maximal_of_succ_le _ _ h₀ _ ha _
-      ((@le_succ _ _ h₁ a).lt_of_not_le $ λ h, H $ h.trans $ @le_succ _ _ h₀ a) },
-  { exact (@succ_le_of_lt _ _ h₀ _ _ $ (@le_succ _ _ h₁ a).lt_of_not_le $ λ h,
-      @maximal_of_succ_le _ _ h₁ _ h _ $ (@le_succ _ _ h₀ a).lt_of_not_le ha).antisymm
-      (@succ_le_of_lt _ _ h₁ _ _ $ (@le_succ _ _ h₀ a).lt_of_not_le ha) }
-end
+instance : Subsingleton (SuccOrder α) := by
+  refine' Subsingleton.intro fun h₀ h₁ => _
+  ext a
+  by_cases' ha : @succ _ _ h₀ a ≤ a
+  · refine' (ha.trans (@le_succ _ _ h₁ a)).antisymm _
+    by_contra H
+    exact
+      @maximal_of_succ_le _ _ h₀ _ ha _ ((@le_succ _ _ h₁ a).lt_of_not_le fun h => H <| h.trans <| @le_succ _ _ h₀ a)
+    
+  · exact
+      (@succ_le_of_lt _ _ h₀ _ _ <|
+            (@le_succ _ _ h₁ a).lt_of_not_le fun h =>
+              @maximal_of_succ_le _ _ h₁ _ h _ <| (@le_succ _ _ h₀ a).lt_of_not_le ha).antisymm
+        (@succ_le_of_lt _ _ h₁ _ _ <| (@le_succ _ _ h₀ a).lt_of_not_le ha)
+    
 
-variables [succ_order α]
+variable [SuccOrder α]
 
-lemma le_le_succ_iff {a b : α} : a ≤ b ∧ b ≤ succ a ↔ b = a ∨ b = succ a :=
-begin
-  split,
-  { rintro h,
-    rw or_iff_not_imp_left,
-    exact λ hba : b ≠ a, h.2.antisymm (succ_le_of_lt $ h.1.lt_of_ne $ hba.symm) },
-  rintro (rfl | rfl),
-  { exact ⟨le_rfl, le_succ b⟩ },
-  { exact ⟨le_succ a, le_rfl⟩ }
-end
+theorem le_le_succ_iff {a b : α} : a ≤ b ∧ b ≤ succ a ↔ b = a ∨ b = succ a := by
+  constructor
+  · rintro h
+    rw [or_iff_not_imp_left]
+    exact fun hba : b ≠ a => h.2.antisymm (succ_le_of_lt <| h.1.lt_of_ne <| hba.symm)
+    
+  rintro (rfl | rfl)
+  · exact ⟨le_rfl, le_succ b⟩
+    
+  · exact ⟨le_succ a, le_rfl⟩
+    
 
-lemma _root_.covby.succ_eq {a b : α} (h : a ⋖ b) : succ a = b :=
-(succ_le_of_lt h.lt).eq_of_not_lt $ λ h', h.2 (lt_succ_of_not_maximal h.lt) h'
+theorem _root_.covby.succ_eq {a b : α} (h : a ⋖ b) : succ a = b :=
+  (succ_le_of_lt h.lt).eq_of_not_lt fun h' => h.2 (lt_succ_of_not_maximal h.lt) h'
 
-section no_max_order
-variables [no_max_order α] {a b : α}
+section NoMaxOrder
 
-lemma succ_injective : injective (succ : α → α) :=
-begin
-  rintro a b,
-  simp_rw [eq_iff_le_not_lt, succ_le_succ_iff, succ_lt_succ_iff],
-  exact id,
-end
+variable [NoMaxOrder α] {a b : α}
 
-lemma succ_eq_succ_iff : succ a = succ b ↔ a = b :=
-succ_injective.eq_iff
+theorem succ_injective : Injective (succ : α → α) := by
+  rintro a b
+  simp_rw [eq_iff_le_not_lt, succ_le_succ_iff, succ_lt_succ_iff]
+  exact id
 
-lemma succ_ne_succ_iff : succ a ≠ succ b ↔ a ≠ b :=
-succ_injective.ne_iff
+theorem succ_eq_succ_iff : succ a = succ b ↔ a = b :=
+  succ_injective.eq_iff
+
+theorem succ_ne_succ_iff : succ a ≠ succ b ↔ a ≠ b :=
+  succ_injective.ne_iff
 
 alias succ_ne_succ_iff ↔ ne_of_succ_ne_succ succ_ne_succ
 
-lemma lt_succ_iff_lt_or_eq : a < succ b ↔ (a < b ∨ a = b) :=
-lt_succ_iff.trans le_iff_lt_or_eq
+theorem lt_succ_iff_lt_or_eq : a < succ b ↔ a < b ∨ a = b :=
+  lt_succ_iff.trans le_iff_lt_or_eqₓ
 
-lemma le_succ_iff_lt_or_eq : a ≤ succ b ↔ (a ≤ b ∨ a = succ b) :=
-by rw [←lt_succ_iff, ←lt_succ_iff, lt_succ_iff_lt_or_eq]
+theorem le_succ_iff_lt_or_eq : a ≤ succ b ↔ a ≤ b ∨ a = succ b := by
+  rw [← lt_succ_iff, ← lt_succ_iff, lt_succ_iff_lt_or_eq]
 
-lemma _root_.covby_iff_succ_eq : a ⋖ b ↔ succ a = b :=
-⟨covby.succ_eq, by { rintro rfl, exact covby_succ _ }⟩
+theorem _root_.covby_iff_succ_eq : a ⋖ b ↔ succ a = b :=
+  ⟨Covby.succ_eq, by
+    rintro rfl
+    exact covby_succ _⟩
 
-end no_max_order
+end NoMaxOrder
 
-end partial_order
+end PartialOrderₓ
 
-section order_top
-variables [partial_order α] [order_top α] [succ_order α]
+section OrderTop
 
-@[simp] lemma succ_top : succ (⊤ : α) = ⊤ :=
-le_top.antisymm (le_succ _)
+variable [PartialOrderₓ α] [OrderTop α] [SuccOrder α]
 
-@[simp] lemma succ_le_iff_eq_top {a : α} : succ a ≤ a ↔ a = ⊤ :=
-⟨λ h, eq_top_of_maximal (maximal_of_succ_le h), λ h, by rw [h, succ_top]⟩
+@[simp]
+theorem succ_top : succ (⊤ : α) = ⊤ :=
+  le_top.antisymm (le_succ _)
 
-@[simp] lemma lt_succ_iff_ne_top {a : α} : a < succ a ↔ a ≠ ⊤ :=
-begin
-  simp only [lt_iff_le_not_le, true_and, le_succ a],
-  exact not_iff_not.2 succ_le_iff_eq_top,
-end
+@[simp]
+theorem succ_le_iff_eq_top {a : α} : succ a ≤ a ↔ a = ⊤ :=
+  ⟨fun h => eq_top_of_maximal (maximal_of_succ_le h), fun h => by
+    rw [h, succ_top]⟩
 
-end order_top
+@[simp]
+theorem lt_succ_iff_ne_top {a : α} : a < succ a ↔ a ≠ ⊤ := by
+  simp only [lt_iff_le_not_leₓ, true_andₓ, le_succ a]
+  exact not_iff_not.2 succ_le_iff_eq_top
 
-section order_bot
-variables [partial_order α] [order_bot α] [succ_order α] [nontrivial α]
+end OrderTop
 
-lemma bot_lt_succ (a : α) : ⊥ < succ a :=
-begin
-  obtain ⟨b, hb⟩ := exists_ne (⊥ : α),
-  refine bot_lt_iff_ne_bot.2 (λ h, _),
-  have := eq_bot_iff.2 ((le_succ a).trans h.le),
-  rw this at h,
-  exact maximal_of_succ_le h.le (bot_lt_iff_ne_bot.2 hb),
-end
+section OrderBot
 
-lemma succ_ne_bot (a : α) : succ a ≠ ⊥ :=
-(bot_lt_succ a).ne'
+variable [PartialOrderₓ α] [OrderBot α] [SuccOrder α] [Nontrivial α]
 
-end order_bot
+theorem bot_lt_succ (a : α) : ⊥ < succ a := by
+  obtain ⟨b, hb⟩ := exists_ne (⊥ : α)
+  refine' bot_lt_iff_ne_bot.2 fun h => _
+  have := eq_bot_iff.2 ((le_succ a).trans h.le)
+  rw [this] at h
+  exact maximal_of_succ_le h.le (bot_lt_iff_ne_bot.2 hb)
 
-section linear_order
-variables [linear_order α]
+theorem succ_ne_bot (a : α) : succ a ≠ ⊥ :=
+  (bot_lt_succ a).ne'
+
+end OrderBot
+
+section LinearOrderₓ
+
+variable [LinearOrderₓ α]
 
 /-- A constructor for `succ_order α` usable when `α` is a linear order with no maximal element. -/
-def of_succ_le_iff (succ : α → α) (hsucc_le_iff : ∀ {a b}, succ a ≤ b ↔ a < b) :
-  succ_order α :=
-{ succ := succ,
-  le_succ := λ a, (hsucc_le_iff.1 le_rfl).le,
-  maximal_of_succ_le := λ a ha, (lt_irrefl a (hsucc_le_iff.1 ha)).elim,
-  succ_le_of_lt := λ a b, hsucc_le_iff.2,
-  le_of_lt_succ := λ a b h, le_of_not_lt ((not_congr hsucc_le_iff).1 h.not_le) }
+def ofSuccLeIff (succ : α → α) (hsucc_le_iff : ∀ {a b}, succ a ≤ b ↔ a < b) : SuccOrder α :=
+  { succ, le_succ := fun a => (hsucc_le_iff.1 le_rfl).le,
+    maximal_of_succ_le := fun a ha => (lt_irreflₓ a (hsucc_le_iff.1 ha)).elim,
+    succ_le_of_lt := fun a b => hsucc_le_iff.2,
+    le_of_lt_succ := fun a b h => le_of_not_ltₓ ((not_congr hsucc_le_iff).1 h.not_le) }
 
-end linear_order
+end LinearOrderₓ
 
-section complete_lattice
-variables [complete_lattice α] [succ_order α]
+section CompleteLattice
 
-lemma succ_eq_infi (a : α) : succ a = ⨅ (b : α) (h : a < b), b :=
-begin
-  refine le_antisymm (le_infi (λ b, le_infi succ_le_of_lt)) _,
-  obtain rfl | ha := eq_or_ne a ⊤,
-  { rw succ_top,
-    exact le_top },
-  exact binfi_le _ (lt_succ_iff_ne_top.2 ha),
-end
+variable [CompleteLattice α] [SuccOrder α]
 
-end complete_lattice
+theorem succ_eq_infi (a : α) : succ a = ⨅ (b : α) (h : a < b), b := by
+  refine' le_antisymmₓ (le_infi fun b => le_infi succ_le_of_lt) _
+  obtain rfl | ha := eq_or_ne a ⊤
+  · rw [succ_top]
+    exact le_top
+    
+  exact binfi_le _ (lt_succ_iff_ne_top.2 ha)
 
-section intervals
-variables [preorder α] [succ_order α]
+end CompleteLattice
 
-lemma Iic_eq_Iio_succ' {a : α} (ha : ¬ is_max a) :
-  set.Iic a = set.Iio (succ_order.succ a) :=
-by { ext1 x, rw [set.mem_Iic, set.mem_Iio], exact (lt_succ_iff_of_not_is_max ha).symm, }
+section Intervals
 
-lemma Iic_eq_Iio_succ [no_max_order α] (a : α) :
-  set.Iic a = set.Iio (succ_order.succ a) :=
-Iic_eq_Iio_succ' (not_is_max a)
+variable [Preorderₓ α] [SuccOrder α]
 
-lemma Ioi_eq_Ici_succ' {a : α} (ha : ¬ is_max a) :
-  set.Ioi a = set.Ici (succ_order.succ a) :=
-by { ext1 x, rw [set.mem_Ioi, set.mem_Ici], exact (succ_le_iff_of_not_is_max ha).symm, }
+theorem Iic_eq_Iio_succ' {a : α} (ha : ¬IsMax a) : Set.Iic a = Set.Iio (SuccOrder.succ a) := by
+  ext1 x
+  rw [Set.mem_Iic, Set.mem_Iio]
+  exact (lt_succ_iff_of_not_is_max ha).symm
 
-lemma Ioi_eq_Ici_succ [no_max_order α] (a : α) :
-  set.Ioi a = set.Ici (succ_order.succ a) :=
-Ioi_eq_Ici_succ' (not_is_max a)
+theorem Iic_eq_Iio_succ [NoMaxOrder α] (a : α) : Set.Iic a = Set.Iio (SuccOrder.succ a) :=
+  Iic_eq_Iio_succ' (not_is_max a)
 
-end intervals
+theorem Ioi_eq_Ici_succ' {a : α} (ha : ¬IsMax a) : Set.Ioi a = Set.Ici (SuccOrder.succ a) := by
+  ext1 x
+  rw [Set.mem_Ioi, Set.mem_Ici]
+  exact (succ_le_iff_of_not_is_max ha).symm
 
-end succ_order
+theorem Ioi_eq_Ici_succ [NoMaxOrder α] (a : α) : Set.Ioi a = Set.Ici (SuccOrder.succ a) :=
+  Ioi_eq_Ici_succ' (not_is_max a)
+
+end Intervals
+
+end SuccOrder
 
 /-! ### Predecessor order -/
 
-/-- Order equipped with a sensible predecessor function. -/
-@[ext] class pred_order (α : Type*) [preorder α] :=
-(pred : α → α)
-(pred_le : ∀ a, pred a ≤ a)
-(minimal_of_le_pred : ∀ ⦃a⦄, a ≤ pred a → ∀ ⦃b⦄, ¬b < a)
-(le_pred_of_lt : ∀ {a b}, a < b → a ≤ pred b)
-(le_of_pred_lt : ∀ {a b}, pred a < b → a ≤ b)
 
-namespace pred_order
-section preorder
-variables [preorder α]
+/-- Order equipped with a sensible predecessor function. -/
+@[ext]
+class PredOrder (α : Type _) [Preorderₓ α] where
+  pred : α → α
+  pred_le : ∀ a, pred a ≤ a
+  minimal_of_le_pred : ∀ ⦃a⦄, a ≤ pred a → ∀ ⦃b⦄, ¬b < a
+  le_pred_of_lt : ∀ {a b}, a < b → a ≤ pred b
+  le_of_pred_lt : ∀ {a b}, pred a < b → a ≤ b
+
+namespace PredOrder
+
+section Preorderₓ
+
+variable [Preorderₓ α]
 
 /-- A constructor for `pred_order α` usable when `α` has no minimal element. -/
-def of_le_pred_iff_of_pred_le_pred (pred : α → α)
-  (hle_pred_iff : ∀ {a b}, a ≤ pred b ↔ a < b)
-  (hle_of_pred_lt : ∀ {a b}, pred a < b → a ≤ b) :
-  pred_order α :=
-{ pred := pred,
-  pred_le := λ a, (hle_pred_iff.1 le_rfl).le,
-  minimal_of_le_pred := λ a ha, (lt_irrefl a (hle_pred_iff.1 ha)).elim,
-  le_pred_of_lt := λ a b, hle_pred_iff.2,
-  le_of_pred_lt := λ a b, hle_of_pred_lt }
+def ofLePredIffOfPredLePred (pred : α → α) (hle_pred_iff : ∀ {a b}, a ≤ pred b ↔ a < b)
+    (hle_of_pred_lt : ∀ {a b}, pred a < b → a ≤ b) : PredOrder α :=
+  { pred, pred_le := fun a => (hle_pred_iff.1 le_rfl).le,
+    minimal_of_le_pred := fun a ha => (lt_irreflₓ a (hle_pred_iff.1 ha)).elim,
+    le_pred_of_lt := fun a b => hle_pred_iff.2, le_of_pred_lt := fun a b => hle_of_pred_lt }
 
-variables [pred_order α]
+variable [PredOrder α]
 
-@[simp, mono] lemma pred_le_pred {a b : α} (h : a ≤ b) : pred a ≤ pred b :=
-begin
-  by_cases hb : ∀ ⦃c⦄, ¬c < b,
-  { have hba : b ≤ pred a,
-    { by_contra H,
-      exact hb (((pred_le a).trans h).lt_of_not_le H) },
-    by_contra H,
-    exact hb ((((pred_le b).trans hba).lt_of_not_le H).trans_le ((pred_le a).trans h)) },
-  { push_neg at hb,
-    obtain ⟨c, hc⟩ := hb,
-    exact le_pred_of_lt (((pred_le a).trans h).lt_of_not_le $ λ hba,
-      minimal_of_le_pred (h.trans hba) $ hc.trans_le $ hba.trans $ pred_le a) }
-end
+@[simp, mono]
+theorem pred_le_pred {a b : α} (h : a ≤ b) : pred a ≤ pred b := by
+  by_cases' hb : ∀ ⦃c⦄, ¬c < b
+  · have hba : b ≤ pred a := by
+      by_contra H
+      exact hb (((pred_le a).trans h).lt_of_not_le H)
+    by_contra H
+    exact hb ((((pred_le b).trans hba).lt_of_not_le H).trans_le ((pred_le a).trans h))
+    
+  · push_neg  at hb
+    obtain ⟨c, hc⟩ := hb
+    exact
+      le_pred_of_lt
+        (((pred_le a).trans h).lt_of_not_le fun hba =>
+          minimal_of_le_pred (h.trans hba) <| hc.trans_le <| hba.trans <| pred_le a)
+    
 
-lemma pred_mono : monotone (pred : α → α) := λ a b, pred_le_pred
+theorem pred_mono : Monotone (pred : α → α) := fun a b => pred_le_pred
 
-lemma pred_lt_of_not_minimal {a b : α} (h : b < a) : pred a < a :=
-(pred_le a).lt_of_not_le (λ ha, minimal_of_le_pred ha h)
+theorem pred_lt_of_not_minimal {a b : α} (h : b < a) : pred a < a :=
+  (pred_le a).lt_of_not_le fun ha => minimal_of_le_pred ha h
 
-alias pred_lt_of_not_minimal ← has_lt.lt.pred_lt
+alias pred_lt_of_not_minimal ← LT.lt.pred_lt
 
-protected lemma _root_.has_lt.lt.pred_covby {a b : α} (h : b < a) : pred a ⋖ a :=
-⟨h.pred_lt, λ c hc, (le_of_pred_lt hc).not_lt⟩
+protected theorem _root_.has_lt.lt.pred_covby {a b : α} (h : b < a) : pred a ⋖ a :=
+  ⟨h.pred_lt, fun c hc => (le_of_pred_lt hc).not_lt⟩
 
-@[simp] lemma pred_covby_of_nonempty_Iio {a : α} (h : (set.Iio a).nonempty) : pred a ⋖ a :=
-has_lt.lt.pred_covby h.some_mem
+@[simp]
+theorem pred_covby_of_nonempty_Iio {a : α} (h : (Set.Iio a).Nonempty) : pred a ⋖ a :=
+  LT.lt.pred_covby h.some_mem
 
-lemma pred_lt_of_not_is_min {a : α} (ha : ¬ is_min a) : pred_order.pred a < a :=
-(pred_le a).lt_of_not_le (λ h, not_exists.2 (minimal_of_le_pred h) (not_is_min_iff.mp ha))
+theorem pred_lt_of_not_is_min {a : α} (ha : ¬IsMin a) : PredOrder.pred a < a :=
+  (pred_le a).lt_of_not_le fun h => not_exists.2 (minimal_of_le_pred h) (not_is_min_iff.mp ha)
 
-lemma pred_lt_iff_of_not_is_min {a b : α} (ha : ¬ is_min a) : pred_order.pred a < b ↔ a ≤ b :=
-⟨le_of_pred_lt, λ h_le, (pred_lt_of_not_is_min ha).trans_le h_le⟩
+theorem pred_lt_iff_of_not_is_min {a b : α} (ha : ¬IsMin a) : PredOrder.pred a < b ↔ a ≤ b :=
+  ⟨le_of_pred_lt, fun h_le => (pred_lt_of_not_is_min ha).trans_le h_le⟩
 
-lemma le_pred_iff_of_not_is_min {a b : α} (hb : ¬ is_min b) : a ≤ pred b ↔ a < b :=
-⟨λ h, h.trans_lt (pred_lt_of_not_is_min hb), le_pred_of_lt⟩
+theorem le_pred_iff_of_not_is_min {a b : α} (hb : ¬IsMin b) : a ≤ pred b ↔ a < b :=
+  ⟨fun h => h.trans_lt (pred_lt_of_not_is_min hb), le_pred_of_lt⟩
 
-section no_min_order
-variables [no_min_order α] {a b : α}
+section NoMinOrder
 
-lemma pred_lt (a : α) : pred a < a :=
-pred_lt_of_not_is_min (not_is_min a)
+variable [NoMinOrder α] {a b : α}
 
-lemma pred_lt_iff : pred a < b ↔ a ≤ b :=
-pred_lt_iff_of_not_is_min (not_is_min a)
+theorem pred_lt (a : α) : pred a < a :=
+  pred_lt_of_not_is_min (not_is_min a)
 
-lemma le_pred_iff : a ≤ pred b ↔ a < b :=
-le_pred_iff_of_not_is_min (not_is_min b)
+theorem pred_lt_iff : pred a < b ↔ a ≤ b :=
+  pred_lt_iff_of_not_is_min (not_is_min a)
 
-@[simp] lemma pred_le_pred_iff : pred a ≤ pred b ↔ a ≤ b :=
-⟨λ h, le_of_pred_lt $ h.trans_lt (pred_lt b), λ h, le_pred_of_lt $ (pred_lt a).trans_le h⟩
+theorem le_pred_iff : a ≤ pred b ↔ a < b :=
+  le_pred_iff_of_not_is_min (not_is_min b)
+
+@[simp]
+theorem pred_le_pred_iff : pred a ≤ pred b ↔ a ≤ b :=
+  ⟨fun h => le_of_pred_lt <| h.trans_lt (pred_lt b), fun h => le_pred_of_lt <| (pred_lt a).trans_le h⟩
 
 alias pred_le_pred_iff ↔ le_of_pred_le_pred _
 
-@[simp] lemma pred_lt_pred_iff : pred a < pred b ↔ a < b :=
-by simp_rw [lt_iff_le_not_le, pred_le_pred_iff]
+@[simp]
+theorem pred_lt_pred_iff : pred a < pred b ↔ a < b := by
+  simp_rw [lt_iff_le_not_leₓ, pred_le_pred_iff]
 
 alias pred_lt_pred_iff ↔ lt_of_pred_lt_pred pred_lt_pred
 
-lemma pred_strict_mono : strict_mono (pred : α → α) := λ a b, pred_lt_pred
+theorem pred_strict_mono : StrictMono (pred : α → α) := fun a b => pred_lt_pred
 
-lemma pred_covby (a : α) : pred a ⋖ a := ⟨pred_lt a, λ c hc, (le_of_pred_lt hc).not_lt⟩
+theorem pred_covby (a : α) : pred a ⋖ a :=
+  ⟨pred_lt a, fun c hc => (le_of_pred_lt hc).not_lt⟩
 
-end no_min_order
+end NoMinOrder
 
-end preorder
+end Preorderₓ
 
-section partial_order
-variables [partial_order α]
+section PartialOrderₓ
+
+variable [PartialOrderₓ α]
 
 /-- There is at most one way to define the predecessors in a `partial_order`. -/
-instance : subsingleton (pred_order α) :=
-begin
-  refine subsingleton.intro (λ h₀ h₁, _),
-  ext a,
-  by_cases ha : a ≤ @pred _ _ h₀ a,
-  { refine le_antisymm _ ((@pred_le _ _ h₁ a).trans ha),
-    by_contra H,
-    exact @minimal_of_le_pred _ _ h₀ _ ha _
-      ((@pred_le _ _ h₁ a).lt_of_not_le $ λ h, H $ (@pred_le _ _ h₀ a).trans h) },
-  { exact (@le_pred_of_lt _ _ h₁ _ _ $ (@pred_le _ _ h₀ a).lt_of_not_le ha).antisymm
-    (@le_pred_of_lt _ _ h₀ _ _ $ (@pred_le _ _ h₁ a).lt_of_not_le $ λ h,
-    @minimal_of_le_pred _ _ h₁ _ h _ $ (@pred_le _ _ h₀ a).lt_of_not_le ha) }
-end
+instance : Subsingleton (PredOrder α) := by
+  refine' Subsingleton.intro fun h₀ h₁ => _
+  ext a
+  by_cases' ha : a ≤ @pred _ _ h₀ a
+  · refine' le_antisymmₓ _ ((@pred_le _ _ h₁ a).trans ha)
+    by_contra H
+    exact @minimal_of_le_pred _ _ h₀ _ ha _ ((@pred_le _ _ h₁ a).lt_of_not_le fun h => H <| (@pred_le _ _ h₀ a).trans h)
+    
+  · exact
+      (@le_pred_of_lt _ _ h₁ _ _ <| (@pred_le _ _ h₀ a).lt_of_not_le ha).antisymm
+        (@le_pred_of_lt _ _ h₀ _ _ <|
+          (@pred_le _ _ h₁ a).lt_of_not_le fun h =>
+            @minimal_of_le_pred _ _ h₁ _ h _ <| (@pred_le _ _ h₀ a).lt_of_not_le ha)
+    
 
-variables [pred_order α]
+variable [PredOrder α]
 
-lemma pred_le_le_iff {a b : α} : pred a ≤ b ∧ b ≤ a ↔ b = a ∨ b = pred a :=
-begin
-  split,
-  { rintro h,
-    rw or_iff_not_imp_left,
-    exact λ hba, (le_pred_of_lt $ h.2.lt_of_ne hba).antisymm h.1 },
-  rintro (rfl | rfl),
-  { exact ⟨pred_le b, le_rfl⟩ },
-  { exact ⟨le_rfl, pred_le a⟩ }
-end
+theorem pred_le_le_iff {a b : α} : pred a ≤ b ∧ b ≤ a ↔ b = a ∨ b = pred a := by
+  constructor
+  · rintro h
+    rw [or_iff_not_imp_left]
+    exact fun hba => (le_pred_of_lt <| h.2.lt_of_ne hba).antisymm h.1
+    
+  rintro (rfl | rfl)
+  · exact ⟨pred_le b, le_rfl⟩
+    
+  · exact ⟨le_rfl, pred_le a⟩
+    
 
-lemma _root_.covby.pred_eq {a b : α} (h : a ⋖ b) : pred b = a :=
-(le_pred_of_lt h.lt).eq_of_not_gt $ λ h', h.2 h' $ pred_lt_of_not_minimal h.lt
+theorem _root_.covby.pred_eq {a b : α} (h : a ⋖ b) : pred b = a :=
+  (le_pred_of_lt h.lt).eq_of_not_gt fun h' => h.2 h' <| pred_lt_of_not_minimal h.lt
 
-section no_min_order
-variables [no_min_order α] {a b : α}
+section NoMinOrder
 
-lemma pred_injective : injective (pred : α → α) :=
-begin
-  rintro a b,
-  simp_rw [eq_iff_le_not_lt, pred_le_pred_iff, pred_lt_pred_iff],
-  exact id,
-end
+variable [NoMinOrder α] {a b : α}
 
-lemma pred_eq_pred_iff : pred a = pred b ↔ a = b :=
-pred_injective.eq_iff
+theorem pred_injective : Injective (pred : α → α) := by
+  rintro a b
+  simp_rw [eq_iff_le_not_lt, pred_le_pred_iff, pred_lt_pred_iff]
+  exact id
 
-lemma pred_ne_pred_iff : pred a ≠ pred b ↔ a ≠ b :=
-pred_injective.ne_iff
+theorem pred_eq_pred_iff : pred a = pred b ↔ a = b :=
+  pred_injective.eq_iff
 
-lemma pred_lt_iff_lt_or_eq : pred a < b ↔ (a < b ∨ a = b) :=
-pred_lt_iff.trans le_iff_lt_or_eq
+theorem pred_ne_pred_iff : pred a ≠ pred b ↔ a ≠ b :=
+  pred_injective.ne_iff
 
-lemma le_pred_iff_lt_or_eq : pred a ≤ b ↔ (a ≤ b ∨ pred a = b) :=
-by rw [←pred_lt_iff, ←pred_lt_iff, pred_lt_iff_lt_or_eq]
+theorem pred_lt_iff_lt_or_eq : pred a < b ↔ a < b ∨ a = b :=
+  pred_lt_iff.trans le_iff_lt_or_eqₓ
 
-lemma _root_.covby_iff_pred_eq : a ⋖ b ↔ pred b = a :=
-⟨covby.pred_eq, by { rintro rfl, exact pred_covby _ }⟩
+theorem le_pred_iff_lt_or_eq : pred a ≤ b ↔ a ≤ b ∨ pred a = b := by
+  rw [← pred_lt_iff, ← pred_lt_iff, pred_lt_iff_lt_or_eq]
 
-end no_min_order
+theorem _root_.covby_iff_pred_eq : a ⋖ b ↔ pred b = a :=
+  ⟨Covby.pred_eq, by
+    rintro rfl
+    exact pred_covby _⟩
 
-end partial_order
+end NoMinOrder
 
-section order_bot
-variables [partial_order α] [order_bot α] [pred_order α]
+end PartialOrderₓ
 
-@[simp] lemma pred_bot : pred (⊥ : α) = ⊥ :=
-(pred_le _).antisymm bot_le
+section OrderBot
 
-@[simp] lemma le_pred_iff_eq_bot {a : α} : a ≤ pred a ↔ a = ⊥ :=
-⟨λ h, eq_bot_of_minimal (minimal_of_le_pred h), λ h, by rw [h, pred_bot]⟩
+variable [PartialOrderₓ α] [OrderBot α] [PredOrder α]
 
-@[simp] lemma pred_lt_iff_ne_bot {a : α} : pred a < a ↔ a ≠ ⊥ :=
-begin
-  simp only [lt_iff_le_not_le, true_and, pred_le a],
-  exact not_iff_not.2 le_pred_iff_eq_bot,
-end
+@[simp]
+theorem pred_bot : pred (⊥ : α) = ⊥ :=
+  (pred_le _).antisymm bot_le
 
-end order_bot
+@[simp]
+theorem le_pred_iff_eq_bot {a : α} : a ≤ pred a ↔ a = ⊥ :=
+  ⟨fun h => eq_bot_of_minimal (minimal_of_le_pred h), fun h => by
+    rw [h, pred_bot]⟩
 
-section order_top
-variables [partial_order α] [order_top α] [pred_order α]
+@[simp]
+theorem pred_lt_iff_ne_bot {a : α} : pred a < a ↔ a ≠ ⊥ := by
+  simp only [lt_iff_le_not_leₓ, true_andₓ, pred_le a]
+  exact not_iff_not.2 le_pred_iff_eq_bot
 
-lemma pred_lt_top [nontrivial α] (a : α) : pred a < ⊤ :=
-begin
-  obtain ⟨b, hb⟩ := exists_ne (⊤ : α),
-  refine lt_top_iff_ne_top.2 (λ h, _),
-  have := eq_top_iff.2 (h.ge.trans (pred_le a)),
-  rw this at h,
-  exact minimal_of_le_pred h.ge (lt_top_iff_ne_top.2 hb),
-end
+end OrderBot
 
-lemma pred_ne_top [nontrivial α] (a : α) : pred a ≠ ⊤ :=
-(pred_lt_top a).ne
+section OrderTop
 
-end order_top
+variable [PartialOrderₓ α] [OrderTop α] [PredOrder α]
 
-section linear_order
-variables [linear_order α] {a b : α}
+theorem pred_lt_top [Nontrivial α] (a : α) : pred a < ⊤ := by
+  obtain ⟨b, hb⟩ := exists_ne (⊤ : α)
+  refine' lt_top_iff_ne_top.2 fun h => _
+  have := eq_top_iff.2 (h.ge.trans (pred_le a))
+  rw [this] at h
+  exact minimal_of_le_pred h.ge (lt_top_iff_ne_top.2 hb)
+
+theorem pred_ne_top [Nontrivial α] (a : α) : pred a ≠ ⊤ :=
+  (pred_lt_top a).Ne
+
+end OrderTop
+
+section LinearOrderₓ
+
+variable [LinearOrderₓ α] {a b : α}
 
 /-- A constructor for `pred_order α` usable when `α` is a linear order with no maximal element. -/
-def of_le_pred_iff (pred : α → α) (hle_pred_iff : ∀ {a b}, a ≤ pred b ↔ a < b) :
-  pred_order α :=
-{ pred := pred,
-  pred_le := λ a, (hle_pred_iff.1 le_rfl).le,
-  minimal_of_le_pred := λ a ha, (lt_irrefl a (hle_pred_iff.1 ha)).elim,
-  le_pred_of_lt := λ a b, hle_pred_iff.2,
-  le_of_pred_lt := λ a b h, le_of_not_lt ((not_congr hle_pred_iff).1 h.not_le) }
+def ofLePredIff (pred : α → α) (hle_pred_iff : ∀ {a b}, a ≤ pred b ↔ a < b) : PredOrder α :=
+  { pred, pred_le := fun a => (hle_pred_iff.1 le_rfl).le,
+    minimal_of_le_pred := fun a ha => (lt_irreflₓ a (hle_pred_iff.1 ha)).elim,
+    le_pred_of_lt := fun a b => hle_pred_iff.2,
+    le_of_pred_lt := fun a b h => le_of_not_ltₓ ((not_congr hle_pred_iff).1 h.not_le) }
 
-end linear_order
+end LinearOrderₓ
 
-section complete_lattice
-variables [complete_lattice α] [pred_order α]
+section CompleteLattice
 
-lemma pred_eq_supr (a : α) : pred a = ⨆ (b : α) (h : b < a), b :=
-begin
-  refine le_antisymm _ (supr_le (λ b, supr_le le_pred_of_lt)),
-  obtain rfl | ha := eq_or_ne a ⊥,
-  { rw pred_bot,
-    exact bot_le },
-  exact @le_bsupr _ _ _ (λ b, b < a) (λ a _, a) (pred a) (pred_lt_iff_ne_bot.2 ha),
-end
+variable [CompleteLattice α] [PredOrder α]
 
-end complete_lattice
+theorem pred_eq_supr (a : α) : pred a = ⨆ (b : α) (h : b < a), b := by
+  refine' le_antisymmₓ _ (supr_le fun b => supr_le le_pred_of_lt)
+  obtain rfl | ha := eq_or_ne a ⊥
+  · rw [pred_bot]
+    exact bot_le
+    
+  exact @le_bsupr _ _ _ (fun b => b < a) (fun a _ => a) (pred a) (pred_lt_iff_ne_bot.2 ha)
 
-section intervals
-variables [preorder α] [pred_order α]
+end CompleteLattice
 
-lemma Ici_eq_Ioi_pred' {a : α} (ha : ¬ is_min a) :
-  set.Ici a = set.Ioi (pred_order.pred a) :=
-by { ext1 x, rw [set.mem_Ici, set.mem_Ioi], exact (pred_lt_iff_of_not_is_min ha).symm, }
+section Intervals
 
-lemma Ici_eq_Ioi_pred [no_min_order α] (a : α) :
-  set.Ici a = set.Ioi (pred_order.pred a) :=
-Ici_eq_Ioi_pred' (not_is_min a)
+variable [Preorderₓ α] [PredOrder α]
 
-lemma Iio_eq_Iic_pred' {a : α} (ha : ¬ is_min a) :
-  set.Iio a = set.Iic (pred_order.pred a) :=
-by { ext1 x, rw [set.mem_Iio, set.mem_Iic], exact (le_pred_iff_of_not_is_min ha).symm, }
+theorem Ici_eq_Ioi_pred' {a : α} (ha : ¬IsMin a) : Set.Ici a = Set.Ioi (PredOrder.pred a) := by
+  ext1 x
+  rw [Set.mem_Ici, Set.mem_Ioi]
+  exact (pred_lt_iff_of_not_is_min ha).symm
 
-lemma Iio_eq_Iic_pred [no_min_order α] (a : α) :
-  set.Iio a = set.Iic (pred_order.pred a) :=
-Iio_eq_Iic_pred' (not_is_min a)
+theorem Ici_eq_Ioi_pred [NoMinOrder α] (a : α) : Set.Ici a = Set.Ioi (PredOrder.pred a) :=
+  Ici_eq_Ioi_pred' (not_is_min a)
 
-end intervals
+theorem Iio_eq_Iic_pred' {a : α} (ha : ¬IsMin a) : Set.Iio a = Set.Iic (PredOrder.pred a) := by
+  ext1 x
+  rw [Set.mem_Iio, Set.mem_Iic]
+  exact (le_pred_iff_of_not_is_min ha).symm
 
-end pred_order
+theorem Iio_eq_Iic_pred [NoMinOrder α] (a : α) : Set.Iio a = Set.Iic (PredOrder.pred a) :=
+  Iio_eq_Iic_pred' (not_is_min a)
 
-open succ_order pred_order
+end Intervals
+
+end PredOrder
+
+open SuccOrder PredOrder
 
 /-! ### Successor-predecessor orders -/
 
-section succ_pred_order
-variables [partial_order α] [succ_order α] [pred_order α] {a b : α}
 
-protected lemma _root_.has_lt.lt.succ_pred (h : b < a) : succ (pred a) = a := h.pred_covby.succ_eq
-protected lemma _root_.has_lt.lt.pred_succ (h : a < b) : pred (succ a) = a := h.covby_succ.pred_eq
+section SuccPredOrder
 
-@[simp] lemma succ_pred_of_nonempty_Iio {a : α} (h : (set.Iio a).nonempty) : succ (pred a) = a :=
-has_lt.lt.succ_pred h.some_mem
+variable [PartialOrderₓ α] [SuccOrder α] [PredOrder α] {a b : α}
 
-@[simp] lemma pred_succ_of_nonempty_Ioi {a : α} (h : (set.Ioi a).nonempty) : pred (succ a) = a :=
-has_lt.lt.pred_succ h.some_mem
+protected theorem _root_.has_lt.lt.succ_pred (h : b < a) : succ (pred a) = a :=
+  h.pred_covby.succ_eq
 
-@[simp] lemma succ_pred [no_min_order α] (a : α) : succ (pred a) = a := (pred_covby _).succ_eq
-@[simp] lemma pred_succ [no_max_order α] (a : α) : pred (succ a) = a := (covby_succ _).pred_eq
+protected theorem _root_.has_lt.lt.pred_succ (h : a < b) : pred (succ a) = a :=
+  h.covby_succ.pred_eq
 
-end succ_pred_order
+@[simp]
+theorem succ_pred_of_nonempty_Iio {a : α} (h : (Set.Iio a).Nonempty) : succ (pred a) = a :=
+  LT.lt.succ_pred h.some_mem
+
+@[simp]
+theorem pred_succ_of_nonempty_Ioi {a : α} (h : (Set.Ioi a).Nonempty) : pred (succ a) = a :=
+  LT.lt.pred_succ h.some_mem
+
+@[simp]
+theorem succ_pred [NoMinOrder α] (a : α) : succ (pred a) = a :=
+  (pred_covby _).succ_eq
+
+@[simp]
+theorem pred_succ [NoMaxOrder α] (a : α) : pred (succ a) = a :=
+  (covby_succ _).pred_eq
+
+end SuccPredOrder
 
 /-! ### Dual order -/
 
-section order_dual
-variables [preorder α]
 
-instance [pred_order α] : succ_order (order_dual α) :=
-{ succ := (pred : α → α),
-  le_succ := pred_le,
-  maximal_of_succ_le := minimal_of_le_pred,
-  succ_le_of_lt := λ a b h, le_pred_of_lt h,
-  le_of_lt_succ := λ a b, le_of_pred_lt }
+section OrderDual
 
-instance [succ_order α] : pred_order (order_dual α) :=
-{ pred := (succ : α → α),
-  pred_le := le_succ,
-  minimal_of_le_pred := maximal_of_succ_le,
-  le_pred_of_lt := λ a b h, succ_le_of_lt h,
-  le_of_pred_lt := λ a b, le_of_lt_succ }
+variable [Preorderₓ α]
 
-end order_dual
+instance [PredOrder α] : SuccOrder (OrderDual α) where
+  succ := (pred : α → α)
+  le_succ := pred_le
+  maximal_of_succ_le := minimal_of_le_pred
+  succ_le_of_lt := fun a b h => le_pred_of_lt h
+  le_of_lt_succ := fun a b => le_of_pred_lt
+
+instance [SuccOrder α] : PredOrder (OrderDual α) where
+  pred := (succ : α → α)
+  pred_le := le_succ
+  minimal_of_le_pred := maximal_of_succ_le
+  le_pred_of_lt := fun a b h => succ_le_of_lt h
+  le_of_pred_lt := fun a b => le_of_lt_succ
+
+end OrderDual
 
 /-! ### `with_bot`, `with_top`
 Adding a greatest/least element to a `succ_order` or to a `pred_order`.
@@ -596,383 +639,441 @@ where "preserves `(succ/pred)`" means
 `(succ/pred)_order α → (succ/pred)_order ((with_top/with_bot) α)`.
 -/
 
-section with_top
-open with_top
+
+section WithTop
+
+open WithTop
 
 /-! #### Adding a `⊤` to an `order_top` -/
 
-instance [decidable_eq α] [partial_order α] [order_top α] [succ_order α] :
-  succ_order (with_top α) :=
-{ succ := λ a, match a with
-    | ⊤        := ⊤
-    | (some a) := ite (a = ⊤) ⊤ (some (succ a))
-  end,
-  le_succ := λ a, begin
-    cases a,
-    { exact le_top },
-    change ((≤) : with_top α → with_top α → Prop) _ (ite _ _ _),
-    split_ifs,
-    { exact le_top },
-    { exact some_le_some.2 (le_succ a) }
-  end,
-  maximal_of_succ_le := λ a ha b h, begin
-    cases a,
-    { exact not_top_lt h },
-    change ((≤) : with_top α → with_top α → Prop) (ite _ _ _) _ at ha,
-    split_ifs at ha with ha',
-    { exact not_top_lt (ha.trans_lt h) },
-    { rw [some_le_some, succ_le_iff_eq_top] at ha,
-      exact ha' ha }
-  end,
-  succ_le_of_lt := λ a b h, begin
-    cases b,
-    { exact le_top },
-    cases a,
-    { exact (not_top_lt h).elim },
-    rw some_lt_some at h,
-    change ((≤) : with_top α → with_top α → Prop) (ite _ _ _) _,
-    split_ifs with ha,
-    { rw ha at h,
-      exact (not_top_lt h).elim },
-    { exact some_le_some.2 (succ_le_of_lt h) }
-  end,
-  le_of_lt_succ := λ a b h, begin
-    cases a,
-    { exact (not_top_lt h).elim },
-    cases b,
-    { exact le_top },
-    change ((<) : with_top α → with_top α → Prop) _ (ite _ _ _) at h,
-    rw some_le_some,
-    split_ifs at h with hb,
-    { rw hb,
-      exact le_top },
-    { exact le_of_lt_succ (some_lt_some.1 h) }
-  end }
 
-instance [partial_order α] [order_top α] [pred_order α] : pred_order (with_top α) :=
-{ pred := λ a, match a with
-    | ⊤        := some ⊤
-    | (some a) := some (pred a)
-  end,
-  pred_le := λ a, match a with
-    | ⊤        := le_top
-    | (some a) := some_le_some.2 (pred_le a)
-  end,
-  minimal_of_le_pred := λ a ha b h, begin
-    cases a,
-    { exact (coe_lt_top (⊤ : α)).not_le ha },
-    cases b,
-    { exact h.not_le le_top },
-    { exact minimal_of_le_pred (some_le_some.1 ha) (some_lt_some.1 h) }
-  end,
-  le_pred_of_lt := λ a b h, begin
-    cases a,
-    { exact ((le_top).not_lt h).elim },
-    cases b,
-    { exact some_le_some.2 le_top },
-    exact some_le_some.2 (le_pred_of_lt $ some_lt_some.1 h),
-  end,
-  le_of_pred_lt := λ a b h, begin
-    cases b,
-    { exact le_top },
-    cases a,
-    { exact (not_top_lt $ some_lt_some.1 h).elim },
-    { exact some_le_some.2 (le_of_pred_lt $ some_lt_some.1 h) }
-  end }
+instance [DecidableEq α] [PartialOrderₓ α] [OrderTop α] [SuccOrder α] : SuccOrder (WithTop α) where
+  succ := fun a =>
+    match a with
+    | ⊤ => ⊤
+    | some a => ite (a = ⊤) ⊤ (some (succ a))
+  le_succ := fun a => by
+    cases a
+    · exact le_top
+      
+    change ((· ≤ ·) : WithTop α → WithTop α → Prop) _ (ite _ _ _)
+    split_ifs
+    · exact le_top
+      
+    · exact some_le_some.2 (le_succ a)
+      
+  maximal_of_succ_le := fun a ha b h => by
+    cases a
+    · exact not_top_lt h
+      
+    change ((· ≤ ·) : WithTop α → WithTop α → Prop) (ite _ _ _) _ at ha
+    split_ifs  at ha with ha'
+    · exact not_top_lt (ha.trans_lt h)
+      
+    · rw [some_le_some, succ_le_iff_eq_top] at ha
+      exact ha' ha
+      
+  succ_le_of_lt := fun a b h => by
+    cases b
+    · exact le_top
+      
+    cases a
+    · exact (not_top_lt h).elim
+      
+    rw [some_lt_some] at h
+    change ((· ≤ ·) : WithTop α → WithTop α → Prop) (ite _ _ _) _
+    split_ifs with ha
+    · rw [ha] at h
+      exact (not_top_lt h).elim
+      
+    · exact some_le_some.2 (succ_le_of_lt h)
+      
+  le_of_lt_succ := fun a b h => by
+    cases a
+    · exact (not_top_lt h).elim
+      
+    cases b
+    · exact le_top
+      
+    change ((· < ·) : WithTop α → WithTop α → Prop) _ (ite _ _ _) at h
+    rw [some_le_some]
+    split_ifs  at h with hb
+    · rw [hb]
+      exact le_top
+      
+    · exact le_of_lt_succ (some_lt_some.1 h)
+      
+
+instance [PartialOrderₓ α] [OrderTop α] [PredOrder α] : PredOrder (WithTop α) where
+  pred := fun a =>
+    match a with
+    | ⊤ => some ⊤
+    | some a => some (pred a)
+  pred_le := fun a =>
+    match a with
+    | ⊤ => le_top
+    | some a => some_le_some.2 (pred_le a)
+  minimal_of_le_pred := fun a ha b h => by
+    cases a
+    · exact (coe_lt_top (⊤ : α)).not_le ha
+      
+    cases b
+    · exact h.not_le le_top
+      
+    · exact minimal_of_le_pred (some_le_some.1 ha) (some_lt_some.1 h)
+      
+  le_pred_of_lt := fun a b h => by
+    cases a
+    · exact (le_top.not_lt h).elim
+      
+    cases b
+    · exact some_le_some.2 le_top
+      
+    exact some_le_some.2 (le_pred_of_lt <| some_lt_some.1 h)
+  le_of_pred_lt := fun a b h => by
+    cases b
+    · exact le_top
+      
+    cases a
+    · exact (not_top_lt <| some_lt_some.1 h).elim
+      
+    · exact some_le_some.2 (le_of_pred_lt <| some_lt_some.1 h)
+      
 
 /-! #### Adding a `⊤` to a `no_max_order` -/
 
-instance with_top.succ_order_of_no_max_order [partial_order α] [no_max_order α] [succ_order α] :
-  succ_order (with_top α) :=
-{ succ := λ a, match a with
-    | ⊤        := ⊤
-    | (some a) := some (succ a)
-  end,
-  le_succ := λ a, begin
-    cases a,
-    { exact le_top },
-    { exact some_le_some.2 (le_succ a) }
-  end,
-  maximal_of_succ_le := λ a ha b h, begin
-    cases a,
-    { exact not_top_lt h },
-    { exact not_exists.2 (maximal_of_succ_le (some_le_some.1 ha)) (exists_gt a) }
-  end,
-  succ_le_of_lt := λ a b h, begin
-    cases a,
-    { exact (not_top_lt h).elim },
-    cases b,
-    { exact le_top} ,
-    { exact some_le_some.2 (succ_le_of_lt $ some_lt_some.1 h) }
-  end,
-  le_of_lt_succ := λ a b h, begin
-    cases a,
-    { exact (not_top_lt h).elim },
-    cases b,
-    { exact le_top },
-    { exact some_le_some.2 (le_of_lt_succ $ some_lt_some.1 h) }
-  end }
 
-instance [partial_order α] [no_max_order α] [hα : nonempty α] :
-  is_empty (pred_order (with_top α)) :=
-⟨begin
-  introI,
-  set b := pred (⊤ : with_top α) with h,
-  cases pred (⊤ : with_top α) with a ha; change b with pred ⊤ at h,
-  { exact hα.elim (λ a, minimal_of_le_pred h.ge (coe_lt_top a)) },
-  { obtain ⟨c, hc⟩ := exists_gt a,
-    rw [←some_lt_some, ←h] at hc,
-    exact (le_of_pred_lt hc).not_lt (some_lt_none _) }
-end⟩
+instance WithTop.succOrderOfNoMaxOrder [PartialOrderₓ α] [NoMaxOrder α] [SuccOrder α] : SuccOrder (WithTop α) where
+  succ := fun a =>
+    match a with
+    | ⊤ => ⊤
+    | some a => some (succ a)
+  le_succ := fun a => by
+    cases a
+    · exact le_top
+      
+    · exact some_le_some.2 (le_succ a)
+      
+  maximal_of_succ_le := fun a ha b h => by
+    cases a
+    · exact not_top_lt h
+      
+    · exact not_exists.2 (maximal_of_succ_le (some_le_some.1 ha)) (exists_gt a)
+      
+  succ_le_of_lt := fun a b h => by
+    cases a
+    · exact (not_top_lt h).elim
+      
+    cases b
+    · exact le_top
+      
+    · exact some_le_some.2 (succ_le_of_lt <| some_lt_some.1 h)
+      
+  le_of_lt_succ := fun a b h => by
+    cases a
+    · exact (not_top_lt h).elim
+      
+    cases b
+    · exact le_top
+      
+    · exact some_le_some.2 (le_of_lt_succ <| some_lt_some.1 h)
+      
 
-end with_top
+instance [PartialOrderₓ α] [NoMaxOrder α] [hα : Nonempty α] : IsEmpty (PredOrder (WithTop α)) :=
+  ⟨by
+    intro
+    set b := pred (⊤ : WithTop α) with h
+    cases' pred (⊤ : WithTop α) with a ha <;> change b with pred ⊤ at h
+    · exact hα.elim fun a => minimal_of_le_pred h.ge (coe_lt_top a)
+      
+    · obtain ⟨c, hc⟩ := exists_gt a
+      rw [← some_lt_some, ← h] at hc
+      exact (le_of_pred_lt hc).not_lt (some_lt_none _)
+      ⟩
 
-section with_bot
-open with_bot
+end WithTop
+
+section WithBot
+
+open WithBot
 
 /-! #### Adding a `⊥` to a `bot_order` -/
 
-instance [preorder α] [order_bot α] [succ_order α] : succ_order (with_bot α) :=
-{ succ := λ a, match a with
-    | ⊥        := some ⊥
-    | (some a) := some (succ a)
-  end,
-  le_succ := λ a, match a with
-    | ⊥        := bot_le
-    | (some a) := some_le_some.2 (le_succ a)
-  end,
-  maximal_of_succ_le := λ a ha b h, begin
-    cases a,
-    { exact (none_lt_some (⊥ : α)).not_le ha },
-    cases b,
-    { exact not_lt_bot h },
-    { exact maximal_of_succ_le (some_le_some.1 ha) (some_lt_some.1 h) }
-  end,
-  succ_le_of_lt := λ a b h, begin
-    cases b,
-    { exact (not_lt_bot h).elim },
-    cases a,
-    { exact some_le_some.2 bot_le },
-    { exact some_le_some.2 (succ_le_of_lt $ some_lt_some.1 h) }
-  end,
-  le_of_lt_succ := λ a b h, begin
-    cases a,
-    { exact bot_le },
-    cases b,
-    { exact (not_lt_bot $ some_lt_some.1 h).elim },
-    { exact some_le_some.2 (le_of_lt_succ $ some_lt_some.1 h) }
-  end }
 
-instance [decidable_eq α] [partial_order α] [order_bot α] [pred_order α] :
-  pred_order (with_bot α) :=
-{ pred := λ a, match a with
-    | ⊥        := ⊥
-    | (some a) := ite (a = ⊥) ⊥ (some (pred a))
-  end,
-  pred_le := λ a, begin
-    cases a,
-    { exact bot_le },
-    change (ite _ _ _ : with_bot α) ≤ some a,
-    split_ifs,
-    { exact bot_le },
-    { exact some_le_some.2 (pred_le a) }
-  end,
-  minimal_of_le_pred := λ a ha b h, begin
-    cases a,
-    { exact not_lt_bot h },
-    change ((≤) : with_bot α → with_bot α → Prop) _ (ite _ _ _) at ha,
-    split_ifs at ha with ha',
-    { exact not_lt_bot (h.trans_le ha) },
-    { rw [some_le_some, le_pred_iff_eq_bot] at ha,
-      exact ha' ha }
-  end,
-  le_pred_of_lt := λ a b h, begin
-    cases a,
-    { exact bot_le },
-    cases b,
-    { exact (not_lt_bot h).elim },
-    rw some_lt_some at h,
-    change ((≤) : with_bot α → with_bot α → Prop) _ (ite _ _ _),
-    split_ifs with hb,
-    { rw hb at h,
-      exact (not_lt_bot h).elim },
-    { exact some_le_some.2 (le_pred_of_lt h) }
-  end,
-  le_of_pred_lt := λ a b h, begin
-    cases b,
-    { exact (not_lt_bot h).elim },
-    cases a,
-    { exact bot_le },
-    change ((<) : with_bot α → with_bot α → Prop) (ite _ _ _) _ at h,
-    rw some_le_some,
-    split_ifs at h with ha,
-    { rw ha,
-      exact bot_le },
-    { exact le_of_pred_lt (some_lt_some.1 h) }
-  end }
+instance [Preorderₓ α] [OrderBot α] [SuccOrder α] : SuccOrder (WithBot α) where
+  succ := fun a =>
+    match a with
+    | ⊥ => some ⊥
+    | some a => some (succ a)
+  le_succ := fun a =>
+    match a with
+    | ⊥ => bot_le
+    | some a => some_le_some.2 (le_succ a)
+  maximal_of_succ_le := fun a ha b h => by
+    cases a
+    · exact (none_lt_some (⊥ : α)).not_le ha
+      
+    cases b
+    · exact not_lt_bot h
+      
+    · exact maximal_of_succ_le (some_le_some.1 ha) (some_lt_some.1 h)
+      
+  succ_le_of_lt := fun a b h => by
+    cases b
+    · exact (not_lt_bot h).elim
+      
+    cases a
+    · exact some_le_some.2 bot_le
+      
+    · exact some_le_some.2 (succ_le_of_lt <| some_lt_some.1 h)
+      
+  le_of_lt_succ := fun a b h => by
+    cases a
+    · exact bot_le
+      
+    cases b
+    · exact (not_lt_bot <| some_lt_some.1 h).elim
+      
+    · exact some_le_some.2 (le_of_lt_succ <| some_lt_some.1 h)
+      
+
+instance [DecidableEq α] [PartialOrderₓ α] [OrderBot α] [PredOrder α] : PredOrder (WithBot α) where
+  pred := fun a =>
+    match a with
+    | ⊥ => ⊥
+    | some a => ite (a = ⊥) ⊥ (some (pred a))
+  pred_le := fun a => by
+    cases a
+    · exact bot_le
+      
+    change (ite _ _ _ : WithBot α) ≤ some a
+    split_ifs
+    · exact bot_le
+      
+    · exact some_le_some.2 (pred_le a)
+      
+  minimal_of_le_pred := fun a ha b h => by
+    cases a
+    · exact not_lt_bot h
+      
+    change ((· ≤ ·) : WithBot α → WithBot α → Prop) _ (ite _ _ _) at ha
+    split_ifs  at ha with ha'
+    · exact not_lt_bot (h.trans_le ha)
+      
+    · rw [some_le_some, le_pred_iff_eq_bot] at ha
+      exact ha' ha
+      
+  le_pred_of_lt := fun a b h => by
+    cases a
+    · exact bot_le
+      
+    cases b
+    · exact (not_lt_bot h).elim
+      
+    rw [some_lt_some] at h
+    change ((· ≤ ·) : WithBot α → WithBot α → Prop) _ (ite _ _ _)
+    split_ifs with hb
+    · rw [hb] at h
+      exact (not_lt_bot h).elim
+      
+    · exact some_le_some.2 (le_pred_of_lt h)
+      
+  le_of_pred_lt := fun a b h => by
+    cases b
+    · exact (not_lt_bot h).elim
+      
+    cases a
+    · exact bot_le
+      
+    change ((· < ·) : WithBot α → WithBot α → Prop) (ite _ _ _) _ at h
+    rw [some_le_some]
+    split_ifs  at h with ha
+    · rw [ha]
+      exact bot_le
+      
+    · exact le_of_pred_lt (some_lt_some.1 h)
+      
 
 /-! #### Adding a `⊥` to a `no_min_order` -/
 
-instance [partial_order α] [no_min_order α] [hα : nonempty α] :
-  is_empty (succ_order (with_bot α)) :=
-⟨begin
-  introI,
-  set b : with_bot α := succ ⊥ with h,
-  cases succ (⊥ : with_bot α) with a ha; change b with succ ⊥ at h,
-  { exact hα.elim (λ a, maximal_of_succ_le h.le (bot_lt_coe a)) },
-  { obtain ⟨c, hc⟩ := exists_lt a,
-    rw [←some_lt_some, ←h] at hc,
-    exact (le_of_lt_succ hc).not_lt (none_lt_some _) }
-end⟩
 
-instance with_bot.pred_order_of_no_min_order [partial_order α] [no_min_order α] [pred_order α] :
-  pred_order (with_bot α) :=
-{ pred := λ a, match a with
-    | ⊥        := ⊥
-    | (some a) := some (pred a)
-  end,
-  pred_le := λ a, begin
-    cases a,
-    { exact bot_le },
-    { exact some_le_some.2 (pred_le a) }
-  end,
-  minimal_of_le_pred := λ a ha b h, begin
-    cases a,
-    { exact not_lt_bot h },
-    { exact not_exists.2 (minimal_of_le_pred (some_le_some.1 ha)) (exists_lt a) }
-  end,
-  le_pred_of_lt := λ a b h, begin
-    cases b,
-    { exact (not_lt_bot h).elim },
-    cases a,
-    { exact bot_le },
-    { exact some_le_some.2 (le_pred_of_lt $ some_lt_some.1 h) }
-  end,
-  le_of_pred_lt := λ a b h, begin
-    cases b,
-    { exact (not_lt_bot h).elim },
-    cases a,
-    { exact bot_le },
-    { exact some_le_some.2 (le_of_pred_lt $ some_lt_some.1 h) }
-  end }
+instance [PartialOrderₓ α] [NoMinOrder α] [hα : Nonempty α] : IsEmpty (SuccOrder (WithBot α)) :=
+  ⟨by
+    intro
+    set b : WithBot α := succ ⊥ with h
+    cases' succ (⊥ : WithBot α) with a ha <;> change b with succ ⊥ at h
+    · exact hα.elim fun a => maximal_of_succ_le h.le (bot_lt_coe a)
+      
+    · obtain ⟨c, hc⟩ := exists_lt a
+      rw [← some_lt_some, ← h] at hc
+      exact (le_of_lt_succ hc).not_lt (none_lt_some _)
+      ⟩
 
-end with_bot
+instance WithBot.predOrderOfNoMinOrder [PartialOrderₓ α] [NoMinOrder α] [PredOrder α] : PredOrder (WithBot α) where
+  pred := fun a =>
+    match a with
+    | ⊥ => ⊥
+    | some a => some (pred a)
+  pred_le := fun a => by
+    cases a
+    · exact bot_le
+      
+    · exact some_le_some.2 (pred_le a)
+      
+  minimal_of_le_pred := fun a ha b h => by
+    cases a
+    · exact not_lt_bot h
+      
+    · exact not_exists.2 (minimal_of_le_pred (some_le_some.1 ha)) (exists_lt a)
+      
+  le_pred_of_lt := fun a b h => by
+    cases b
+    · exact (not_lt_bot h).elim
+      
+    cases a
+    · exact bot_le
+      
+    · exact some_le_some.2 (le_pred_of_lt <| some_lt_some.1 h)
+      
+  le_of_pred_lt := fun a b h => by
+    cases b
+    · exact (not_lt_bot h).elim
+      
+    cases a
+    · exact bot_le
+      
+    · exact some_le_some.2 (le_of_pred_lt <| some_lt_some.1 h)
+      
+
+end WithBot
 
 /-! ### Archimedeanness -/
 
+
 /-- A `succ_order` is succ-archimedean if one can go from any two comparable elements by iterating
 `succ` -/
-class is_succ_archimedean (α : Type*) [preorder α] [succ_order α] : Prop :=
-(exists_succ_iterate_of_le {a b : α} (h : a ≤ b) : ∃ n, succ^[n] a = b)
+class IsSuccArchimedean (α : Type _) [Preorderₓ α] [SuccOrder α] : Prop where
+  exists_succ_iterate_of_le {a b : α} (h : a ≤ b) : ∃ n, (succ^[n]) a = b
 
 /-- A `pred_order` is pred-archimedean if one can go from any two comparable elements by iterating
 `pred` -/
-class is_pred_archimedean (α : Type*) [preorder α] [pred_order α] : Prop :=
-(exists_pred_iterate_of_le {a b : α} (h : a ≤ b) : ∃ n, pred^[n] b = a)
+class IsPredArchimedean (α : Type _) [Preorderₓ α] [PredOrder α] : Prop where
+  exists_pred_iterate_of_le {a b : α} (h : a ≤ b) : ∃ n, (pred^[n]) b = a
 
-export is_succ_archimedean (exists_succ_iterate_of_le)
-export is_pred_archimedean (exists_pred_iterate_of_le)
+export IsSuccArchimedean (exists_succ_iterate_of_le)
 
-section preorder
-variables [preorder α]
+export IsPredArchimedean (exists_pred_iterate_of_le)
 
-section succ_order
-variables [succ_order α] [is_succ_archimedean α] {a b : α}
+section Preorderₓ
 
-instance : is_pred_archimedean (order_dual α) :=
-{ exists_pred_iterate_of_le := λ a b h, by convert @exists_succ_iterate_of_le α _ _ _ _ _ h }
+variable [Preorderₓ α]
 
-lemma has_le.le.exists_succ_iterate (h : a ≤ b) : ∃ n, succ^[n] a = b :=
-exists_succ_iterate_of_le h
+section SuccOrder
 
-lemma exists_succ_iterate_iff_le : (∃ n, succ^[n] a = b) ↔ a ≤ b :=
-begin
-  refine ⟨_, exists_succ_iterate_of_le⟩,
-  rintro ⟨n, rfl⟩,
-  exact id_le_iterate_of_id_le le_succ n a,
-end
+variable [SuccOrder α] [IsSuccArchimedean α] {a b : α}
+
+instance : IsPredArchimedean (OrderDual α) where
+  exists_pred_iterate_of_le := fun a b h => by
+    convert @exists_succ_iterate_of_le α _ _ _ _ _ h
+
+theorem LE.le.exists_succ_iterate (h : a ≤ b) : ∃ n, (succ^[n]) a = b :=
+  exists_succ_iterate_of_le h
+
+theorem exists_succ_iterate_iff_le : (∃ n, (succ^[n]) a = b) ↔ a ≤ b := by
+  refine' ⟨_, exists_succ_iterate_of_le⟩
+  rintro ⟨n, rfl⟩
+  exact id_le_iterate_of_id_le le_succ n a
 
 /-- Induction principle on a type with a `succ_order` for all elements above a given element `m`. -/
-@[elab_as_eliminator] lemma succ.rec {P : α → Prop} {m : α}
-  (h0 : P m) (h1 : ∀ n, m ≤ n → P n → P (succ n)) ⦃n : α⦄ (hmn : m ≤ n) : P n :=
-begin
-  obtain ⟨n, rfl⟩ := hmn.exists_succ_iterate, clear hmn,
-  induction n with n ih,
-  { exact h0 },
-  { rw [function.iterate_succ_apply'], exact h1 _ (id_le_iterate_of_id_le le_succ n m) ih }
-end
+@[elab_as_eliminator]
+theorem Succ.rec {P : α → Prop} {m : α} (h0 : P m) (h1 : ∀ n, m ≤ n → P n → P (succ n)) ⦃n : α⦄ (hmn : m ≤ n) : P n :=
+  by
+  obtain ⟨n, rfl⟩ := hmn.exists_succ_iterate
+  clear hmn
+  induction' n with n ih
+  · exact h0
+    
+  · rw [Function.iterate_succ_apply']
+    exact h1 _ (id_le_iterate_of_id_le le_succ n m) ih
+    
 
-lemma succ.rec_iff {p : α → Prop} (hsucc : ∀ a, p a ↔ p (succ a)) {a b : α} (h : a ≤ b) :
-  p a ↔ p b :=
-begin
-  obtain ⟨n, rfl⟩ := h.exists_succ_iterate,
-  exact iterate.rec (λ b, p a ↔ p b) (λ c hc, hc.trans (hsucc _)) iff.rfl n,
-end
+theorem Succ.rec_iff {p : α → Prop} (hsucc : ∀ a, p a ↔ p (succ a)) {a b : α} (h : a ≤ b) : p a ↔ p b := by
+  obtain ⟨n, rfl⟩ := h.exists_succ_iterate
+  exact iterate.rec (fun b => p a ↔ p b) (fun c hc => hc.trans (hsucc _)) Iff.rfl n
 
-end succ_order
+end SuccOrder
 
-section pred_order
-variables [pred_order α] [is_pred_archimedean α] {a b : α}
+section PredOrder
 
-instance : is_succ_archimedean (order_dual α) :=
-{ exists_succ_iterate_of_le := λ a b h, by convert @exists_pred_iterate_of_le α _ _ _ _ _ h }
+variable [PredOrder α] [IsPredArchimedean α] {a b : α}
 
-lemma has_le.le.exists_pred_iterate (h : a ≤ b) : ∃ n, pred^[n] b = a :=
-exists_pred_iterate_of_le h
+instance : IsSuccArchimedean (OrderDual α) where
+  exists_succ_iterate_of_le := fun a b h => by
+    convert @exists_pred_iterate_of_le α _ _ _ _ _ h
 
-lemma exists_pred_iterate_iff_le : (∃ n, pred^[n] b = a) ↔ a ≤ b :=
-@exists_succ_iterate_iff_le (order_dual α) _ _ _ _ _
+theorem LE.le.exists_pred_iterate (h : a ≤ b) : ∃ n, (pred^[n]) b = a :=
+  exists_pred_iterate_of_le h
+
+theorem exists_pred_iterate_iff_le : (∃ n, (pred^[n]) b = a) ↔ a ≤ b :=
+  @exists_succ_iterate_iff_le (OrderDual α) _ _ _ _ _
 
 /-- Induction principle on a type with a `pred_order` for all elements below a given element `m`. -/
-@[elab_as_eliminator] lemma pred.rec {P : α → Prop} {m : α}
-  (h0 : P m) (h1 : ∀ n, n ≤ m → P n → P (pred n)) ⦃n : α⦄ (hmn : n ≤ m) : P n :=
-@succ.rec (order_dual α) _ _ _ _ _ h0 h1 _ hmn
+@[elab_as_eliminator]
+theorem Pred.rec {P : α → Prop} {m : α} (h0 : P m) (h1 : ∀ n, n ≤ m → P n → P (pred n)) ⦃n : α⦄ (hmn : n ≤ m) : P n :=
+  @Succ.rec (OrderDual α) _ _ _ _ _ h0 h1 _ hmn
 
-lemma pred.rec_iff {p : α → Prop} (hsucc : ∀ a, p a ↔ p (pred a)) {a b : α} (h : a ≤ b) :
-  p a ↔ p b :=
-(@succ.rec_iff (order_dual α) _ _ _ _ hsucc _ _ h).symm
+theorem Pred.rec_iff {p : α → Prop} (hsucc : ∀ a, p a ↔ p (pred a)) {a b : α} (h : a ≤ b) : p a ↔ p b :=
+  (@Succ.rec_iff (OrderDual α) _ _ _ _ hsucc _ _ h).symm
 
-end pred_order
-end preorder
+end PredOrder
 
-section linear_order
-variables [linear_order α]
+end Preorderₓ
 
-section succ_order
-variables [succ_order α] [is_succ_archimedean α] {a b : α}
+section LinearOrderₓ
 
-lemma exists_succ_iterate_or : (∃ n, succ^[n] a = b) ∨ ∃ n, succ^[n] b = a :=
-(le_total a b).imp exists_succ_iterate_of_le exists_succ_iterate_of_le
+variable [LinearOrderₓ α]
 
-lemma succ.rec_linear {p : α → Prop} (hsucc : ∀ a, p a ↔ p (succ a)) (a b : α) : p a ↔ p b :=
-(le_total a b).elim (succ.rec_iff hsucc) (λ h, (succ.rec_iff hsucc h).symm)
+section SuccOrder
 
-end succ_order
+variable [SuccOrder α] [IsSuccArchimedean α] {a b : α}
 
-section pred_order
-variables [pred_order α] [is_pred_archimedean α] {a b : α}
+theorem exists_succ_iterate_or : (∃ n, (succ^[n]) a = b) ∨ ∃ n, (succ^[n]) b = a :=
+  (le_totalₓ a b).imp exists_succ_iterate_of_le exists_succ_iterate_of_le
 
-lemma exists_pred_iterate_or : (∃ n, pred^[n] b = a) ∨ ∃ n, pred^[n] a = b :=
-(le_total a b).imp exists_pred_iterate_of_le exists_pred_iterate_of_le
+theorem Succ.rec_linear {p : α → Prop} (hsucc : ∀ a, p a ↔ p (succ a)) (a b : α) : p a ↔ p b :=
+  (le_totalₓ a b).elim (Succ.rec_iff hsucc) fun h => (Succ.rec_iff hsucc h).symm
 
-lemma pred.rec_linear {p : α → Prop} (hsucc : ∀ a, p a ↔ p (pred a)) (a b : α) : p a ↔ p b :=
-(le_total a b).elim (pred.rec_iff hsucc) (λ h, (pred.rec_iff hsucc h).symm)
+end SuccOrder
 
-end pred_order
-end linear_order
+section PredOrder
 
-section order_bot
-variables [preorder α] [order_bot α] [succ_order α] [is_succ_archimedean α]
+variable [PredOrder α] [IsPredArchimedean α] {a b : α}
 
-lemma succ.rec_bot (p : α → Prop) (hbot : p ⊥) (hsucc : ∀ a, p a → p (succ a)) (a : α) : p a :=
-succ.rec hbot (λ x _ h, hsucc x h) (bot_le : ⊥ ≤ a)
+theorem exists_pred_iterate_or : (∃ n, (pred^[n]) b = a) ∨ ∃ n, (pred^[n]) a = b :=
+  (le_totalₓ a b).imp exists_pred_iterate_of_le exists_pred_iterate_of_le
 
-end order_bot
+theorem Pred.rec_linear {p : α → Prop} (hsucc : ∀ a, p a ↔ p (pred a)) (a b : α) : p a ↔ p b :=
+  (le_totalₓ a b).elim (Pred.rec_iff hsucc) fun h => (Pred.rec_iff hsucc h).symm
 
-section order_top
-variables [preorder α] [order_top α] [pred_order α] [is_pred_archimedean α]
+end PredOrder
 
-lemma pred.rec_top (p : α → Prop) (htop : p ⊤) (hpred : ∀ a, p a → p (pred a)) (a : α) : p a :=
-pred.rec htop (λ x _ h, hpred x h) (le_top : a ≤ ⊤)
+end LinearOrderₓ
 
-end order_top
+section OrderBot
+
+variable [Preorderₓ α] [OrderBot α] [SuccOrder α] [IsSuccArchimedean α]
+
+theorem Succ.rec_bot (p : α → Prop) (hbot : p ⊥) (hsucc : ∀ a, p a → p (succ a)) (a : α) : p a :=
+  Succ.rec hbot (fun x _ h => hsucc x h) (bot_le : ⊥ ≤ a)
+
+end OrderBot
+
+section OrderTop
+
+variable [Preorderₓ α] [OrderTop α] [PredOrder α] [IsPredArchimedean α]
+
+theorem Pred.rec_top (p : α → Prop) (htop : p ⊤) (hpred : ∀ a, p a → p (pred a)) (a : α) : p a :=
+  Pred.rec htop (fun x _ h => hpred x h) (le_top : a ≤ ⊤)
+
+end OrderTop
+

@@ -3,10 +3,9 @@ Copyright (c) 2020 Johan Commelin. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johan Commelin, Robert Y. Lewis
 -/
-
-import data.mv_polynomial.counit
-import data.mv_polynomial.invertible
-import ring_theory.witt_vector.defs
+import Mathbin.Data.MvPolynomial.Counit
+import Mathbin.Data.MvPolynomial.Invertible
+import Mathbin.RingTheory.WittVector.Defs
 
 /-!
 # Witt vectors
@@ -45,254 +44,274 @@ in this file.
 
 -/
 
-noncomputable theory
 
-open mv_polynomial function
+noncomputable section
 
-open_locale big_operators
+open MvPolynomial Function
 
-variables {p : ℕ} {R S T : Type*} [hp : fact p.prime] [comm_ring R] [comm_ring S] [comm_ring T]
-variables {α : Type*} {β : Type*}
+open_locale BigOperators
 
-local notation `𝕎` := witt_vector p -- type as `\bbW`
-open_locale witt
+variable {p : ℕ} {R S T : Type _} [hp : Fact p.Prime] [CommRingₓ R] [CommRingₓ S] [CommRingₓ T]
 
-namespace witt_vector
+variable {α : Type _} {β : Type _}
+
+-- mathport name: «expr𝕎»
+local notation "𝕎" => WittVector p
+
+-- type as `\bbW`
+open_locale Witt
+
+namespace WittVector
 
 /-- `f : α → β` induces a map from `𝕎 α` to `𝕎 β` by applying `f` componentwise.
 If `f` is a ring homomorphism, then so is `f`, see `witt_vector.map f`. -/
-def map_fun (f : α → β) : 𝕎 α → 𝕎 β :=
-λ x, mk _ (f ∘ x.coeff)
+def mapFun (f : α → β) : 𝕎 α → 𝕎 β := fun x => mk _ (f ∘ x.coeff)
 
-namespace map_fun
+namespace MapFun
 
-lemma injective (f : α → β) (hf : injective f) : injective (map_fun f : 𝕎 α → 𝕎 β) :=
-λ x y h, ext $ λ n, hf (congr_arg (λ x, coeff x n) h : _)
+theorem injective (f : α → β) (hf : Injective f) : Injective (mapFun f : 𝕎 α → 𝕎 β) := fun x y h =>
+  ext fun n => hf (congr_argₓ (fun x => coeff x n) h : _)
 
-lemma surjective (f : α → β) (hf : surjective f) : surjective (map_fun f : 𝕎 α → 𝕎 β) :=
-λ x, ⟨mk _ (λ n, classical.some $ hf $ x.coeff n),
-by { ext n, dsimp [map_fun], rw classical.some_spec (hf (x.coeff n)) }⟩
+theorem surjective (f : α → β) (hf : Surjective f) : Surjective (mapFun f : 𝕎 α → 𝕎 β) := fun x =>
+  ⟨mk _ fun n => Classical.some <| hf <| x.coeff n, by
+    ext n
+    dsimp [map_fun]
+    rw [Classical.some_spec (hf (x.coeff n))]⟩
 
-variables (f : R →+* S) (x y : 𝕎 R)
+variable (f : R →+* S) (x y : 𝕎 R)
 
+-- ././Mathport/Syntax/Translate/Basic.lean:915:4: warning: unsupported (TODO): `[tacs]
 /-- Auxiliary tactic for showing that `map_fun` respects the ring operations. -/
-meta def map_fun_tac : tactic unit :=
-`[ext n,
-  show f (aeval _ _) = aeval _ _,
-  rw map_aeval,
-  apply eval₂_hom_congr (ring_hom.ext_int _ _) _ rfl,
-  ext ⟨i, k⟩,
-  fin_cases i; refl]
+unsafe def map_fun_tac : tactic Unit :=
+  sorry
 
 include hp
 
-/- We do not tag these lemmas as `@[simp]` because they will be bundled in `map` later on. -/
+-- We do not tag these lemmas as `@[simp]` because they will be bundled in `map` later on.
+theorem zero : mapFun f (0 : 𝕎 R) = 0 := by
+  run_tac
+    map_fun_tac
 
-lemma zero : map_fun f (0 : 𝕎 R) = 0 := by map_fun_tac
+theorem one : mapFun f (1 : 𝕎 R) = 1 := by
+  run_tac
+    map_fun_tac
 
-lemma one : map_fun f (1 : 𝕎 R) = 1 := by map_fun_tac
+theorem add : mapFun f (x + y) = mapFun f x + mapFun f y := by
+  run_tac
+    map_fun_tac
 
-lemma add : map_fun f (x + y) = map_fun f x + map_fun f y := by map_fun_tac
+theorem sub : mapFun f (x - y) = mapFun f x - mapFun f y := by
+  run_tac
+    map_fun_tac
 
-lemma sub : map_fun f (x - y) = map_fun f x - map_fun f y := by map_fun_tac
+theorem mul : mapFun f (x * y) = mapFun f x * mapFun f y := by
+  run_tac
+    map_fun_tac
 
-lemma mul : map_fun f (x * y) = map_fun f x * map_fun f y := by map_fun_tac
+theorem neg : mapFun f (-x) = -mapFun f x := by
+  run_tac
+    map_fun_tac
 
-lemma neg : map_fun f (-x) = -map_fun f x := by map_fun_tac
+theorem nsmul (n : ℕ) : mapFun f (n • x) = n • mapFun f x := by
+  run_tac
+    map_fun_tac
 
-lemma nsmul (n : ℕ) : map_fun f (n • x) = n • map_fun f x := by map_fun_tac
+theorem zsmul (z : ℤ) : mapFun f (z • x) = z • mapFun f x := by
+  run_tac
+    map_fun_tac
 
-lemma zsmul (z : ℤ) : map_fun f (z • x) = z • map_fun f x := by map_fun_tac
+theorem pow (n : ℕ) : mapFun f (x ^ n) = mapFun f x ^ n := by
+  run_tac
+    map_fun_tac
 
-lemma pow (n : ℕ) : map_fun f (x^ n) = map_fun f x ^ n := by map_fun_tac
+end MapFun
 
-end map_fun
+end WittVector
 
-end witt_vector
+section Tactic
 
-section tactic
 setup_tactic_parser
-open tactic
 
+open Tactic
+
+-- ././Mathport/Syntax/Translate/Basic.lean:915:4: warning: unsupported (TODO): `[tacs]
+-- ././Mathport/Syntax/Translate/Basic.lean:915:4: warning: unsupported (TODO): `[tacs]
+-- ././Mathport/Syntax/Translate/Basic.lean:915:4: warning: unsupported (TODO): `[tacs]
 /-- An auxiliary tactic for proving that `ghost_fun` respects the ring operations. -/
-meta def tactic.interactive.ghost_fun_tac (φ fn : parse parser.pexpr) : tactic unit := do
-fn ← to_expr ```(%%fn : fin _ → ℕ → R),
-`(fin %%k → _ → _) ← infer_type fn,
-`[ext n],
-`[dunfold
-  witt_vector.has_zero witt_zero
-  witt_vector.has_one witt_one
-  witt_vector.has_neg witt_neg
-  witt_vector.has_mul witt_mul
-  witt_vector.has_sub witt_sub
-  witt_vector.has_add witt_add
-  witt_vector.has_nat_scalar witt_nsmul
-  witt_vector.has_int_scalar witt_zsmul
-  witt_vector.has_nat_pow witt_pow
-  ],
-to_expr ```(congr_fun (congr_arg (@peval R _ %%k) (witt_structure_int_prop p %%φ n)) %%fn) >>=
-  note `this none,
-`[simpa [ghost_fun, aeval_rename, aeval_bind₁, (∘), uncurry, peval, eval] using this]
+unsafe def tactic.interactive.ghost_fun_tac (φ fn : parse parser.pexpr) : tactic Unit := do
+  let fn ← to_expr (ppquote.1 (%%ₓfn : Finₓ _ → ℕ → R))
+  let quote.1 (Finₓ (%%ₓk) → _ → _) ← infer_type fn
+  sorry
+  sorry
+  to_expr (ppquote.1 (congr_funₓ (congr_argₓ (@peval R _ (%%ₓk)) (witt_structure_int_prop p (%%ₓφ) n)) (%%ₓfn))) >>=
+      note `this none
+  sorry
 
-end tactic
+end Tactic
 
-namespace witt_vector
+namespace WittVector
 
 /-- Evaluates the `n`th Witt polynomial on the first `n` coefficients of `x`,
 producing a value in `R`.
 This function will be bundled as the ring homomorphism `witt_vector.ghost_map`
 once the ring structure is available,
 but we rely on it to set up the ring structure in the first place. -/
-private def ghost_fun : 𝕎 R → (ℕ → R) := λ x n, aeval x.coeff (W_ ℤ n)
+private def ghost_fun : 𝕎 R → ℕ → R := fun x n => aeval x.coeff (W_ ℤ n)
 
-section ghost_fun
+section GhostFun
+
 include hp
 
-/- The following lemmas are not `@[simp]` because they will be bundled in `ghost_map` later on. -/
-
-variables (x y : 𝕎 R)
+-- The following lemmas are not `@[simp]` because they will be bundled in `ghost_map` later on.
+variable (x y : 𝕎 R)
 
 omit hp
-local attribute [simp]
-lemma matrix_vec_empty_coeff {R} (i j) :
-  @coeff p R (matrix.vec_empty i) j = (matrix.vec_empty i : ℕ → R) j :=
-by rcases i with ⟨_ | _ | _ | _ | i_val, ⟨⟩⟩
+
+@[local simp]
+theorem matrix_vec_empty_coeff {R} i j : @coeff p R (Matrix.vecEmpty i) j = (Matrix.vecEmpty i : ℕ → R) j := by
+  rcases i with ⟨_ | _ | _ | _ | i_val, ⟨⟩⟩
+
 include hp
 
-private lemma ghost_fun_zero : ghost_fun (0 : 𝕎 R) = 0 := by ghost_fun_tac 0 ![]
+private theorem ghost_fun_zero : ghostFun (0 : 𝕎 R) = 0 := by
+  ghost_fun_tac 0, ![]
 
-private lemma ghost_fun_one : ghost_fun (1 : 𝕎 R) = 1 := by ghost_fun_tac 1 ![]
+private theorem ghost_fun_one : ghostFun (1 : 𝕎 R) = 1 := by
+  ghost_fun_tac 1, ![]
 
-private lemma ghost_fun_add : ghost_fun (x + y) = ghost_fun x + ghost_fun y :=
-by ghost_fun_tac (X 0 + X 1) ![x.coeff, y.coeff]
+private theorem ghost_fun_add : ghostFun (x + y) = ghostFun x + ghostFun y := by
+  ghost_fun_tac X 0 + X 1, ![x.coeff, y.coeff]
 
-private lemma ghost_fun_sub : ghost_fun (x - y) = ghost_fun x - ghost_fun y :=
-by ghost_fun_tac (X 0 - X 1) ![x.coeff, y.coeff]
+private theorem ghost_fun_sub : ghostFun (x - y) = ghostFun x - ghostFun y := by
+  ghost_fun_tac X 0 - X 1, ![x.coeff, y.coeff]
 
-private lemma ghost_fun_mul : ghost_fun (x * y) = ghost_fun x * ghost_fun y :=
-by ghost_fun_tac (X 0 * X 1) ![x.coeff, y.coeff]
+private theorem ghost_fun_mul : ghostFun (x * y) = ghostFun x * ghostFun y := by
+  ghost_fun_tac X 0 * X 1, ![x.coeff, y.coeff]
 
-private lemma ghost_fun_neg : ghost_fun (-x) = - ghost_fun x :=
-by ghost_fun_tac (-X 0) ![x.coeff]
+private theorem ghost_fun_neg : ghostFun (-x) = -ghostFun x := by
+  ghost_fun_tac -X 0, ![x.coeff]
 
-private lemma ghost_fun_nsmul (m : ℕ) : ghost_fun (m • x) = m • ghost_fun x :=
-by ghost_fun_tac (m • X 0) ![x.coeff]
+private theorem ghost_fun_nsmul (m : ℕ) : ghostFun (m • x) = m • ghostFun x := by
+  ghost_fun_tac m • X 0, ![x.coeff]
 
-private lemma ghost_fun_zsmul (m : ℤ) : ghost_fun (m • x) = m • ghost_fun x :=
-by ghost_fun_tac (m • X 0) ![x.coeff]
+private theorem ghost_fun_zsmul (m : ℤ) : ghostFun (m • x) = m • ghostFun x := by
+  ghost_fun_tac m • X 0, ![x.coeff]
 
-private lemma ghost_fun_pow (m : ℕ) : ghost_fun (x ^ m) = ghost_fun x ^ m :=
-by ghost_fun_tac (X 0 ^ m) ![x.coeff]
+private theorem ghost_fun_pow (m : ℕ) : ghostFun (x ^ m) = ghostFun x ^ m := by
+  ghost_fun_tac X 0 ^ m, ![x.coeff]
 
-end ghost_fun
+end GhostFun
 
-variables (p) (R)
+variable (p) (R)
 
 /-- The bijection between `𝕎 R` and `ℕ → R`, under the assumption that `p` is invertible in `R`.
 In `witt_vector.ghost_equiv` we upgrade this to an isomorphism of rings. -/
-private def ghost_equiv' [invertible (p : R)] : 𝕎 R ≃ (ℕ → R) :=
-{ to_fun := ghost_fun,
-  inv_fun := λ x, mk p $ λ n, aeval x (X_in_terms_of_W p R n),
-  left_inv :=
-  begin
-    intro x,
-    ext n,
-    have := bind₁_witt_polynomial_X_in_terms_of_W p R n,
-    apply_fun (aeval x.coeff) at this,
+private def ghost_equiv' [Invertible (p : R)] : 𝕎 R ≃ (ℕ → R) where
+  toFun := ghostFun
+  invFun := fun x => (mk p) fun n => aeval x (xInTermsOfW p R n)
+  left_inv := by
+    intro x
+    ext n
+    have := bind₁_witt_polynomial_X_in_terms_of_W p R n
+    apply_fun aeval x.coeff  at this
     simpa only [aeval_bind₁, aeval_X, ghost_fun, aeval_witt_polynomial]
-  end,
-  right_inv :=
-  begin
-    intro x,
-    ext n,
-    have := bind₁_X_in_terms_of_W_witt_polynomial p R n,
-    apply_fun (aeval x) at this,
+  right_inv := by
+    intro x
+    ext n
+    have := bind₁_X_in_terms_of_W_witt_polynomial p R n
+    apply_fun aeval x  at this
     simpa only [aeval_bind₁, aeval_X, ghost_fun, aeval_witt_polynomial]
-  end }
 
 include hp
 
-local attribute [instance]
-private def comm_ring_aux₁ : comm_ring (𝕎 (mv_polynomial R ℚ)) :=
-(ghost_equiv' p (mv_polynomial R ℚ)).injective.comm_ring (ghost_fun)
-  ghost_fun_zero ghost_fun_one ghost_fun_add ghost_fun_mul ghost_fun_neg ghost_fun_sub
-  ghost_fun_nsmul ghost_fun_zsmul ghost_fun_pow
+@[local instance]
+private def comm_ring_aux₁ : CommRingₓ (𝕎 (MvPolynomial R ℚ)) :=
+  (ghostEquiv' p (MvPolynomial R ℚ)).Injective.CommRing ghostFun ghost_fun_zero ghost_fun_one ghost_fun_add
+    ghost_fun_mul ghost_fun_neg ghost_fun_sub ghost_fun_nsmul ghost_fun_zsmul ghost_fun_pow
 
-local attribute [instance]
-private def comm_ring_aux₂ : comm_ring (𝕎 (mv_polynomial R ℤ)) :=
-(map_fun.injective _ $ map_injective (int.cast_ring_hom ℚ) int.cast_injective).comm_ring _
-  (map_fun.zero _) (map_fun.one _) (map_fun.add _) (map_fun.mul _) (map_fun.neg _) (map_fun.sub _)
-  (map_fun.nsmul _) (map_fun.zsmul _) (map_fun.pow _)
+@[local instance]
+private def comm_ring_aux₂ : CommRingₓ (𝕎 (MvPolynomial R ℤ)) :=
+  (mapFun.injective _ <| map_injective (Int.castRingHom ℚ) Int.cast_injective).CommRing _ (mapFun.zero _) (mapFun.one _)
+    (mapFun.add _) (mapFun.mul _) (mapFun.neg _) (mapFun.sub _) (mapFun.nsmul _) (mapFun.zsmul _) (mapFun.pow _)
 
 /-- The commutative ring structure on `𝕎 R`. -/
-instance : comm_ring (𝕎 R) :=
-(map_fun.surjective _ $ counit_surjective _).comm_ring (map_fun $ mv_polynomial.counit _)
-  (map_fun.zero _) (map_fun.one _) (map_fun.add _) (map_fun.mul _) (map_fun.neg _) (map_fun.sub _)
-  (map_fun.nsmul _) (map_fun.zsmul _) (map_fun.pow _)
+instance : CommRingₓ (𝕎 R) :=
+  (mapFun.surjective _ <| counit_surjective _).CommRing (map_fun <| MvPolynomial.counit _) (mapFun.zero _)
+    (mapFun.one _) (mapFun.add _) (mapFun.mul _) (mapFun.neg _) (mapFun.sub _) (mapFun.nsmul _) (mapFun.zsmul _)
+    (mapFun.pow _)
 
-variables {p R}
+variable {p R}
 
 /-- `witt_vector.map f` is the ring homomorphism `𝕎 R →+* 𝕎 S` naturally induced
 by a ring homomorphism `f : R →+* S`. It acts coefficientwise. -/
-def map (f : R →+* S) : 𝕎 R →+* 𝕎 S :=
-{ to_fun := map_fun f,
-  map_zero' := map_fun.zero f,
-  map_one' := map_fun.one f,
-  map_add' := map_fun.add f,
-  map_mul' := map_fun.mul f }
+def map (f : R →+* S) : 𝕎 R →+* 𝕎 S where
+  toFun := mapFun f
+  map_zero' := mapFun.zero f
+  map_one' := mapFun.one f
+  map_add' := mapFun.add f
+  map_mul' := mapFun.mul f
 
-lemma map_injective (f : R →+* S) (hf : injective f) : injective (map f : 𝕎 R → 𝕎 S) :=
-map_fun.injective f hf
+theorem map_injective (f : R →+* S) (hf : Injective f) : Injective (map f : 𝕎 R → 𝕎 S) :=
+  mapFun.injective f hf
 
-lemma map_surjective (f : R →+* S) (hf : surjective f) : surjective (map f : 𝕎 R → 𝕎 S) :=
-map_fun.surjective f hf
+theorem map_surjective (f : R →+* S) (hf : Surjective f) : Surjective (map f : 𝕎 R → 𝕎 S) :=
+  mapFun.surjective f hf
 
-@[simp] lemma map_coeff (f : R →+* S) (x : 𝕎 R) (n : ℕ) :
-  (map f x).coeff n = f (x.coeff n) := rfl
+@[simp]
+theorem map_coeff (f : R →+* S) (x : 𝕎 R) (n : ℕ) : (map f x).coeff n = f (x.coeff n) :=
+  rfl
 
 /-- `witt_vector.ghost_map` is a ring homomorphism that maps each Witt vector
 to the sequence of its ghost components. -/
-def ghost_map : 𝕎 R →+* ℕ → R :=
-{ to_fun := ghost_fun,
-  map_zero' := ghost_fun_zero,
-  map_one' := ghost_fun_one,
-  map_add' := ghost_fun_add,
-  map_mul' := ghost_fun_mul }
+def ghostMap : 𝕎 R →+* ℕ → R where
+  toFun := ghostFun
+  map_zero' := ghost_fun_zero
+  map_one' := ghost_fun_one
+  map_add' := ghost_fun_add
+  map_mul' := ghost_fun_mul
 
 /-- Evaluates the `n`th Witt polynomial on the first `n` coefficients of `x`,
 producing a value in `R`. -/
-def ghost_component (n : ℕ) : 𝕎 R →+* R := (pi.eval_ring_hom _ n).comp ghost_map
+def ghostComponent (n : ℕ) : 𝕎 R →+* R :=
+  (Pi.evalRingHom _ n).comp ghostMap
 
-lemma ghost_component_apply (n : ℕ) (x : 𝕎 R) : ghost_component n x = aeval x.coeff (W_ ℤ n) := rfl
+theorem ghost_component_apply (n : ℕ) (x : 𝕎 R) : ghostComponent n x = aeval x.coeff (W_ ℤ n) :=
+  rfl
 
-@[simp] lemma ghost_map_apply (x : 𝕎 R) (n : ℕ) : ghost_map x n = ghost_component n x := rfl
+@[simp]
+theorem ghost_map_apply (x : 𝕎 R) (n : ℕ) : ghostMap x n = ghostComponent n x :=
+  rfl
 
-section invertible
+section Invertible
 
-variables (p R) [invertible (p : R)]
+variable (p R) [Invertible (p : R)]
 
 /-- `witt_vector.ghost_map` is a ring isomorphism when `p` is invertible in `R`. -/
-def ghost_equiv : 𝕎 R ≃+* (ℕ → R) :=
-{ .. (ghost_map : 𝕎 R →+* (ℕ → R)), .. (ghost_equiv' p R) }
+def ghostEquiv : 𝕎 R ≃+* (ℕ → R) :=
+  { (ghostMap : 𝕎 R →+* ℕ → R), ghostEquiv' p R with }
 
-@[simp] lemma ghost_equiv_coe : (ghost_equiv p R : 𝕎 R →+* (ℕ → R)) = ghost_map := rfl
+@[simp]
+theorem ghost_equiv_coe : (ghostEquiv p R : 𝕎 R →+* ℕ → R) = ghost_map :=
+  rfl
 
-lemma ghost_map.bijective_of_invertible : function.bijective (ghost_map : 𝕎 R → ℕ → R) :=
-(ghost_equiv p R).bijective
+theorem ghostMap.bijective_of_invertible : Function.Bijective (ghostMap : 𝕎 R → ℕ → R) :=
+  (ghostEquiv p R).Bijective
 
-end invertible
+end Invertible
 
 /-- `witt_vector.coeff x 0` as a `ring_hom` -/
 @[simps]
-def constant_coeff : 𝕎 R →+* R :=
-{ to_fun := λ x, x.coeff 0,
-  map_zero' := by simp,
-  map_one' := by simp,
-  map_add' := add_coeff_zero,
-  map_mul' := mul_coeff_zero }
+def constantCoeff : 𝕎 R →+* R where
+  toFun := fun x => x.coeff 0
+  map_zero' := by
+    simp
+  map_one' := by
+    simp
+  map_add' := add_coeff_zero
+  map_mul' := mul_coeff_zero
 
-instance [nontrivial R] : nontrivial (𝕎 R) :=
-constant_coeff.domain_nontrivial
+instance [Nontrivial R] : Nontrivial (𝕎 R) :=
+  constantCoeff.domain_nontrivial
 
+end WittVector
 
-end witt_vector

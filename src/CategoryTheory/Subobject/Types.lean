@@ -3,8 +3,8 @@ Copyright (c) 2021 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import category_theory.subobject.well_powered
-import category_theory.types
+import Mathbin.CategoryTheory.Subobject.WellPowered
+import Mathbin.CategoryTheory.Types
 
 /-!
 # `Type u` is well-powered
@@ -20,48 +20,56 @@ This may be possible using Lawvere theories,
 but it remains to be seen whether this just pushes lumps around in the carpet.
 -/
 
-universes u
 
-open category_theory
-open category_theory.subobject
+universe u
 
-open_locale category_theory.Type
+open CategoryTheory
 
-lemma subtype_val_mono {α : Type u} (s : set α) : mono ↾(subtype.val : s → α) :=
-(mono_iff_injective _).mpr subtype.val_injective
+open CategoryTheory.Subobject
 
-local attribute [instance] subtype_val_mono
+open_locale CategoryTheory.Type
 
-/--
-The category of `mono_over α`, for `α : Type u`, is equivalent to the partial order `set α`.
+theorem subtype_val_mono {α : Type u} (s : Set α) : Mono (↾(Subtype.val : s → α)) :=
+  (mono_iff_injective _).mpr Subtype.val_injective
+
+attribute [local instance] subtype_val_mono
+
+/-- The category of `mono_over α`, for `α : Type u`, is equivalent to the partial order `set α`.
 -/
 @[simps]
-noncomputable
-def types.mono_over_equivalence_set (α : Type u) : mono_over α ≌ set α :=
-{ functor :=
-  { obj := λ f, set.range f.1.hom,
-    map := λ f g t, hom_of_le begin
-      rintro a ⟨x, rfl⟩,
-      exact ⟨t.1 x, congr_fun t.w x⟩,
-    end, },
+noncomputable def Types.monoOverEquivalenceSet (α : Type u) : MonoOver α ≌ Set α where
+  Functor :=
+    { obj := fun f => Set.Range f.1.Hom,
+      map := fun f g t =>
+        homOfLe
+          (by
+            rintro a ⟨x, rfl⟩
+            exact ⟨t.1 x, congr_funₓ t.w x⟩) }
   inverse :=
-  { obj := λ s, mono_over.mk' (subtype.val : s → α),
-    map := λ s t b, mono_over.hom_mk (λ w, ⟨w.1, set.mem_of_mem_of_subset w.2 b.le⟩)
-      (by { ext, simp, }), },
-  unit_iso := nat_iso.of_components
-    (λ f, mono_over.iso_mk
-      (equiv.of_injective f.1.hom ((mono_iff_injective _).mp f.2)).to_iso (by tidy))
-    (by tidy),
-  counit_iso := nat_iso.of_components
-    (λ s, eq_to_iso subtype.range_val)
-    (by tidy), }
+    { obj := fun s => MonoOver.mk' (Subtype.val : s → α),
+      map := fun s t b =>
+        MonoOver.homMk (fun w => ⟨w.1, Set.mem_of_mem_of_subset w.2 b.le⟩)
+          (by
+            ext
+            simp ) }
+  unitIso :=
+    NatIso.ofComponents
+      (fun f =>
+        MonoOver.isoMk (Equivₓ.ofInjective f.1.Hom ((mono_iff_injective _).mp f.2)).toIso
+          (by
+            tidy))
+      (by
+        tidy)
+  counitIso :=
+    NatIso.ofComponents (fun s => eqToIso Subtype.range_val)
+      (by
+        tidy)
 
-instance : well_powered (Type u) :=
-well_powered_of_essentially_small_mono_over
-  (λ α, essentially_small.mk' (types.mono_over_equivalence_set α))
+instance : WellPowered (Type u) :=
+  well_powered_of_essentially_small_mono_over fun α => EssentiallySmall.mk' (Types.monoOverEquivalenceSet α)
 
-/--
-For `α : Type u`, `subobject α` is order isomorphic to `set α`.
+/-- For `α : Type u`, `subobject α` is order isomorphic to `set α`.
 -/
-noncomputable def types.subobject_equiv_set (α : Type u) : subobject α ≃o set α :=
-(types.mono_over_equivalence_set α).thin_skeleton_order_iso
+noncomputable def Types.subobjectEquivSet (α : Type u) : Subobject α ≃o Set α :=
+  (Types.monoOverEquivalenceSet α).thinSkeletonOrderIso
+

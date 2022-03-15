@@ -3,8 +3,8 @@ Copyright (c) 2021 Floris van Doorn. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Floris van Doorn, Yury Kudryashov
 -/
-import order.symm_diff
-import tactic.monotonicity.basic
+import Mathbin.Order.SymmDiff
+import Mathbin.Tactic.Monotonicity.Basic
 
 /-!
 # Implication and equivalence as operations on a boolean algebra
@@ -15,80 +15,122 @@ to be the implication and equivalence as operations on a boolean algebra. More p
 `a ⇔ₒ b = (a Δ b)ᶜ`. For propositions these operations are equal to the usual implication and `iff`.
 -/
 
-variables {α β : Type*}
 
-namespace lattice
+variable {α β : Type _}
+
+namespace Lattice
 
 /-- Implication as a binary operation on a boolean algebra. -/
-def imp [has_compl α] [has_sup α] (a b : α) : α := aᶜ ⊔ b
+def imp [HasCompl α] [HasSup α] (a b : α) : α :=
+  aᶜ⊔b
 
-infix ` ⇒ₒ `:65 := lattice.imp
+-- mathport name: «expr ⇒ₒ »
+infixl:65 " ⇒ₒ " => Lattice.imp
 
 /-- Equivalence as a binary operation on a boolean algebra. -/
-def biimp [has_compl α] [has_sup α] [has_inf α] (a b : α) : α := (a ⇒ₒ b) ⊓ (b ⇒ₒ a)
+def biimp [HasCompl α] [HasSup α] [HasInf α] (a b : α) : α :=
+  (a ⇒ₒ b)⊓(b ⇒ₒ a)
 
-infix ` ⇔ₒ `:60 := lattice.biimp
+-- mathport name: «expr ⇔ₒ »
+infixl:60 " ⇔ₒ " => Lattice.biimp
 
-@[simp] lemma imp_eq_arrow (p q : Prop) : p ⇒ₒ q = (p → q) := propext imp_iff_not_or.symm
+@[simp]
+theorem imp_eq_arrow (p q : Prop) : p ⇒ₒ q = (p → q) :=
+  propext imp_iff_not_or.symm
 
-@[simp] lemma biimp_eq_iff (p q : Prop) : p ⇔ₒ q = (p ↔ q) := by simp [biimp, ← iff_def]
+@[simp]
+theorem biimp_eq_iff (p q : Prop) : p ⇔ₒ q = (p ↔ q) := by
+  simp [biimp, ← iff_def]
 
-variables [boolean_algebra α] {a b c d : α}
+variable [BooleanAlgebra α] {a b c d : α}
 
-@[simp] lemma compl_imp (a b : α) : (a ⇒ₒ b)ᶜ = a \ b := by simp [imp, sdiff_eq]
+@[simp]
+theorem compl_imp (a b : α) : (a ⇒ₒ b)ᶜ = a \ b := by
+  simp [imp, sdiff_eq]
 
-lemma compl_sdiff (a b : α) : (a \ b)ᶜ = a ⇒ₒ b := by rw [← compl_imp, compl_compl]
+theorem compl_sdiff (a b : α) : (a \ b)ᶜ = a ⇒ₒ b := by
+  rw [← compl_imp, compl_compl]
 
-@[mono] lemma imp_mono (h₁ : a ≤ b) (h₂ : c ≤ d) : b ⇒ₒ c ≤ a ⇒ₒ d :=
-sup_le_sup (compl_le_compl h₁) h₂
+@[mono]
+theorem imp_mono (h₁ : a ≤ b) (h₂ : c ≤ d) : b ⇒ₒ c ≤ a ⇒ₒ d :=
+  sup_le_sup (compl_le_compl h₁) h₂
 
-lemma inf_imp_eq (a b c : α) : a ⊓ (b ⇒ₒ c) = (a ⇒ₒ b) ⇒ₒ (a ⊓ c) :=
-by unfold imp; simp [inf_sup_left]
+theorem inf_imp_eq (a b c : α) : a⊓(b ⇒ₒ c) = a ⇒ₒ b ⇒ₒ a⊓c := by
+  unfold imp <;> simp [inf_sup_left]
 
-@[simp] lemma imp_eq_top_iff : (a ⇒ₒ b = ⊤) ↔ a ≤ b :=
-by rw [← compl_sdiff, compl_eq_top, sdiff_eq_bot_iff]
+@[simp]
+theorem imp_eq_top_iff : a ⇒ₒ b = ⊤ ↔ a ≤ b := by
+  rw [← compl_sdiff, compl_eq_top, sdiff_eq_bot_iff]
 
-@[simp] lemma imp_eq_bot_iff : (a ⇒ₒ b = ⊥) ↔ (a = ⊤ ∧ b = ⊥) := by simp [imp]
+@[simp]
+theorem imp_eq_bot_iff : a ⇒ₒ b = ⊥ ↔ a = ⊤ ∧ b = ⊥ := by
+  simp [imp]
 
-@[simp] lemma imp_bot (a : α) : a ⇒ₒ ⊥ = aᶜ := sup_bot_eq
+@[simp]
+theorem imp_bot (a : α) : a ⇒ₒ ⊥ = aᶜ :=
+  sup_bot_eq
 
-@[simp] lemma top_imp (a : α) : ⊤ ⇒ₒ a = a := by simp [imp]
+@[simp]
+theorem top_imp (a : α) : ⊤ ⇒ₒ a = a := by
+  simp [imp]
 
-@[simp] lemma bot_imp (a : α) : ⊥ ⇒ₒ a = ⊤ := imp_eq_top_iff.2 bot_le
+@[simp]
+theorem bot_imp (a : α) : ⊥ ⇒ₒ a = ⊤ :=
+  imp_eq_top_iff.2 bot_le
 
-@[simp] lemma imp_top (a : α) : a ⇒ₒ ⊤ = ⊤ := imp_eq_top_iff.2 le_top
+@[simp]
+theorem imp_top (a : α) : a ⇒ₒ ⊤ = ⊤ :=
+  imp_eq_top_iff.2 le_top
 
-@[simp] lemma imp_self (a : α) : a ⇒ₒ a = ⊤ := compl_sup_eq_top
+@[simp]
+theorem imp_self (a : α) : a ⇒ₒ a = ⊤ :=
+  compl_sup_eq_top
 
-@[simp] lemma compl_imp_compl (a b : α) : aᶜ ⇒ₒ bᶜ = b ⇒ₒ a := by simp [imp, sup_comm]
+@[simp]
+theorem compl_imp_compl (a b : α) : aᶜ ⇒ₒ bᶜ = b ⇒ₒ a := by
+  simp [imp, sup_comm]
 
-lemma imp_inf_le {α : Type*} [boolean_algebra α] (a b : α) : (a ⇒ₒ b) ⊓ a ≤ b :=
-by { unfold imp, rw [inf_sup_right], simp }
+theorem imp_inf_le {α : Type _} [BooleanAlgebra α] (a b : α) : (a ⇒ₒ b)⊓a ≤ b := by
+  unfold imp
+  rw [inf_sup_right]
+  simp
 
-lemma inf_imp_eq_imp_imp (a b c : α) : ((a ⊓ b) ⇒ₒ c) = (a ⇒ₒ (b ⇒ₒ c)) := by simp [imp, sup_assoc]
+theorem inf_imp_eq_imp_imp (a b c : α) : a⊓b ⇒ₒ c = a ⇒ₒ (b ⇒ₒ c) := by
+  simp [imp, sup_assoc]
 
-lemma le_imp_iff : a ≤ (b ⇒ₒ c) ↔ a ⊓ b ≤ c :=
-by rw [imp, sup_comm, is_compl_compl.le_sup_right_iff_inf_left_le]
+theorem le_imp_iff : a ≤ b ⇒ₒ c ↔ a⊓b ≤ c := by
+  rw [imp, sup_comm, is_compl_compl.le_sup_right_iff_inf_left_le]
 
-lemma biimp_mp (a b : α) : (a ⇔ₒ b) ≤ (a ⇒ₒ b) := inf_le_left
+theorem biimp_mp (a b : α) : a ⇔ₒ b ≤ a ⇒ₒ b :=
+  inf_le_left
 
-lemma biimp_mpr (a b : α) : (a ⇔ₒ b) ≤ (b ⇒ₒ a) := inf_le_right
+theorem biimp_mpr (a b : α) : a ⇔ₒ b ≤ b ⇒ₒ a :=
+  inf_le_right
 
-lemma biimp_comm (a b : α) : (a ⇔ₒ b) = (b ⇔ₒ a) :=
-by {unfold lattice.biimp, rw inf_comm}
+theorem biimp_comm (a b : α) : a ⇔ₒ b = b ⇔ₒ a := by
+  unfold Lattice.biimp
+  rw [inf_comm]
 
-@[simp] lemma biimp_eq_top_iff : a ⇔ₒ b = ⊤ ↔ a = b :=
-by simp [biimp, ← le_antisymm_iff]
+@[simp]
+theorem biimp_eq_top_iff : a ⇔ₒ b = ⊤ ↔ a = b := by
+  simp [biimp, ← le_antisymm_iffₓ]
 
-@[simp] lemma biimp_self (a : α) : a ⇔ₒ a = ⊤ := biimp_eq_top_iff.2 rfl
+@[simp]
+theorem biimp_self (a : α) : a ⇔ₒ a = ⊤ :=
+  biimp_eq_top_iff.2 rfl
 
-lemma biimp_symm : a ≤ (b ⇔ₒ c) ↔ a ≤ (c ⇔ₒ b) := by rw biimp_comm
+theorem biimp_symm : a ≤ b ⇔ₒ c ↔ a ≤ c ⇔ₒ b := by
+  rw [biimp_comm]
 
-lemma compl_symm_diff (a b : α) : (a Δ b)ᶜ = a ⇔ₒ b :=
-by simp only [biimp, imp, symm_diff, sdiff_eq, compl_sup, compl_inf, compl_compl]
+theorem compl_symm_diff (a b : α) : (a Δ b)ᶜ = a ⇔ₒ b := by
+  simp only [biimp, imp, symmDiff, sdiff_eq, compl_sup, compl_inf, compl_compl]
 
-lemma compl_biimp (a b : α) : (a ⇔ₒ b)ᶜ = a Δ b := by rw [← compl_symm_diff, compl_compl]
+theorem compl_biimp (a b : α) : (a ⇔ₒ b)ᶜ = a Δ b := by
+  rw [← compl_symm_diff, compl_compl]
 
-@[simp] lemma compl_biimp_compl : aᶜ ⇔ₒ bᶜ = a ⇔ₒ b := by simp [biimp, inf_comm]
+@[simp]
+theorem compl_biimp_compl : aᶜ ⇔ₒ bᶜ = a ⇔ₒ b := by
+  simp [biimp, inf_comm]
 
-end lattice
+end Lattice
+

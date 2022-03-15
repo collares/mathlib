@@ -3,7 +3,7 @@ Copyright (c) 2020 Anne Baanen. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Anne Baanen
 -/
-import tactic.core
+import Mathbin.Tactic.Core
 
 /-!
 # The `simp_rw` tactic
@@ -20,11 +20,12 @@ it. Arguments to `simp_rw` are of the format used by `rw` and are translated to
 their equivalents for `simp`.
 -/
 
-namespace tactic.interactive
-open interactive interactive.types tactic
 
-/--
-`simp_rw` functions as a mix of `simp` and `rw`. Like `rw`, it applies each
+namespace Tactic.Interactive
+
+open Interactive Interactive.Types Tactic
+
+/-- `simp_rw` functions as a mix of `simp` and `rw`. Like `rw`, it applies each
 rewrite rule in the given order, but like `simp` it repeatedly applies these
 rules and also under binders like `∀ x, ...`, `∃ x, ...` and `λ x, ...`.
 
@@ -44,18 +45,16 @@ example {α β : Type} {f : α → β} {t : set β} :
 by simp_rw [set.image_subset_iff, set.subset_def]
 ```
 -/
-meta def simp_rw (q : parse rw_rules) (l : parse location) : tactic unit :=
-q.rules.mmap' (λ rule, do
-  let simp_arg := if rule.symm
-    then simp_arg_type.symm_expr rule.rule
-    else simp_arg_type.expr rule.rule,
-  save_info rule.pos,
-  simp none none tt [simp_arg] [] l) -- equivalent to `simp only [rule] at l`
+unsafe def simp_rw (q : parse rw_rules) (l : parse location) : tactic Unit :=
+  q.rules.mmap' fun rule => do
+    let simp_arg := if rule.symm then simp_arg_type.symm_expr rule.rule else simp_arg_type.expr rule.rule
+    save_info rule
+    simp none none tt [simp_arg] [] l
 
+-- equivalent to `simp only [rule] at l`
 add_tactic_doc
-{ name       := "simp_rw",
-  category   := doc_category.tactic,
-  decl_names := [`tactic.interactive.simp_rw],
-  tags       := ["simplification"] }
+  { Name := "simp_rw", category := DocCategory.tactic, declNames := [`tactic.interactive.simp_rw],
+    tags := ["simplification"] }
 
-end tactic.interactive
+end Tactic.Interactive
+

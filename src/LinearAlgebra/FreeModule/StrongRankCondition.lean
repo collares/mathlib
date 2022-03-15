@@ -3,9 +3,8 @@ Copyright (c) 2021 Riccardo Brasca. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Riccardo Brasca
 -/
-
-import linear_algebra.charpoly.basic
-import linear_algebra.invariant_basis_number
+import Mathbin.LinearAlgebra.Charpoly.Basic
+import Mathbin.LinearAlgebra.InvariantBasisNumber
 
 /-!
 
@@ -31,36 +30,31 @@ vector `(0,...,0,1)` gives `a₀`, contradiction.
 
 -/
 
-variables (R : Type*) [comm_ring R] [nontrivial R]
 
-open polynomial function fin linear_map
+variable (R : Type _) [CommRingₓ R] [Nontrivial R]
+
+open Polynomial Function Finₓ LinearMap
 
 /-- Any commutative ring satisfies the `strong_rank_condition`. -/
-@[priority 100]
-instance comm_ring_strong_rank_condition : strong_rank_condition R :=
-begin
-  suffices : ∀ n, ∀ f : (fin (n + 1) → R) →ₗ[R] fin n → R, ¬injective f,
-  { rwa strong_rank_condition_iff_succ R },
-  intros n f, by_contradiction hf,
-
+instance (priority := 100) comm_ring_strong_rank_condition : StrongRankCondition R := by
+  suffices ∀ n, ∀ f : (Finₓ (n + 1) → R) →ₗ[R] Finₓ n → R, ¬injective f by
+    rwa [strong_rank_condition_iff_succ R]
+  intro n f
+  by_contra hf
   -- Lean is unable to find this instance without help, either via this `letI`, or via a duplicate
   -- instance with unecessarily strong typeclasses on `R` and `M`.
-  letI : module.finite R (fin n.succ → R) := module.finite.pi,
+  let this' : Module.Finite R (Finₓ n.succ → R) := Module.Finite.pi
+  let g : (Finₓ (n + 1) → R) →ₗ[R] Finₓ (n + 1) → R := (extend_by_zero.linear_map R cast_succ).comp f
+  have hg : injective g := (extend_injective (RelEmbedding.injective cast_succ) 0).comp hf
+  have hnex : ¬∃ i : Finₓ n, cast_succ i = last n := fun ⟨i, hi⟩ => ne_of_ltₓ (cast_succ_lt_last i) hi
+  let a₀ := (minpoly R g).coeff 0
+  have : a₀ ≠ 0 := minpoly_coeff_zero_of_injective hg
+  have : a₀ = 0 := by
+    -- Evaluate `(minpoly R g) g` at the vector `(0,...,0,1)`
+    have heval := LinearMap.congr_fun (minpoly.aeval R g) (Pi.single (Finₓ.last n) 1)
+    obtain ⟨P, hP⟩ := X_dvd_iff.2 (erase_same (minpoly R g) 0)
+    rw [← monomial_add_erase (minpoly R g) 0, hP] at heval
+    replace heval := congr_funₓ heval (Finₓ.last n)
+    simpa [hnex] using heval
+  contradiction
 
-  let g : (fin (n + 1) → R) →ₗ[R] fin (n + 1) → R :=
-    (extend_by_zero.linear_map R cast_succ).comp f,
-  have hg : injective g := (extend_injective (rel_embedding.injective cast_succ) 0).comp hf,
-
-  have hnex : ¬∃ i : fin n, cast_succ i = last n := λ ⟨i, hi⟩, ne_of_lt (cast_succ_lt_last i) hi,
-
-  let a₀ := (minpoly R g).coeff 0,
-  have : a₀ ≠ 0 := minpoly_coeff_zero_of_injective hg,
-  have : a₀ = 0,
-  { -- Evaluate `(minpoly R g) g` at the vector `(0,...,0,1)`
-    have heval := linear_map.congr_fun (minpoly.aeval R g) (pi.single (fin.last n) 1),
-    obtain ⟨P, hP⟩ := X_dvd_iff.2 (erase_same (minpoly R g) 0),
-    rw [← monomial_add_erase (minpoly R g) 0, hP] at heval,
-    replace heval := congr_fun heval (fin.last n),
-    simpa [hnex] using heval },
-  contradiction,
-end

@@ -3,10 +3,9 @@ Copyright (c) 2021 Jon Eugster. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jon Eugster, Eric Wieser
 -/
-import algebra.char_p.basic
-import ring_theory.localization.fraction_ring
-import algebra.free_algebra
-
+import Mathbin.Algebra.CharP.Basic
+import Mathbin.RingTheory.Localization.FractionRing
+import Mathbin.Algebra.FreeAlgebra
 
 /-!
 # Characteristics of algebras
@@ -30,75 +29,72 @@ Instances constructed from this result:
 
 
 /-- If the algebra map `R →+* A` is injective then `A` has the same characteristic as `R`. -/
-lemma char_p_of_injective_algebra_map {R A : Type*} [comm_semiring R] [semiring A] [algebra R A]
-  (h : function.injective (algebra_map R A)) (p : ℕ) [char_p R p] : char_p A p :=
-{ cast_eq_zero_iff := λx,
-  begin
-    rw ←char_p.cast_eq_zero_iff R p x,
-    change algebra_map ℕ A x = 0 ↔ algebra_map ℕ R x = 0,
-    rw is_scalar_tower.algebra_map_apply ℕ R A x,
-    refine iff.trans _ h.eq_iff,
-    rw ring_hom.map_zero,
-  end }
+theorem char_p_of_injective_algebra_map {R A : Type _} [CommSemiringₓ R] [Semiringₓ A] [Algebra R A]
+    (h : Function.Injective (algebraMap R A)) (p : ℕ) [CharP R p] : CharP A p :=
+  { cast_eq_zero_iff := fun x => by
+      rw [← CharP.cast_eq_zero_iff R p x]
+      change algebraMap ℕ A x = 0 ↔ algebraMap ℕ R x = 0
+      rw [IsScalarTower.algebra_map_apply ℕ R A x]
+      refine' Iff.trans _ h.eq_iff
+      rw [RingHom.map_zero] }
 
 /-- If the algebra map `R →+* A` is injective and `R` has characteristic zero then so does `A`. -/
-lemma char_zero_of_injective_algebra_map {R A : Type*} [comm_semiring R] [semiring A] [algebra R A]
-  (h : function.injective (algebra_map R A)) [char_zero R] : char_zero A :=
-{ cast_injective := λ x y hxy,
-  begin
-    change algebra_map ℕ A x = algebra_map ℕ A y at hxy,
-    rw is_scalar_tower.algebra_map_apply ℕ R A x at hxy,
-    rw is_scalar_tower.algebra_map_apply ℕ R A y at hxy,
-    exact char_zero.cast_injective (h hxy),
-  end }
+theorem char_zero_of_injective_algebra_map {R A : Type _} [CommSemiringₓ R] [Semiringₓ A] [Algebra R A]
+    (h : Function.Injective (algebraMap R A)) [CharZero R] : CharZero A :=
+  { cast_injective := fun x y hxy => by
+      change algebraMap ℕ A x = algebraMap ℕ A y at hxy
+      rw [IsScalarTower.algebra_map_apply ℕ R A x] at hxy
+      rw [IsScalarTower.algebra_map_apply ℕ R A y] at hxy
+      exact CharZero.cast_injective (h hxy) }
+
 -- `char_p.char_p_to_char_zero A _ (char_p_of_injective_algebra_map h 0)` does not work
 -- here as it would require `ring A`.
-
 section
 
-variables (K L : Type*) [field K] [comm_semiring L] [nontrivial L] [algebra K L]
+variable (K L : Type _) [Field K] [CommSemiringₓ L] [Nontrivial L] [Algebra K L]
 
-lemma algebra.char_p_iff (p : ℕ) : char_p K p ↔ char_p L p :=
-(algebra_map K L).char_p_iff_char_p p
+theorem Algebra.char_p_iff (p : ℕ) : CharP K p ↔ CharP L p :=
+  (algebraMap K L).char_p_iff_char_p p
 
 end
 
-namespace free_algebra
+namespace FreeAlgebra
 
-variables {R X : Type*} [comm_semiring R] (p : ℕ)
+variable {R X : Type _} [CommSemiringₓ R] (p : ℕ)
 
 /-- If `R` has characteristic `p`, then so does `free_algebra R X`. -/
-instance char_p [char_p R p] : char_p (free_algebra R X) p :=
-char_p_of_injective_algebra_map free_algebra.algebra_map_left_inverse.injective p
+instance char_p [CharP R p] : CharP (FreeAlgebra R X) p :=
+  char_p_of_injective_algebra_map FreeAlgebra.algebra_map_left_inverse.Injective p
 
 /-- If `R` has characteristic `0`, then so does `free_algebra R X`. -/
-instance char_zero [char_zero R] : char_zero (free_algebra R X) :=
-char_zero_of_injective_algebra_map free_algebra.algebra_map_left_inverse.injective
+instance char_zero [CharZero R] : CharZero (FreeAlgebra R X) :=
+  char_zero_of_injective_algebra_map FreeAlgebra.algebra_map_left_inverse.Injective
 
-end free_algebra
+end FreeAlgebra
 
-namespace is_fraction_ring
+namespace IsFractionRing
 
-variables (R : Type*) {K : Type*} [comm_ring R]
-  [field K] [algebra R K] [is_fraction_ring R K]
-variables (p : ℕ)
+variable (R : Type _) {K : Type _} [CommRingₓ R] [Field K] [Algebra R K] [IsFractionRing R K]
+
+variable (p : ℕ)
 
 /-- If `R` has characteristic `p`, then so does Frac(R). -/
-lemma char_p_of_is_fraction_ring [char_p R p] : char_p K p :=
-char_p_of_injective_algebra_map (is_fraction_ring.injective R K) p
+theorem char_p_of_is_fraction_ring [CharP R p] : CharP K p :=
+  char_p_of_injective_algebra_map (IsFractionRing.injective R K) p
 
 /-- If `R` has characteristic `0`, then so does Frac(R). -/
-lemma char_zero_of_is_fraction_ring [char_zero R] : char_zero K :=
-@char_p.char_p_to_char_zero K _ (char_p_of_is_fraction_ring R 0)
+theorem char_zero_of_is_fraction_ring [CharZero R] : CharZero K :=
+  @CharP.char_p_to_char_zero K _ (char_p_of_is_fraction_ring R 0)
 
-variables [is_domain R]
+variable [IsDomain R]
 
 /-- If `R` has characteristic `p`, then so does `fraction_ring R`. -/
-instance char_p [char_p R p] : char_p (fraction_ring R) p :=
-char_p_of_is_fraction_ring R p
+instance char_p [CharP R p] : CharP (FractionRing R) p :=
+  char_p_of_is_fraction_ring R p
 
 /-- If `R` has characteristic `0`, then so does `fraction_ring R`. -/
-instance char_zero [char_zero R] : char_zero (fraction_ring R) :=
-char_zero_of_is_fraction_ring R
+instance char_zero [CharZero R] : CharZero (FractionRing R) :=
+  char_zero_of_is_fraction_ring R
 
-end is_fraction_ring
+end IsFractionRing
+

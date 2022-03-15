@@ -1,2 +1,3 @@
-import control.traversable.instances
-import control.traversable.lemmas
+import Mathbin.Control.Traversable.Instances
+import Mathbin.Control.Traversable.Lemmas
+

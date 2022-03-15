@@ -3,8 +3,8 @@ Copyright (c) 2021 David Wärn. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: David Wärn
 -/
-import combinatorics.quiver.subquiver
-import combinatorics.quiver.path
+import Mathbin.Combinatorics.Quiver.Subquiver
+import Mathbin.Combinatorics.Quiver.Path
 
 /-!
 ## Weakly connected components
@@ -17,66 +17,74 @@ zigzags can be seen as a proof-relevant analogue of `eqv_gen`.)
 
 Strongly connected components have not yet been defined.
 -/
-universes v u
 
-namespace quiver
+
+universe v u
+
+namespace Quiver
 
 /-- A type synonym for the symmetrized quiver (with an arrow both ways for each original arrow).
     NB: this does not work for `Prop`-valued quivers. It requires `[quiver.{v+1} V]`. -/
 @[nolint has_inhabited_instance]
-def symmetrify (V) : Type u := V
+def Symmetrify V : Type u :=
+  V
 
-instance symmetrify_quiver (V : Type u) [quiver V] : quiver (symmetrify V) :=
-⟨λ a b : V, (a ⟶ b) ⊕ (b ⟶ a)⟩
+instance symmetrifyQuiver (V : Type u) [Quiver V] : Quiver (Symmetrify V) :=
+  ⟨fun a b : V => Sum (a ⟶ b) (b ⟶ a)⟩
 
-variables (V : Type u) [quiver.{v+1} V]
+variable (V : Type u) [Quiver.{v + 1} V]
 
 /-- A quiver `has_reverse` if we can reverse an arrow `p` from `a` to `b` to get an arrow
     `p.reverse` from `b` to `a`.-/
-class has_reverse :=
-(reverse' : Π {a b : V}, (a ⟶ b) → (b ⟶ a))
+class HasReverse where
+  reverse' : ∀ {a b : V}, (a ⟶ b) → (b ⟶ a)
 
-instance : has_reverse (symmetrify V) := ⟨λ a b e, e.swap⟩
+instance : HasReverse (Symmetrify V) :=
+  ⟨fun a b e => e.swap⟩
 
-variables {V}
+variable {V}
 
 /-- Reverse the direction of an arrow. -/
-def reverse [has_reverse V] {a b : V} : (a ⟶ b) → (b ⟶ a) := has_reverse.reverse'
+def reverse [HasReverse V] {a b : V} : (a ⟶ b) → (b ⟶ a) :=
+  has_reverse.reverse'
 
 /-- Reverse the direction of a path. -/
-def path.reverse [has_reverse V] {a : V} : Π {b}, path a b → path b a
-| a path.nil := path.nil
-| b (path.cons p e) := (reverse e).to_path.comp p.reverse
+def Path.reverseₓ [HasReverse V] {a : V} : ∀ {b}, Path a b → Path b a
+  | a, path.nil => Path.nil
+  | b, path.cons p e => (reverse e).toPath.comp p.reverse
 
-variables (V)
+variable (V)
 
 /-- Two vertices are related in the zigzag setoid if there is a
     zigzag of arrows from one to the other. -/
-def zigzag_setoid : setoid V :=
-⟨λ a b, nonempty (@path (symmetrify V) _ a b),
- λ a, ⟨path.nil⟩,
- λ a b ⟨p⟩, ⟨p.reverse⟩,
- λ a b c ⟨p⟩ ⟨q⟩, ⟨p.comp q⟩⟩
+def zigzagSetoid : Setoidₓ V :=
+  ⟨fun a b => Nonempty (@Path (Symmetrify V) _ a b), fun a => ⟨Path.nil⟩, fun a b ⟨p⟩ => ⟨p.reverse⟩,
+    fun a b c ⟨p⟩ ⟨q⟩ => ⟨p.comp q⟩⟩
 
 /-- The type of weakly connected components of a directed graph. Two vertices are
     in the same weakly connected component if there is a zigzag of arrows from one
     to the other. -/
-def weakly_connected_component : Type* := quotient (zigzag_setoid V)
+def WeaklyConnectedComponent : Type _ :=
+  Quotientₓ (zigzagSetoid V)
 
-namespace weakly_connected_component
+namespace WeaklyConnectedComponent
+
 variable {V}
 
 /-- The weakly connected component corresponding to a vertex. -/
-protected def mk : V → weakly_connected_component V := quotient.mk'
+protected def mk : V → WeaklyConnectedComponent V :=
+  Quotientₓ.mk'
 
-instance : has_coe_t V (weakly_connected_component V) := ⟨weakly_connected_component.mk⟩
-instance [inhabited V] : inhabited (weakly_connected_component V) := ⟨show V, from default⟩
+instance : CoeTₓ V (WeaklyConnectedComponent V) :=
+  ⟨WeaklyConnectedComponent.mk⟩
 
-protected lemma eq (a b : V) :
-  (a : weakly_connected_component V) = b ↔ nonempty (@path (symmetrify V) _ a b) :=
-quotient.eq'
+instance [Inhabited V] : Inhabited (WeaklyConnectedComponent V) :=
+  ⟨show V from default⟩
 
-end weakly_connected_component
+protected theorem eq (a b : V) : (a : WeaklyConnectedComponent V) = b ↔ Nonempty (@Path (Symmetrify V) _ a b) :=
+  Quotientₓ.eq'
+
+end WeaklyConnectedComponent
 
 variable {V}
 
@@ -84,7 +92,8 @@ variable {V}
     an arrow `e` if either `e` or its reversal is in `H`. -/
 -- Without the explicit universe level in `quiver.{v+1}` Lean comes up with
 -- `quiver.{max u_2 u_3 + 1}`. This causes problems elsewhere, so we write `quiver.{v+1}`.
-def wide_subquiver_symmetrify (H : wide_subquiver (symmetrify V)) : wide_subquiver V :=
-λ a b, { e | sum.inl e ∈ H a b ∨ sum.inr e ∈ H b a }
+def WideSubquiverSymmetrify (H : WideSubquiver (Symmetrify V)) : WideSubquiver V := fun a b =>
+  { e | Sum.inl e ∈ H a b ∨ Sum.inr e ∈ H b a }
 
-end quiver
+end Quiver
+

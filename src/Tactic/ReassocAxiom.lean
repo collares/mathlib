@@ -3,7 +3,7 @@ Copyright (c) 2019 Simon Hudon. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Simon Hudon
 -/
-import category_theory.category.basic
+import Mathbin.CategoryTheory.Category.Basic
 
 /-!
 # Tools to reformulate category-theoretic axioms in a more associativity-friendly way
@@ -47,60 +47,62 @@ attribute [simp, reassoc] some_class.bar
 ```
 -/
 
-namespace tactic
 
-open category_theory
+namespace Tactic
+
+open CategoryTheory
 
 /-- From an expression `f ≫ g`, extract the expression representing the category instance. -/
-meta def get_cat_inst : expr → tactic expr
-| `(@category_struct.comp _ %%struct_inst _ _ _ _ _) := pure struct_inst
-| _ := failed
+unsafe def get_cat_inst : expr → tactic expr
+  | quote.1 (@CategoryStruct.comp _ (%%ₓstruct_inst) _ _ _ _ _) => pure struct_inst
+  | _ => failed
 
 /-- (internals for `@[reassoc]`)
 Given a lemma of the form `∀ ..., f ≫ g = h`, proves a new lemma of the form
 `h : ∀ ... {W} (k), f ≫ (g ≫ k) = h ≫ k`, and returns the type and proof of this lemma.
 -/
-meta def prove_reassoc (h : expr) : tactic (expr × expr) :=
-do
-   (vs,t) ← infer_type h >>= open_pis,
-   (lhs,rhs) ← match_eq t,
-   struct_inst ← get_cat_inst lhs <|> get_cat_inst rhs <|> fail "no composition found in statement",
-   `(@quiver.hom _ %%hom_inst %%X %%Y) ← infer_type lhs,
-   C ← infer_type X,
-   X' ← mk_local' `X' binder_info.implicit C,
-   ft ← to_expr ``(@quiver.hom _ %%hom_inst %%Y %%X'),
-   f' ← mk_local_def `f' ft,
-   t' ← to_expr ``(@category_struct.comp _ %%struct_inst _ _ _%%lhs %%f' =
-                     @category_struct.comp _ %%struct_inst _ _ _ %%rhs %%f'),
-   let c' := h.mk_app vs,
-   (_,pr) ← solve_aux t' (rewrite_target c'; reflexivity),
-   pr ← instantiate_mvars pr,
-   let s := simp_lemmas.mk,
-   s ← s.add_simp ``category.assoc,
-   s ← s.add_simp ``category.id_comp,
-   s ← s.add_simp ``category.comp_id,
-   (t'', pr', _) ← simplify s [] t',
-   pr' ← mk_eq_mp pr' pr,
-   t'' ← pis (vs ++ [X',f']) t'',
-   pr' ← lambdas (vs ++ [X',f']) pr',
-   pure (t'',pr')
+unsafe def prove_reassoc (h : expr) : tactic (expr × expr) := do
+  let (vs, t) ← infer_type h >>= open_pis
+  let (lhs, rhs) ← match_eq t
+  let struct_inst ← get_cat_inst lhs <|> get_cat_inst rhs <|> fail "no composition found in statement"
+  let quote.1 (@Quiver.Hom _ (%%ₓhom_inst) (%%ₓX) (%%ₓY)) ← infer_type lhs
+  let C ← infer_type X
+  let X' ← mk_local' `X' BinderInfo.implicit C
+  let ft ← to_expr (pquote.1 (@Quiver.Hom _ (%%ₓhom_inst) (%%ₓY) (%%ₓX')))
+  let f' ← mk_local_def `f' ft
+  let t' ←
+    to_expr
+        (pquote.1
+          (@CategoryStruct.comp _ (%%ₓstruct_inst) _ _ _ (%%ₓlhs) (%%ₓf') =
+            @CategoryStruct.comp _ (%%ₓstruct_inst) _ _ _ (%%ₓrhs) (%%ₓf')))
+  let c' := h.mk_app vs
+  let (_, pr) ← solve_aux t' (andthen (rewrite_target c') reflexivity)
+  let pr ← instantiate_mvars pr
+  let s := simp_lemmas.mk
+  let s ← s.add_simp `` category.assoc
+  let s ← s.add_simp `` category.id_comp
+  let s ← s.add_simp `` category.comp_id
+  let (t'', pr', _) ← simplify s [] t'
+  let pr' ← mk_eq_mp pr' pr
+  let t'' ← pis (vs ++ [X', f']) t''
+  let pr' ← lambdas (vs ++ [X', f']) pr'
+  pure (t'', pr')
 
 /-- (implementation for `@[reassoc]`)
 Given a declaration named `n` of the form `∀ ..., f ≫ g = h`, proves a new lemma named `n'`
 of the form `∀ ... {W} (k), f ≫ (g ≫ k) = h ≫ k`.
 -/
-meta def reassoc_axiom (n : name) (n' : name := n.append_suffix "_assoc") : tactic unit :=
-do d ← get_decl n,
-   let ls := d.univ_params.map level.param,
-   let c := @expr.const tt n ls,
-   (t'',pr') ← prove_reassoc c,
-   add_decl $ declaration.thm n' d.univ_params t'' (pure pr'),
-   copy_attribute `simp n n'
+unsafe def reassoc_axiom (n : Name) (n' : Name := n.appendSuffix "_assoc") : tactic Unit := do
+  let d ← get_decl n
+  let ls := d.univ_params.map level.param
+  let c := @expr.const true n ls
+  let (t'', pr') ← prove_reassoc c
+  add_decl <| declaration.thm n' d t'' (pure pr')
+  copy_attribute `simp n n'
 
 setup_tactic_parser
 
-/--
-The `reassoc` attribute can be applied to a lemma
+/-- The `reassoc` attribute can be applied to a lemma
 
 ```lean
 @[reassoc]
@@ -117,22 +119,19 @@ The name of the produced lemma can be specified with `@[reassoc other_lemma_name
 `simp` is added first, the generated lemma will also have the `simp` attribute.
 -/
 @[user_attribute]
-meta def reassoc_attr : user_attribute unit (option name) :=
-{ name := `reassoc,
-  descr := "create a companion lemma for associativity-aware rewriting",
-  parser := optional ident,
-  after_set := some (λ n _ _,
-    do some n' ← reassoc_attr.get_param n | reassoc_axiom n (n.append_suffix "_assoc"),
-       reassoc_axiom n $ n.get_prefix ++ n' ) }
+unsafe def reassoc_attr : user_attribute Unit (Option Name) where
+  Name := `reassoc
+  descr := "create a companion lemma for associativity-aware rewriting"
+  Parser := optionalₓ ident
+  after_set :=
+    some fun n _ _ => do
+      let some n' ← reassoc_attr.get_param n | reassoc_axiom n (n.appendSuffix "_assoc")
+      reassoc_axiom n <| n ++ n'
 
 add_tactic_doc
-{ name                     := "reassoc",
-  category                 := doc_category.attr,
-  decl_names               := [`tactic.reassoc_attr],
-  tags                     := ["category theory"] }
+  { Name := "reassoc", category := DocCategory.attr, declNames := [`tactic.reassoc_attr], tags := ["category theory"] }
 
-/--
-When declaring a class of categories, the axioms can be reformulated to be more amenable
+/-- When declaring a class of categories, the axioms can be reformulated to be more amenable
 to manipulation in right associated expressions:
 
 ```lean
@@ -158,19 +157,17 @@ attribute [simp, reassoc] some_class.bar
 ```
 -/
 @[user_command]
-meta def reassoc_cmd (_ : parse $ tk "reassoc_axiom") : lean.parser unit :=
-do n ← ident,
-   of_tactic $
-   do n ← resolve_constant n,
+unsafe def reassoc_cmd (_ : parse <| tk "reassoc_axiom") : lean.parser Unit := do
+  let n ← ident
+  of_tactic <| do
+      let n ← resolve_constant n
       reassoc_axiom n
 
 add_tactic_doc
-{ name                     := "reassoc_axiom",
-  category                 := doc_category.cmd,
-  decl_names               := [`tactic.reassoc_cmd],
-  tags                     := ["category theory"] }
+  { Name := "reassoc_axiom", category := DocCategory.cmd, declNames := [`tactic.reassoc_cmd],
+    tags := ["category theory"] }
 
-namespace interactive
+namespace Interactive
 
 setup_tactic_parser
 
@@ -180,24 +177,25 @@ setup_tactic_parser
 (You can also add the attribute `@[reassoc]` to lemmas to generate new declarations generalized
 in this way.)
 -/
-meta def reassoc (del : parse (tk "!")?) (ns : parse ident*) : tactic unit :=
-do ns.mmap' (λ n,
-   do h ← get_local n,
-      (t,pr) ← prove_reassoc h,
-      assertv n t pr,
-      when del.is_some (tactic.clear h) )
+unsafe def reassoc (del : parse (tk "!")?) (ns : parse ident*) : tactic Unit := do
+  ns fun n => do
+      let h ← get_local n
+      let (t, pr) ← prove_reassoc h
+      assertv n t pr
+      when del (tactic.clear h)
 
-end interactive
+end Interactive
 
-def calculated_Prop {α} (β : Prop) (hh : α) := β
+def CalculatedProp {α} (β : Prop) (hh : α) :=
+  β
 
-meta def derive_reassoc_proof : tactic unit :=
-do `(calculated_Prop %%v %%h) ← target,
-   (t,pr) ← prove_reassoc h,
-   unify v t,
-   exact pr
+unsafe def derive_reassoc_proof : tactic Unit := do
+  let quote.1 (CalculatedProp (%%ₓv) (%%ₓh)) ← target
+  let (t, pr) ← prove_reassoc h
+  unify v t
+  exact pr
 
-end tactic
+end Tactic
 
 /-- With `h : x ≫ y ≫ z = x` (with universal quantifiers tolerated),
 `reassoc_of h : ∀ {X'} (f : W ⟶ X'), x ≫ y ≫ z ≫ f = x ≫ f`.
@@ -216,11 +214,14 @@ begin
 end
 ```
 -/
-theorem category_theory.reassoc_of {α} (hh : α) {β}
-  (x : tactic.calculated_Prop β hh . tactic.derive_reassoc_proof) : β := x
+theorem CategoryTheory.reassoc_of {α} (hh : α) {β}
+    (x : Tactic.CalculatedProp β hh := by
+      run_tac
+        tactic.derive_reassoc_proof) :
+    β :=
+  x
 
-/--
-`reassoc_of h` takes local assumption `h` and add a ` ≫ f` term on the right of
+/-- `reassoc_of h` takes local assumption `h` and add a ` ≫ f` term on the right of
 both sides of the equality. Instead of creating a new assumption from the result, `reassoc_of h`
 stands for the proof of that reassociated statement. This keeps complicated assumptions that are
 used only once or twice from polluting the local context.
@@ -244,7 +245,6 @@ Although `reassoc_of` is not a tactic or a meta program, its type is generated
 through meta-programming to make it usable inside normal expressions.
 -/
 add_tactic_doc
-{ name                     := "category_theory.reassoc_of",
-  category                 := doc_category.tactic,
-  decl_names               := [`category_theory.reassoc_of],
-  tags                     := ["category theory"] }
+  { Name := "category_theory.reassoc_of", category := DocCategory.tactic, declNames := [`category_theory.reassoc_of],
+    tags := ["category theory"] }
+

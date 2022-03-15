@@ -3,8 +3,8 @@ Copyright (c) 2021 Yury Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury Kudryashov
 -/
-import topology.urysohns_lemma
-import topology.continuous_function.bounded
+import Mathbin.Topology.UrysohnsLemma
+import Mathbin.Topology.ContinuousFunction.Bounded
 
 /-!
 # Urysohn's lemma for bounded continuous functions
@@ -18,8 +18,10 @@ bounded continuous functions `X →ᵇ ℝ`. These lemmas live in a separate fil
 Urysohn's lemma, normal topological space
 -/
 
-open_locale bounded_continuous_function
-open set function
+
+open_locale BoundedContinuousFunction
+
+open Set Function
 
 /-- Urysohns lemma: if `s` and `t` are two disjoint closed sets in a normal topological space `X`,
 then there exists a continuous function `f : X → ℝ` such that
@@ -28,12 +30,11 @@ then there exists a continuous function `f : X → ℝ` such that
 * `f` equals one on `t`;
 * `0 ≤ f x ≤ 1` for all `x`.
 -/
-lemma exists_bounded_zero_one_of_closed {X : Type*} [topological_space X] [normal_space X]
-  {s t : set X} (hs : is_closed s) (ht : is_closed t)
-  (hd : disjoint s t) :
-  ∃ f : X →ᵇ ℝ, eq_on f 0 s ∧ eq_on f 1 t ∧ ∀ x, f x ∈ Icc (0 : ℝ) 1 :=
-let ⟨f, hfs, hft, hf⟩ := exists_continuous_zero_one_of_closed hs ht hd
-in ⟨⟨f, 1, λ x y, real.dist_le_of_mem_Icc_01 (hf _) (hf _)⟩, hfs, hft, hf⟩
+theorem exists_bounded_zero_one_of_closed {X : Type _} [TopologicalSpace X] [NormalSpace X] {s t : Set X}
+    (hs : IsClosed s) (ht : IsClosed t) (hd : Disjoint s t) :
+    ∃ f : X →ᵇ ℝ, EqOn f 0 s ∧ EqOn f 1 t ∧ ∀ x, f x ∈ Icc (0 : ℝ) 1 :=
+  let ⟨f, hfs, hft, hf⟩ := exists_continuous_zero_one_of_closed hs ht hd
+  ⟨⟨f, 1, fun x y => Real.dist_le_of_mem_Icc_01 (hf _) (hf _)⟩, hfs, hft, hf⟩
 
 /-- Urysohns lemma: if `s` and `t` are two disjoint closed sets in a normal topological space `X`,
 and `a ≤ b` are two real numbers, then there exists a continuous function `f : X → ℝ` such that
@@ -42,11 +43,14 @@ and `a ≤ b` are two real numbers, then there exists a continuous function `f :
 * `f` equals `b` on `t`;
 * `a ≤ f x ≤ b` for all `x`.
 -/
-lemma exists_bounded_mem_Icc_of_closed_of_le {X : Type*} [topological_space X] [normal_space X]
-  {s t : set X} (hs : is_closed s) (ht : is_closed t) (hd : disjoint s t)
-  {a b : ℝ} (hle : a ≤ b) :
-  ∃ f : X →ᵇ ℝ, eq_on f (const X a) s ∧ eq_on f (const X b) t ∧ ∀ x, f x ∈ Icc a b :=
-let ⟨f, hfs, hft, hf01⟩ := exists_bounded_zero_one_of_closed hs ht hd
-in ⟨bounded_continuous_function.const X a + (b - a) • f,
-  λ x hx, by simp [hfs hx], λ x hx, by simp [hft hx],
-  λ x, ⟨by dsimp; nlinarith [(hf01 x).1], by dsimp; nlinarith [(hf01 x).2]⟩⟩
+theorem exists_bounded_mem_Icc_of_closed_of_le {X : Type _} [TopologicalSpace X] [NormalSpace X] {s t : Set X}
+    (hs : IsClosed s) (ht : IsClosed t) (hd : Disjoint s t) {a b : ℝ} (hle : a ≤ b) :
+    ∃ f : X →ᵇ ℝ, EqOn f (const X a) s ∧ EqOn f (const X b) t ∧ ∀ x, f x ∈ Icc a b :=
+  let ⟨f, hfs, hft, hf01⟩ := exists_bounded_zero_one_of_closed hs ht hd
+  ⟨BoundedContinuousFunction.const X a + (b - a) • f, fun x hx => by
+    simp [hfs hx], fun x hx => by
+    simp [hft hx], fun x =>
+    ⟨by
+      dsimp <;> nlinarith [(hf01 x).1], by
+      dsimp <;> nlinarith [(hf01 x).2]⟩⟩
+

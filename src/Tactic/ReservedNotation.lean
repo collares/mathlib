@@ -16,45 +16,28 @@ are defined.
 
 -/
 
+
+-- ././Mathport/Syntax/Translate/Basic.lean:1537:35: warning: unsupported: precedence command
+-- ././Mathport/Syntax/Translate/Basic.lean:1437:11: warning: suppressing unsupported reserve notation
+-- ././Mathport/Syntax/Translate/Basic.lean:1437:11: warning: suppressing unsupported reserve notation
+-- ././Mathport/Syntax/Translate/Basic.lean:1437:11: warning: suppressing unsupported reserve notation
+-- ././Mathport/Syntax/Translate/Basic.lean:1437:11: warning: suppressing unsupported reserve notation
+-- ././Mathport/Syntax/Translate/Basic.lean:1437:11: warning: suppressing unsupported reserve notation
+-- ././Mathport/Syntax/Translate/Basic.lean:1437:11: warning: suppressing unsupported reserve notation
+-- ././Mathport/Syntax/Translate/Basic.lean:1437:11: warning: suppressing unsupported reserve notation
+-- ././Mathport/Syntax/Translate/Basic.lean:1437:11: warning: suppressing unsupported reserve notation
+-- ././Mathport/Syntax/Translate/Basic.lean:1537:35: warning: unsupported: precedence command
+-- ././Mathport/Syntax/Translate/Basic.lean:1537:35: warning: unsupported: precedence command
 -- used in `logic/relator.lean`
-reserve infixr ` ⇒ `:40
-
 -- used in `tactic/core.lean`
-precedence `setup_tactic_parser`:0
-reserve prefix `pformat! `:100
-reserve prefix `fail! `:100
-reserve prefix `trace! `:100
-
 -- used in `tactic/localized.lean`
-reserve notation `localized`
-
 -- used in `tactic/lint/frontend.lean`
-reserve notation `#lint`
-reserve notation `#lint_mathlib`
-reserve notation `#lint_all`
-reserve notation `#list_linters`
-
 -- used in `tactic/where.lean`
-reserve prefix `#where`:max
-
 -- used in `tactic/simps.lean`
-reserve notation `initialize_simps_projections`
-reserve notation `as_prefix`
-
 -- used in `tactic/lift.lean`
-reserve notation `to`
-
 -- used in `tactic/rcases.lean`
-precedence `?`:max
-
 -- used in `tactic/induction.lean`
-precedence `fixing`:0
-
 -- used in `order/lattice.lean`
 -- These priorities are chosen to be above `+`, `∑`, and `∏`, but below `*`. There is no particular
 -- reason for this choice.
-reserve infixl ` ⊓ `:69
-reserve infixl ` ⊔ `:68
-
 -- used in `algebra/module/linear_map.lean`
-reserve infix ` ≃ₗ `:25

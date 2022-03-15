@@ -1,12 +1,13 @@
-import category_theory.limits.shapes.terminal
-import category_theory.limits.shapes.binary_products
-import category_theory.limits.shapes.products
-import category_theory.limits.shapes.finite_products
-import category_theory.limits.shapes.finite_limits
-import category_theory.limits.shapes.biproducts
-import category_theory.limits.shapes.images
-import category_theory.limits.shapes.zero
-import category_theory.limits.shapes.kernels
-import category_theory.limits.shapes.equalizers
-import category_theory.limits.shapes.wide_pullbacks
-import category_theory.limits.shapes.pullbacks
+import Mathbin.CategoryTheory.Limits.Shapes.Terminal
+import Mathbin.CategoryTheory.Limits.Shapes.BinaryProducts
+import Mathbin.CategoryTheory.Limits.Shapes.Products
+import Mathbin.CategoryTheory.Limits.Shapes.FiniteProducts
+import Mathbin.CategoryTheory.Limits.Shapes.FiniteLimits
+import Mathbin.CategoryTheory.Limits.Shapes.Biproducts
+import Mathbin.CategoryTheory.Limits.Shapes.Images
+import Mathbin.CategoryTheory.Limits.Shapes.Zero
+import Mathbin.CategoryTheory.Limits.Shapes.Kernels
+import Mathbin.CategoryTheory.Limits.Shapes.Equalizers
+import Mathbin.CategoryTheory.Limits.Shapes.WidePullbacks
+import Mathbin.CategoryTheory.Limits.Shapes.Pullbacks
+

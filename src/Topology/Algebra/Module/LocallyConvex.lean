@@ -3,7 +3,8 @@ Copyright (c) 2022 Anatole Dedecker. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Anatole Dedecker
 -/
-import analysis.convex.topology
+import Mathbin.Analysis.Convex.Topology
+
 /-!
 # Locally convex topological modules
 
@@ -28,67 +29,61 @@ In a module, this is equivalent to `0` satisfying such properties.
 
 -/
 
-open topological_space filter
 
-open_locale topological_space
+open TopologicalSpace Filter
 
-section semimodule
+open_locale TopologicalSpace
+
+section Semimodule
 
 /-- A `locally_convex_space` is a topological semimodule over an ordered semiring in which convex
 neighborhoods of a point form a neighborhood basis at that point. -/
-class locally_convex_space (𝕜 E : Type*) [ordered_semiring 𝕜] [add_comm_monoid E] [module 𝕜 E]
-  [topological_space E] : Prop :=
-(convex_basis : ∀ x : E, (𝓝 x).has_basis (λ (s : set E), s ∈ 𝓝 x ∧ convex 𝕜 s) id)
+class LocallyConvexSpace (𝕜 E : Type _) [OrderedSemiring 𝕜] [AddCommMonoidₓ E] [Module 𝕜 E] [TopologicalSpace E] :
+  Prop where
+  convex_basis : ∀ x : E, (𝓝 x).HasBasis (fun s : Set E => s ∈ 𝓝 x ∧ Convex 𝕜 s) id
 
-variables (𝕜 E : Type*) [ordered_semiring 𝕜] [add_comm_monoid E] [module 𝕜 E] [topological_space E]
+variable (𝕜 E : Type _) [OrderedSemiring 𝕜] [AddCommMonoidₓ E] [Module 𝕜 E] [TopologicalSpace E]
 
-lemma locally_convex_space_iff :
-  locally_convex_space 𝕜 E ↔
-  ∀ x : E, (𝓝 x).has_basis (λ (s : set E), s ∈ 𝓝 x ∧ convex 𝕜 s) id :=
-⟨@locally_convex_space.convex_basis _ _ _ _ _ _, locally_convex_space.mk⟩
+theorem locally_convex_space_iff :
+    LocallyConvexSpace 𝕜 E ↔ ∀ x : E, (𝓝 x).HasBasis (fun s : Set E => s ∈ 𝓝 x ∧ Convex 𝕜 s) id :=
+  ⟨@LocallyConvexSpace.convex_basis _ _ _ _ _ _, LocallyConvexSpace.mk⟩
 
-lemma locally_convex_space.of_bases {ι : Type*} (b : E → ι → set E) (p : ι → Prop)
-  (hbasis : ∀ x : E, (𝓝 x).has_basis p (b x)) (hconvex : ∀ x i, p i → convex 𝕜 (b x i)) :
-  locally_convex_space 𝕜 E :=
-⟨λ x, (hbasis x).to_has_basis
-  (λ i hi, ⟨b x i, ⟨⟨(hbasis x).mem_of_mem hi, hconvex x i hi⟩, le_refl (b x i)⟩⟩)
-  (λ s hs, ⟨(hbasis x).index s hs.1,
-    ⟨(hbasis x).property_index hs.1, (hbasis x).set_index_subset hs.1⟩⟩)⟩
+theorem LocallyConvexSpace.of_bases {ι : Type _} (b : E → ι → Set E) (p : ι → Prop)
+    (hbasis : ∀ x : E, (𝓝 x).HasBasis p (b x)) (hconvex : ∀ x i, p i → Convex 𝕜 (b x i)) : LocallyConvexSpace 𝕜 E :=
+  ⟨fun x =>
+    (hbasis x).to_has_basis (fun i hi => ⟨b x i, ⟨⟨(hbasis x).mem_of_mem hi, hconvex x i hi⟩, le_reflₓ (b x i)⟩⟩)
+      fun s hs => ⟨(hbasis x).index s hs.1, ⟨(hbasis x).property_index hs.1, (hbasis x).set_index_subset hs.1⟩⟩⟩
 
-lemma locally_convex_space.convex_basis_zero [locally_convex_space 𝕜 E] :
-  (𝓝 0 : filter E).has_basis (λ s, s ∈ (𝓝 0 : filter E) ∧ convex 𝕜 s) id :=
-locally_convex_space.convex_basis 0
+theorem LocallyConvexSpace.convex_basis_zero [LocallyConvexSpace 𝕜 E] :
+    (𝓝 0 : Filter E).HasBasis (fun s => s ∈ (𝓝 0 : Filter E) ∧ Convex 𝕜 s) id :=
+  LocallyConvexSpace.convex_basis 0
 
-lemma locally_convex_space_iff_exists_convex_subset :
-  locally_convex_space 𝕜 E ↔ ∀ x : E, ∀ U ∈ 𝓝 x, ∃ S ∈ 𝓝 x, convex 𝕜 S ∧ S ⊆ U :=
-(locally_convex_space_iff 𝕜 E).trans (forall_congr $ λ x, has_basis_self)
+theorem locally_convex_space_iff_exists_convex_subset :
+    LocallyConvexSpace 𝕜 E ↔ ∀ x : E, ∀, ∀ U ∈ 𝓝 x, ∀, ∃ S ∈ 𝓝 x, Convex 𝕜 S ∧ S ⊆ U :=
+  (locally_convex_space_iff 𝕜 E).trans (forall_congrₓ fun x => has_basis_self)
 
-end semimodule
+end Semimodule
 
-section module
+section Module
 
-variables (𝕜 E : Type*) [ordered_semiring 𝕜] [add_comm_group E] [module 𝕜 E] [topological_space E]
-  [topological_add_group E]
+variable (𝕜 E : Type _) [OrderedSemiring 𝕜] [AddCommGroupₓ E] [Module 𝕜 E] [TopologicalSpace E] [TopologicalAddGroup E]
 
-lemma locally_convex_space.of_basis_zero {ι : Type*} (b : ι → set E) (p : ι → Prop)
-  (hbasis : (𝓝 0).has_basis p b) (hconvex : ∀ i, p i → convex 𝕜 (b i)) :
-  locally_convex_space 𝕜 E :=
-begin
-  refine locally_convex_space.of_bases 𝕜 E (λ (x : E) (i : ι), ((+) x) '' b i) p (λ x, _)
-    (λ x i hi, (hconvex i hi).translate x),
-  rw ← map_add_left_nhds_zero,
+theorem LocallyConvexSpace.of_basis_zero {ι : Type _} (b : ι → Set E) (p : ι → Prop) (hbasis : (𝓝 0).HasBasis p b)
+    (hconvex : ∀ i, p i → Convex 𝕜 (b i)) : LocallyConvexSpace 𝕜 E := by
+  refine'
+    LocallyConvexSpace.of_bases 𝕜 E (fun i : ι => (· + ·) x '' b i) p (fun x => _) fun x i hi =>
+      (hconvex i hi).translate x
+  rw [← map_add_left_nhds_zero]
   exact hbasis.map _
-end
 
-lemma locally_convex_space_iff_zero :
-  locally_convex_space 𝕜 E ↔
-  (𝓝 0 : filter E).has_basis (λ (s : set E), s ∈ (𝓝 0 : filter E) ∧ convex 𝕜 s) id :=
-⟨λ h, @locally_convex_space.convex_basis _ _ _ _ _ _ h 0,
- λ h, locally_convex_space.of_basis_zero 𝕜 E _ _ h (λ s, and.right)⟩
+theorem locally_convex_space_iff_zero :
+    LocallyConvexSpace 𝕜 E ↔ (𝓝 0 : Filter E).HasBasis (fun s : Set E => s ∈ (𝓝 0 : Filter E) ∧ Convex 𝕜 s) id :=
+  ⟨fun h => @LocallyConvexSpace.convex_basis _ _ _ _ _ _ h 0, fun h =>
+    LocallyConvexSpace.of_basis_zero 𝕜 E _ _ h fun s => And.right⟩
 
-lemma locally_convex_space_iff_exists_convex_subset_zero :
-  locally_convex_space 𝕜 E ↔
-  ∀ U ∈ (𝓝 0 : filter E), ∃ S ∈ (𝓝 0 : filter E), convex 𝕜 S ∧ S ⊆ U :=
-(locally_convex_space_iff_zero 𝕜 E).trans has_basis_self
+theorem locally_convex_space_iff_exists_convex_subset_zero :
+    LocallyConvexSpace 𝕜 E ↔ ∀, ∀ U ∈ (𝓝 0 : Filter E), ∀, ∃ S ∈ (𝓝 0 : Filter E), Convex 𝕜 S ∧ S ⊆ U :=
+  (locally_convex_space_iff_zero 𝕜 E).trans has_basis_self
 
-end module
+end Module
+

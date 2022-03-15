@@ -3,7 +3,7 @@ Copyright (c) 2018 Mario Carneiro. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Mario Carneiro
 -/
-import data.set.lattice
+import Mathbin.Data.Set.Lattice
 
 /-! # Semiquotients
 
@@ -15,191 +15,222 @@ which return something in a range of values (represented by the
 predicate `S`) but are not completely determined.
 -/
 
+
 /-- A member of `semiquot α` is classically a nonempty `set α`,
   and in the VM is represented by an element of `α`; the relation
   between these is that the VM element is required to be a member
   of the set `s`. The specific element of `s` that the VM computes
   is hidden by a quotient construction, allowing for the representation
   of nondeterministic functions. -/
-structure {u} semiquot (α : Type*) := mk' ::
-(s : set α)
-(val : trunc ↥s)
+structure Semiquot.{u} (α : Type _) where mk' ::
+  S : Set α
+  val : Trunc ↥s
 
-namespace semiquot
-variables {α : Type*} {β : Type*}
+namespace Semiquot
 
-instance : has_mem α (semiquot α) := ⟨λ a q, a ∈ q.s⟩
+variable {α : Type _} {β : Type _}
+
+instance : HasMem α (Semiquot α) :=
+  ⟨fun a q => a ∈ q.S⟩
 
 /-- Construct a `semiquot α` from `h : a ∈ s` where `s : set α`. -/
-def mk {a : α} {s : set α} (h : a ∈ s) : semiquot α :=
-⟨s, trunc.mk ⟨a, h⟩⟩
+def mk {a : α} {s : Set α} (h : a ∈ s) : Semiquot α :=
+  ⟨s, Trunc.mk ⟨a, h⟩⟩
 
-theorem ext_s {q₁ q₂ : semiquot α} : q₁ = q₂ ↔ q₁.s = q₂.s :=
-begin
-  refine ⟨congr_arg _, λ h, _⟩,
-  cases q₁,
-  cases q₂,
-  cc,
-end
+theorem ext_s {q₁ q₂ : Semiquot α} : q₁ = q₂ ↔ q₁.S = q₂.S := by
+  refine' ⟨congr_argₓ _, fun h => _⟩
+  cases q₁
+  cases q₂
+  cc
 
-theorem ext {q₁ q₂ : semiquot α} : q₁ = q₂ ↔ ∀ a, a ∈ q₁ ↔ a ∈ q₂ :=
-ext_s.trans set.ext_iff
+theorem ext {q₁ q₂ : Semiquot α} : q₁ = q₂ ↔ ∀ a, a ∈ q₁ ↔ a ∈ q₂ :=
+  ext_s.trans Set.ext_iff
 
-theorem exists_mem (q : semiquot α) : ∃ a, a ∈ q :=
-let ⟨⟨a, h⟩, h₂⟩ := q.2.exists_rep in ⟨a, h⟩
+theorem exists_mem (q : Semiquot α) : ∃ a, a ∈ q :=
+  let ⟨⟨a, h⟩, h₂⟩ := q.2.exists_rep
+  ⟨a, h⟩
 
-theorem eq_mk_of_mem {q : semiquot α} {a : α} (h : a ∈ q) :
-  q = @mk _ a q.1 h := ext_s.2 rfl
+theorem eq_mk_of_mem {q : Semiquot α} {a : α} (h : a ∈ q) : q = @mk _ a q.1 h :=
+  ext_s.2 rfl
 
-theorem nonempty (q : semiquot α) : q.s.nonempty := q.exists_mem
+theorem nonempty (q : Semiquot α) : q.S.Nonempty :=
+  q.exists_mem
 
 /-- `pure a` is `a` reinterpreted as an unspecified element of `{a}`. -/
-protected def pure (a : α) : semiquot α := mk (set.mem_singleton a)
+protected def pure (a : α) : Semiquot α :=
+  mk (Set.mem_singleton a)
 
-@[simp] theorem mem_pure' {a b : α} : a ∈ semiquot.pure b ↔ a = b :=
-set.mem_singleton_iff
+@[simp]
+theorem mem_pure' {a b : α} : a ∈ Semiquot.pure b ↔ a = b :=
+  Set.mem_singleton_iff
 
 /-- Replace `s` in a `semiquot` with a superset. -/
-def blur' (q : semiquot α) {s : set α} (h : q.s ⊆ s) : semiquot α :=
-⟨s, trunc.lift (λ a : q.s, trunc.mk ⟨a.1, h a.2⟩)
-  (λ _ _, trunc.eq _ _) q.2⟩
+def blur' (q : Semiquot α) {s : Set α} (h : q.S ⊆ s) : Semiquot α :=
+  ⟨s, Trunc.lift (fun a : q.S => Trunc.mk ⟨a.1, h a.2⟩) (fun _ _ => Trunc.eq _ _) q.2⟩
 
 /-- Replace `s` in a `q : semiquot α` with a union `s ∪ q.s` -/
-def blur (s : set α) (q : semiquot α) : semiquot α :=
-blur' q (set.subset_union_right s q.s)
+def blur (s : Set α) (q : Semiquot α) : Semiquot α :=
+  blur' q (Set.subset_union_right s q.S)
 
-theorem blur_eq_blur' (q : semiquot α) (s : set α) (h : q.s ⊆ s) :
-  blur s q = blur' q h :=
-by unfold blur; congr; exact set.union_eq_self_of_subset_right h
+theorem blur_eq_blur' (q : Semiquot α) (s : Set α) (h : q.S ⊆ s) : blur s q = blur' q h := by
+  unfold blur <;> congr <;> exact Set.union_eq_self_of_subset_right h
 
-@[simp] theorem mem_blur' (q : semiquot α) {s : set α} (h : q.s ⊆ s)
-  {a : α} : a ∈ blur' q h ↔ a ∈ s := iff.rfl
+@[simp]
+theorem mem_blur' (q : Semiquot α) {s : Set α} (h : q.S ⊆ s) {a : α} : a ∈ blur' q h ↔ a ∈ s :=
+  Iff.rfl
 
 /-- Convert a `trunc α` to a `semiquot α`. -/
-def of_trunc (q : trunc α) : semiquot α :=
-⟨set.univ, q.map (λ a, ⟨a, trivial⟩)⟩
+def ofTrunc (q : Trunc α) : Semiquot α :=
+  ⟨Set.Univ, q.map fun a => ⟨a, trivialₓ⟩⟩
 
 /-- Convert a `semiquot α` to a `trunc α`. -/
-def to_trunc (q : semiquot α) : trunc α :=
-q.2.map subtype.val
+def toTrunc (q : Semiquot α) : Trunc α :=
+  q.2.map Subtype.val
 
+-- ././Mathport/Syntax/Translate/Basic.lean:598:2: warning: expanding binder collection (a b «expr ∈ » q)
 /-- If `f` is a constant on `q.s`, then `q.lift_on f` is the value of `f`
 at any point of `q`. -/
-def lift_on (q : semiquot α) (f : α → β) (h : ∀ a b ∈ q, f a = f b) : β :=
-trunc.lift_on q.2 (λ x, f x.1) (λ x y, h _ x.2 _ y.2)
+def liftOn (q : Semiquot α) (f : α → β) (h : ∀ a b _ : a ∈ q _ : b ∈ q, f a = f b) : β :=
+  Trunc.liftOn q.2 (fun x => f x.1) fun x y => h _ x.2 _ y.2
 
-theorem lift_on_of_mem (q : semiquot α)
-  (f : α → β) (h : ∀ a b ∈ q, f a = f b)
-  (a : α) (aq : a ∈ q) : lift_on q f h = f a :=
-by revert h; rw eq_mk_of_mem aq; intro; refl
+-- ././Mathport/Syntax/Translate/Basic.lean:598:2: warning: expanding binder collection (a b «expr ∈ » q)
+theorem lift_on_of_mem (q : Semiquot α) (f : α → β) (h : ∀ a b _ : a ∈ q _ : b ∈ q, f a = f b) (a : α) (aq : a ∈ q) :
+    liftOn q f h = f a := by
+  revert h <;> rw [eq_mk_of_mem aq] <;> intro <;> rfl
 
 /-- Apply a function to the unknown value stored in a `semiquot α`. -/
-def map (f : α → β) (q : semiquot α) : semiquot β :=
-⟨f '' q.1, q.2.map (λ x, ⟨f x.1, set.mem_image_of_mem _ x.2⟩)⟩
+def map (f : α → β) (q : Semiquot α) : Semiquot β :=
+  ⟨f '' q.1, q.2.map fun x => ⟨f x.1, Set.mem_image_of_mem _ x.2⟩⟩
 
-@[simp] theorem mem_map (f : α → β) (q : semiquot α) (b : β) :
-  b ∈ map f q ↔ ∃ a, a ∈ q ∧ f a = b := set.mem_image _ _ _
+@[simp]
+theorem mem_map (f : α → β) (q : Semiquot α) (b : β) : b ∈ map f q ↔ ∃ a, a ∈ q ∧ f a = b :=
+  Set.mem_image _ _ _
 
 /-- Apply a function returning a `semiquot` to a `semiquot`. -/
-def bind (q : semiquot α) (f : α → semiquot β) : semiquot β :=
-⟨⋃ a ∈ q.1, (f a).1,
- q.2.bind (λ a, (f a.1).2.map (λ b, ⟨b.1, set.mem_bUnion a.2 b.2⟩))⟩
+def bind (q : Semiquot α) (f : α → Semiquot β) : Semiquot β :=
+  ⟨⋃ a ∈ q.1, (f a).1, q.2.bind fun a => (f a.1).2.map fun b => ⟨b.1, Set.mem_bUnion a.2 b.2⟩⟩
 
-@[simp] theorem mem_bind (q : semiquot α) (f : α → semiquot β) (b : β) :
-  b ∈ bind q f ↔ ∃ a ∈ q, b ∈ f a := set.mem_Union₂
+@[simp]
+theorem mem_bind (q : Semiquot α) (f : α → Semiquot β) (b : β) : b ∈ bind q f ↔ ∃ a ∈ q, b ∈ f a :=
+  Set.mem_Union₂
 
-instance : monad semiquot :=
-{ pure := @semiquot.pure,
-  map := @semiquot.map,
-  bind := @semiquot.bind }
+instance : Monadₓ Semiquot where
+  pure := @Semiquot.pure
+  map := @Semiquot.map
+  bind := @Semiquot.bind
 
-@[simp] lemma map_def {β} : ((<$>) : (α → β) → semiquot α → semiquot β) = map := rfl
-@[simp] lemma bind_def {β} : ((>>=) : semiquot α → (α → semiquot β) → semiquot β) = bind := rfl
+@[simp]
+theorem map_def {β} : ((· <$> ·) : (α → β) → Semiquot α → Semiquot β) = map :=
+  rfl
 
-@[simp] theorem mem_pure {a b : α} : a ∈ (pure b : semiquot α) ↔ a = b :=
-set.mem_singleton_iff
+@[simp]
+theorem bind_def {β} : ((· >>= ·) : Semiquot α → (α → Semiquot β) → Semiquot β) = bind :=
+  rfl
 
-theorem mem_pure_self (a : α) : a ∈ (pure a : semiquot α) :=
-set.mem_singleton a
+@[simp]
+theorem mem_pure {a b : α} : a ∈ (pure b : Semiquot α) ↔ a = b :=
+  Set.mem_singleton_iff
 
-@[simp] theorem pure_inj {a b : α} : (pure a : semiquot α) = pure b ↔ a = b :=
-ext_s.trans set.singleton_eq_singleton_iff
+theorem mem_pure_self (a : α) : a ∈ (pure a : Semiquot α) :=
+  Set.mem_singleton a
 
-instance : is_lawful_monad semiquot :=
-{ pure_bind  := λ α β x f, ext.2 $ by simp,
-  bind_assoc := λ α β γ s f g, ext.2 $ by simp; exact
-    λ c, ⟨λ ⟨b, ⟨a, as, bf⟩, cg⟩, ⟨a, as, b, bf, cg⟩,
-          λ ⟨a, as, b, bf, cg⟩, ⟨b, ⟨a, as, bf⟩, cg⟩⟩,
-  id_map     := λ α q, ext.2 $ by simp,
-  bind_pure_comp_eq_map := λ α β f s, ext.2 $ by simp [eq_comm] }
+@[simp]
+theorem pure_inj {a b : α} : (pure a : Semiquot α) = pure b ↔ a = b :=
+  ext_s.trans Set.singleton_eq_singleton_iff
 
-instance : has_le (semiquot α) := ⟨λ s t, s.s ⊆ t.s⟩
+instance : IsLawfulMonad Semiquot where
+  pure_bind := fun α β x f =>
+    ext.2 <| by
+      simp
+  bind_assoc := fun α β γ s f g =>
+    ext.2 <| by
+      simp <;>
+        exact fun c => ⟨fun ⟨b, ⟨a, as, bf⟩, cg⟩ => ⟨a, as, b, bf, cg⟩, fun ⟨a, as, b, bf, cg⟩ => ⟨b, ⟨a, as, bf⟩, cg⟩⟩
+  id_map := fun α q =>
+    ext.2 <| by
+      simp
+  bind_pure_comp_eq_map := fun α β f s =>
+    ext.2 <| by
+      simp [eq_comm]
 
-instance : partial_order (semiquot α) :=
-{ le := λ s t, ∀ ⦃x⦄, x ∈ s → x ∈ t,
-  le_refl := λ s, set.subset.refl _,
-  le_trans := λ s t u, set.subset.trans,
-  le_antisymm := λ s t h₁ h₂, ext_s.2 (set.subset.antisymm h₁ h₂) }
+instance : LE (Semiquot α) :=
+  ⟨fun s t => s.S ⊆ t.S⟩
 
-instance : semilattice_sup (semiquot α) :=
-{ sup := λ s, blur s.s,
-  le_sup_left := λ s t, set.subset_union_left _ _,
-  le_sup_right := λ s t, set.subset_union_right _ _,
-  sup_le := λ s t u, set.union_subset,
-  ..semiquot.partial_order }
+instance : PartialOrderₓ (Semiquot α) where
+  le := fun s t => ∀ ⦃x⦄, x ∈ s → x ∈ t
+  le_refl := fun s => Set.Subset.refl _
+  le_trans := fun s t u => Set.Subset.trans
+  le_antisymm := fun s t h₁ h₂ => ext_s.2 (Set.Subset.antisymm h₁ h₂)
 
-@[simp] theorem pure_le {a : α} {s : semiquot α} : pure a ≤ s ↔ a ∈ s :=
-set.singleton_subset_iff
+instance : SemilatticeSup (Semiquot α) :=
+  { Semiquot.partialOrder with sup := fun s => blur s.S, le_sup_left := fun s t => Set.subset_union_left _ _,
+    le_sup_right := fun s t => Set.subset_union_right _ _, sup_le := fun s t u => Set.union_subset }
 
+@[simp]
+theorem pure_le {a : α} {s : Semiquot α} : pure a ≤ s ↔ a ∈ s :=
+  Set.singleton_subset_iff
+
+-- ././Mathport/Syntax/Translate/Basic.lean:598:2: warning: expanding binder collection (a b «expr ∈ » q)
 /-- Assert that a `semiquot` contains only one possible value. -/
-def is_pure (q : semiquot α) : Prop := ∀ a b ∈ q, a = b
+def IsPure (q : Semiquot α) : Prop :=
+  ∀ a b _ : a ∈ q _ : b ∈ q, a = b
 
 /-- Extract the value from a `is_pure` semiquotient. -/
-def get (q : semiquot α) (h : q.is_pure) : α := lift_on q id h
+def get (q : Semiquot α) (h : q.IsPure) : α :=
+  liftOn q id h
 
-theorem get_mem {q : semiquot α} (p) : get q p ∈ q :=
-let ⟨a, h⟩ := exists_mem q in
-by unfold get; rw lift_on_of_mem q _ _ a h; exact h
+theorem get_mem {q : Semiquot α} p : get q p ∈ q := by
+  let ⟨a, h⟩ := exists_mem q
+  unfold get <;> rw [lift_on_of_mem q _ _ a h] <;> exact h
 
-theorem eq_pure {q : semiquot α} (p) : q = pure (get q p) :=
-ext.2 $ λ a, by simp; exact
-⟨λ h, p _ h _ (get_mem _), λ e, e.symm ▸ get_mem _⟩
+theorem eq_pure {q : Semiquot α} p : q = pure (get q p) :=
+  ext.2 fun a => by
+    simp <;> exact ⟨fun h => p _ h _ (get_mem _), fun e => e.symm ▸ get_mem _⟩
 
-@[simp] theorem pure_is_pure (a : α) : is_pure (pure a)
-| b ab c ac := by { rw [mem_pure] at ab ac, cc }
+@[simp]
+theorem pure_is_pure (a : α) : IsPure (pure a)
+  | b, ab, c, ac => by
+    rw [mem_pure] at ab ac
+    cc
 
-theorem is_pure_iff {s : semiquot α} : is_pure s ↔ ∃ a, s = pure a :=
-⟨λ h, ⟨_, eq_pure h⟩, λ ⟨a, e⟩, e.symm ▸ pure_is_pure _⟩
+theorem is_pure_iff {s : Semiquot α} : IsPure s ↔ ∃ a, s = pure a :=
+  ⟨fun h => ⟨_, eq_pure h⟩, fun ⟨a, e⟩ => e.symm ▸ pure_is_pure _⟩
 
-theorem is_pure.mono {s t : semiquot α}
-  (st : s ≤ t) (h : is_pure t) : is_pure s
-| a as b bs := h _ (st as) _ (st bs)
+theorem IsPure.mono {s t : Semiquot α} (st : s ≤ t) (h : IsPure t) : IsPure s
+  | a, as, b, bs => h _ (st as) _ (st bs)
 
-theorem is_pure.min {s t : semiquot α} (h : is_pure t) : s ≤ t ↔ s = t :=
-⟨λ st, le_antisymm st $ by rw [eq_pure h, eq_pure (h.mono st)]; simp;
-   exact h _ (get_mem _) _ (st $ get_mem _),
- le_of_eq⟩
+theorem IsPure.min {s t : Semiquot α} (h : IsPure t) : s ≤ t ↔ s = t :=
+  ⟨fun st =>
+    le_antisymmₓ st <| by
+      rw [eq_pure h, eq_pure (h.mono st)] <;> simp <;> exact h _ (get_mem _) _ (st <| get_mem _),
+    le_of_eqₓ⟩
 
-theorem is_pure_of_subsingleton [subsingleton α] (q : semiquot α) : is_pure q
-| a b aq bq := subsingleton.elim _ _
+theorem is_pure_of_subsingleton [Subsingleton α] (q : Semiquot α) : IsPure q
+  | a, b, aq, bq => Subsingleton.elimₓ _ _
 
 /-- `univ : semiquot α` represents an unspecified element of `univ : set α`. -/
-def univ [inhabited α] : semiquot α :=
-mk $ set.mem_univ default
+def univ [Inhabited α] : Semiquot α :=
+  mk <| Set.mem_univ default
 
-instance [inhabited α] : inhabited (semiquot α) := ⟨univ⟩
+instance [Inhabited α] : Inhabited (Semiquot α) :=
+  ⟨univ⟩
 
-@[simp] theorem mem_univ [inhabited α] : ∀ a, a ∈ @univ α _ :=
-@set.mem_univ α
+@[simp]
+theorem mem_univ [Inhabited α] : ∀ a, a ∈ @univ α _ :=
+  @Set.mem_univ α
 
-@[congr] theorem univ_unique (I J : inhabited α) : @univ _ I = @univ _ J :=
-ext.2 $ by simp
+@[congr]
+theorem univ_unique (I J : Inhabited α) : @univ _ I = @univ _ J :=
+  ext.2 <| by
+    simp
 
-@[simp] theorem is_pure_univ [inhabited α] : @is_pure α univ ↔ subsingleton α :=
-⟨λ h, ⟨λ a b, h a trivial b trivial⟩, λ ⟨h⟩ a _ b _, h a b⟩
+@[simp]
+theorem is_pure_univ [Inhabited α] : @IsPure α univ ↔ Subsingleton α :=
+  ⟨fun h => ⟨fun a b => h a trivialₓ b trivialₓ⟩, fun a _ b _ => h a b⟩
 
-instance [inhabited α] : order_top (semiquot α) :=
-{ top := univ,
-  le_top := λ s, set.subset_univ _ }
+instance [Inhabited α] : OrderTop (Semiquot α) where
+  top := univ
+  le_top := fun s => Set.subset_univ _
 
-end semiquot
+end Semiquot
+

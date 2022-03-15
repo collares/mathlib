@@ -3,9 +3,9 @@ Copyright (c) 2021 Andrew Yang. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Andrew Yang
 -/
-import category_theory.limits.cones
-import category_theory.structured_arrow
-import category_theory.fin_category
+import Mathbin.CategoryTheory.Limits.Cones
+import Mathbin.CategoryTheory.StructuredArrow
+import Mathbin.CategoryTheory.FinCategory
 
 /-!
 # Bicones
@@ -21,101 +21,157 @@ Given a diagram `F : J ⥤ C` and two `cone F`s, we can join them into a diagram
 This is used in `category_theory.flat_functors.preserves_finite_limits_of_flat`.
 -/
 
-universes v₁ u₁
 
-open category_theory.limits
+universe v₁ u₁
 
-namespace category_theory
-section bicone
-variables (J : Type u₁)
+open CategoryTheory.Limits
+
+namespace CategoryTheory
+
+section Bicone
+
+variable (J : Type u₁)
 
 /-- Given a category `J`, construct a walking `bicone J` by adjoining two elements. -/
-@[derive decidable_eq]
-inductive bicone
-| left : bicone
-| right : bicone
-| diagram (val : J) : bicone
+inductive Bicone
+  | left : bicone
+  | right : bicone
+  | diagram (val : J) : bicone
+  deriving DecidableEq
 
-instance : inhabited (bicone J) := ⟨bicone.left⟩
+instance : Inhabited (Bicone J) :=
+  ⟨Bicone.left⟩
 
-instance fin_bicone [fintype J] [decidable_eq J] : fintype (bicone J) :=
-{ elems := [bicone.left, bicone.right].to_finset ∪ finset.image bicone.diagram (fintype.elems J),
-  complete := λ j, by { cases j; simp, exact fintype.complete j, }, }
+instance finBicone [Fintype J] [DecidableEq J] : Fintype (Bicone J) where
+  elems := [Bicone.left, Bicone.right].toFinset ∪ Finset.image Bicone.diagram (Fintype.elems J)
+  complete := fun j => by
+    cases j <;> simp
+    exact Fintype.complete j
 
-variables [category.{v₁} J] [∀ (j k : J), decidable_eq (j ⟶ k)]
+variable [Category.{v₁} J] [∀ j k : J, DecidableEq (j ⟶ k)]
 
 /-- The homs for a walking `bicone J`. -/
-inductive bicone_hom : bicone J → bicone J → Type (max u₁ v₁)
-| left_id  : bicone_hom bicone.left bicone.left
-| right_id : bicone_hom bicone.right bicone.right
-| left (j : J) : bicone_hom bicone.left (bicone.diagram j)
-| right (j : J) : bicone_hom bicone.right (bicone.diagram j)
-| diagram {j k : J} (f : j ⟶ k) : bicone_hom (bicone.diagram j) (bicone.diagram k)
+inductive BiconeHom : Bicone J → Bicone J → Type max u₁ v₁
+  | left_id : bicone_hom Bicone.left Bicone.left
+  | right_id : bicone_hom Bicone.right Bicone.right
+  | left (j : J) : bicone_hom Bicone.left (Bicone.diagram j)
+  | right (j : J) : bicone_hom Bicone.right (Bicone.diagram j)
+  | diagram {j k : J} (f : j ⟶ k) : bicone_hom (Bicone.diagram j) (Bicone.diagram k)
 
-instance : inhabited (bicone_hom J bicone.left bicone.left) := ⟨bicone_hom.left_id⟩
+instance : Inhabited (BiconeHom J Bicone.left Bicone.left) :=
+  ⟨BiconeHom.left_id⟩
 
-instance bicone_hom.decidable_eq {j k : bicone J} : decidable_eq (bicone_hom J j k) :=
-λ f g, by { cases f; cases g; simp; apply_instance }
+instance BiconeHom.decidableEq {j k : Bicone J} : DecidableEq (BiconeHom J j k) := fun f g => by
+  cases f <;> cases g <;> simp <;> infer_instance
 
 @[simps]
-instance bicone_category_struct : category_struct (bicone J) :=
-{ hom := bicone_hom J,
-  id := λ j, bicone.cases_on j
-    bicone_hom.left_id bicone_hom.right_id (λ k, bicone_hom.diagram (𝟙 k)),
-  comp := λ X Y Z f g, by
-  { cases f, exact g, exact g,
-    cases g, exact bicone_hom.left g_k,
-    cases g, exact bicone_hom.right g_k,
-    cases g, exact bicone_hom.diagram (f_f ≫ g_f) } }
+instance biconeCategoryStruct : CategoryStruct (Bicone J) where
+  Hom := BiconeHom J
+  id := fun j => Bicone.casesOn j BiconeHom.left_id BiconeHom.right_id fun k => BiconeHom.diagram (𝟙 k)
+  comp := fun X Y Z f g => by
+    cases f
+    exact g
+    exact g
+    cases g
+    exact bicone_hom.left g_k
+    cases g
+    exact bicone_hom.right g_k
+    cases g
+    exact bicone_hom.diagram (f_f ≫ g_f)
 
-instance bicone_category : category (bicone J) :=
-{ id_comp' := λ X Y f, by { cases f; simp },
-  comp_id' := λ X Y f, by { cases f; simp },
-  assoc' := λ W X Y Z f g h, by { cases f; cases g; cases h; simp } }
+instance biconeCategory : Category (Bicone J) where
+  id_comp' := fun X Y f => by
+    cases f <;> simp
+  comp_id' := fun X Y f => by
+    cases f <;> simp
+  assoc' := fun W X Y Z f g h => by
+    cases f <;> cases g <;> cases h <;> simp
 
-end bicone
-section small_category
-variables (J : Type v₁) [small_category J]
+end Bicone
 
-/--
-Given a diagram `F : J ⥤ C` and two `cone F`s, we can join them into a diagram `bicone J ⥤ C`.
+section SmallCategory
+
+variable (J : Type v₁) [SmallCategory J]
+
+/-- Given a diagram `F : J ⥤ C` and two `cone F`s, we can join them into a diagram `bicone J ⥤ C`.
 -/
-@[simps] def bicone_mk [∀ (j k : J), decidable_eq (j ⟶ k)] {C : Type u₁} [category.{v₁} C]
-  {F : J ⥤ C} (c₁ c₂ : cone F) : bicone J ⥤ C :=
-{ obj := λ X, bicone.cases_on X c₁.X c₂.X (λ j, F.obj j),
-  map := λ X Y f, by
-  { cases f, exact (𝟙 _), exact (𝟙 _),
-    exact c₁.π.app f_1,
-    exact c₂.π.app f_1,
-    exact F.map f_f, },
-  map_id' := λ X, by { cases X; simp },
-  map_comp' := λ X Y Z f g, by
-  { cases f,
-    exact (category.id_comp _).symm,
-    exact (category.id_comp _).symm,
-    cases g, exact (category.id_comp _).symm.trans (c₁.π.naturality g_f : _),
-    cases g, exact (category.id_comp _).symm.trans (c₂.π.naturality g_f : _),
-    cases g, exact F.map_comp _ _ } }
+@[simps]
+def biconeMk [∀ j k : J, DecidableEq (j ⟶ k)] {C : Type u₁} [Category.{v₁} C] {F : J ⥤ C} (c₁ c₂ : Cone F) :
+    Bicone J ⥤ C where
+  obj := fun X => Bicone.casesOn X c₁.x c₂.x fun j => F.obj j
+  map := fun X Y f => by
+    cases f
+    exact 𝟙 _
+    exact 𝟙 _
+    exact c₁.π.app f_1
+    exact c₂.π.app f_1
+    exact F.map f_f
+  map_id' := fun X => by
+    cases X <;> simp
+  map_comp' := fun X Y Z f g => by
+    cases f
+    exact (category.id_comp _).symm
+    exact (category.id_comp _).symm
+    cases g
+    exact (category.id_comp _).symm.trans (c₁.π.naturality g_f : _)
+    cases g
+    exact (category.id_comp _).symm.trans (c₂.π.naturality g_f : _)
+    cases g
+    exact F.map_comp _ _
 
-instance fin_bicone_hom [fin_category J] (j k : bicone J) : fintype (j ⟶ k) :=
-begin
-  cases j; cases k,
-  exact { elems := {bicone_hom.left_id}, complete := λ f, by { cases f, simp } },
-  exact { elems := ∅, complete := λ f, by { cases f } },
-  exact { elems := {bicone_hom.left k}, complete := λ f, by { cases f, simp } },
-  exact { elems := ∅, complete := λ f, by { cases f } },
-  exact { elems := {bicone_hom.right_id}, complete := λ f, by { cases f, simp } },
-  exact { elems := {bicone_hom.right k}, complete := λ f, by { cases f, simp } },
-  exact { elems := ∅, complete := λ f, by { cases f } },
-  exact { elems := ∅, complete := λ f, by { cases f } },
-  exact { elems := finset.image (bicone_hom.diagram) (fintype.elems (j ⟶ k)),
-          complete := λ f, by
-            { cases f, simp only [finset.mem_image], use f_f, simpa using fintype.complete _, } },
-end
+instance finBiconeHom [FinCategory J] (j k : Bicone J) : Fintype (j ⟶ k) := by
+  cases j <;> cases k
+  exact
+    { elems := {bicone_hom.left_id},
+      complete := fun f => by
+        cases f
+        simp }
+  exact
+    { elems := ∅,
+      complete := fun f => by
+        cases f }
+  exact
+    { elems := {bicone_hom.left k},
+      complete := fun f => by
+        cases f
+        simp }
+  exact
+    { elems := ∅,
+      complete := fun f => by
+        cases f }
+  exact
+    { elems := {bicone_hom.right_id},
+      complete := fun f => by
+        cases f
+        simp }
+  exact
+    { elems := {bicone_hom.right k},
+      complete := fun f => by
+        cases f
+        simp }
+  exact
+    { elems := ∅,
+      complete := fun f => by
+        cases f }
+  exact
+    { elems := ∅,
+      complete := fun f => by
+        cases f }
+  exact
+    { elems := Finset.image bicone_hom.diagram (Fintype.elems (j ⟶ k)),
+      complete := fun f => by
+        cases f
+        simp only [Finset.mem_image]
+        use f_f
+        simpa using Fintype.complete _ }
 
-instance bicone_small_category [∀ (j k : J), decidable_eq (j ⟶ k)] :
-  small_category (bicone J) := category_theory.bicone_category J
+instance biconeSmallCategory [∀ j k : J, DecidableEq (j ⟶ k)] : SmallCategory (Bicone J) :=
+  CategoryTheory.biconeCategory J
 
-instance bicone_fin_category [fin_category J] : fin_category (bicone J) := {}
-end small_category
-end category_theory
+instance biconeFinCategory [FinCategory J] : FinCategory (Bicone J) :=
+  {  }
+
+end SmallCategory
+
+end CategoryTheory
+

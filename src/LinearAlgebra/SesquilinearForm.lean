@@ -3,9 +3,9 @@ Copyright (c) 2018 Andreas Swerdlow. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Andreas Swerdlow
 -/
-import algebra.module.linear_map
-import linear_algebra.bilinear_map
-import linear_algebra.matrix.basis
+import Mathbin.Algebra.Module.LinearMap
+import Mathbin.LinearAlgebra.BilinearMap
+import Mathbin.LinearAlgebra.Matrix.Basis
 
 /-!
 # Sesquilinear form
@@ -34,179 +34,190 @@ lemmas about construction and elementary calculations are found there.
 Sesquilinear form,
 -/
 
-open_locale big_operators
 
-variables {R R₁ R₂ R₃ M M₁ M₂ K K₁ K₂ V V₁ V₂ n: Type*}
+open_locale BigOperators
 
-namespace linear_map
+variable {R R₁ R₂ R₃ M M₁ M₂ K K₁ K₂ V V₁ V₂ n : Type _}
+
+namespace LinearMap
 
 /-! ### Orthogonal vectors -/
 
-section comm_ring
+
+section CommRingₓ
 
 -- the `ₗ` subscript variables are for special cases about linear (as opposed to semilinear) maps
-variables [comm_semiring R] [comm_semiring R₁] [add_comm_monoid M₁] [module R₁ M₁]
-  [comm_semiring R₂] [add_comm_monoid M₂] [module R₂ M₂]
-  {I₁ : R₁ →+* R} {I₂ : R₂ →+* R} {I₁' : R₁ →+* R}
+variable [CommSemiringₓ R] [CommSemiringₓ R₁] [AddCommMonoidₓ M₁] [Module R₁ M₁] [CommSemiringₓ R₂] [AddCommMonoidₓ M₂]
+  [Module R₂ M₂] {I₁ : R₁ →+* R} {I₂ : R₂ →+* R} {I₁' : R₁ →+* R}
 
 /-- The proposition that two elements of a sesquilinear form space are orthogonal -/
-def is_ortho (B : M₁ →ₛₗ[I₁] M₂ →ₛₗ[I₂] R) (x y) : Prop := B x y = 0
+def IsOrtho (B : M₁ →ₛₗ[I₁] M₂ →ₛₗ[I₂] R) x y : Prop :=
+  B x y = 0
 
-lemma is_ortho_def {B : M₁ →ₛₗ[I₁] M₂ →ₛₗ[I₂] R} {x y} :
-  B.is_ortho x y ↔ B x y = 0 := iff.rfl
+theorem is_ortho_def {B : M₁ →ₛₗ[I₁] M₂ →ₛₗ[I₂] R} {x y} : B.IsOrtho x y ↔ B x y = 0 :=
+  Iff.rfl
 
-lemma is_ortho_zero_left (B : M₁ →ₛₗ[I₁] M₂ →ₛₗ[I₂] R) (x) : is_ortho B (0 : M₁) x :=
-  by { dunfold is_ortho, rw [ map_zero B, zero_apply] }
+theorem is_ortho_zero_left (B : M₁ →ₛₗ[I₁] M₂ →ₛₗ[I₂] R) x : IsOrtho B (0 : M₁) x := by
+  dunfold is_ortho
+  rw [map_zero B, zero_apply]
 
-lemma is_ortho_zero_right (B : M₁ →ₛₗ[I₁] M₂ →ₛₗ[I₂] R) (x) : is_ortho B x (0 : M₂) :=
+theorem is_ortho_zero_right (B : M₁ →ₛₗ[I₁] M₂ →ₛₗ[I₂] R) x : IsOrtho B x (0 : M₂) :=
   map_zero (B x)
 
 /-- A set of vectors `v` is orthogonal with respect to some bilinear form `B` if and only
 if for all `i ≠ j`, `B (v i) (v j) = 0`. For orthogonality between two elements, use
 `bilin_form.is_ortho` -/
-def is_Ortho {n : Type*} (B : M₁ →ₛₗ[I₁] M₁ →ₛₗ[I₁'] R) (v : n → M₁) : Prop :=
-pairwise (B.is_ortho on v)
+def IsOrthoₓ {n : Type _} (B : M₁ →ₛₗ[I₁] M₁ →ₛₗ[I₁'] R) (v : n → M₁) : Prop :=
+  Pairwise (B.IsOrtho on v)
 
-lemma is_Ortho_def {n : Type*} {B : M₁ →ₛₗ[I₁] M₁ →ₛₗ[I₁'] R} {v : n → M₁} :
-  B.is_Ortho v ↔ ∀ i j : n, i ≠ j → B (v i) (v j) = 0 := iff.rfl
+theorem is_Ortho_def {n : Type _} {B : M₁ →ₛₗ[I₁] M₁ →ₛₗ[I₁'] R} {v : n → M₁} :
+    B.IsOrtho v ↔ ∀ i j : n, i ≠ j → B (v i) (v j) = 0 :=
+  Iff.rfl
 
-end comm_ring
-section field
+end CommRingₓ
 
-variables [field K] [field K₁] [add_comm_group V₁] [module K₁ V₁]
-  [field K₂] [add_comm_group V₂] [module K₂ V₂]
-  {I₁ : K₁ →+* K} {I₂ : K₂ →+* K} {I₁' : K₁ →+* K}
-  {J₁ : K →+* K} {J₂ : K →+* K}
+section Field
+
+variable [Field K] [Field K₁] [AddCommGroupₓ V₁] [Module K₁ V₁] [Field K₂] [AddCommGroupₓ V₂] [Module K₂ V₂]
+  {I₁ : K₁ →+* K} {I₂ : K₂ →+* K} {I₁' : K₁ →+* K} {J₁ : K →+* K} {J₂ : K →+* K}
 
 -- todo: this also holds for [comm_ring R] [is_domain R] when J₁ is invertible
-lemma ortho_smul_left {B : V₁ →ₛₗ[I₁] V₂ →ₛₗ[I₂] K} {x y} {a : K₁} (ha : a ≠ 0) :
-  (is_ortho B x y) ↔ (is_ortho B (a • x) y) :=
-begin
-  dunfold is_ortho,
-  split; intro H,
-  { rw [map_smulₛₗ₂, H, smul_zero]},
-  { rw [map_smulₛₗ₂, smul_eq_zero] at H,
-    cases H,
-    { rw I₁.map_eq_zero at H, trivial },
-    { exact H }}
-end
+theorem ortho_smul_left {B : V₁ →ₛₗ[I₁] V₂ →ₛₗ[I₂] K} {x y} {a : K₁} (ha : a ≠ 0) :
+    IsOrtho B x y ↔ IsOrtho B (a • x) y := by
+  dunfold is_ortho
+  constructor <;> intro H
+  · rw [map_smulₛₗ₂, H, smul_zero]
+    
+  · rw [map_smulₛₗ₂, smul_eq_zero] at H
+    cases H
+    · rw [I₁.map_eq_zero] at H
+      trivial
+      
+    · exact H
+      
+    
 
 -- todo: this also holds for [comm_ring R] [is_domain R] when J₂ is invertible
-lemma ortho_smul_right {B : V₁ →ₛₗ[I₁] V₂ →ₛₗ[I₂] K} {x y} {a : K₂} {ha : a ≠ 0} :
-(is_ortho B x y) ↔ (is_ortho B x (a • y)) :=
-begin
-  dunfold is_ortho,
-  split; intro H,
-  { rw [map_smulₛₗ, H, smul_zero] },
-  { rw [map_smulₛₗ, smul_eq_zero] at H,
-    cases H,
-    { simp at H,
-      exfalso,
-      exact ha H },
-    { exact H }}
-end
+theorem ortho_smul_right {B : V₁ →ₛₗ[I₁] V₂ →ₛₗ[I₂] K} {x y} {a : K₂} {ha : a ≠ 0} :
+    IsOrtho B x y ↔ IsOrtho B x (a • y) := by
+  dunfold is_ortho
+  constructor <;> intro H
+  · rw [map_smulₛₗ, H, smul_zero]
+    
+  · rw [map_smulₛₗ, smul_eq_zero] at H
+    cases H
+    · simp at H
+      exfalso
+      exact ha H
+      
+    · exact H
+      
+    
 
 /-- A set of orthogonal vectors `v` with respect to some sesquilinear form `B` is linearly
   independent if for all `i`, `B (v i) (v i) ≠ 0`. -/
-lemma linear_independent_of_is_Ortho {B : V₁ →ₛₗ[I₁] V₁ →ₛₗ[I₁'] K} {v : n → V₁}
-  (hv₁ : B.is_Ortho v) (hv₂ : ∀ i, ¬ B.is_ortho (v i) (v i)) : linear_independent K₁ v :=
-begin
-  classical,
-  rw linear_independent_iff',
-  intros s w hs i hi,
-  have : B (s.sum $ λ (i : n), w i • v i) (v i) = 0,
-  { rw [hs, map_zero, zero_apply] },
-  have hsum : s.sum (λ (j : n), I₁(w j) * B (v j) (v i)) = I₁(w i) * B (v i) (v i),
-  { apply finset.sum_eq_single_of_mem i hi,
-    intros j hj hij,
-    rw [is_Ortho_def.1 hv₁ _ _ hij, mul_zero], },
-  simp_rw [B.map_sum₂, map_smulₛₗ₂, smul_eq_mul, hsum] at this,
-  apply I₁.map_eq_zero.mp,
-  exact eq_zero_of_ne_zero_of_mul_right_eq_zero (hv₂ i) this,
-end
+theorem linear_independent_of_is_Ortho {B : V₁ →ₛₗ[I₁] V₁ →ₛₗ[I₁'] K} {v : n → V₁} (hv₁ : B.IsOrtho v)
+    (hv₂ : ∀ i, ¬B.IsOrtho (v i) (v i)) : LinearIndependent K₁ v := by
+  classical
+  rw [linear_independent_iff']
+  intro s w hs i hi
+  have : B (s.sum fun i : n => w i • v i) (v i) = 0 := by
+    rw [hs, map_zero, zero_apply]
+  have hsum : (s.sum fun j : n => I₁ (w j) * B (v j) (v i)) = I₁ (w i) * B (v i) (v i) := by
+    apply Finset.sum_eq_single_of_mem i hi
+    intro j hj hij
+    rw [is_Ortho_def.1 hv₁ _ _ hij, mul_zero]
+  simp_rw [B.map_sum₂, map_smulₛₗ₂, smul_eq_mul, hsum]  at this
+  apply I₁.map_eq_zero.mp
+  exact eq_zero_of_ne_zero_of_mul_right_eq_zero (hv₂ i) this
 
-end field
+end Field
 
-variables [comm_ring R] [add_comm_group M] [module R M]
-  [comm_ring R₁] [add_comm_group M₁] [module R₁ M₁]
-  {I : R →+* R} {I₁ : R₁ →+* R} {I₂ : R₁ →+* R}
-  {B : M₁ →ₛₗ[I₁] M₁ →ₛₗ[I₂] R}
-  {B' : M →ₗ[R] M →ₛₗ[I] R}
+variable [CommRingₓ R] [AddCommGroupₓ M] [Module R M] [CommRingₓ R₁] [AddCommGroupₓ M₁] [Module R₁ M₁] {I : R →+* R}
+  {I₁ : R₁ →+* R} {I₂ : R₁ →+* R} {B : M₁ →ₛₗ[I₁] M₁ →ₛₗ[I₂] R} {B' : M →ₗ[R] M →ₛₗ[I] R}
 
 /-! ### Reflexive bilinear forms -/
 
+
 /-- The proposition that a sesquilinear form is reflexive -/
-def is_refl (B : M₁ →ₛₗ[I₁] M₁ →ₛₗ[I₂] R) : Prop :=
-  ∀ (x y), B x y = 0 → B y x = 0
+def IsRefl (B : M₁ →ₛₗ[I₁] M₁ →ₛₗ[I₂] R) : Prop :=
+  ∀ x y, B x y = 0 → B y x = 0
 
-namespace is_refl
+namespace IsRefl
 
-variable (H : B.is_refl)
+variable (H : B.IsRefl)
 
-lemma eq_zero : ∀ {x y}, B x y = 0 → B y x = 0 := λ x y, H x y
+theorem eq_zero : ∀ {x y}, B x y = 0 → B y x = 0 := fun x y => H x y
 
-lemma ortho_comm {x y} : is_ortho B x y ↔ is_ortho B y x := ⟨eq_zero H, eq_zero H⟩
+theorem ortho_comm {x y} : IsOrtho B x y ↔ IsOrtho B y x :=
+  ⟨eq_zero H, eq_zero H⟩
 
-end is_refl
+end IsRefl
 
 /-! ### Symmetric bilinear forms -/
 
+
 /-- The proposition that a sesquilinear form is symmetric -/
-def is_symm (B : M →ₗ[R] M →ₛₗ[I] R) : Prop :=
-  ∀ (x y), I (B x y) = B y x
+def IsSymm (B : M →ₗ[R] M →ₛₗ[I] R) : Prop :=
+  ∀ x y, I (B x y) = B y x
 
-namespace is_symm
+namespace IsSymm
 
-variable (H : B'.is_symm)
+variable (H : B'.IsSymm)
+
 include H
 
-protected lemma eq (x y) : (I (B' x y)) = B' y x := H x y
+protected theorem eq x y : I (B' x y) = B' y x :=
+  H x y
 
-lemma is_refl : B'.is_refl := λ x y H1, by { rw [←H], simp [H1] }
+theorem is_refl : B'.IsRefl := fun x y H1 => by
+  rw [← H]
+  simp [H1]
 
-lemma ortho_comm {x y} : is_ortho B' x y ↔ is_ortho B' y x := H.is_refl.ortho_comm
+theorem ortho_comm {x y} : IsOrtho B' x y ↔ IsOrtho B' y x :=
+  H.IsRefl.ortho_comm
 
-end is_symm
+end IsSymm
 
 /-! ### Alternating bilinear forms -/
 
+
 /-- The proposition that a sesquilinear form is alternating -/
-def is_alt (B : M₁ →ₛₗ[I₁] M₁ →ₛₗ[I₂] R) : Prop := ∀ x, B x x = 0
+def IsAlt (B : M₁ →ₛₗ[I₁] M₁ →ₛₗ[I₂] R) : Prop :=
+  ∀ x, B x x = 0
 
-namespace is_alt
+namespace IsAlt
 
-variable (H : B.is_alt)
+variable (H : B.IsAlt)
+
 include H
 
-lemma self_eq_zero (x) : B x x = 0 := H x
+theorem self_eq_zero x : B x x = 0 :=
+  H x
 
-lemma neg (x y) : - B x y = B y x :=
-begin
-  have H1 : B (y + x) (y + x) = 0,
-  { exact self_eq_zero H (y + x) },
-  simp [map_add, self_eq_zero H] at H1,
-  rw [add_eq_zero_iff_neg_eq] at H1,
-  exact H1,
-end
+theorem neg x y : -B x y = B y x := by
+  have H1 : B (y + x) (y + x) = 0 := self_eq_zero H (y + x)
+  simp [map_add, self_eq_zero H] at H1
+  rw [add_eq_zero_iff_neg_eq] at H1
+  exact H1
 
-lemma is_refl : B.is_refl :=
-begin
-  intros x y h,
-  rw [←neg H, h, neg_zero],
-end
+theorem is_refl : B.IsRefl := by
+  intro x y h
+  rw [← neg H, h, neg_zero]
 
-lemma ortho_comm {x y} : is_ortho B x y ↔ is_ortho B y x := H.is_refl.ortho_comm
+theorem ortho_comm {x y} : IsOrtho B x y ↔ IsOrtho B y x :=
+  H.IsRefl.ortho_comm
 
-end is_alt
+end IsAlt
 
-end linear_map
+end LinearMap
 
-namespace submodule
+namespace Submodule
 
 /-! ### The orthogonal complement -/
 
-variables [comm_ring R] [comm_ring R₁] [add_comm_group M₁] [module R₁ M₁]
-  {I₁ : R₁ →+* R} {I₂ : R₁ →+* R}
+
+variable [CommRingₓ R] [CommRingₓ R₁] [AddCommGroupₓ M₁] [Module R₁ M₁] {I₁ : R₁ →+* R} {I₂ : R₁ →+* R}
   {B : M₁ →ₛₗ[I₁] M₁ →ₛₗ[I₂] R}
 
 /-- The orthogonal complement of a submodule `N` with respect to some bilinear form is the set of
@@ -216,91 +227,85 @@ Note that for general (neither symmetric nor antisymmetric) bilinear forms this 
 chirality; in addition to this "left" orthogonal complement one could define a "right" orthogonal
 complement for which, for all `y` in `N`, `B y x = 0`.  This variant definition is not currently
 provided in mathlib. -/
-def orthogonal_bilin (N : submodule R₁ M₁) (B : M₁ →ₛₗ[I₁] M₁ →ₛₗ[I₂] R) : submodule R₁ M₁ :=
-{ carrier := { m | ∀ n ∈ N, B.is_ortho n m },
-  zero_mem' := λ x _, B.is_ortho_zero_right x,
-  add_mem' := λ x y hx hy n hn,
-    by rw [linear_map.is_ortho, map_add, show B n x = 0, by exact hx n hn,
-        show B n y = 0, by exact hy n hn, zero_add],
-  smul_mem' := λ c x hx n hn,
-    by rw [linear_map.is_ortho, linear_map.map_smulₛₗ, show B n x = 0, by exact hx n hn,
-        smul_zero] }
+def orthogonalBilin (N : Submodule R₁ M₁) (B : M₁ →ₛₗ[I₁] M₁ →ₛₗ[I₂] R) : Submodule R₁ M₁ where
+  Carrier := { m | ∀, ∀ n ∈ N, ∀, B.IsOrtho n m }
+  zero_mem' := fun x _ => B.is_ortho_zero_right x
+  add_mem' := fun x y hx hy n hn => by
+    rw [LinearMap.IsOrtho, map_add, show B n x = 0 from hx n hn, show B n y = 0 from hy n hn, zero_addₓ]
+  smul_mem' := fun c x hx n hn => by
+    rw [LinearMap.IsOrtho, LinearMap.map_smulₛₗ, show B n x = 0 from hx n hn, smul_zero]
 
-variables {N L : submodule R₁ M₁}
+variable {N L : Submodule R₁ M₁}
 
-@[simp] lemma mem_orthogonal_bilin_iff {m : M₁} :
-  m ∈ N.orthogonal_bilin B ↔ ∀ n ∈ N, B.is_ortho n m := iff.rfl
+@[simp]
+theorem mem_orthogonal_bilin_iff {m : M₁} : m ∈ N.orthogonalBilin B ↔ ∀, ∀ n ∈ N, ∀, B.IsOrtho n m :=
+  Iff.rfl
 
-lemma orthogonal_bilin_le (h : N ≤ L) : L.orthogonal_bilin B ≤ N.orthogonal_bilin B :=
-λ _ hn l hl, hn l (h hl)
+theorem orthogonal_bilin_le (h : N ≤ L) : L.orthogonalBilin B ≤ N.orthogonalBilin B := fun _ hn l hl => hn l (h hl)
 
-lemma le_orthogonal_bilin_orthogonal_bilin (b : B.is_refl) :
-  N ≤ (N.orthogonal_bilin B).orthogonal_bilin B :=
-λ n hn m hm, b _ _ (hm n hn)
+theorem le_orthogonal_bilin_orthogonal_bilin (b : B.IsRefl) : N ≤ (N.orthogonalBilin B).orthogonalBilin B :=
+  fun n hn m hm => b _ _ (hm n hn)
 
-end submodule
+end Submodule
 
-namespace linear_map
+namespace LinearMap
 
-section orthogonal
+section Orthogonal
 
-variables [field K] [add_comm_group V] [module K V]
-  [field K₁] [add_comm_group V₁] [module K₁ V₁]
-  {J : K →+* K} {J₁ : K₁ →+* K} {J₁' : K₁ →+* K}
+variable [Field K] [AddCommGroupₓ V] [Module K V] [Field K₁] [AddCommGroupₓ V₁] [Module K₁ V₁] {J : K →+* K}
+  {J₁ : K₁ →+* K} {J₁' : K₁ →+* K}
 
 -- ↓ This lemma only applies in fields as we require `a * b = 0 → a = 0 ∨ b = 0`
-lemma span_singleton_inf_orthogonal_eq_bot
-  (B : V₁ →ₛₗ[J₁] V₁ →ₛₗ[J₁'] K) (x : V₁) (hx : ¬ B.is_ortho x x) :
-  (K₁ ∙ x) ⊓ submodule.orthogonal_bilin (K₁ ∙ x) B = ⊥ :=
-begin
-  rw ← finset.coe_singleton,
-  refine eq_bot_iff.2 (λ y h, _),
-  rcases mem_span_finset.1 h.1 with ⟨μ, rfl⟩,
-  have := h.2 x _,
-  { rw finset.sum_singleton at this ⊢,
-    suffices hμzero : μ x = 0,
-    { rw [hμzero, zero_smul, submodule.mem_bot] },
-    change B x (μ x • x) = 0 at this, rw [map_smulₛₗ, smul_eq_mul] at this,
-    exact or.elim (zero_eq_mul.mp this.symm)
-    (λ y, by { simp at y, exact y })
-    (λ hfalse, false.elim $ hx hfalse) },
-  { rw submodule.mem_span; exact λ _ hp, hp $ finset.mem_singleton_self _ }
-end
+theorem span_singleton_inf_orthogonal_eq_bot (B : V₁ →ₛₗ[J₁] V₁ →ₛₗ[J₁'] K) (x : V₁) (hx : ¬B.IsOrtho x x) :
+    (K₁∙x)⊓Submodule.orthogonalBilin (K₁∙x) B = ⊥ := by
+  rw [← Finset.coe_singleton]
+  refine' eq_bot_iff.2 fun y h => _
+  rcases mem_span_finset.1 h.1 with ⟨μ, rfl⟩
+  have := h.2 x _
+  · rw [Finset.sum_singleton] at this⊢
+    suffices hμzero : μ x = 0
+    · rw [hμzero, zero_smul, Submodule.mem_bot]
+      
+    change B x (μ x • x) = 0 at this
+    rw [map_smulₛₗ, smul_eq_mul] at this
+    exact
+      Or.elim (zero_eq_mul.mp this.symm)
+        (fun y => by
+          simp at y
+          exact y)
+        fun hfalse => False.elim <| hx hfalse
+    
+  · rw [Submodule.mem_span] <;> exact fun _ hp => hp <| Finset.mem_singleton_self _
+    
 
 -- ↓ This lemma only applies in fields since we use the `mul_eq_zero`
-lemma orthogonal_span_singleton_eq_to_lin_ker {B : V →ₗ[K] V →ₛₗ[J] K} (x : V) :
-  submodule.orthogonal_bilin (K ∙ x) B = (B x).ker :=
-begin
-  ext y,
-  simp_rw [submodule.mem_orthogonal_bilin_iff, linear_map.mem_ker,
-           submodule.mem_span_singleton ],
-  split,
-  { exact λ h, h x ⟨1, one_smul _ _⟩ },
-  { rintro h _ ⟨z, rfl⟩,
-    rw [is_ortho, map_smulₛₗ₂, smul_eq_zero],
-    exact or.intro_right _ h }
-end
-
+theorem orthogonal_span_singleton_eq_to_lin_ker {B : V →ₗ[K] V →ₛₗ[J] K} (x : V) :
+    Submodule.orthogonalBilin (K∙x) B = (B x).ker := by
+  ext y
+  simp_rw [Submodule.mem_orthogonal_bilin_iff, LinearMap.mem_ker, Submodule.mem_span_singleton]
+  constructor
+  · exact fun h => h x ⟨1, one_smul _ _⟩
+    
+  · rintro h _ ⟨z, rfl⟩
+    rw [is_ortho, map_smulₛₗ₂, smul_eq_zero]
+    exact Or.intro_rightₓ _ h
+    
 
 -- todo: Generalize this to sesquilinear maps
-lemma span_singleton_sup_orthogonal_eq_top {B : V →ₗ[K] V →ₗ[K] K}
-  {x : V} (hx : ¬ B.is_ortho x x) :
-  (K ∙ x) ⊔ submodule.orthogonal_bilin (K ∙ x) B = ⊤ :=
-begin
-  rw orthogonal_span_singleton_eq_to_lin_ker,
-  exact (B x).span_singleton_sup_ker_eq_top hx,
-end
+theorem span_singleton_sup_orthogonal_eq_top {B : V →ₗ[K] V →ₗ[K] K} {x : V} (hx : ¬B.IsOrtho x x) :
+    (K∙x)⊔Submodule.orthogonalBilin (K∙x) B = ⊤ := by
+  rw [orthogonal_span_singleton_eq_to_lin_ker]
+  exact (B x).span_singleton_sup_ker_eq_top hx
 
-
--- todo: Generalize this to sesquilinear maps
 /-- Given a bilinear form `B` and some `x` such that `B x x ≠ 0`, the span of the singleton of `x`
   is complement to its orthogonal complement. -/
-lemma is_compl_span_singleton_orthogonal {B : V →ₗ[K] V →ₗ[K] K}
-  {x : V} (hx : ¬ B.is_ortho x x) : is_compl (K ∙ x) (submodule.orthogonal_bilin (K ∙ x) B) :=
-{ inf_le_bot := eq_bot_iff.1 $
-    (span_singleton_inf_orthogonal_eq_bot B x hx),
-  top_le_sup := eq_top_iff.1 $ span_singleton_sup_orthogonal_eq_top hx }
+-- todo: Generalize this to sesquilinear maps
+theorem is_compl_span_singleton_orthogonal {B : V →ₗ[K] V →ₗ[K] K} {x : V} (hx : ¬B.IsOrtho x x) :
+    IsCompl (K∙x) (Submodule.orthogonalBilin (K∙x) B) :=
+  { inf_le_bot := eq_bot_iff.1 <| span_singleton_inf_orthogonal_eq_bot B x hx,
+    top_le_sup := eq_top_iff.1 <| span_singleton_sup_orthogonal_eq_top hx }
 
-end orthogonal
+end Orthogonal
 
-end linear_map
+end LinearMap
+

@@ -3,10 +3,9 @@ Copyright (c) 2021 Kevin Buzzard. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kevin Buzzard
 -/
-
-import algebra.module.basic
-import linear_algebra.finsupp
-import linear_algebra.free_module.basic
+import Mathbin.Algebra.Module.Basic
+import Mathbin.LinearAlgebra.Finsupp
+import Mathbin.LinearAlgebra.FreeModule.Basic
 
 /-!
 
@@ -60,127 +59,119 @@ projective module
 
 -/
 
-universes u v
 
-/- The actual implementation we choose: `P` is projective if the natural surjection
-   from the free `R`-module on `P` to `P` splits. -/
+universe u v
+
 /-- An R-module is projective if it is a direct summand of a free module, or equivalently
   if maps from the module lift along surjections. There are several other equivalent
   definitions. -/
-class module.projective (R : Type u) [semiring R] (P : Type (max u v)) [add_comm_monoid P]
-  [module R P] : Prop :=
-(out : ∃ s : P →ₗ[R] (P →₀ R), function.left_inverse (finsupp.total P P R id) s)
+/- The actual implementation we choose: `P` is projective if the natural surjection
+   from the free `R`-module on `P` to `P` splits. -/
+class Module.Projective (R : Type u) [Semiringₓ R] (P : Type max u v) [AddCommMonoidₓ P] [Module R P] : Prop where
+  out : ∃ s : P →ₗ[R] P →₀ R, Function.LeftInverse (Finsupp.total P P R id) s
 
-namespace module
+namespace Module
 
-lemma projective_def {R : Type u} [semiring R] {P : Type (max u v)} [add_comm_monoid P]
-  [module R P] : projective R P ↔
-  (∃ s : P →ₗ[R] (P →₀ R), function.left_inverse (finsupp.total P P R id) s) :=
-⟨λ h, h.1, λ h, ⟨h⟩⟩
+theorem projective_def {R : Type u} [Semiringₓ R] {P : Type max u v} [AddCommMonoidₓ P] [Module R P] :
+    Projective R P ↔ ∃ s : P →ₗ[R] P →₀ R, Function.LeftInverse (Finsupp.total P P R id) s :=
+  ⟨fun h => h.1, fun h => ⟨h⟩⟩
 
-section semiring
+section Semiringₓ
 
-variables {R : Type u} [semiring R] {P : Type (max u v)} [add_comm_monoid P] [module R P]
-  {M : Type (max u v)} [add_comm_group M] [module R M] {N : Type*} [add_comm_group N] [module R N]
+variable {R : Type u} [Semiringₓ R] {P : Type max u v} [AddCommMonoidₓ P] [Module R P] {M : Type max u v}
+  [AddCommGroupₓ M] [Module R M] {N : Type _} [AddCommGroupₓ N] [Module R N]
 
 /-- A projective R-module has the property that maps from it lift along surjections. -/
-theorem projective_lifting_property [h : projective R P] (f : M →ₗ[R] N) (g : P →ₗ[R] N)
-  (hf : function.surjective f) : ∃ (h : P →ₗ[R] M), f.comp h = g :=
-begin
+theorem projective_lifting_property [h : Projective R P] (f : M →ₗ[R] N) (g : P →ₗ[R] N) (hf : Function.Surjective f) :
+    ∃ h : P →ₗ[R] M, f.comp h = g := by
   /-
-  Here's the first step of the proof.
-  Recall that `X →₀ R` is Lean's way of talking about the free `R`-module
-  on a type `X`. The universal property `finsupp.total` says that to a map
-  `X → N` from a type to an `R`-module, we get an associated R-module map
-  `(X →₀ R) →ₗ N`. Apply this to a (noncomputable) map `P → M` coming from the map
-  `P →ₗ N` and a random splitting of the surjection `M →ₗ N`, and we get
-  a map `φ : (P →₀ R) →ₗ M`.
-  -/
-  let φ : (P →₀ R) →ₗ[R] M := finsupp.total _ _ _ (λ p, function.surj_inv hf (g p)),
+    Here's the first step of the proof.
+    Recall that `X →₀ R` is Lean's way of talking about the free `R`-module
+    on a type `X`. The universal property `finsupp.total` says that to a map
+    `X → N` from a type to an `R`-module, we get an associated R-module map
+    `(X →₀ R) →ₗ N`. Apply this to a (noncomputable) map `P → M` coming from the map
+    `P →ₗ N` and a random splitting of the surjection `M →ₗ N`, and we get
+    a map `φ : (P →₀ R) →ₗ M`.
+    -/
+  let φ : (P →₀ R) →ₗ[R] M := Finsupp.total _ _ _ fun p => Function.surjInv hf (g p)
   -- By projectivity we have a map `P →ₗ (P →₀ R)`;
-  cases h.out with s hs,
+  cases' h.out with s hs
   -- Compose to get `P →ₗ M`. This works.
-  use φ.comp s,
-  ext p,
-  conv_rhs {rw ← hs p},
-  simp [φ, finsupp.total_apply, function.surj_inv_eq hf],
-end
+  use φ.comp s
+  ext p
+  conv_rhs => rw [← hs p]
+  simp [φ, Finsupp.total_apply, Function.surj_inv_eq hf]
 
 /-- A module which satisfies the universal property is projective. Note that the universe variables
 in `huniv` are somewhat restricted. -/
 theorem projective_of_lifting_property'
-  -- If for all surjections of `R`-modules `M →ₗ N`, all maps `P →ₗ N` lift to `P →ₗ M`,
-  (huniv : ∀ {M : Type (max v u)} {N : Type (max u v)} [add_comm_monoid M] [add_comm_monoid N],
-    by exactI
-    ∀ [module R M] [module R N],
-    by exactI
-    ∀ (f : M →ₗ[R] N) (g : P →ₗ[R] N),
-  function.surjective f → ∃ (h : P →ₗ[R] M), f.comp h = g) :
-  -- then `P` is projective.
-  projective R P :=
-begin
+    -- If for all surjections of `R`-modules `M →ₗ N`, all maps `P →ₗ N` lift to `P →ₗ M`,
+    (huniv :
+      ∀ {M : Type max v u} {N : Type max u v} [AddCommMonoidₓ M] [AddCommMonoidₓ N],
+        ∀ [Module R M] [Module R N],
+          ∀ f : M →ₗ[R] N g : P →ₗ[R] N,
+            Function.Surjective f → ∃ h : P →ₗ[R] M, f.comp h = g) :-- then `P` is projective.
+      Projective
+      R P :=
+  by
   -- let `s` be the universal map `(P →₀ R) →ₗ P` coming from the identity map `P →ₗ P`.
-  obtain ⟨s, hs⟩ : ∃ (s : P →ₗ[R] P →₀ R),
-    (finsupp.total P P R id).comp s = linear_map.id :=
-    huniv (finsupp.total P P R (id : P → P)) (linear_map.id : P →ₗ[R] P) _,
+  obtain ⟨s, hs⟩ : ∃ s : P →ₗ[R] P →₀ R, (Finsupp.total P P R id).comp s = LinearMap.id :=
+    huniv (Finsupp.total P P R (id : P → P)) (LinearMap.id : P →ₗ[R] P) _
   -- This `s` works.
-  { use s,
-    rwa linear_map.ext_iff at hs },
-  { intro p,
-    use finsupp.single p 1,
-    simp },
-end
+  · use s
+    rwa [LinearMap.ext_iff] at hs
+    
+  · intro p
+    use Finsupp.single p 1
+    simp
+    
 
-end semiring
+end Semiringₓ
 
-section ring
+section Ringₓ
 
-variables {R : Type u} [ring R] {P : Type (max u v)} [add_comm_group P] [module R P]
+variable {R : Type u} [Ringₓ R] {P : Type max u v} [AddCommGroupₓ P] [Module R P]
 
 /-- A variant of `of_lifting_property'` when we're working over a `[ring R]`,
 which only requires quantifying over modules with an `add_comm_group` instance. -/
 theorem projective_of_lifting_property
-  -- If for all surjections of `R`-modules `M →ₗ N`, all maps `P →ₗ N` lift to `P →ₗ M`,
-  (huniv : ∀ {M : Type (max v u)} {N : Type (max u v)} [add_comm_group M] [add_comm_group N],
-    by exactI
-    ∀ [module R M] [module R N],
-    by exactI
-    ∀ (f : M →ₗ[R] N) (g : P →ₗ[R] N),
-  function.surjective f → ∃ (h : P →ₗ[R] M), f.comp h = g) :
-  -- then `P` is projective.
-  projective R P :=
--- We could try and prove this *using* `of_lifting_property`,
--- but this quickly leads to typeclass hell,
--- so we just prove it over again.
-begin
+    -- If for all surjections of `R`-modules `M →ₗ N`, all maps `P →ₗ N` lift to `P →ₗ M`,
+    (huniv :
+      ∀ {M : Type max v u} {N : Type max u v} [AddCommGroupₓ M] [AddCommGroupₓ N],
+        ∀ [Module R M] [Module R N],
+          ∀ f : M →ₗ[R] N g : P →ₗ[R] N,
+            Function.Surjective f → ∃ h : P →ₗ[R] M, f.comp h = g) :-- then `P` is projective.
+      Projective
+      R P :=
+  by
+  -- We could try and prove this *using* `of_lifting_property`,
+  -- but this quickly leads to typeclass hell,
+  -- so we just prove it over again.
   -- let `s` be the universal map `(P →₀ R) →ₗ P` coming from the identity map `P →ₗ P`.
-  obtain ⟨s, hs⟩ : ∃ (s : P →ₗ[R] P →₀ R),
-    (finsupp.total P P R id).comp s = linear_map.id :=
-    huniv (finsupp.total P P R (id : P → P)) (linear_map.id : P →ₗ[R] P) _,
+  obtain ⟨s, hs⟩ : ∃ s : P →ₗ[R] P →₀ R, (Finsupp.total P P R id).comp s = LinearMap.id :=
+    huniv (Finsupp.total P P R (id : P → P)) (LinearMap.id : P →ₗ[R] P) _
   -- This `s` works.
-  { use s,
-    rwa linear_map.ext_iff at hs },
-  { intro p,
-    use finsupp.single p 1,
-    simp },
-end
+  · use s
+    rwa [LinearMap.ext_iff] at hs
+    
+  · intro p
+    use Finsupp.single p 1
+    simp
+    
 
 /-- Free modules are projective. -/
-theorem projective_of_basis {ι : Type*} (b : basis ι R P) : projective R P :=
-begin
+theorem projective_of_basis {ι : Type _} (b : Basis ι R P) : Projective R P := by
   -- need P →ₗ (P →₀ R) for definition of projective.
   -- get it from `ι → (P →₀ R)` coming from `b`.
-  use b.constr ℕ (λ i, finsupp.single (b i) (1 : R)),
-  intro m,
-  simp only [b.constr_apply, mul_one, id.def, finsupp.smul_single', finsupp.total_single,
-    linear_map.map_finsupp_sum],
-  exact b.total_repr m,
-end
+  use b.constr ℕ fun i => Finsupp.single (b i) (1 : R)
+  intro m
+  simp only [b.constr_apply, mul_oneₓ, id.def, Finsupp.smul_single', Finsupp.total_single, LinearMap.map_finsupp_sum]
+  exact b.total_repr m
 
-@[priority 100]
-instance projective_of_free [module.free R P] : module.projective R P :=
-projective_of_basis $ module.free.choose_basis R P
+instance (priority := 100) projective_of_free [Module.Free R P] : Module.Projective R P :=
+  projective_of_basis <| Module.Free.chooseBasis R P
 
-end ring
+end Ringₓ
 
-end module
+end Module
+

@@ -3,8 +3,8 @@ Copyright (c) 2021 Oliver Nash. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oliver Nash
 -/
-import algebra.lie.basic
-import algebra.non_unital_alg_hom
+import Mathbin.Algebra.Lie.Basic
+import Mathbin.Algebra.NonUnitalAlgHom
 
 /-!
 # Lie algebras as non-unital, non-associative algebras
@@ -31,49 +31,45 @@ algebra and we provide some basic definitions for doing so here.
 lie algebra, non-unital, non-associative
 -/
 
-universes u v w
 
-variables (R : Type u) (L : Type v) [comm_ring R] [lie_ring L] [lie_algebra R L]
+universe u v w
+
+variable (R : Type u) (L : Type v) [CommRingₓ R] [LieRing L] [LieAlgebra R L]
 
 /-- A `lie_ring` can be regarded as a `non_unital_non_assoc_semiring` by turning its
 `has_bracket` (denoted `⁅, ⁆`) into a `has_mul` (denoted `*`). -/
-def lie_ring.to_non_unital_non_assoc_semiring : non_unital_non_assoc_semiring L :=
-{ mul           := has_bracket.bracket,
-  left_distrib  := lie_add,
-  right_distrib := add_lie,
-  zero_mul      := zero_lie,
-  mul_zero      := lie_zero,
-  .. (infer_instance : add_comm_monoid L) }
+def LieRing.toNonUnitalNonAssocSemiring : NonUnitalNonAssocSemiringₓ L :=
+  { (inferInstance : AddCommMonoidₓ L) with mul := HasBracket.bracket, left_distrib := lie_add,
+    right_distrib := add_lie, zero_mul := zero_lie, mul_zero := lie_zero }
 
-local attribute [instance] lie_ring.to_non_unital_non_assoc_semiring
+attribute [local instance] LieRing.toNonUnitalNonAssocSemiring
 
-namespace lie_algebra
+namespace LieAlgebra
 
 /-- Regarding the `lie_ring` of a `lie_algebra` as a `non_unital_non_assoc_semiring`, we can
 reinterpret the `smul_lie` law as an `is_scalar_tower`. -/
-instance is_scalar_tower : is_scalar_tower R L L := ⟨smul_lie⟩
+instance is_scalar_tower : IsScalarTower R L L :=
+  ⟨smul_lie⟩
 
 /-- Regarding the `lie_ring` of a `lie_algebra` as a `non_unital_non_assoc_semiring`, we can
 reinterpret the `lie_smul` law as an `smul_comm_class`. -/
-instance smul_comm_class : smul_comm_class R L L := ⟨λ t x y, (lie_smul t x y).symm⟩
+instance smul_comm_class : SmulCommClass R L L :=
+  ⟨fun t x y => (lie_smul t x y).symm⟩
 
-end lie_algebra
+end LieAlgebra
 
-namespace lie_hom
+namespace LieHom
 
-variables {R L} {L₂ : Type w} [lie_ring L₂] [lie_algebra R L₂]
+variable {R L} {L₂ : Type w} [LieRing L₂] [LieAlgebra R L₂]
 
 /-- Regarding the `lie_ring` of a `lie_algebra` as a `non_unital_non_assoc_semiring`, we can
 regard a `lie_hom` as a `non_unital_alg_hom`. -/
 @[simps]
-def to_non_unital_alg_hom (f : L →ₗ⁅R⁆ L₂) : non_unital_alg_hom R L L₂ :=
-{ to_fun := f,
-  map_zero' := f.map_zero,
-  map_mul'  := f.map_lie,
-  ..f }
+def toNonUnitalAlgHom (f : L →ₗ⁅R⁆ L₂) : NonUnitalAlgHom R L L₂ :=
+  { f with toFun := f, map_zero' := f.map_zero, map_mul' := f.map_lie }
 
-lemma to_non_unital_alg_hom_injective :
-  function.injective (to_non_unital_alg_hom : _ → non_unital_alg_hom R L L₂) :=
-λ f g h, ext $ non_unital_alg_hom.congr_fun h
+theorem to_non_unital_alg_hom_injective : Function.Injective (toNonUnitalAlgHom : _ → NonUnitalAlgHom R L L₂) :=
+  fun f g h => ext <| NonUnitalAlgHom.congr_fun h
 
-end lie_hom
+end LieHom
+

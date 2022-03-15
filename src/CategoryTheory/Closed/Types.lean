@@ -3,10 +3,10 @@ Copyright (c) 2020 Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bhavik Mehta
 -/
-import category_theory.limits.presheaf
-import category_theory.limits.preserves.functor_category
-import category_theory.limits.shapes.types
-import category_theory.closed.cartesian
+import Mathbin.CategoryTheory.Limits.Presheaf
+import Mathbin.CategoryTheory.Limits.Preserves.FunctorCategory
+import Mathbin.CategoryTheory.Limits.Shapes.Types
+import Mathbin.CategoryTheory.Closed.Cartesian
 
 /-!
 # Cartesian closure of Type
@@ -16,42 +16,39 @@ category in `Type u₁`.
 Note this implies that the category of presheaves on a small category `C` is cartesian closed.
 -/
 
-namespace category_theory
 
-noncomputable theory
+namespace CategoryTheory
 
-open category limits
-universes v₁ v₂ u₁ u₂
+noncomputable section
 
-variables {C : Type v₂} [category.{v₁} C]
+open Category Limits
 
-section cartesian_closed
+universe v₁ v₂ u₁ u₂
 
-instance (X : Type v₁) : is_left_adjoint (types.binary_product_functor.obj X) :=
-{ right :=
-  { obj := λ Y, X ⟶ Y,
-    map := λ Y₁ Y₂ f g, g ≫ f },
-  adj := adjunction.mk_of_unit_counit
-  { unit := { app := λ Z (z : Z) x, ⟨x, z⟩ },
-    counit := { app := λ Z xf, xf.2 xf.1 } } }
+variable {C : Type v₂} [Category.{v₁} C]
 
-instance : has_finite_products (Type v₁) := has_finite_products_of_has_products _
+section CartesianClosed
 
-instance : cartesian_closed (Type v₁) :=
-{ closed' := λ X,
-  { is_adj := adjunction.left_adjoint_of_nat_iso (types.binary_product_iso_prod.app X) } }
+instance (X : Type v₁) : IsLeftAdjoint (Types.binaryProductFunctor.obj X) where
+  right := { obj := fun Y => X ⟶ Y, map := fun Y₁ Y₂ f g => g ≫ f }
+  adj := Adjunction.mkOfUnitCounit { Unit := { app := fun x => ⟨x, z⟩ }, counit := { app := fun Z xf => xf.2 xf.1 } }
 
-instance {C : Type u₁} [category.{v₁} C] : has_finite_products (C ⥤ Type u₁) :=
-has_finite_products_of_has_products _
+instance : HasFiniteProducts (Type v₁) :=
+  has_finite_products_of_has_products _
 
-instance {C : Type v₁} [small_category C] : cartesian_closed (C ⥤ Type v₁) :=
-{ closed' := λ F,
-  { is_adj :=
-    begin
-      letI := functor_category.prod_preserves_colimits F,
-      apply is_left_adjoint_of_preserves_colimits (prod.functor.obj F),
-    end } }
+instance : CartesianClosed (Type v₁) where
+  closed' := fun X => { isAdj := Adjunction.leftAdjointOfNatIso (Types.binaryProductIsoProd.app X) }
 
-end cartesian_closed
+instance {C : Type u₁} [Category.{v₁} C] : HasFiniteProducts (C ⥤ Type u₁) :=
+  has_finite_products_of_has_products _
 
-end category_theory
+instance {C : Type v₁} [SmallCategory C] : CartesianClosed (C ⥤ Type v₁) where
+  closed' := fun F =>
+    { isAdj := by
+        let this' := functor_category.prod_preserves_colimits F
+        apply is_left_adjoint_of_preserves_colimits (prod.functor.obj F) }
+
+end CartesianClosed
+
+end CategoryTheory
+

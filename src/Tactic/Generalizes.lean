@@ -3,8 +3,7 @@ Copyright (c) 2020 Jannis Limperg. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jannis Limperg
 -/
-
-import tactic.core
+import Mathbin.Tactic.Core
 
 /-!
 # The `generalizes` tactic
@@ -36,16 +35,16 @@ This leaves us with a generalized goal. This construction is performed by
 `generalizes.step3`.
 -/
 
-universes u v w
 
-namespace tactic
+universe u v w
 
-open expr
+namespace Tactic
 
-namespace generalizes
+open Expr
 
-/--
-Input:
+namespace Generalizes
+
+/-- Input:
 
 - Target expression `e`.
 - List of expressions `jᵢ` to be generalised, along with a name for the local
@@ -63,19 +62,17 @@ Note that the substitution also affects the types of the `kᵢ`: If `jᵢ : Jᵢ
 The transparency `md` and the boolean `unify` are passed to `kabstract` when we
 abstract over occurrences of the `jᵢ` in `e`.
 -/
-meta def step1 (md : transparency) (unify : bool)
-  (e : expr) (to_generalize : list (name × expr)) : tactic (expr × list expr) := do
-  let go : name × expr → expr × list expr → tactic (expr × list expr) :=
-        λ ⟨n, j⟩ ⟨e, ks⟩, do
-        { J ← infer_type j,
-          k ← mk_local' n binder_info.default J,
-          e ← kreplace e j k md unify,
-          ks ← ks.mmap $ λ k', kreplace k' j k md unify,
-          pure (e, k :: ks) },
-  to_generalize.mfoldr go (e, [])
+unsafe def step1 (md : Transparency) (unify : Bool) (e : expr) (to_generalize : List (Name × expr)) :
+    tactic (expr × List expr) := do
+  let go : Name × expr → expr × List expr → tactic (expr × List expr) := fun ⟨n, j⟩ ⟨e, ks⟩ => do
+    let J ← infer_type j
+    let k ← mk_local' n BinderInfo.default J
+    let e ← kreplace e j k md unify
+    let ks ← ks.mmap fun k' => kreplace k' j k md unify
+    pure (e, k :: ks)
+  to_generalize go (e, [])
 
-/--
-Input: for each equation that should be generated: the equation name, the
+/-- Input: for each equation that should be generated: the equation name, the
 argument `jᵢ` and the corresponding local constant `kᵢ` from step 1.
 
 Output: for each element of the input list a new local constant of type
@@ -85,50 +82,43 @@ The transparency `md` is used when determining whether the type of `jᵢ` is def
 to the type of `kᵢ` (and thus whether to generate a homogeneous or heterogeneous
 equation).
 -/
-meta def step2 (md : transparency)
-  (to_generalize : list (name × expr × expr))
-  : tactic (list (expr × expr)) :=
-to_generalize.mmap $ λ ⟨n, j, k⟩, do
-  J ← infer_type j,
-  K ← infer_type k,
-  sort u ← infer_type K |
-    fail! "generalizes'/step2: expected the type of {K} to be a sort",
-  homogeneous ← succeeds $ is_def_eq J K md,
-  let ⟨eq_type, eq_proof⟩ :=
-    if homogeneous
-      then ((const `eq  [u]) K k j  , (const `eq.refl  [u]) J j)
-      else ((const `heq [u]) K k J j, (const `heq.refl [u]) J j),
-  eq ← mk_local' n binder_info.default eq_type,
-  pure (eq, eq_proof)
+unsafe def step2 (md : Transparency) (to_generalize : List (Name × expr × expr)) : tactic (List (expr × expr)) :=
+  to_generalize.mmap fun ⟨n, j, k⟩ => do
+    let J ← infer_type j
+    let K ← infer_type k
+    let sort u ← infer_type K | throwError "generalizes'/step2: expected the type of {← K} to be a sort"
+    let homogeneous ← succeeds <| is_def_eq J K md
+    let ⟨eq_type, eq_proof⟩ :=
+      if homogeneous then ((const `eq [u]) K k j, (const `eq.refl [u]) J j)
+      else ((const `heq [u]) K k J j, (const `heq.refl [u]) J j)
+    let eq ← mk_local' n BinderInfo.default eq_type
+    pure (Eq, eq_proof)
 
-/--
-Input: The `jᵢ`; the local constants `kᵢ` from step 1; the equations and their
+/-- Input: The `jᵢ`; the local constants `kᵢ` from step 1; the equations and their
 proofs from step 2.
 
 This step is the first one that changes the goal (and also the last one
 overall). It asserts the generalized goal, then derives the current goal from
 it. This leaves us with the generalized goal.
 -/
-meta def step3 (e : expr) (js ks eqs eq_proofs : list expr)
-  : tactic unit :=
-focus1 $ do
-  let new_target_type := (e.pis eqs).pis ks,
-  type_check new_target_type <|> fail!
-    ("generalizes': unable to generalize the target because the generalized target type does not" ++
-    " type check:\n{new_target_type}"),
-  n ← mk_fresh_name,
-  new_target ← assert n new_target_type,
-  swap,
-  let target_proof := new_target.mk_app $ js ++ eq_proofs,
-  exact target_proof
+unsafe def step3 (e : expr) (js ks eqs eq_proofs : List expr) : tactic Unit :=
+  focus1 <| do
+    let new_target_type := (e.pis eqs).pis ks
+    type_check new_target_type <|>
+        throwError
+          "generalizes': unable to generalize the target because the generalized target type does not type check:
+          {← new_target_type}"
+    let n ← mk_fresh_name
+    let new_target ← assert n new_target_type
+    swap
+    let target_proof := new_target.mk_app <| js ++ eq_proofs
+    exact target_proof
 
-end generalizes
+end Generalizes
 
-open generalizes
+open Generalizes
 
-
-/--
-Generalizes the target over each of the expressions in `args`. Given
+/-- Generalizes the target over each of the expressions in `args`. Given
 `args = [(a₁, h₁, arg₁), ...]`, this changes the target to
 
     ∀ (a₁ : T₁) ... (h₁ : a₁ = arg₁) ..., U
@@ -148,60 +138,56 @@ The `args` must be given in dependency order, so `[n, fin n]` is okay but
 After generalizing the `args`, the target type may no longer type check.
 `generalizes'` will then raise an error.
 -/
-meta def generalizes' (args : list (name × option name × expr))
-  (md := semireducible) (unify := tt) : tactic unit := do
-  tgt ← target,
-  let stage1_args := args.map $ λ ⟨n, _, j⟩, (n, j),
-  ⟨e, ks⟩ ← step1 md unify tgt stage1_args,
-  let stage2_args : list (option (name × expr × expr)) :=
-    args.map₂ (λ ⟨_, eq_name, j⟩ k, eq_name.map $ λ eq_name, (eq_name, j, k)) ks,
-  let stage2_args := stage2_args.reduce_option,
-  eqs_and_proofs ← step2 md stage2_args,
-  let eqs := eqs_and_proofs.map prod.fst,
-  let eq_proofs := eqs_and_proofs.map prod.snd,
-  let js := args.map (prod.snd ∘ prod.snd),
+unsafe def generalizes' (args : List (Name × Option Name × expr)) (md := semireducible) (unify := true) : tactic Unit :=
+  do
+  let tgt ← target
+  let stage1_args := args.map fun ⟨n, _, j⟩ => (n, j)
+  let ⟨e, ks⟩ ← step1 md unify tgt stage1_args
+  let stage2_args : List (Option (Name × expr × expr)) :=
+    args.map₂ (fun k => eq_name.map fun eq_name => (eq_name, j, k)) ks
+  let stage2_args := stage2_args.reduceOption
+  let eqs_and_proofs ← step2 md stage2_args
+  let eqs := eqs_and_proofs.map Prod.fst
+  let eq_proofs := eqs_and_proofs.map Prod.snd
+  let js := args.map (Prod.snd ∘ Prod.snd)
   step3 e js ks eqs eq_proofs
 
-/--
-Like `generalizes'`, but also introduces the generalized constants and their
+/-- Like `generalizes'`, but also introduces the generalized constants and their
 associated equations into the context.
 -/
-meta def generalizes_intro (args : list (name × option name × expr))
-  (md := semireducible) (unify := tt) : tactic (list expr × list expr) := do
-  generalizes' args md unify,
-  ks ← intron' args.length,
-  eqs ← intron' $ args.countp $ λ x, x.snd.fst.is_some,
+unsafe def generalizes_intro (args : List (Name × Option Name × expr)) (md := semireducible) (unify := true) :
+    tactic (List expr × List expr) := do
+  generalizes' args md unify
+  let ks ← intron' args.length
+  let eqs ← intron' <| args.countp fun x => x.snd.fst.isSome
   pure (ks, eqs)
 
-namespace interactive
+namespace Interactive
 
 setup_tactic_parser
 
-private meta def generalizes_arg_parser_eq : pexpr → lean.parser (pexpr × name)
-| (app (app (macro _ [const `eq _ ])  e) (local_const x _ _ _)) := pure (e, x)
-| (app (app (macro _ [const `heq _ ]) e) (local_const x _ _ _)) := pure (e, x)
-| _ := failure
+private unsafe def generalizes_arg_parser_eq : pexpr → lean.parser (pexpr × Name)
+  | app (app (macro _ [const `eq _]) e) (local_const x _ _ _) => pure (e, x)
+  | app (app (macro _ [const `heq _]) e) (local_const x _ _ _) => pure (e, x)
+  | _ => failure
 
-private meta def generalizes_arg_parser : lean.parser (name × option name × pexpr) :=
-with_desc "(id :)? expr = id" $ do
-  lhs ← lean.parser.pexpr 0,
-  (tk ":" >> match lhs with
-    | local_const hyp_name _ _ _ := do
-      (arg, arg_name) ← lean.parser.pexpr 0 >>= generalizes_arg_parser_eq,
-      pure (arg_name, some hyp_name, arg)
-    | _ := failure
-    end) <|>
-  (do
-    (arg, arg_name) ← generalizes_arg_parser_eq lhs,
-    pure (arg_name, none, arg))
+private unsafe def generalizes_arg_parser : lean.parser (Name × Option Name × pexpr) :=
+  with_desc "(id :)? expr = id" <| do
+    let lhs ← lean.parser.pexpr 0
+    (tk ":" >>
+          match lhs with
+          | local_const hyp_name _ _ _ => do
+            let (arg, arg_name) ← lean.parser.pexpr 0 >>= generalizes_arg_parser_eq
+            pure (arg_name, some hyp_name, arg)
+          | _ => failure) <|>
+        do
+        let (arg, arg_name) ← generalizes_arg_parser_eq lhs
+        pure (arg_name, none, arg)
 
-private meta def generalizes_args_parser
-  : lean.parser (list (name × option name × pexpr)) :=
-with_desc "[(id :)? expr = id, ...]" $
-  tk "[" *> sep_by (tk ",") generalizes_arg_parser <* tk "]"
+private unsafe def generalizes_args_parser : lean.parser (List (Name × Option Name × pexpr)) :=
+  with_desc "[(id :)? expr = id, ...]" <| tk "[" *> sep_by (tk ",") generalizes_arg_parser <* tk "]"
 
-/--
-Generalizes the target over multiple expressions. For example, given the goal
+/-- Generalizes the target over multiple expressions. For example, given the goal
 
     P : ∀ n, fin n → Prop
     n : ℕ
@@ -237,20 +223,20 @@ example, `generalizes [nat.succ n = n', fin.succ f == f']` gets you
 After generalization, the target type may no longer type check. `generalizes`
 will then raise an error.
 -/
-meta def generalizes (args : parse generalizes_args_parser) : tactic unit :=
-propagate_tags $ do
-  args ← args.mmap $ λ ⟨arg_name, hyp_name, arg⟩, do
-  { arg ← to_expr arg,
-    pure (arg_name, hyp_name, arg) },
-  generalizes_intro args,
-  pure ()
+unsafe def generalizes (args : parse generalizes_args_parser) : tactic Unit :=
+  propagate_tags <| do
+    let args ←
+      args.mmap fun ⟨arg_name, hyp_name, arg⟩ => do
+          let arg ← to_expr arg
+          pure (arg_name, hyp_name, arg)
+    generalizes_intro args
+    pure ()
 
 add_tactic_doc
-{ name       := "generalizes",
-  category   := doc_category.tactic,
-  decl_names := [`tactic.interactive.generalizes],
-  tags       := ["context management"],
-  inherit_description_from := `tactic.interactive.generalizes }
+  { Name := "generalizes", category := DocCategory.tactic, declNames := [`tactic.interactive.generalizes],
+    tags := ["context management"], inheritDescriptionFrom := `tactic.interactive.generalizes }
 
-end interactive
-end tactic
+end Interactive
+
+end Tactic
+

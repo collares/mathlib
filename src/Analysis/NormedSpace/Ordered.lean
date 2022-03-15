@@ -3,7 +3,7 @@ Copyright (c) 2020 Anatole Dedecker. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Anatole Dedecker
 -/
-import analysis.normed_space.basic
+import Mathbin.Analysis.NormedSpace.Basic
 
 /-!
 # Ordered normed spaces
@@ -12,39 +12,38 @@ In this file, we define classes for fields and groups that are both normed and o
 These are mostly useful to avoid diamonds during type class inference.
 -/
 
-open filter set
-open_locale topological_space
+
+open Filter Set
+
+open_locale TopologicalSpace
 
 /-- A `normed_linear_ordered_group` is an additive group that is both a `normed_group` and
     a `linear_ordered_add_comm_group`. This class is necessary to avoid diamonds. -/
-class normed_linear_ordered_group (α : Type*)
-extends linear_ordered_add_comm_group α, has_norm α, metric_space α :=
-(dist_eq : ∀ x y, dist x y = norm (x - y))
+class NormedLinearOrderedGroup (α : Type _) extends LinearOrderedAddCommGroup α, HasNorm α, MetricSpace α where
+  dist_eq : ∀ x y, dist x y = norm (x - y)
 
-@[priority 100] instance normed_linear_ordered_group.to_normed_group (α : Type*)
-  [normed_linear_ordered_group α] : normed_group α :=
-⟨normed_linear_ordered_group.dist_eq⟩
+instance (priority := 100) NormedLinearOrderedGroup.toNormedGroup (α : Type _) [NormedLinearOrderedGroup α] :
+    NormedGroup α :=
+  ⟨NormedLinearOrderedGroup.dist_eq⟩
 
 /-- A `normed_linear_ordered_field` is a field that is both a `normed_field` and a
     `linear_ordered_field`. This class is necessary to avoid diamonds. -/
-class normed_linear_ordered_field (α : Type*)
-extends linear_ordered_field α, has_norm α, metric_space α :=
-(dist_eq : ∀ x y, dist x y = norm (x - y))
-(norm_mul' : ∀ a b, norm (a * b) = norm a * norm b)
+class NormedLinearOrderedField (α : Type _) extends LinearOrderedField α, HasNorm α, MetricSpace α where
+  dist_eq : ∀ x y, dist x y = norm (x - y)
+  norm_mul' : ∀ a b, norm (a * b) = norm a * norm b
 
-@[priority 100] instance normed_linear_ordered_field.to_normed_field (α : Type*)
-  [normed_linear_ordered_field α] : normed_field α :=
-{ dist_eq := normed_linear_ordered_field.dist_eq,
-  norm_mul' := normed_linear_ordered_field.norm_mul' }
+instance (priority := 100) NormedLinearOrderedField.toNormedField (α : Type _) [NormedLinearOrderedField α] :
+    NormedField α where
+  dist_eq := NormedLinearOrderedField.dist_eq
+  norm_mul' := NormedLinearOrderedField.norm_mul'
 
-@[priority 100] instance normed_linear_ordered_field.to_normed_linear_ordered_group (α : Type*)
-[normed_linear_ordered_field α] : normed_linear_ordered_group α :=
-⟨normed_linear_ordered_field.dist_eq⟩
+instance (priority := 100) NormedLinearOrderedField.toNormedLinearOrderedGroup (α : Type _)
+    [NormedLinearOrderedField α] : NormedLinearOrderedGroup α :=
+  ⟨NormedLinearOrderedField.dist_eq⟩
 
-noncomputable
-instance : normed_linear_ordered_field ℚ :=
-⟨dist_eq_norm, norm_mul⟩
+noncomputable instance : NormedLinearOrderedField ℚ :=
+  ⟨dist_eq_norm, norm_mul⟩
 
-noncomputable
-instance : normed_linear_ordered_field ℝ :=
-⟨dist_eq_norm, norm_mul⟩
+noncomputable instance : NormedLinearOrderedField ℝ :=
+  ⟨dist_eq_norm, norm_mul⟩
+

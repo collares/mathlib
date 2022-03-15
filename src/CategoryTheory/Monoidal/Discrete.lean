@@ -3,9 +3,9 @@ Copyright (c) 2020 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import category_theory.monoidal.natural_transformation
-import category_theory.discrete_category
-import algebra.group.hom
+import Mathbin.CategoryTheory.Monoidal.NaturalTransformation
+import Mathbin.CategoryTheory.DiscreteCategory
+import Mathbin.Algebra.Group.Hom
 
 /-!
 # Monoids as discrete monoidal categories
@@ -14,52 +14,58 @@ The discrete category on a monoid is a monoidal category.
 Multiplicative morphisms induced monoidal functors.
 -/
 
-universes u
 
-open category_theory
-open category_theory.discrete
+universe u
 
-variables (M : Type u) [monoid M]
+open CategoryTheory
 
-namespace category_theory
+open CategoryTheory.Discrete
+
+variable (M : Type u) [Monoidₓ M]
+
+namespace CategoryTheory
 
 @[to_additive]
-instance monoid_discrete : monoid (discrete M) := by { dsimp [discrete], apply_instance }
+instance monoidDiscrete : Monoidₓ (Discrete M) := by
+  dsimp [discrete]
+  infer_instance
 
-@[to_additive discrete.add_monoidal]
-instance discrete.monoidal : monoidal_category (discrete M) :=
-{ tensor_unit := 1,
-  tensor_obj := λ X Y, X * Y,
-  tensor_hom := λ W X Y Z f g, eq_to_hom (by rw [eq_of_hom f, eq_of_hom g]),
-  left_unitor := λ X, eq_to_iso (one_mul X),
-  right_unitor := λ X, eq_to_iso (mul_one X),
-  associator := λ X Y Z, eq_to_iso (mul_assoc _ _ _), }
+@[to_additive Discrete.addMonoidal]
+instance Discrete.monoidal : MonoidalCategory (Discrete M) where
+  tensorUnit := 1
+  tensorObj := fun X Y => X * Y
+  tensorHom := fun W X Y Z f g =>
+    eqToHom
+      (by
+        rw [eq_of_hom f, eq_of_hom g])
+  leftUnitor := fun X => eqToIso (one_mulₓ X)
+  rightUnitor := fun X => eqToIso (mul_oneₓ X)
+  associator := fun X Y Z => eqToIso (mul_assoc _ _ _)
 
-variables {M} {N : Type u} [monoid N]
+variable {M} {N : Type u} [Monoidₓ N]
 
-/--
-A multiplicative morphism between monoids gives a monoidal functor between the corresponding
+/-- A multiplicative morphism between monoids gives a monoidal functor between the corresponding
 discrete monoidal categories.
 -/
-@[to_additive dicrete.add_monoidal_functor "An additive morphism between add_monoids gives a
-  monoidal functor between the corresponding discrete monoidal categories.", simps]
-def discrete.monoidal_functor (F : M →* N) : monoidal_functor (discrete M) (discrete N) :=
-{ obj := F,
-  map := λ X Y f, eq_to_hom (F.congr_arg (eq_of_hom f)),
-  ε := eq_to_hom F.map_one.symm,
-  μ := λ X Y, eq_to_hom (F.map_mul X Y).symm, }
+@[to_additive Dicrete.addMonoidalFunctor
+      "An additive morphism between add_monoids gives a\n  monoidal functor between the corresponding discrete monoidal categories.",
+  simps]
+def Discrete.monoidalFunctor (F : M →* N) : MonoidalFunctor (Discrete M) (Discrete N) where
+  obj := F
+  map := fun X Y f => eqToHom (F.congr_arg (eq_of_hom f))
+  ε := eqToHom F.map_one.symm
+  μ := fun X Y => eqToHom (F.map_mul X Y).symm
 
-variables {K : Type u} [monoid K]
+variable {K : Type u} [Monoidₓ K]
 
-/--
-The monoidal natural isomorphism corresponding to composing two multiplicative morphisms.
+/-- The monoidal natural isomorphism corresponding to composing two multiplicative morphisms.
 -/
-@[to_additive dicrete.add_monoidal_functor_comp "The monoidal natural isomorphism corresponding to
-composing two additive morphisms."]
-def discrete.monoidal_functor_comp (F : M →* N) (G : N →* K) :
-  discrete.monoidal_functor F ⊗⋙ discrete.monoidal_functor G ≅
-  discrete.monoidal_functor (G.comp F) :=
-{ hom := { app := λ X, 𝟙 _, },
-  inv := { app := λ X, 𝟙 _, }, }
+@[to_additive Dicrete.addMonoidalFunctorComp
+      "The monoidal natural isomorphism corresponding to\ncomposing two additive morphisms."]
+def Discrete.monoidalFunctorComp (F : M →* N) (G : N →* K) :
+    Discrete.monoidalFunctor F ⊗⋙ Discrete.monoidalFunctor G ≅ Discrete.monoidalFunctor (G.comp F) where
+  Hom := { app := fun X => 𝟙 _ }
+  inv := { app := fun X => 𝟙 _ }
 
-end category_theory
+end CategoryTheory
+

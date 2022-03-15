@@ -1,9 +1,9 @@
+import Mathbin.Data.Qpf.Multivariate.Basic
+import Mathbin.Data.Qpf.Multivariate.Constructions.Fix
+import Mathbin.Data.Qpf.Multivariate.Constructions.Cofix
+import Mathbin.Data.Qpf.Multivariate.Constructions.Comp
+import Mathbin.Data.Qpf.Multivariate.Constructions.Quot
+import Mathbin.Data.Qpf.Multivariate.Constructions.Prj
+import Mathbin.Data.Qpf.Multivariate.Constructions.Const
+import Mathbin.Data.Qpf.Multivariate.Constructions.Sigma
 
-import data.qpf.multivariate.basic
-import data.qpf.multivariate.constructions.fix
-import data.qpf.multivariate.constructions.cofix
-import data.qpf.multivariate.constructions.comp
-import data.qpf.multivariate.constructions.quot
-import data.qpf.multivariate.constructions.prj
-import data.qpf.multivariate.constructions.const
-import data.qpf.multivariate.constructions.sigma

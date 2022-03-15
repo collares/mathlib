@@ -3,9 +3,8 @@ Copyright © 2020 Nicolò Cavalleri. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolò Cavalleri
 -/
-
-import geometry.manifold.algebra.smooth_functions
-import ring_theory.derivation
+import Mathbin.Geometry.Manifold.Algebra.SmoothFunctions
+import Mathbin.RingTheory.Derivation
 
 /-!
 
@@ -20,122 +19,149 @@ of the Lie algebra for a Lie group.
 
 -/
 
-variables (𝕜 : Type*) [nondiscrete_normed_field 𝕜]
-{E : Type*} [normed_group E] [normed_space 𝕜 E]
-{H : Type*} [topological_space H] (I : model_with_corners 𝕜 E H)
-(M : Type*) [topological_space M] [charted_space H M] (n : with_top ℕ)
 
-open_locale manifold
+variable (𝕜 : Type _) [NondiscreteNormedField 𝕜] {E : Type _} [NormedGroup E] [NormedSpace 𝕜 E] {H : Type _}
+  [TopologicalSpace H] (I : ModelWithCorners 𝕜 E H) (M : Type _) [TopologicalSpace M] [ChartedSpace H M] (n : WithTop ℕ)
+
+open_locale Manifold
 
 -- the following two instances prevent poorly understood type class inference timeout problems
-instance smooth_functions_algebra : algebra 𝕜 C^∞⟮I, M; 𝕜⟯ := by apply_instance
-instance smooth_functions_tower : is_scalar_tower 𝕜 C^∞⟮I, M; 𝕜⟯ C^∞⟮I, M; 𝕜⟯ := by apply_instance
+instance smoothFunctionsAlgebra : Algebra 𝕜 C^∞⟮I, M; 𝕜⟯ := by
+  infer_instance
+
+instance smooth_functions_tower : IsScalarTower 𝕜 C^∞⟮I, M; 𝕜⟯ C^∞⟮I, M; 𝕜⟯ := by
+  infer_instance
 
 /-- Type synonym, introduced to put a different `has_scalar` action on `C^n⟮I, M; 𝕜⟯`
 which is defined as `f • r = f(x) * r`. -/
-@[nolint unused_arguments] def pointed_smooth_map (x : M) := C^n⟮I, M; 𝕜⟯
+@[nolint unused_arguments]
+def PointedSmoothMap (x : M) :=
+  C^n⟮I, M; 𝕜⟯
 
-localized "notation `C^` n `⟮` I `,` M `;` 𝕜 `⟯⟨` x `⟩` :=
-  pointed_smooth_map 𝕜 I M n x" in derivation
+-- mathport name: «exprC^ ⟮ , ; ⟯⟨ ⟩»
+localized [Derivation] notation "C^" n "⟮" I "," M ";" 𝕜 "⟯⟨" x "⟩" => PointedSmoothMap 𝕜 I M n x
 
-variables {𝕜 M}
+variable {𝕜 M}
 
-namespace pointed_smooth_map
+namespace PointedSmoothMap
 
-instance {x : M} : has_coe_to_fun C^∞⟮I, M; 𝕜⟯⟨x⟩ (λ _, M → 𝕜) :=
-cont_mdiff_map.has_coe_to_fun
-instance {x : M} : comm_ring C^∞⟮I, M; 𝕜⟯⟨x⟩ := smooth_map.comm_ring
-instance {x : M} : algebra 𝕜 C^∞⟮I, M; 𝕜⟯⟨x⟩ := smooth_map.algebra
-instance {x : M} : inhabited C^∞⟮I, M; 𝕜⟯⟨x⟩ := ⟨0⟩
-instance {x : M} : algebra C^∞⟮I, M; 𝕜⟯⟨x⟩ C^∞⟮I, M; 𝕜⟯ := algebra.id C^∞⟮I, M; 𝕜⟯
-instance {x : M} : is_scalar_tower 𝕜 C^∞⟮I, M; 𝕜⟯⟨x⟩ C^∞⟮I, M; 𝕜⟯ := is_scalar_tower.right
+instance {x : M} : CoeFun C^∞⟮I,M;𝕜⟯⟨x⟩ fun _ => M → 𝕜 :=
+  ContMdiffMap.hasCoeToFun
+
+instance {x : M} : CommRingₓ C^∞⟮I,M;𝕜⟯⟨x⟩ :=
+  SmoothMap.commRing
+
+instance {x : M} : Algebra 𝕜 C^∞⟮I,M;𝕜⟯⟨x⟩ :=
+  SmoothMap.algebra
+
+instance {x : M} : Inhabited C^∞⟮I,M;𝕜⟯⟨x⟩ :=
+  ⟨0⟩
+
+instance {x : M} : Algebra C^∞⟮I,M;𝕜⟯⟨x⟩ C^∞⟮I, M; 𝕜⟯ :=
+  Algebra.id C^∞⟮I, M; 𝕜⟯
+
+instance {x : M} : IsScalarTower 𝕜 C^∞⟮I,M;𝕜⟯⟨x⟩ C^∞⟮I, M; 𝕜⟯ :=
+  IsScalarTower.right
 
 variable {I}
 
 /-- `smooth_map.eval_ring_hom` gives rise to an algebra structure of `C^∞⟮I, M; 𝕜⟯` on `𝕜`. -/
-instance eval_algebra {x : M} : algebra C^∞⟮I, M; 𝕜⟯⟨x⟩ 𝕜 :=
-(smooth_map.eval_ring_hom x : C^∞⟮I, M; 𝕜⟯⟨x⟩ →+* 𝕜).to_algebra
+instance evalAlgebra {x : M} : Algebra C^∞⟮I,M;𝕜⟯⟨x⟩ 𝕜 :=
+  (SmoothMap.evalRingHom x : C^∞⟮I,M;𝕜⟯⟨x⟩ →+* 𝕜).toAlgebra
 
 /-- With the `eval_algebra` algebra structure evaluation is actually an algebra morphism. -/
-def eval (x : M) : C^∞⟮I, M; 𝕜⟯ →ₐ[C^∞⟮I, M; 𝕜⟯⟨x⟩] 𝕜 :=
-algebra.of_id C^∞⟮I, M; 𝕜⟯⟨x⟩ 𝕜
+def eval (x : M) : C^∞⟮I, M; 𝕜⟯ →ₐ[C^∞⟮I,M;𝕜⟯⟨x⟩] 𝕜 :=
+  Algebra.ofId C^∞⟮I,M;𝕜⟯⟨x⟩ 𝕜
 
-lemma smul_def (x : M) (f : C^∞⟮I, M; 𝕜⟯⟨x⟩) (k : 𝕜) : f • k = f x * k := rfl
+theorem smul_def (x : M) (f : C^∞⟮I,M;𝕜⟯⟨x⟩) (k : 𝕜) : f • k = f x * k :=
+  rfl
 
-instance (x : M) : is_scalar_tower 𝕜 C^∞⟮I, M; 𝕜⟯⟨x⟩ 𝕜 :=
-{ smul_assoc := λ k f h, by { simp only [smul_def, algebra.id.smul_eq_mul, smooth_map.coe_smul,
-  pi.smul_apply, mul_assoc]} }
+instance (x : M) : IsScalarTower 𝕜 C^∞⟮I,M;𝕜⟯⟨x⟩ 𝕜 where
+  smul_assoc := fun k f h => by
+    simp only [smul_def, Algebra.id.smul_eq_mul, SmoothMap.coe_smul, Pi.smul_apply, mul_assoc]
 
-end pointed_smooth_map
+end PointedSmoothMap
 
-open_locale derivation
+open_locale Derivation
 
 /-- The derivations at a point of a manifold. Some regard this as a possible definition of the
 tangent space -/
-@[reducible] def point_derivation (x : M) := derivation 𝕜 (C^∞⟮I, M; 𝕜⟯⟨x⟩) 𝕜
+@[reducible]
+def PointDerivation (x : M) :=
+  Derivation 𝕜 C^∞⟮I,M;𝕜⟯⟨x⟩ 𝕜
 
 section
 
-variables (I) {M} (X Y : derivation 𝕜 C^∞⟮I, M; 𝕜⟯ C^∞⟮I, M; 𝕜⟯) (f g : C^∞⟮I, M; 𝕜⟯) (r : 𝕜)
+variable (I) {M} (X Y : Derivation 𝕜 C^∞⟮I, M; 𝕜⟯ C^∞⟮I, M; 𝕜⟯) (f g : C^∞⟮I, M; 𝕜⟯) (r : 𝕜)
 
 /-- Evaluation at a point gives rise to a `C^∞⟮I, M; 𝕜⟯`-linear map between `C^∞⟮I, M; 𝕜⟯` and `𝕜`.
  -/
-def smooth_function.eval_at (x : M) : C^∞⟮I, M; 𝕜⟯ →ₗ[C^∞⟮I, M; 𝕜⟯⟨x⟩] 𝕜 :=
-(pointed_smooth_map.eval x).to_linear_map
+def SmoothFunction.evalAt (x : M) : C^∞⟮I, M; 𝕜⟯ →ₗ[C^∞⟮I,M;𝕜⟯⟨x⟩] 𝕜 :=
+  (PointedSmoothMap.eval x).toLinearMap
 
-namespace derivation
+namespace Derivation
 
 variable {I}
 
 /-- The evaluation at a point as a linear map. -/
-def eval_at (x : M) : (derivation 𝕜 C^∞⟮I, M; 𝕜⟯ C^∞⟮I, M; 𝕜⟯) →ₗ[𝕜] point_derivation I x :=
-(smooth_function.eval_at I x).comp_der
+def evalAt (x : M) : Derivation 𝕜 C^∞⟮I, M; 𝕜⟯ C^∞⟮I, M; 𝕜⟯ →ₗ[𝕜] PointDerivation I x :=
+  (SmoothFunction.evalAt I x).compDer
 
-lemma eval_at_apply (x : M) : eval_at x X f = (X f) x := rfl
+theorem eval_at_apply (x : M) : evalAt x X f = (X f) x :=
+  rfl
 
-end derivation
+end Derivation
 
-variables {I} {E' : Type*} [normed_group E'] [normed_space 𝕜 E']
-{H' : Type*} [topological_space H'] {I' : model_with_corners 𝕜 E' H'}
-{M' : Type*} [topological_space M'] [charted_space H' M']
+variable {I} {E' : Type _} [NormedGroup E'] [NormedSpace 𝕜 E'] {H' : Type _} [TopologicalSpace H']
+  {I' : ModelWithCorners 𝕜 E' H'} {M' : Type _} [TopologicalSpace M'] [ChartedSpace H' M']
 
 /-- The heterogeneous differential as a linear map. Instead of taking a function as an argument this
 differential takes `h : f x = y`. It is particularly handy to deal with situations where the points
 on where it has to be evaluated are equal but not definitionally equal. -/
 def hfdifferential {f : C^∞⟮I, M; I', M'⟯} {x : M} {y : M'} (h : f x = y) :
-  point_derivation I x →ₗ[𝕜] point_derivation I' y :=
-{ to_fun := λ v, derivation.mk'
-    { to_fun := λ g, v (g.comp f),
-      map_add' := λ g g', by rw [smooth_map.add_comp, derivation.map_add],
-      map_smul' := λ k g,
-        by simp only [smooth_map.smul_comp, derivation.map_smul, ring_hom.id_apply], }
-    (λ g g', by simp only [derivation.leibniz, smooth_map.mul_comp, linear_map.coe_mk,
-      pointed_smooth_map.smul_def, cont_mdiff_map.comp_apply, h]),
-  map_smul' := λ k v, rfl,
-  map_add' := λ v w, rfl }
+    PointDerivation I x →ₗ[𝕜] PointDerivation I' y where
+  toFun := fun v =>
+    Derivation.mk'
+      { toFun := fun g => v (g.comp f),
+        map_add' := fun g g' => by
+          rw [SmoothMap.add_comp, Derivation.map_add],
+        map_smul' := fun k g => by
+          simp only [SmoothMap.smul_comp, Derivation.map_smul, RingHom.id_apply] }
+      fun g g' => by
+      simp only [Derivation.leibniz, SmoothMap.mul_comp, LinearMap.coe_mk, PointedSmoothMap.smul_def,
+        ContMdiffMap.comp_apply, h]
+  map_smul' := fun k v => rfl
+  map_add' := fun v w => rfl
 
 /-- The homogeneous differential as a linear map. -/
-def fdifferential (f : C^∞⟮I, M; I', M'⟯) (x : M) :
-  point_derivation I x →ₗ[𝕜] point_derivation I' (f x) :=
-hfdifferential (rfl : f x = f x)
+def fdifferential (f : C^∞⟮I, M; I', M'⟯) (x : M) : PointDerivation I x →ₗ[𝕜] PointDerivation I' (f x) :=
+  hfdifferential (rfl : f x = f x)
 
-/- Standard notation for the differential. The abbreviation is `MId`. -/
-localized "notation `𝒅` := fdifferential" in manifold
+-- mathport name: «expr𝒅»
+-- Standard notation for the differential. The abbreviation is `MId`.
+localized [Manifold] notation "𝒅" => fdifferential
 
-/- Standard notation for the differential. The abbreviation is `MId`. -/
-localized "notation `𝒅ₕ` := hfdifferential" in manifold
+-- mathport name: «expr𝒅ₕ»
+-- Standard notation for the differential. The abbreviation is `MId`.
+localized [Manifold] notation "𝒅ₕ" => hfdifferential
 
-@[simp] lemma apply_fdifferential (f : C^∞⟮I, M; I', M'⟯) {x : M} (v : point_derivation I x)
-  (g : C^∞⟮I', M'; 𝕜⟯) : 𝒅f x v g = v (g.comp f) := rfl
+@[simp]
+theorem apply_fdifferential (f : C^∞⟮I, M; I', M'⟯) {x : M} (v : PointDerivation I x) (g : C^∞⟮I', M'; 𝕜⟯) :
+    𝒅 f x v g = v (g.comp f) :=
+  rfl
 
-@[simp] lemma apply_hfdifferential {f : C^∞⟮I, M; I', M'⟯} {x : M} {y : M'} (h : f x = y)
-  (v : point_derivation I x) (g : C^∞⟮I', M'; 𝕜⟯) : 𝒅ₕh v g = 𝒅f x v g := rfl
+@[simp]
+theorem apply_hfdifferential {f : C^∞⟮I, M; I', M'⟯} {x : M} {y : M'} (h : f x = y) (v : PointDerivation I x)
+    (g : C^∞⟮I', M'; 𝕜⟯) : 𝒅ₕ h v g = 𝒅 f x v g :=
+  rfl
 
-variables {E'' : Type*} [normed_group E''] [normed_space 𝕜 E'']
-{H'' : Type*} [topological_space H''] {I'' : model_with_corners 𝕜 E'' H''}
-{M'' : Type*} [topological_space M''] [charted_space H'' M'']
+variable {E'' : Type _} [NormedGroup E''] [NormedSpace 𝕜 E''] {H'' : Type _} [TopologicalSpace H'']
+  {I'' : ModelWithCorners 𝕜 E'' H''} {M'' : Type _} [TopologicalSpace M''] [ChartedSpace H'' M'']
 
-@[simp] lemma fdifferential_comp (g : C^∞⟮I', M'; I'', M''⟯) (f : C^∞⟮I, M; I', M'⟯) (x : M) :
-  𝒅(g.comp f) x = (𝒅g (f x)).comp (𝒅f x) := rfl
+@[simp]
+theorem fdifferential_comp (g : C^∞⟮I', M'; I'', M''⟯) (f : C^∞⟮I, M; I', M'⟯) (x : M) :
+    𝒅 (g.comp f) x = (𝒅 g (f x)).comp (𝒅 f x) :=
+  rfl
 
 end
+

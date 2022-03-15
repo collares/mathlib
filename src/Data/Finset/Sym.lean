@@ -3,8 +3,8 @@ Copyright (c) 2021 Yaël Dillies. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yaël Dillies
 -/
-import data.finset.prod
-import data.sym.sym2
+import Mathbin.Data.Finset.Prod
+import Mathbin.Data.Sym.Sym2
 
 /-!
 # Symmetric powers of a finset
@@ -24,136 +24,171 @@ This file defines the symmetric powers of a finset as `finset (sym α n)` and `f
 `finset.sym2`.
 -/
 
-namespace finset
-variables {α : Type*} [decidable_eq α] {s t : finset α} {a b : α}
 
-lemma is_diag_mk_of_mem_diag {a : α × α} (h : a ∈ s.diag) : sym2.is_diag ⟦a⟧ :=
-(sym2.is_diag_iff_proj_eq _).2 ((mem_diag _ _).1 h).2
+namespace Finset
 
-lemma not_is_diag_mk_of_mem_off_diag {a : α × α} (h : a ∈ s.off_diag) : ¬ sym2.is_diag ⟦a⟧ :=
-by { rw sym2.is_diag_iff_proj_eq, exact ((mem_off_diag _ _).1 h).2.2 }
+variable {α : Type _} [DecidableEq α] {s t : Finset α} {a b : α}
 
-section sym2
-variables {m : sym2 α}
+theorem is_diag_mk_of_mem_diag {a : α × α} (h : a ∈ s.diag) : Sym2.IsDiag ⟦a⟧ :=
+  (Sym2.is_diag_iff_proj_eq _).2 ((mem_diag _ _).1 h).2
+
+theorem not_is_diag_mk_of_mem_off_diag {a : α × α} (h : a ∈ s.offDiag) : ¬Sym2.IsDiag ⟦a⟧ := by
+  rw [Sym2.is_diag_iff_proj_eq]
+  exact ((mem_off_diag _ _).1 h).2.2
+
+section Sym2
+
+variable {m : Sym2 α}
 
 /-- Lifts a finset to `sym2 α`. `s.sym2` is the finset of all pairs with elements in `s`. -/
-protected def sym2 (s : finset α) : finset (sym2 α) := (s.product s).image quotient.mk
+protected def sym2 (s : Finset α) : Finset (Sym2 α) :=
+  (s.product s).Image Quotientₓ.mk
 
-@[simp] lemma mem_sym2_iff : m ∈ s.sym2 ↔ ∀ a ∈ m, a ∈ s :=
-begin
-  refine mem_image.trans
-    ⟨_, λ h, ⟨m.out, mem_product.2 ⟨h _ m.out_fst_mem, h _ m.out_snd_mem⟩, m.out_eq⟩⟩,
-  rintro ⟨⟨a, b⟩, h, rfl⟩,
-  rw sym2.ball,
-  rwa mem_product at h,
-end
+@[simp]
+theorem mem_sym2_iff : m ∈ s.Sym2 ↔ ∀, ∀ a ∈ m, ∀, a ∈ s := by
+  refine' mem_image.trans ⟨_, fun h => ⟨m.out, mem_product.2 ⟨h _ m.out_fst_mem, h _ m.out_snd_mem⟩, m.out_eq⟩⟩
+  rintro ⟨⟨a, b⟩, h, rfl⟩
+  rw [Sym2.ball]
+  rwa [mem_product] at h
 
-lemma mk_mem_sym2_iff : ⟦(a, b)⟧ ∈ s.sym2 ↔ a ∈ s ∧ b ∈ s := by rw [mem_sym2_iff, sym2.ball]
+theorem mk_mem_sym2_iff : ⟦(a, b)⟧ ∈ s.Sym2 ↔ a ∈ s ∧ b ∈ s := by
+  rw [mem_sym2_iff, Sym2.ball]
 
-@[simp] lemma sym2_empty : (∅ : finset α).sym2 = ∅ := rfl
+@[simp]
+theorem sym2_empty : (∅ : Finset α).Sym2 = ∅ :=
+  rfl
 
-@[simp] lemma sym2_eq_empty : s.sym2 = ∅ ↔ s = ∅ :=
-by rw [finset.sym2, image_eq_empty, product_eq_empty, or_self]
+@[simp]
+theorem sym2_eq_empty : s.Sym2 = ∅ ↔ s = ∅ := by
+  rw [Finset.sym2, image_eq_empty, product_eq_empty, or_selfₓ]
 
-@[simp] lemma sym2_nonempty : s.sym2.nonempty ↔ s.nonempty :=
-by rw [finset.sym2, nonempty.image_iff, nonempty_product, and_self]
+@[simp]
+theorem sym2_nonempty : s.Sym2.Nonempty ↔ s.Nonempty := by
+  rw [Finset.sym2, nonempty.image_iff, nonempty_product, and_selfₓ]
 
-alias sym2_nonempty ↔ _ finset.nonempty.sym2
+alias sym2_nonempty ↔ _ Finset.Nonempty.sym2
 
-attribute [protected] finset.nonempty.sym2
+attribute [protected] Finset.Nonempty.sym2
 
-@[simp] lemma sym2_univ [fintype α] : (univ : finset α).sym2 = univ := rfl
+@[simp]
+theorem sym2_univ [Fintype α] : (univ : Finset α).Sym2 = univ :=
+  rfl
 
-@[simp] lemma sym2_singleton (a : α) : ({a} : finset α).sym2 = {sym2.diag a} :=
-by rw [finset.sym2, singleton_product_singleton, image_singleton, sym2.diag]
+@[simp]
+theorem sym2_singleton (a : α) : ({a} : Finset α).Sym2 = {Sym2.diag a} := by
+  rw [Finset.sym2, singleton_product_singleton, image_singleton, Sym2.diag]
 
-@[simp] lemma diag_mem_sym2_iff : sym2.diag a ∈ s.sym2 ↔ a ∈ s := mk_mem_sym2_iff.trans $ and_self _
+@[simp]
+theorem diag_mem_sym2_iff : Sym2.diag a ∈ s.Sym2 ↔ a ∈ s :=
+  mk_mem_sym2_iff.trans <| and_selfₓ _
 
-@[simp] lemma sym2_mono (h : s ⊆ t) : s.sym2 ⊆ t.sym2 :=
-λ m he, mem_sym2_iff.2 $ λ a ha, h $ mem_sym2_iff.1 he _ ha
+@[simp]
+theorem sym2_mono (h : s ⊆ t) : s.Sym2 ⊆ t.Sym2 := fun m he => mem_sym2_iff.2 fun a ha => h <| mem_sym2_iff.1 he _ ha
 
-lemma image_diag_union_image_off_diag :
-  s.diag.image quotient.mk ∪ s.off_diag.image quotient.mk = s.sym2 :=
-by { rw [←image_union, diag_union_off_diag], refl }
+theorem image_diag_union_image_off_diag : s.diag.Image Quotientₓ.mk ∪ s.offDiag.Image Quotientₓ.mk = s.Sym2 := by
+  rw [← image_union, diag_union_off_diag]
+  rfl
 
-end sym2
+end Sym2
 
-section sym
-variables {n : ℕ} {m : sym α n}
+section Sym
+
+variable {n : ℕ} {m : Sym α n}
 
 /-- Lifts a finset to `sym α n`. `s.sym n` is the finset of all unordered tuples of cardinality `n`
 with elements in `s`. -/
-protected def sym (s : finset α) : Π n, finset (sym α n)
-| 0       := {∅}
-| (n + 1) := s.sup $ λ a, (sym n).image $ _root_.sym.cons a
+protected def sym (s : Finset α) : ∀ n, Finset (Sym α n)
+  | 0 => {∅}
+  | n + 1 => s.sup fun a => (Sym n).Image <| Sym.cons a
 
-@[simp] lemma sym_zero : s.sym 0 = {∅} := rfl
-@[simp] lemma sym_succ : s.sym (n + 1) = s.sup (λ a, (s.sym n).image $ sym.cons a) := rfl
+@[simp]
+theorem sym_zero : s.Sym 0 = {∅} :=
+  rfl
 
-@[simp] lemma mem_sym_iff : m ∈ s.sym n ↔ ∀ a ∈ m, a ∈ s :=
-begin
-  induction n with n ih,
-  { refine mem_singleton.trans ⟨_, λ _, sym.eq_nil_of_card_zero _⟩,
-    rintro rfl,
-    exact λ a ha, ha.elim },
-  refine mem_sup.trans  ⟨_, λ h, _⟩,
-  { rintro ⟨a, ha, he⟩ b hb,
-    rw mem_image at he,
-    obtain ⟨m, he, rfl⟩ := he,
-    rw sym.mem_cons at hb,
-    obtain rfl | hb := hb,
-    { exact ha },
-    { exact ih.1 he _ hb } },
-  { obtain ⟨a, m, rfl⟩ := m.exists_eq_cons_of_succ,
-    exact ⟨a, h _ $ sym.mem_cons_self _ _,
-      mem_image_of_mem _ $ ih.2 $ λ b hb, h _ $ sym.mem_cons_of_mem hb⟩ }
-end
+@[simp]
+theorem sym_succ : s.Sym (n + 1) = s.sup fun a => (s.Sym n).Image <| Sym.cons a :=
+  rfl
 
-@[simp] lemma sym_empty (n : ℕ) : (∅ : finset α).sym (n + 1) = ∅ := rfl
+@[simp]
+theorem mem_sym_iff : m ∈ s.Sym n ↔ ∀, ∀ a ∈ m, ∀, a ∈ s := by
+  induction' n with n ih
+  · refine' mem_singleton.trans ⟨_, fun _ => Sym.eq_nil_of_card_zero _⟩
+    rintro rfl
+    exact fun a ha => ha.elim
+    
+  refine' mem_sup.trans ⟨_, fun h => _⟩
+  · rintro ⟨a, ha, he⟩ b hb
+    rw [mem_image] at he
+    obtain ⟨m, he, rfl⟩ := he
+    rw [Sym.mem_cons] at hb
+    obtain rfl | hb := hb
+    · exact ha
+      
+    · exact ih.1 he _ hb
+      
+    
+  · obtain ⟨a, m, rfl⟩ := m.exists_eq_cons_of_succ
+    exact ⟨a, h _ <| Sym.mem_cons_self _ _, mem_image_of_mem _ <| ih.2 fun b hb => h _ <| Sym.mem_cons_of_mem hb⟩
+    
 
-lemma repeat_mem_sym (ha : a ∈ s) (n : ℕ) : sym.repeat a n ∈ s.sym n :=
-mem_sym_iff.2 $ λ b hb, by rwa (sym.mem_repeat.1 hb).2
+@[simp]
+theorem sym_empty (n : ℕ) : (∅ : Finset α).Sym (n + 1) = ∅ :=
+  rfl
 
-protected lemma nonempty.sym (h : s.nonempty) (n : ℕ) : (s.sym n).nonempty :=
-let ⟨a, ha⟩ := h in ⟨_, repeat_mem_sym ha n⟩
+theorem repeat_mem_sym (ha : a ∈ s) (n : ℕ) : Sym.repeat a n ∈ s.Sym n :=
+  mem_sym_iff.2 fun b hb => by
+    rwa [(Sym.mem_repeat.1 hb).2]
 
-@[simp] lemma sym_singleton (a : α) (n : ℕ) : ({a} : finset α).sym n = {sym.repeat a n} :=
-eq_singleton_iff_nonempty_unique_mem.2 ⟨(singleton_nonempty _).sym n,
-  λ s hs, sym.eq_repeat_iff.2 $ λ b hb, eq_of_mem_singleton $ mem_sym_iff.1 hs _ hb⟩
+protected theorem Nonempty.sym (h : s.Nonempty) (n : ℕ) : (s.Sym n).Nonempty :=
+  let ⟨a, ha⟩ := h
+  ⟨_, repeat_mem_sym ha n⟩
 
-lemma eq_empty_of_sym_eq_empty (h : s.sym n = ∅) : s = ∅ :=
-begin
-  rw ←not_nonempty_iff_eq_empty at ⊢ h,
-  exact λ hs, h (hs.sym _),
-end
+@[simp]
+theorem sym_singleton (a : α) (n : ℕ) : ({a} : Finset α).Sym n = {Sym.repeat a n} :=
+  eq_singleton_iff_nonempty_unique_mem.2
+    ⟨(singleton_nonempty _).Sym n, fun s hs =>
+      Sym.eq_repeat_iff.2 fun b hb => eq_of_mem_singleton <| mem_sym_iff.1 hs _ hb⟩
 
-@[simp] lemma sym_eq_empty : s.sym n = ∅ ↔ n ≠ 0 ∧ s = ∅ :=
-begin
-  cases n,
-  { exact iff_of_false (singleton_ne_empty _) (λ h, (h.1 rfl).elim) },
-  { refine ⟨λ h, ⟨n.succ_ne_zero, eq_empty_of_sym_eq_empty h⟩, _⟩,
-    rintro ⟨_, rfl⟩,
-    exact sym_empty _ }
-end
+theorem eq_empty_of_sym_eq_empty (h : s.Sym n = ∅) : s = ∅ := by
+  rw [← not_nonempty_iff_eq_empty] at h⊢
+  exact fun hs => h (hs.Sym _)
 
-@[simp] lemma sym_nonempty : (s.sym n).nonempty ↔ n = 0 ∨ s.nonempty :=
-by simp_rw [nonempty_iff_ne_empty, ne.def, sym_eq_empty, not_and_distrib, not_ne_iff]
+@[simp]
+theorem sym_eq_empty : s.Sym n = ∅ ↔ n ≠ 0 ∧ s = ∅ := by
+  cases n
+  · exact iff_of_false (singleton_ne_empty _) fun h => (h.1 rfl).elim
+    
+  · refine' ⟨fun h => ⟨n.succ_ne_zero, eq_empty_of_sym_eq_empty h⟩, _⟩
+    rintro ⟨_, rfl⟩
+    exact sym_empty _
+    
 
-alias sym2_nonempty ↔ _ finset.nonempty.sym2
+@[simp]
+theorem sym_nonempty : (s.Sym n).Nonempty ↔ n = 0 ∨ s.Nonempty := by
+  simp_rw [nonempty_iff_ne_empty, Ne.def, sym_eq_empty, not_and_distrib, not_ne_iff]
 
-attribute [protected] finset.nonempty.sym2
+alias sym2_nonempty ↔ _ Finset.Nonempty.sym2
 
-@[simp] lemma sym_univ [fintype α] (n : ℕ) : (univ : finset α).sym n = univ :=
-eq_univ_iff_forall.2 $ λ s, mem_sym_iff.2 $ λ a _, mem_univ _
+attribute [protected] Finset.Nonempty.sym2
 
-@[simp] lemma sym_mono (h : s ⊆ t) (n : ℕ): s.sym n ⊆ t.sym n :=
-λ m hm, mem_sym_iff.2 $ λ a ha, h $ mem_sym_iff.1 hm _ ha
+@[simp]
+theorem sym_univ [Fintype α] (n : ℕ) : (univ : Finset α).Sym n = univ :=
+  eq_univ_iff_forall.2 fun s => mem_sym_iff.2 fun a _ => mem_univ _
 
-@[simp] lemma sym_inter (s t : finset α) (n : ℕ) : (s ∩ t).sym n = s.sym n ∩ t.sym n :=
-by { ext m, simp only [mem_inter, mem_sym_iff, imp_and_distrib, forall_and_distrib] }
+@[simp]
+theorem sym_mono (h : s ⊆ t) (n : ℕ) : s.Sym n ⊆ t.Sym n := fun m hm =>
+  mem_sym_iff.2 fun a ha => h <| mem_sym_iff.1 hm _ ha
 
-@[simp] lemma sym_union (s t : finset α) (n : ℕ) : s.sym n ∪ t.sym n ⊆ (s ∪ t).sym n :=
-union_subset (sym_mono (subset_union_left s t) n) (sym_mono (subset_union_right s t) n)
+@[simp]
+theorem sym_inter (s t : Finset α) (n : ℕ) : (s ∩ t).Sym n = s.Sym n ∩ t.Sym n := by
+  ext m
+  simp only [mem_inter, mem_sym_iff, imp_and_distrib, forall_and_distrib]
 
-end sym
-end finset
+@[simp]
+theorem sym_union (s t : Finset α) (n : ℕ) : s.Sym n ∪ t.Sym n ⊆ (s ∪ t).Sym n :=
+  union_subset (sym_mono (subset_union_left s t) n) (sym_mono (subset_union_right s t) n)
+
+end Sym
+
+end Finset
+

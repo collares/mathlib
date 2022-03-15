@@ -3,9 +3,8 @@ Copyright (c) 2019 Sébastien Gouëzel. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sébastien Gouëzel
 -/
-
-import tactic.interactive
-import tactic.norm_num
+import Mathbin.Tactic.Interactive
+import Mathbin.Tactic.NormNum
 
 /-!
 # `field_simp` tactic
@@ -13,22 +12,26 @@ import tactic.norm_num
 Tactic to clear denominators in algebraic expressions, based on `simp` with a specific simpset.
 -/
 
-namespace tactic
 
+namespace Tactic
+
+-- ././Mathport/Syntax/Translate/Basic.lean:915:4: warning: unsupported (TODO): `[tacs]
 /-- Try to prove a goal of the form `x ≠ 0` by calling `assumption`, or `norm_num1` if `x` is
 a numeral. -/
-meta def field_simp.ne_zero : tactic unit := do
-  goal ← tactic.target,
+unsafe def field_simp.ne_zero : tactic Unit := do
+  let goal ← tactic.target
   match goal with
-  | `(%%e ≠ 0) := assumption <|> do n ← e.to_rat, `[norm_num1]
-  | _ := tactic.fail "goal should be of the form `x ≠ 0`"
-  end
+    | quote.1 ((%%ₓe) ≠ 0) =>
+      assumption <|> do
+        let n ← e
+        sorry
+    | _ => tactic.fail "goal should be of the form `x ≠ 0`"
 
-namespace interactive
+namespace Interactive
+
 setup_tactic_parser
 
-/--
-The goal of `field_simp` is to reduce an expression in a field to an expression of the form `n / d`
+/-- The goal of `field_simp` is to reduce an expression in a field to an expression of the form `n / d`
 where neither `n` nor `d` contains any division symbol, just using the simplifier (with a carefully
 crafted simpset named `field_simps`) to reduce the number of division symbols whenever possible by
 iterating the following steps:
@@ -81,19 +84,17 @@ that have numerals in denominators.
 The tactics are not related: `cancel_denoms` will only handle numeric denominators, and will try to
 entirely remove (numeric) division from the expression by multiplying by a factor.
 -/
-meta def field_simp (no_dflt : parse only_flag) (hs : parse simp_arg_list)
-  (attr_names : parse with_ident_list)
-  (locat : parse location)
-  (cfg : simp_config_ext := {discharger := field_simp.ne_zero}) : tactic unit :=
-let attr_names := `field_simps :: attr_names,
-    hs := simp_arg_type.except `one_div :: simp_arg_type.except `mul_eq_zero :: hs in
-propagate_tags (simp_core cfg.to_simp_config cfg.discharger no_dflt hs attr_names locat >> skip)
+unsafe def field_simp (no_dflt : parse only_flag) (hs : parse simp_arg_list) (attr_names : parse with_ident_list)
+    (locat : parse location) (cfg : simp_config_ext := { discharger := field_simp.ne_zero }) : tactic Unit :=
+  let attr_names := `field_simps :: attr_names
+  let hs := simp_arg_type.except `one_div :: simp_arg_type.except `mul_eq_zero :: hs
+  propagate_tags (simp_core cfg.toSimpConfig cfg.discharger no_dflt hs attr_names locat >> skip)
 
 add_tactic_doc
-{ name       := "field_simp",
-  category   := doc_category.tactic,
-  decl_names := [`tactic.interactive.field_simp],
-  tags       := ["simplification", "arithmetic"] }
+  { Name := "field_simp", category := DocCategory.tactic, declNames := [`tactic.interactive.field_simp],
+    tags := ["simplification", "arithmetic"] }
 
-end interactive
-end tactic
+end Interactive
+
+end Tactic
+

@@ -3,8 +3,8 @@ Copyright (c) 2022 Bolton Bailey. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey, Chris Hughes, Abhimanyu Pallavi Sudhir, Jean Lo, Calle Sönne
 -/
-import analysis.special_functions.log
-import analysis.special_functions.pow
+import Mathbin.Analysis.SpecialFunctions.Log
+import Mathbin.Analysis.SpecialFunctions.Pow
 
 /-!
 # Real logarithm base `b`
@@ -21,295 +21,311 @@ We prove some basic properties of this function and it's relation to `rpow`.
 logarithm, continuity
 -/
 
-open set filter function
-open_locale topological_space
-noncomputable theory
 
-namespace real
+open Set Filter Function
 
-variables {b x y : ℝ}
+open_locale TopologicalSpace
+
+noncomputable section
+
+namespace Real
+
+variable {b x y : ℝ}
 
 /-- The real logarithm in a given base. As with the natural logarithm, we define `logb b x` to
 be `logb b |x|` for `x < 0`, and `0` for `x = 0`.-/
-@[pp_nodot] noncomputable def logb (b x : ℝ) : ℝ := log x / log b
+@[pp_nodot]
+noncomputable def logb (b x : ℝ) : ℝ :=
+  log x / log b
 
-lemma log_div_log : log x / log b = logb b x := rfl
+theorem log_div_log : log x / log b = logb b x :=
+  rfl
 
-@[simp] lemma logb_zero : logb b 0 = 0 := by simp [logb]
+@[simp]
+theorem logb_zero : logb b 0 = 0 := by
+  simp [logb]
 
-@[simp] lemma logb_one : logb b 1 = 0 := by simp [logb]
+@[simp]
+theorem logb_one : logb b 1 = 0 := by
+  simp [logb]
 
-@[simp] lemma logb_abs (x : ℝ) : logb b (|x|) = logb b x := by rw [logb, logb, log_abs]
+@[simp]
+theorem logb_abs (x : ℝ) : logb b (abs x) = logb b x := by
+  rw [logb, logb, log_abs]
 
-@[simp] lemma logb_neg_eq_logb (x : ℝ) : logb b (-x) = logb b x :=
-by rw [← logb_abs x, ← logb_abs (-x), abs_neg]
+@[simp]
+theorem logb_neg_eq_logb (x : ℝ) : logb b (-x) = logb b x := by
+  rw [← logb_abs x, ← logb_abs (-x), abs_neg]
 
-lemma logb_mul (hx : x ≠ 0) (hy : y ≠ 0) : logb b (x * y) = logb b x + logb b y :=
-by simp_rw [logb, log_mul hx hy, add_div]
+theorem logb_mul (hx : x ≠ 0) (hy : y ≠ 0) : logb b (x * y) = logb b x + logb b y := by
+  simp_rw [logb, log_mul hx hy, add_div]
 
-lemma logb_div (hx : x ≠ 0) (hy : y ≠ 0) : logb b (x / y) = logb b x - logb b y :=
-by simp_rw [logb, log_div hx hy, sub_div]
+theorem logb_div (hx : x ≠ 0) (hy : y ≠ 0) : logb b (x / y) = logb b x - logb b y := by
+  simp_rw [logb, log_div hx hy, sub_div]
 
-@[simp] lemma logb_inv (x : ℝ) : logb b (x⁻¹) = -logb b x := by simp [logb, neg_div]
+@[simp]
+theorem logb_inv (x : ℝ) : logb b x⁻¹ = -logb b x := by
+  simp [logb, neg_div]
 
-section b_pos_and_ne_one
+section BPosAndNeOne
 
 variable (b_pos : 0 < b)
+
 variable (b_ne_one : b ≠ 1)
+
 include b_pos b_ne_one
 
-private lemma log_b_ne_zero : log b ≠ 0 :=
-begin
-  have b_ne_zero : b ≠ 0, linarith,
-  have b_ne_minus_one : b ≠ -1, linarith,
-  simp [b_ne_one, b_ne_zero, b_ne_minus_one],
-end
+private theorem log_b_ne_zero : log b ≠ 0 := by
+  have b_ne_zero : b ≠ 0
+  linarith
+  have b_ne_minus_one : b ≠ -1
+  linarith
+  simp [b_ne_one, b_ne_zero, b_ne_minus_one]
 
-@[simp] lemma logb_rpow :
-  logb b (b ^ x) = x :=
-begin
-  rw [logb, div_eq_iff, log_rpow b_pos],
-  exact log_b_ne_zero b_pos b_ne_one,
-end
+@[simp]
+theorem logb_rpow : logb b (b ^ x) = x := by
+  rw [logb, div_eq_iff, log_rpow b_pos]
+  exact log_b_ne_zero b_pos b_ne_one
 
-lemma rpow_logb_eq_abs (hx : x ≠ 0) : b ^ (logb b x) = |x| :=
-begin
-  apply log_inj_on_pos,
-  simp only [set.mem_Ioi],
-  apply rpow_pos_of_pos b_pos,
-  simp only [abs_pos, mem_Ioi, ne.def, hx, not_false_iff],
-  rw [log_rpow b_pos, logb, log_abs],
-  field_simp [log_b_ne_zero b_pos b_ne_one],
-end
+theorem rpow_logb_eq_abs (hx : x ≠ 0) : b ^ logb b x = abs x := by
+  apply log_inj_on_pos
+  simp only [Set.mem_Ioi]
+  apply rpow_pos_of_pos b_pos
+  simp only [abs_pos, mem_Ioi, Ne.def, hx, not_false_iff]
+  rw [log_rpow b_pos, logb, log_abs]
+  field_simp [log_b_ne_zero b_pos b_ne_one]
 
-@[simp] lemma rpow_logb (hx : 0 < x) : b ^ (logb b x) = x :=
-by { rw rpow_logb_eq_abs b_pos b_ne_one (hx.ne'), exact abs_of_pos hx, }
+@[simp]
+theorem rpow_logb (hx : 0 < x) : b ^ logb b x = x := by
+  rw [rpow_logb_eq_abs b_pos b_ne_one hx.ne']
+  exact abs_of_pos hx
 
-lemma rpow_logb_of_neg (hx : x < 0) : b ^ (logb b x) = -x :=
-by { rw rpow_logb_eq_abs b_pos b_ne_one (ne_of_lt hx), exact abs_of_neg hx }
+theorem rpow_logb_of_neg (hx : x < 0) : b ^ logb b x = -x := by
+  rw [rpow_logb_eq_abs b_pos b_ne_one (ne_of_ltₓ hx)]
+  exact abs_of_neg hx
 
-lemma surj_on_logb : surj_on (logb b) (Ioi 0) univ :=
-λ x _, ⟨rpow b x, rpow_pos_of_pos b_pos x, logb_rpow b_pos b_ne_one⟩
+theorem surj_on_logb : SurjOn (logb b) (Ioi 0) Univ := fun x _ =>
+  ⟨rpow b x, rpow_pos_of_pos b_pos x, logb_rpow b_pos b_ne_one⟩
 
-lemma logb_surjective : surjective (logb b) :=
-λ x, ⟨b ^ x, logb_rpow b_pos b_ne_one⟩
+theorem logb_surjective : Surjective (logb b) := fun x => ⟨b ^ x, logb_rpow b_pos b_ne_one⟩
 
-@[simp] lemma range_logb : range (logb b) = univ :=
-(logb_surjective b_pos b_ne_one).range_eq
+@[simp]
+theorem range_logb : Range (logb b) = univ :=
+  (logb_surjective b_pos b_ne_one).range_eq
 
-lemma surj_on_logb' : surj_on (logb b) (Iio 0) univ :=
-begin
-  intros x x_in_univ,
-  use -b ^ x,
-  split,
-  { simp only [right.neg_neg_iff, set.mem_Iio], apply rpow_pos_of_pos b_pos, },
-  { rw [logb_neg_eq_logb, logb_rpow b_pos b_ne_one], },
-end
+theorem surj_on_logb' : SurjOn (logb b) (Iio 0) Univ := by
+  intro x x_in_univ
+  use -(b ^ x)
+  constructor
+  · simp only [Right.neg_neg_iff, Set.mem_Iio]
+    apply rpow_pos_of_pos b_pos
+    
+  · rw [logb_neg_eq_logb, logb_rpow b_pos b_ne_one]
+    
 
-end b_pos_and_ne_one
+end BPosAndNeOne
 
-section one_lt_b
+section OneLtB
 
 variable (hb : 1 < b)
+
 include hb
 
-private lemma b_pos : 0 < b := by linarith
+private theorem b_pos : 0 < b := by
+  linarith
 
-private lemma b_ne_one : b ≠ 1 := by linarith
+private theorem b_ne_one : b ≠ 1 := by
+  linarith
 
-@[simp] lemma logb_le_logb (h : 0 < x) (h₁ : 0 < y) :
-  logb b x ≤ logb b y ↔ x ≤ y :=
-by { rw [logb, logb, div_le_div_right (log_pos hb), log_le_log h h₁], }
+@[simp]
+theorem logb_le_logb (h : 0 < x) (h₁ : 0 < y) : logb b x ≤ logb b y ↔ x ≤ y := by
+  rw [logb, logb, div_le_div_right (log_pos hb), log_le_log h h₁]
 
-lemma logb_lt_logb (hx : 0 < x) (hxy : x < y) : logb b x < logb b y :=
-by { rw [logb, logb, div_lt_div_right (log_pos hb)], exact log_lt_log hx hxy, }
+theorem logb_lt_logb (hx : 0 < x) (hxy : x < y) : logb b x < logb b y := by
+  rw [logb, logb, div_lt_div_right (log_pos hb)]
+  exact log_lt_log hx hxy
 
-@[simp] lemma logb_lt_logb_iff (hx : 0 < x) (hy : 0 < y) :
-  logb b x < logb b y ↔ x < y :=
-by { rw [logb, logb, div_lt_div_right (log_pos hb)], exact log_lt_log_iff hx hy, }
+@[simp]
+theorem logb_lt_logb_iff (hx : 0 < x) (hy : 0 < y) : logb b x < logb b y ↔ x < y := by
+  rw [logb, logb, div_lt_div_right (log_pos hb)]
+  exact log_lt_log_iff hx hy
 
-lemma logb_le_iff_le_rpow (hx : 0 < x) : logb b x ≤ y ↔ x ≤ b ^ y :=
-by rw [←rpow_le_rpow_left_iff hb, rpow_logb (b_pos hb) (b_ne_one hb) hx]
+theorem logb_le_iff_le_rpow (hx : 0 < x) : logb b x ≤ y ↔ x ≤ b ^ y := by
+  rw [← rpow_le_rpow_left_iff hb, rpow_logb (b_pos hb) (b_ne_one hb) hx]
 
-lemma logb_lt_iff_lt_rpow (hx : 0 < x) : logb b x < y ↔ x < b ^ y :=
-by rw [←rpow_lt_rpow_left_iff hb, rpow_logb (b_pos hb) (b_ne_one hb) hx]
+theorem logb_lt_iff_lt_rpow (hx : 0 < x) : logb b x < y ↔ x < b ^ y := by
+  rw [← rpow_lt_rpow_left_iff hb, rpow_logb (b_pos hb) (b_ne_one hb) hx]
 
-lemma le_logb_iff_rpow_le (hy : 0 < y) : x ≤ logb b y ↔ b ^ x ≤ y :=
-by rw [←rpow_le_rpow_left_iff hb, rpow_logb (b_pos hb) (b_ne_one hb) hy]
+theorem le_logb_iff_rpow_le (hy : 0 < y) : x ≤ logb b y ↔ b ^ x ≤ y := by
+  rw [← rpow_le_rpow_left_iff hb, rpow_logb (b_pos hb) (b_ne_one hb) hy]
 
-lemma lt_logb_iff_rpow_lt (hy : 0 < y) : x < logb b y ↔ b ^ x < y :=
-by rw [←rpow_lt_rpow_left_iff hb, rpow_logb (b_pos hb) (b_ne_one hb) hy]
+theorem lt_logb_iff_rpow_lt (hy : 0 < y) : x < logb b y ↔ b ^ x < y := by
+  rw [← rpow_lt_rpow_left_iff hb, rpow_logb (b_pos hb) (b_ne_one hb) hy]
 
-lemma logb_pos_iff (hx : 0 < x) : 0 < logb b x ↔ 1 < x :=
-by { rw ← @logb_one b, rw logb_lt_logb_iff hb zero_lt_one hx, }
+theorem logb_pos_iff (hx : 0 < x) : 0 < logb b x ↔ 1 < x := by
+  rw [← @logb_one b]
+  rw [logb_lt_logb_iff hb zero_lt_one hx]
 
-lemma logb_pos (hx : 1 < x) : 0 < logb b x :=
-by { rw logb_pos_iff hb (lt_trans zero_lt_one hx), exact hx, }
+theorem logb_pos (hx : 1 < x) : 0 < logb b x := by
+  rw [logb_pos_iff hb (lt_transₓ zero_lt_one hx)]
+  exact hx
 
-lemma logb_neg_iff (h : 0 < x) : logb b x < 0 ↔ x < 1 :=
-by { rw ← logb_one, exact logb_lt_logb_iff hb h zero_lt_one, }
+theorem logb_neg_iff (h : 0 < x) : logb b x < 0 ↔ x < 1 := by
+  rw [← logb_one]
+  exact logb_lt_logb_iff hb h zero_lt_one
 
-lemma logb_neg (h0 : 0 < x) (h1 : x < 1) : logb b x < 0 :=
-(logb_neg_iff hb h0).2 h1
+theorem logb_neg (h0 : 0 < x) (h1 : x < 1) : logb b x < 0 :=
+  (logb_neg_iff hb h0).2 h1
 
-lemma logb_nonneg_iff (hx : 0 < x) : 0 ≤ logb b x ↔ 1 ≤ x :=
-by rw [← not_lt, logb_neg_iff hb hx, not_lt]
+theorem logb_nonneg_iff (hx : 0 < x) : 0 ≤ logb b x ↔ 1 ≤ x := by
+  rw [← not_ltₓ, logb_neg_iff hb hx, not_ltₓ]
 
-lemma logb_nonneg (hx : 1 ≤ x) : 0 ≤ logb b x :=
-(logb_nonneg_iff hb (zero_lt_one.trans_le hx)).2 hx
+theorem logb_nonneg (hx : 1 ≤ x) : 0 ≤ logb b x :=
+  (logb_nonneg_iff hb (zero_lt_one.trans_le hx)).2 hx
 
-lemma logb_nonpos_iff (hx : 0 < x) : logb b x ≤ 0 ↔ x ≤ 1 :=
-by rw [← not_lt, logb_pos_iff hb hx, not_lt]
+theorem logb_nonpos_iff (hx : 0 < x) : logb b x ≤ 0 ↔ x ≤ 1 := by
+  rw [← not_ltₓ, logb_pos_iff hb hx, not_ltₓ]
 
-lemma logb_nonpos_iff' (hx : 0 ≤ x) : logb b x ≤ 0 ↔ x ≤ 1 :=
-begin
-  rcases hx.eq_or_lt with (rfl|hx),
-  { simp [le_refl, zero_le_one] },
-  exact logb_nonpos_iff hb hx,
-end
+theorem logb_nonpos_iff' (hx : 0 ≤ x) : logb b x ≤ 0 ↔ x ≤ 1 := by
+  rcases hx.eq_or_lt with (rfl | hx)
+  · simp [le_reflₓ, zero_le_one]
+    
+  exact logb_nonpos_iff hb hx
 
-lemma logb_nonpos (hx : 0 ≤ x) (h'x : x ≤ 1) : logb b x ≤ 0 :=
-(logb_nonpos_iff' hb hx).2 h'x
+theorem logb_nonpos (hx : 0 ≤ x) (h'x : x ≤ 1) : logb b x ≤ 0 :=
+  (logb_nonpos_iff' hb hx).2 h'x
 
-lemma strict_mono_on_logb : strict_mono_on (logb b) (set.Ioi 0) :=
-λ x hx y hy hxy, logb_lt_logb hb hx hxy
+theorem strict_mono_on_logb : StrictMonoOn (logb b) (Set.Ioi 0) := fun x hx y hy hxy => logb_lt_logb hb hx hxy
 
-lemma strict_anti_on_logb : strict_anti_on (logb b) (set.Iio 0) :=
-begin
-  rintros x (hx : x < 0) y (hy : y < 0) hxy,
-  rw [← logb_abs y, ← logb_abs x],
-  refine logb_lt_logb hb (abs_pos.2 hy.ne) _,
-  rwa [abs_of_neg hy, abs_of_neg hx, neg_lt_neg_iff],
-end
+theorem strict_anti_on_logb : StrictAntiOn (logb b) (Set.Iio 0) := by
+  rintro x (hx : x < 0) y (hy : y < 0) hxy
+  rw [← logb_abs y, ← logb_abs x]
+  refine' logb_lt_logb hb (abs_pos.2 hy.ne) _
+  rwa [abs_of_neg hy, abs_of_neg hx, neg_lt_neg_iff]
 
-lemma logb_inj_on_pos : set.inj_on (logb b) (set.Ioi 0) :=
-(strict_mono_on_logb hb).inj_on
+theorem logb_inj_on_pos : Set.InjOn (logb b) (Set.Ioi 0) :=
+  (strict_mono_on_logb hb).InjOn
 
-lemma eq_one_of_pos_of_logb_eq_zero (h₁ : 0 < x) (h₂ : logb b x = 0) :
-x = 1 :=
-logb_inj_on_pos hb (set.mem_Ioi.2 h₁) (set.mem_Ioi.2 zero_lt_one)
-  (h₂.trans real.logb_one.symm)
+theorem eq_one_of_pos_of_logb_eq_zero (h₁ : 0 < x) (h₂ : logb b x = 0) : x = 1 :=
+  logb_inj_on_pos hb (Set.mem_Ioi.2 h₁) (Set.mem_Ioi.2 zero_lt_one) (h₂.trans Real.logb_one.symm)
 
-lemma logb_ne_zero_of_pos_of_ne_one (hx_pos : 0 < x) (hx : x ≠ 1) :
-  logb b x ≠ 0 :=
-mt (eq_one_of_pos_of_logb_eq_zero hb hx_pos) hx
+theorem logb_ne_zero_of_pos_of_ne_one (hx_pos : 0 < x) (hx : x ≠ 1) : logb b x ≠ 0 :=
+  mt (eq_one_of_pos_of_logb_eq_zero hb hx_pos) hx
 
-lemma tendsto_logb_at_top : tendsto (logb b) at_top at_top :=
-tendsto.at_top_div_const (log_pos hb) tendsto_log_at_top
+theorem tendsto_logb_at_top : Tendsto (logb b) atTop atTop :=
+  Tendsto.at_top_div_const (log_pos hb) tendsto_log_at_top
 
-end one_lt_b
+end OneLtB
 
-section b_pos_and_b_lt_one
+section BPosAndBLtOne
 
 variable (b_pos : 0 < b)
+
 variable (b_lt_one : b < 1)
+
 include b_lt_one
 
-private lemma b_ne_one : b ≠ 1 := by linarith
+private theorem b_ne_one : b ≠ 1 := by
+  linarith
 
 include b_pos
 
-@[simp] lemma logb_le_logb_of_base_lt_one (h : 0 < x) (h₁ : 0 < y) :
-  logb b x ≤ logb b y ↔ y ≤ x :=
-by { rw [logb, logb, div_le_div_right_of_neg (log_neg b_pos b_lt_one), log_le_log h₁ h], }
+@[simp]
+theorem logb_le_logb_of_base_lt_one (h : 0 < x) (h₁ : 0 < y) : logb b x ≤ logb b y ↔ y ≤ x := by
+  rw [logb, logb, div_le_div_right_of_neg (log_neg b_pos b_lt_one), log_le_log h₁ h]
 
-lemma logb_lt_logb_of_base_lt_one (hx : 0 < x) (hxy : x < y) : logb b y < logb b x :=
-by { rw [logb, logb, div_lt_div_right_of_neg (log_neg b_pos b_lt_one)], exact log_lt_log hx hxy, }
+theorem logb_lt_logb_of_base_lt_one (hx : 0 < x) (hxy : x < y) : logb b y < logb b x := by
+  rw [logb, logb, div_lt_div_right_of_neg (log_neg b_pos b_lt_one)]
+  exact log_lt_log hx hxy
 
-@[simp] lemma logb_lt_logb_iff_of_base_lt_one (hx : 0 < x) (hy : 0 < y) :
-  logb b x < logb b y ↔ y < x :=
-by { rw [logb, logb, div_lt_div_right_of_neg (log_neg b_pos b_lt_one)], exact log_lt_log_iff hy hx }
+@[simp]
+theorem logb_lt_logb_iff_of_base_lt_one (hx : 0 < x) (hy : 0 < y) : logb b x < logb b y ↔ y < x := by
+  rw [logb, logb, div_lt_div_right_of_neg (log_neg b_pos b_lt_one)]
+  exact log_lt_log_iff hy hx
 
-lemma logb_le_iff_le_rpow_of_base_lt_one (hx : 0 < x) : logb b x ≤ y ↔ b ^ y ≤ x :=
-by rw [←rpow_le_rpow_left_iff_of_base_lt_one b_pos b_lt_one, rpow_logb b_pos (b_ne_one b_lt_one) hx]
+theorem logb_le_iff_le_rpow_of_base_lt_one (hx : 0 < x) : logb b x ≤ y ↔ b ^ y ≤ x := by
+  rw [← rpow_le_rpow_left_iff_of_base_lt_one b_pos b_lt_one, rpow_logb b_pos (b_ne_one b_lt_one) hx]
 
-lemma logb_lt_iff_lt_rpow_of_base_lt_one (hx : 0 < x) : logb b x < y ↔ b ^ y < x :=
-by rw [←rpow_lt_rpow_left_iff_of_base_lt_one b_pos b_lt_one, rpow_logb b_pos (b_ne_one b_lt_one) hx]
+theorem logb_lt_iff_lt_rpow_of_base_lt_one (hx : 0 < x) : logb b x < y ↔ b ^ y < x := by
+  rw [← rpow_lt_rpow_left_iff_of_base_lt_one b_pos b_lt_one, rpow_logb b_pos (b_ne_one b_lt_one) hx]
 
-lemma le_logb_iff_rpow_le_of_base_lt_one (hy : 0 < y) : x ≤ logb b y ↔ y ≤ b ^ x :=
-by rw [←rpow_le_rpow_left_iff_of_base_lt_one b_pos b_lt_one, rpow_logb b_pos (b_ne_one b_lt_one) hy]
+theorem le_logb_iff_rpow_le_of_base_lt_one (hy : 0 < y) : x ≤ logb b y ↔ y ≤ b ^ x := by
+  rw [← rpow_le_rpow_left_iff_of_base_lt_one b_pos b_lt_one, rpow_logb b_pos (b_ne_one b_lt_one) hy]
 
-lemma lt_logb_iff_rpow_lt_of_base_lt_one (hy : 0 < y) : x < logb b y ↔ y < b ^ x :=
-by rw [←rpow_lt_rpow_left_iff_of_base_lt_one b_pos b_lt_one, rpow_logb b_pos (b_ne_one b_lt_one) hy]
+theorem lt_logb_iff_rpow_lt_of_base_lt_one (hy : 0 < y) : x < logb b y ↔ y < b ^ x := by
+  rw [← rpow_lt_rpow_left_iff_of_base_lt_one b_pos b_lt_one, rpow_logb b_pos (b_ne_one b_lt_one) hy]
 
-lemma logb_pos_iff_of_base_lt_one (hx : 0 < x) : 0 < logb b x ↔ x < 1 :=
-by rw [← @logb_one b, logb_lt_logb_iff_of_base_lt_one b_pos b_lt_one zero_lt_one hx]
+theorem logb_pos_iff_of_base_lt_one (hx : 0 < x) : 0 < logb b x ↔ x < 1 := by
+  rw [← @logb_one b, logb_lt_logb_iff_of_base_lt_one b_pos b_lt_one zero_lt_one hx]
 
-lemma logb_pos_of_base_lt_one (hx : 0 < x) (hx' : x < 1) : 0 < logb b x :=
-by { rw logb_pos_iff_of_base_lt_one b_pos b_lt_one hx, exact hx', }
+theorem logb_pos_of_base_lt_one (hx : 0 < x) (hx' : x < 1) : 0 < logb b x := by
+  rw [logb_pos_iff_of_base_lt_one b_pos b_lt_one hx]
+  exact hx'
 
-lemma logb_neg_iff_of_base_lt_one (h : 0 < x) : logb b x < 0 ↔ 1 < x :=
-by rw [← @logb_one b, logb_lt_logb_iff_of_base_lt_one b_pos b_lt_one h zero_lt_one]
+theorem logb_neg_iff_of_base_lt_one (h : 0 < x) : logb b x < 0 ↔ 1 < x := by
+  rw [← @logb_one b, logb_lt_logb_iff_of_base_lt_one b_pos b_lt_one h zero_lt_one]
 
-lemma logb_neg_of_base_lt_one (h1 : 1 < x) : logb b x < 0 :=
-(logb_neg_iff_of_base_lt_one b_pos b_lt_one (lt_trans zero_lt_one h1)).2 h1
+theorem logb_neg_of_base_lt_one (h1 : 1 < x) : logb b x < 0 :=
+  (logb_neg_iff_of_base_lt_one b_pos b_lt_one (lt_transₓ zero_lt_one h1)).2 h1
 
-lemma logb_nonneg_iff_of_base_lt_one (hx : 0 < x) : 0 ≤ logb b x ↔ x ≤ 1 :=
-by rw [← not_lt, logb_neg_iff_of_base_lt_one b_pos b_lt_one hx, not_lt]
+theorem logb_nonneg_iff_of_base_lt_one (hx : 0 < x) : 0 ≤ logb b x ↔ x ≤ 1 := by
+  rw [← not_ltₓ, logb_neg_iff_of_base_lt_one b_pos b_lt_one hx, not_ltₓ]
 
-lemma logb_nonneg_of_base_lt_one (hx : 0 < x) (hx' : x ≤ 1) : 0 ≤ logb b x :=
-by {rw [logb_nonneg_iff_of_base_lt_one b_pos b_lt_one hx], exact hx' }
+theorem logb_nonneg_of_base_lt_one (hx : 0 < x) (hx' : x ≤ 1) : 0 ≤ logb b x := by
+  rw [logb_nonneg_iff_of_base_lt_one b_pos b_lt_one hx]
+  exact hx'
 
-lemma logb_nonpos_iff_of_base_lt_one (hx : 0 < x) : logb b x ≤ 0 ↔ 1 ≤ x :=
-by rw [← not_lt, logb_pos_iff_of_base_lt_one b_pos b_lt_one hx, not_lt]
+theorem logb_nonpos_iff_of_base_lt_one (hx : 0 < x) : logb b x ≤ 0 ↔ 1 ≤ x := by
+  rw [← not_ltₓ, logb_pos_iff_of_base_lt_one b_pos b_lt_one hx, not_ltₓ]
 
-lemma strict_anti_on_logb_of_base_lt_one : strict_anti_on (logb b) (set.Ioi 0) :=
-λ x hx y hy hxy, logb_lt_logb_of_base_lt_one b_pos b_lt_one hx hxy
+theorem strict_anti_on_logb_of_base_lt_one : StrictAntiOn (logb b) (Set.Ioi 0) := fun x hx y hy hxy =>
+  logb_lt_logb_of_base_lt_one b_pos b_lt_one hx hxy
 
-lemma strict_mono_on_logb_of_base_lt_one : strict_mono_on (logb b) (set.Iio 0) :=
-begin
-  rintros x (hx : x < 0) y (hy : y < 0) hxy,
-  rw [← logb_abs y, ← logb_abs x],
-  refine logb_lt_logb_of_base_lt_one b_pos b_lt_one (abs_pos.2 hy.ne) _,
-  rwa [abs_of_neg hy, abs_of_neg hx, neg_lt_neg_iff],
-end
+theorem strict_mono_on_logb_of_base_lt_one : StrictMonoOn (logb b) (Set.Iio 0) := by
+  rintro x (hx : x < 0) y (hy : y < 0) hxy
+  rw [← logb_abs y, ← logb_abs x]
+  refine' logb_lt_logb_of_base_lt_one b_pos b_lt_one (abs_pos.2 hy.ne) _
+  rwa [abs_of_neg hy, abs_of_neg hx, neg_lt_neg_iff]
 
-lemma logb_inj_on_pos_of_base_lt_one : set.inj_on (logb b) (set.Ioi 0) :=
-(strict_anti_on_logb_of_base_lt_one b_pos b_lt_one).inj_on
+theorem logb_inj_on_pos_of_base_lt_one : Set.InjOn (logb b) (Set.Ioi 0) :=
+  (strict_anti_on_logb_of_base_lt_one b_pos b_lt_one).InjOn
 
-lemma eq_one_of_pos_of_logb_eq_zero_of_base_lt_one (h₁ : 0 < x) (h₂ : logb b x = 0) :
-x = 1 :=
-logb_inj_on_pos_of_base_lt_one b_pos b_lt_one (set.mem_Ioi.2 h₁) (set.mem_Ioi.2 zero_lt_one)
-  (h₂.trans real.logb_one.symm)
+theorem eq_one_of_pos_of_logb_eq_zero_of_base_lt_one (h₁ : 0 < x) (h₂ : logb b x = 0) : x = 1 :=
+  logb_inj_on_pos_of_base_lt_one b_pos b_lt_one (Set.mem_Ioi.2 h₁) (Set.mem_Ioi.2 zero_lt_one)
+    (h₂.trans Real.logb_one.symm)
 
-lemma logb_ne_zero_of_pos_of_ne_one_of_base_lt_one (hx_pos : 0 < x) (hx : x ≠ 1) :
-  logb b x ≠ 0 :=
-mt (eq_one_of_pos_of_logb_eq_zero_of_base_lt_one b_pos b_lt_one hx_pos) hx
+theorem logb_ne_zero_of_pos_of_ne_one_of_base_lt_one (hx_pos : 0 < x) (hx : x ≠ 1) : logb b x ≠ 0 :=
+  mt (eq_one_of_pos_of_logb_eq_zero_of_base_lt_one b_pos b_lt_one hx_pos) hx
 
-lemma tendsto_logb_at_top_of_base_lt_one : tendsto (logb b) at_top at_bot :=
-begin
-  rw tendsto_at_top_at_bot,
-  intro e,
-  use 1 ⊔ b ^ e,
-  intro a,
-  simp only [and_imp, sup_le_iff],
-  intro ha,
-  rw logb_le_iff_le_rpow_of_base_lt_one b_pos b_lt_one,
-  tauto,
-  exact lt_of_lt_of_le zero_lt_one ha,
-end
+theorem tendsto_logb_at_top_of_base_lt_one : Tendsto (logb b) atTop atBot := by
+  rw [tendsto_at_top_at_bot]
+  intro e
+  use 1⊔b ^ e
+  intro a
+  simp only [and_imp, sup_le_iff]
+  intro ha
+  rw [logb_le_iff_le_rpow_of_base_lt_one b_pos b_lt_one]
+  tauto
+  exact lt_of_lt_of_leₓ zero_lt_one ha
 
-end b_pos_and_b_lt_one
+end BPosAndBLtOne
 
-@[simp] lemma logb_eq_zero :
-  logb b x = 0 ↔ b = 0 ∨ b = 1 ∨ b = -1 ∨ x = 0 ∨ x = 1 ∨ x = -1 :=
-begin
-  simp_rw [logb, div_eq_zero_iff, log_eq_zero],
-  tauto,
-end
+@[simp]
+theorem logb_eq_zero : logb b x = 0 ↔ b = 0 ∨ b = 1 ∨ b = -1 ∨ x = 0 ∨ x = 1 ∨ x = -1 := by
+  simp_rw [logb, div_eq_zero_iff, log_eq_zero]
+  tauto
 
-/- TODO add other limits and continuous API lemmas analogous to those in log.lean -/
+-- TODO add other limits and continuous API lemmas analogous to those in log.lean
+open_locale BigOperators
 
-open_locale big_operators
+theorem logb_prod {α : Type _} (s : Finset α) (f : α → ℝ) (hf : ∀, ∀ x ∈ s, ∀, f x ≠ 0) :
+    logb b (∏ i in s, f i) = ∑ i in s, logb b (f i) := by
+  classical
+  induction' s using Finset.induction_on with a s ha ih
+  · simp
+    
+  simp only [Finset.mem_insert, forall_eq_or_imp] at hf
+  simp [ha, ih hf.2, logb_mul hf.1 (Finset.prod_ne_zero_iff.2 hf.2)]
 
-lemma logb_prod {α : Type*} (s : finset α) (f : α → ℝ) (hf : ∀ x ∈ s, f x ≠ 0):
-  logb b (∏ i in s, f i) = ∑ i in s, logb b (f i) :=
-begin
-  classical,
-  induction s using finset.induction_on with a s ha ih,
-  { simp },
-  simp only [finset.mem_insert, forall_eq_or_imp] at hf,
-  simp [ha, ih hf.2, logb_mul hf.1 (finset.prod_ne_zero_iff.2 hf.2)],
-end
+end Real
 
-end real

@@ -3,101 +3,114 @@ Copyright (c) 2018 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import category_theory.category.basic
+import Mathbin.CategoryTheory.Category.Basic
 
-open category_theory
+open CategoryTheory
 
 -- TODO someone might like to generalise this tactic to work with other associative structures.
+namespace Tactic
 
-namespace tactic
+unsafe def repeat_with_results {α : Type} (t : tactic α) : tactic (List α) :=
+  (do
+      let r ← t
+      let s ← repeat_with_results
+      return (r :: s)) <|>
+    return []
 
-meta def repeat_with_results {α : Type} (t : tactic α) : tactic (list α) :=
-(do r ← t,
-    s ← repeat_with_results,
-    return (r :: s)) <|> return []
+unsafe def repeat_count {α : Type} (t : tactic α) : tactic ℕ := do
+  let r ← repeat_with_results t
+  return r
 
-meta def repeat_count {α : Type} (t : tactic α) : tactic ℕ :=
-do r ← repeat_with_results t,
-   return r.length
+end Tactic
 
-end tactic
+namespace Conv
 
-namespace conv
-open tactic
-meta def repeat_with_results {α : Type} (t : tactic α) : tactic (list α) :=
-(do r ← t,
-    s ← repeat_with_results,
-    return (r :: s)) <|> return []
+open Tactic
 
-meta def repeat_count {α : Type} (t : tactic α) : tactic ℕ :=
-do r ← repeat_with_results t,
-   return r.length
+unsafe def repeat_with_results {α : Type} (t : tactic α) : tactic (List α) :=
+  (do
+      let r ← t
+      let s ← repeat_with_results
+      return (r :: s)) <|>
+    return []
 
-meta def slice (a b : ℕ) : conv unit :=
-do repeat $ to_expr ``(category.assoc) >>= λ e, tactic.rewrite_target e {symm:=ff},
-   iterate_range (a-1) (a-1) (do conv.congr, conv.skip),
-   k ← repeat_count $ to_expr ``(category.assoc) >>= λ e, tactic.rewrite_target e {symm:=tt},
-   iterate_range (k+1+a-b) (k+1+a-b) conv.congr,
-   repeat $ to_expr ``(category.assoc) >>= λ e, tactic.rewrite_target e {symm:=ff},
-   rotate 1,
-   iterate_exactly' (k+1+a-b) conv.skip
+unsafe def repeat_count {α : Type} (t : tactic α) : tactic ℕ := do
+  let r ← repeat_with_results t
+  return r
 
-meta def slice_lhs (a b : ℕ) (t : conv unit) : tactic unit :=
-do conv.interactive.to_lhs,
-   slice a b,
-   t
+unsafe def slice (a b : ℕ) : conv Unit := do
+  repeat <| to_expr (pquote.1 Category.assoc) >>= fun e => tactic.rewrite_target e { symm := ff }
+  iterate_range (a - 1) (a - 1) do
+      conv.congr
+      conv.skip
+  let k ← repeat_count <| to_expr (pquote.1 Category.assoc) >>= fun e => tactic.rewrite_target e { symm := true }
+  iterate_range (k + 1 + a - b) (k + 1 + a - b) conv.congr
+  repeat <| to_expr (pquote.1 Category.assoc) >>= fun e => tactic.rewrite_target e { symm := ff }
+  rotate 1
+  iterate_exactly' (k + 1 + a - b) conv.skip
 
-meta def slice_rhs (a b : ℕ) (t : conv unit) : tactic unit :=
-do conv.interactive.to_rhs,
-   slice a b,
-   t
+unsafe def slice_lhs (a b : ℕ) (t : conv Unit) : tactic Unit := do
+  conv.interactive.to_lhs
+  slice a b
+  t
 
-namespace interactive
-/--
-`slice` is a conv tactic; if the current focus is a composition of several morphisms,
+unsafe def slice_rhs (a b : ℕ) (t : conv Unit) : tactic Unit := do
+  conv.interactive.to_rhs
+  slice a b
+  t
+
+namespace Interactive
+
+/-- `slice` is a conv tactic; if the current focus is a composition of several morphisms,
 `slice a b` reassociates as needed, and zooms in on the `a`-th through `b`-th morphisms.
 
 Thus if the current focus is `(a ≫ b) ≫ ((c ≫ d) ≫ e)`, then `slice 2 3` zooms to `b ≫ c`.
  -/
-meta def slice := conv.slice
-end interactive
-end conv
+unsafe def slice :=
+  conv.slice
 
-namespace tactic
-open conv
-private meta def conv_target' (c : conv unit) : tactic unit :=
-do t ← target,
-   (new_t, pr) ← c.convert t,
-   replace_target new_t pr,
-   try tactic.triv, try (tactic.reflexivity reducible)
+end Interactive
 
-namespace interactive
+end Conv
+
+namespace Tactic
+
+open Conv
+
+private unsafe def conv_target' (c : conv Unit) : tactic Unit := do
+  let t ← target
+  let (new_t, pr) ← c.convert t
+  replace_target new_t pr
+  try tactic.triv
+  try (tactic.reflexivity reducible)
+
+namespace Interactive
+
 setup_tactic_parser
 
-/--
-`slice_lhs a b { tac }` zooms to the left hand side, uses associativity for categorical
+/-- `slice_lhs a b { tac }` zooms to the left hand side, uses associativity for categorical
 composition as needed, zooms in on the `a`-th through `b`-th morphisms, and invokes `tac`.
 -/
-meta def slice_lhs (a b : parse small_nat) (t : conv.interactive.itactic) : tactic unit :=
-do conv_target' (conv.interactive.to_lhs >> slice a b >> t)
-/--
-`slice_rhs a b { tac }` zooms to the right hand side, uses associativity for categorical
-composition as needed, zooms in on the `a`-th through `b`-th morphisms, and invokes `tac`.
--/
-meta def slice_rhs (a b : parse small_nat) (t : conv.interactive.itactic) : tactic unit :=
-do conv_target' (conv.interactive.to_rhs >> slice a b >> t)
-end interactive
-end tactic
+unsafe def slice_lhs (a b : parse small_nat) (t : conv.interactive.itactic) : tactic Unit := do
+  conv_target' ((conv.interactive.to_lhs >> slice a b) >> t)
 
-/--
-`slice_lhs a b { tac }` zooms to the left hand side, uses associativity for categorical
+/-- `slice_rhs a b { tac }` zooms to the right hand side, uses associativity for categorical
+composition as needed, zooms in on the `a`-th through `b`-th morphisms, and invokes `tac`.
+-/
+unsafe def slice_rhs (a b : parse small_nat) (t : conv.interactive.itactic) : tactic Unit := do
+  conv_target' ((conv.interactive.to_rhs >> slice a b) >> t)
+
+end Interactive
+
+end Tactic
+
+/-- `slice_lhs a b { tac }` zooms to the left hand side, uses associativity for categorical
 composition as needed, zooms in on the `a`-th through `b`-th morphisms, and invokes `tac`.
 
 `slice_rhs a b { tac }` zooms to the right hand side, uses associativity for categorical
 composition as needed, zooms in on the `a`-th through `b`-th morphisms, and invokes `tac`.
 -/
 add_tactic_doc
-{ name := "slice",
-  category := doc_category.tactic,
-  decl_names := [`tactic.interactive.slice_lhs, `tactic.interactive.slice_rhs],
-  tags := ["category theory"] }
+  { Name := "slice", category := DocCategory.tactic,
+    declNames := [`tactic.interactive.slice_lhs, `tactic.interactive.slice_rhs], tags := ["category theory"] }
+

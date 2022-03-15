@@ -3,8 +3,8 @@ Copyright (c) 2022 Heather Macbeth. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Heather Macbeth
 -/
-import order.conditionally_complete_lattice
-import data.set.intervals.ord_connected
+import Mathbin.Order.ConditionallyCompleteLattice
+import Mathbin.Data.Set.Intervals.OrdConnected
 
 /-! # Subtypes of conditionally complete linear orders
 
@@ -19,128 +19,128 @@ Add appropriate instances for all `set.Ixx`. This requires a refactor that will 
 default values for `Sup` and `Inf`.
 -/
 
-open_locale classical
-open set
 
-variables {α : Type*} (s : set α)
+open_locale Classical
 
-section has_Sup
-variables [has_Sup α]
+open Set
+
+variable {α : Type _} (s : Set α)
+
+section HasSupₓ
+
+variable [HasSupₓ α]
 
 /-- `has_Sup` structure on a nonempty subset `s` of an object with `has_Sup`. This definition is
 non-canonical (it uses `default s`); it should be used only as here, as an auxiliary instance in the
 construction of the `conditionally_complete_linear_order` structure. -/
-noncomputable def subset_has_Sup [inhabited s] : has_Sup s := {Sup := λ t,
-if ht : Sup (coe '' t : set α) ∈ s then ⟨Sup (coe '' t : set α), ht⟩ else default}
+noncomputable def subsetHasSup [Inhabited s] : HasSupₓ s where
+  sup := fun t => if ht : sup (coe '' t : Set α) ∈ s then ⟨sup (coe '' t : Set α), ht⟩ else default
 
-local attribute [instance] subset_has_Sup
+attribute [local instance] subsetHasSup
 
-@[simp] lemma subset_Sup_def [inhabited s] :
-  @Sup s _ = λ t,
-  if ht : Sup (coe '' t : set α) ∈ s then ⟨Sup (coe '' t : set α), ht⟩ else default := rfl
+@[simp]
+theorem subset_Sup_def [Inhabited s] :
+    @sup s _ = fun t => if ht : sup (coe '' t : Set α) ∈ s then ⟨sup (coe '' t : Set α), ht⟩ else default :=
+  rfl
 
-lemma subset_Sup_of_within [inhabited s] {t : set s} (h : Sup (coe '' t : set α) ∈ s) :
-  Sup (coe '' t : set α) = (@Sup s _ t : α) :=
-by simp [dif_pos h]
+theorem subset_Sup_of_within [Inhabited s] {t : Set s} (h : sup (coe '' t : Set α) ∈ s) :
+    sup (coe '' t : Set α) = (@sup s _ t : α) := by
+  simp [dif_pos h]
 
-end has_Sup
+end HasSupₓ
 
-section has_Inf
-variables [has_Inf α]
+section HasInfₓ
+
+variable [HasInfₓ α]
 
 /-- `has_Inf` structure on a nonempty subset `s` of an object with `has_Inf`. This definition is
 non-canonical (it uses `default s`); it should be used only as here, as an auxiliary instance in the
 construction of the `conditionally_complete_linear_order` structure. -/
-noncomputable def subset_has_Inf [inhabited s] : has_Inf s := {Inf := λ t,
-if ht : Inf (coe '' t : set α) ∈ s then ⟨Inf (coe '' t : set α), ht⟩ else default}
+noncomputable def subsetHasInf [Inhabited s] : HasInfₓ s where
+  inf := fun t => if ht : inf (coe '' t : Set α) ∈ s then ⟨inf (coe '' t : Set α), ht⟩ else default
 
-local attribute [instance] subset_has_Inf
+attribute [local instance] subsetHasInf
 
-@[simp] lemma subset_Inf_def [inhabited s] :
-  @Inf s _ = λ t,
-  if ht : Inf (coe '' t : set α) ∈ s then ⟨Inf (coe '' t : set α), ht⟩ else default := rfl
+@[simp]
+theorem subset_Inf_def [Inhabited s] :
+    @inf s _ = fun t => if ht : inf (coe '' t : Set α) ∈ s then ⟨inf (coe '' t : Set α), ht⟩ else default :=
+  rfl
 
-lemma subset_Inf_of_within [inhabited s] {t : set s} (h : Inf (coe '' t : set α) ∈ s) :
-  Inf (coe '' t : set α) = (@Inf s _ t : α) :=
-by simp [dif_pos h]
+theorem subset_Inf_of_within [Inhabited s] {t : Set s} (h : inf (coe '' t : Set α) ∈ s) :
+    inf (coe '' t : Set α) = (@inf s _ t : α) := by
+  simp [dif_pos h]
 
-end has_Inf
+end HasInfₓ
 
-variables [conditionally_complete_linear_order α]
+variable [ConditionallyCompleteLinearOrder α]
 
-local attribute [instance] subset_has_Sup
-local attribute [instance] subset_has_Inf
+attribute [local instance] subsetHasSup
+
+attribute [local instance] subsetHasInf
 
 /-- For a nonempty subset of a conditionally complete linear order to be a conditionally complete
 linear order, it suffices that it contain the `Sup` of all its nonempty bounded-above subsets, and
 the `Inf` of all its nonempty bounded-below subsets.
 See note [reducible non-instances]. -/
 @[reducible]
-noncomputable def subset_conditionally_complete_linear_order [inhabited s]
-  (h_Sup : ∀ {t : set s} (ht : t.nonempty) (h_bdd : bdd_above t), Sup (coe '' t : set α) ∈ s)
-  (h_Inf : ∀ {t : set s} (ht : t.nonempty) (h_bdd : bdd_below t), Inf (coe '' t : set α) ∈ s) :
-  conditionally_complete_linear_order s :=
-{ le_cSup := begin
-    rintros t c h_bdd hct,
-    -- The following would be a more natural way to finish, but gives a "deep recursion" error:
-    -- simpa [subset_Sup_of_within (h_Sup t)] using
-    --   (strict_mono_coe s).monotone.le_cSup_image hct h_bdd,
-    have := (subtype.mono_coe s).le_cSup_image hct h_bdd,
-    rwa subset_Sup_of_within s (h_Sup ⟨c, hct⟩ h_bdd) at this,
-  end,
-  cSup_le := begin
-    rintros t B ht hB,
-    have := (subtype.mono_coe s).cSup_image_le ht hB,
-    rwa subset_Sup_of_within s (h_Sup ht ⟨B, hB⟩) at this,
-  end,
-  le_cInf := begin
-    intros t B ht hB,
-    have := (subtype.mono_coe s).le_cInf_image ht hB,
-    rwa subset_Inf_of_within s (h_Inf ht ⟨B, hB⟩) at this,
-  end,
-  cInf_le := begin
-    rintros t c h_bdd hct,
-    have := (subtype.mono_coe s).cInf_image_le hct h_bdd,
-    rwa subset_Inf_of_within s (h_Inf ⟨c, hct⟩ h_bdd) at this,
-  end,
-  ..subset_has_Sup s,
-  ..subset_has_Inf s,
-  ..distrib_lattice.to_lattice s,
-  ..(infer_instance : linear_order s) }
+noncomputable def subsetConditionallyCompleteLinearOrder [Inhabited s]
+    (h_Sup : ∀ {t : Set s} ht : t.Nonempty h_bdd : BddAbove t, sup (coe '' t : Set α) ∈ s)
+    (h_Inf : ∀ {t : Set s} ht : t.Nonempty h_bdd : BddBelow t, inf (coe '' t : Set α) ∈ s) :
+    ConditionallyCompleteLinearOrder s :=
+  { -- The following would be a more natural way to finish, but gives a "deep recursion" error:
+      -- simpa [subset_Sup_of_within (h_Sup t)] using
+      --   (strict_mono_coe s).monotone.le_cSup_image hct h_bdd,
+      subsetHasSup
+      s,
+    subsetHasInf s, DistribLattice.toLattice s, (inferInstance : LinearOrderₓ s) with
+    le_cSup := by
+      rintro t c h_bdd hct
+      have := (Subtype.mono_coe s).le_cSup_image hct h_bdd
+      rwa [subset_Sup_of_within s (h_Sup ⟨c, hct⟩ h_bdd)] at this,
+    cSup_le := by
+      rintro t B ht hB
+      have := (Subtype.mono_coe s).cSup_image_le ht hB
+      rwa [subset_Sup_of_within s (h_Sup ht ⟨B, hB⟩)] at this,
+    le_cInf := by
+      intro t B ht hB
+      have := (Subtype.mono_coe s).le_cInf_image ht hB
+      rwa [subset_Inf_of_within s (h_Inf ht ⟨B, hB⟩)] at this,
+    cInf_le := by
+      rintro t c h_bdd hct
+      have := (Subtype.mono_coe s).cInf_image_le hct h_bdd
+      rwa [subset_Inf_of_within s (h_Inf ⟨c, hct⟩ h_bdd)] at this }
 
-section ord_connected
+section OrdConnected
 
 /-- The `Sup` function on a nonempty `ord_connected` set `s` in a conditionally complete linear
 order takes values within `s`, for all nonempty bounded-above subsets of `s`. -/
-lemma Sup_within_of_ord_connected
-  {s : set α} [hs : ord_connected s] ⦃t : set s⦄ (ht : t.nonempty) (h_bdd : bdd_above t) :
-  Sup (coe '' t : set α) ∈ s :=
-begin
-  obtain ⟨c, hct⟩ : ∃ c, c ∈ t := ht,
-  obtain ⟨B, hB⟩ : ∃ B, B ∈ upper_bounds t := h_bdd,
-  refine hs.out c.2 B.2 ⟨_, _⟩,
-  { exact (subtype.mono_coe s).le_cSup_image hct ⟨B, hB⟩ },
-  { exact (subtype.mono_coe s).cSup_image_le ⟨c, hct⟩ hB },
-end
+theorem Sup_within_of_ord_connected {s : Set α} [hs : OrdConnected s] ⦃t : Set s⦄ (ht : t.Nonempty)
+    (h_bdd : BddAbove t) : sup (coe '' t : Set α) ∈ s := by
+  obtain ⟨c, hct⟩ : ∃ c, c ∈ t := ht
+  obtain ⟨B, hB⟩ : ∃ B, B ∈ UpperBounds t := h_bdd
+  refine' hs.out c.2 B.2 ⟨_, _⟩
+  · exact (Subtype.mono_coe s).le_cSup_image hct ⟨B, hB⟩
+    
+  · exact (Subtype.mono_coe s).cSup_image_le ⟨c, hct⟩ hB
+    
 
 /-- The `Inf` function on a nonempty `ord_connected` set `s` in a conditionally complete linear
 order takes values within `s`, for all nonempty bounded-below subsets of `s`. -/
-lemma Inf_within_of_ord_connected
-  {s : set α} [hs : ord_connected s] ⦃t : set s⦄ (ht : t.nonempty) (h_bdd : bdd_below t) :
-  Inf (coe '' t : set α) ∈ s :=
-begin
-  obtain ⟨c, hct⟩ : ∃ c, c ∈ t := ht,
-  obtain ⟨B, hB⟩ : ∃ B, B ∈ lower_bounds t := h_bdd,
-  refine hs.out B.2 c.2 ⟨_, _⟩,
-  { exact (subtype.mono_coe s).le_cInf_image ⟨c, hct⟩ hB },
-  { exact (subtype.mono_coe s).cInf_image_le hct ⟨B, hB⟩ },
-end
+theorem Inf_within_of_ord_connected {s : Set α} [hs : OrdConnected s] ⦃t : Set s⦄ (ht : t.Nonempty)
+    (h_bdd : BddBelow t) : inf (coe '' t : Set α) ∈ s := by
+  obtain ⟨c, hct⟩ : ∃ c, c ∈ t := ht
+  obtain ⟨B, hB⟩ : ∃ B, B ∈ LowerBounds t := h_bdd
+  refine' hs.out B.2 c.2 ⟨_, _⟩
+  · exact (Subtype.mono_coe s).le_cInf_image ⟨c, hct⟩ hB
+    
+  · exact (Subtype.mono_coe s).cInf_image_le hct ⟨B, hB⟩
+    
 
 /-- A nonempty `ord_connected` set in a conditionally complete linear order is naturally a
 conditionally complete linear order. -/
-noncomputable instance ord_connected_subset_conditionally_complete_linear_order
-  [inhabited s] [ord_connected s] :
-  conditionally_complete_linear_order s :=
-subset_conditionally_complete_linear_order s Sup_within_of_ord_connected Inf_within_of_ord_connected
+noncomputable instance ordConnectedSubsetConditionallyCompleteLinearOrder [Inhabited s] [OrdConnected s] :
+    ConditionallyCompleteLinearOrder s :=
+  subsetConditionallyCompleteLinearOrder s Sup_within_of_ord_connected Inf_within_of_ord_connected
 
-end ord_connected
+end OrdConnected
+

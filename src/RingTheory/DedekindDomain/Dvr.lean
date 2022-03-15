@@ -3,8 +3,8 @@ Copyright (c) 2020 Kenji Nakagawa. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenji Nakagawa, Anne Baanen, Filippo A. E. Nuccio
 -/
-import ring_theory.localization.at_prime
-import ring_theory.discrete_valuation_ring
+import Mathbin.RingTheory.Localization.AtPrime
+import Mathbin.RingTheory.DiscreteValuationRing
 
 /-!
 # Dedekind domains
@@ -37,18 +37,19 @@ to add a `(h : ¬ is_field A)` assumption whenever this is explicitly needed.
 dedekind domain, dedekind ring
 -/
 
-variables (R A K : Type*) [comm_ring R] [comm_ring A] [is_domain A] [field K]
 
-open_locale non_zero_divisors polynomial
+variable (R A K : Type _) [CommRingₓ R] [CommRingₓ A] [IsDomain A] [Field K]
 
-/--
-A Dedekind domain is an integral domain that is Noetherian, and the
+open_locale nonZeroDivisors Polynomial
+
+-- ././Mathport/Syntax/Translate/Basic.lean:598:2: warning: expanding binder collection (P «expr ≠ » («expr⊥»() : ideal A))
+/-- A Dedekind domain is an integral domain that is Noetherian, and the
 localization at every nonzero prime is a discrete valuation ring.
 
 This is equivalent to `is_dedekind_domain`.
 TODO: prove the equivalence.
 -/
-structure is_dedekind_domain_dvr : Prop :=
-(is_noetherian_ring : is_noetherian_ring A)
-(is_dvr_at_nonzero_prime : ∀ P ≠ (⊥ : ideal A), P.is_prime →
-  discrete_valuation_ring (localization.at_prime P))
+structure IsDedekindDomainDvr : Prop where
+  IsNoetherianRing : IsNoetherianRing A
+  is_dvr_at_nonzero_prime : ∀ P _ : P ≠ (⊥ : Ideal A), P.IsPrime → DiscreteValuationRing (Localization.AtPrime P)
+

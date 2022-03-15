@@ -3,7 +3,7 @@ Copyright (c) 2019 Jean Lo. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jean Lo, Bhavik Mehta, Yaël Dillies
 -/
-import analysis.normed_space.basic
+import Mathbin.Analysis.NormedSpace.Basic
 
 /-!
 # Local convexity
@@ -34,249 +34,246 @@ For a module over a normed ring:
 absorbent, balanced, locally convex, LCTVS
 -/
 
-open set
-open_locale pointwise topological_space
 
-variables {𝕜 𝕝 E : Type*}
+open Set
 
-section semi_normed_ring
-variables [semi_normed_ring 𝕜]
+open_locale Pointwise TopologicalSpace
 
-section has_scalar
-variables (𝕜) [has_scalar 𝕜 E]
+variable {𝕜 𝕝 E : Type _}
+
+section SemiNormedRing
+
+variable [SemiNormedRing 𝕜]
+
+section HasScalar
+
+variable (𝕜) [HasScalar 𝕜 E]
 
 /-- A set `A` absorbs another set `B` if `B` is contained in all scalings of `A` by elements of
 sufficiently large norm. -/
-def absorbs (A B : set E) := ∃ r, 0 < r ∧ ∀ a : 𝕜, r ≤ ∥a∥ → B ⊆ a • A
+def Absorbs (A B : Set E) :=
+  ∃ r, 0 < r ∧ ∀ a : 𝕜, r ≤ ∥a∥ → B ⊆ a • A
 
-variables {𝕜} {s t u v A B : set E}
+variable {𝕜} {s t u v A B : Set E}
 
-lemma absorbs_empty {s : set E}: absorbs 𝕜 s (∅ : set E) :=
-⟨1, one_pos, λ a ha, set.empty_subset _⟩
+theorem absorbs_empty {s : Set E} : Absorbs 𝕜 s (∅ : Set E) :=
+  ⟨1, one_pos, fun a ha => Set.empty_subset _⟩
 
-lemma absorbs.mono (hs : absorbs 𝕜 s u) (hst : s ⊆ t) (hvu : v ⊆ u) : absorbs 𝕜 t v :=
-let ⟨r, hr, h⟩ := hs in ⟨r, hr, λ a ha, hvu.trans $ (h _ ha).trans $ smul_set_mono hst⟩
+theorem Absorbs.mono (hs : Absorbs 𝕜 s u) (hst : s ⊆ t) (hvu : v ⊆ u) : Absorbs 𝕜 t v :=
+  let ⟨r, hr, h⟩ := hs
+  ⟨r, hr, fun a ha => hvu.trans <| (h _ ha).trans <| smul_set_mono hst⟩
 
-lemma absorbs.mono_left (hs : absorbs 𝕜 s u) (h : s ⊆ t) : absorbs 𝕜 t u := hs.mono h subset.rfl
-lemma absorbs.mono_right (hs : absorbs 𝕜 s u) (h : v ⊆ u) : absorbs 𝕜 s v := hs.mono subset.rfl h
+theorem Absorbs.mono_left (hs : Absorbs 𝕜 s u) (h : s ⊆ t) : Absorbs 𝕜 t u :=
+  hs.mono h Subset.rfl
 
-lemma absorbs.union (hu : absorbs 𝕜 s u) (hv : absorbs 𝕜 s v) : absorbs 𝕜 s (u ∪ v) :=
-begin
-  obtain ⟨a, ha, hu⟩ := hu,
-  obtain ⟨b, hb, hv⟩ := hv,
-  exact ⟨max a b, lt_max_of_lt_left ha,
-    λ c hc, union_subset (hu _ $ le_of_max_le_left hc) (hv _ $ le_of_max_le_right hc)⟩,
-end
+theorem Absorbs.mono_right (hs : Absorbs 𝕜 s u) (h : v ⊆ u) : Absorbs 𝕜 s v :=
+  hs.mono Subset.rfl h
 
-@[simp] lemma absorbs_union : absorbs 𝕜 s (u ∪ v) ↔ absorbs 𝕜 s u ∧ absorbs 𝕜 s v :=
-⟨λ h, ⟨h.mono_right $ subset_union_left _ _, h.mono_right $ subset_union_right _ _⟩,
-  λ h, h.1.union h.2⟩
+theorem Absorbs.union (hu : Absorbs 𝕜 s u) (hv : Absorbs 𝕜 s v) : Absorbs 𝕜 s (u ∪ v) := by
+  obtain ⟨a, ha, hu⟩ := hu
+  obtain ⟨b, hb, hv⟩ := hv
+  exact
+    ⟨max a b, lt_max_of_lt_left ha, fun c hc =>
+      union_subset (hu _ <| le_of_max_le_left hc) (hv _ <| le_of_max_le_right hc)⟩
 
-variables (𝕜)
+@[simp]
+theorem absorbs_union : Absorbs 𝕜 s (u ∪ v) ↔ Absorbs 𝕜 s u ∧ Absorbs 𝕜 s v :=
+  ⟨fun h => ⟨h.mono_right <| subset_union_left _ _, h.mono_right <| subset_union_right _ _⟩, fun h => h.1.union h.2⟩
+
+variable (𝕜)
 
 /-- A set is absorbent if it absorbs every singleton. -/
-def absorbent (A : set E) := ∀ x, ∃ r, 0 < r ∧ ∀ a : 𝕜, r ≤ ∥a∥ → x ∈ a • A
+def Absorbent (A : Set E) :=
+  ∀ x, ∃ r, 0 < r ∧ ∀ a : 𝕜, r ≤ ∥a∥ → x ∈ a • A
 
-variables {𝕜}
+variable {𝕜}
 
-lemma absorbent.subset (hA : absorbent 𝕜 A) (hAB : A ⊆ B) : absorbent 𝕜 B :=
-begin
-  refine forall_imp (λ x, _) hA,
-  exact Exists.imp (λ r, and.imp_right $ forall₂_imp $ λ a ha hx, set.smul_set_mono hAB hx),
-end
+theorem Absorbent.subset (hA : Absorbent 𝕜 A) (hAB : A ⊆ B) : Absorbent 𝕜 B := by
+  refine' forall_imp (fun x => _) hA
+  exact Exists.impₓ fun r => And.imp_right <| forall₂_imp fun a ha hx => Set.smul_set_mono hAB hx
 
-lemma absorbent_iff_forall_absorbs_singleton : absorbent 𝕜 A ↔ ∀ x, absorbs 𝕜 A {x} :=
-by simp_rw [absorbs, absorbent, singleton_subset_iff]
+theorem absorbent_iff_forall_absorbs_singleton : Absorbent 𝕜 A ↔ ∀ x, Absorbs 𝕜 A {x} := by
+  simp_rw [Absorbs, Absorbent, singleton_subset_iff]
 
-lemma absorbent.absorbs (hs : absorbent 𝕜 s) {x : E} : absorbs 𝕜 s {x} :=
-absorbent_iff_forall_absorbs_singleton.1 hs _
+theorem Absorbent.absorbs (hs : Absorbent 𝕜 s) {x : E} : Absorbs 𝕜 s {x} :=
+  absorbent_iff_forall_absorbs_singleton.1 hs _
 
-lemma absorbent_iff_nonneg_lt : absorbent 𝕜 A ↔ ∀ x, ∃ r, 0 ≤ r ∧ ∀ ⦃a : 𝕜⦄, r < ∥a∥ → x ∈ a • A :=
-forall_congr $ λ x, ⟨λ ⟨r, hr, hx⟩, ⟨r, hr.le, λ a ha, hx a ha.le⟩, λ ⟨r, hr, hx⟩,
-  ⟨r + 1, add_pos_of_nonneg_of_pos hr zero_lt_one,
-    λ a ha, hx ((lt_add_of_pos_right r zero_lt_one).trans_le ha)⟩⟩
+theorem absorbent_iff_nonneg_lt : Absorbent 𝕜 A ↔ ∀ x, ∃ r, 0 ≤ r ∧ ∀ ⦃a : 𝕜⦄, r < ∥a∥ → x ∈ a • A :=
+  forall_congrₓ fun x =>
+    ⟨fun ⟨r, hr, hx⟩ => ⟨r, hr.le, fun a ha => hx a ha.le⟩, fun ⟨r, hr, hx⟩ =>
+      ⟨r + 1, add_pos_of_nonneg_of_pos hr zero_lt_one, fun a ha =>
+        hx ((lt_add_of_pos_right r zero_lt_one).trans_le ha)⟩⟩
 
-variables (𝕜)
+variable (𝕜)
 
 /-- A set `A` is balanced if `a • A` is contained in `A` whenever `a` has norm at most `1`. -/
-def balanced (A : set E) := ∀ a : 𝕜, ∥a∥ ≤ 1 → a • A ⊆ A
+def Balanced (A : Set E) :=
+  ∀ a : 𝕜, ∥a∥ ≤ 1 → a • A ⊆ A
 
-variables {𝕜}
+variable {𝕜}
 
-lemma balanced_mem {s : set E} (hs : balanced 𝕜 s) {x : E} (hx : x ∈ s) {a : 𝕜} (ha : ∥a∥ ≤ 1) :
-  a • x ∈ s :=
-mem_of_subset_of_mem (hs a ha) (smul_mem_smul_set hx)
+theorem balanced_mem {s : Set E} (hs : Balanced 𝕜 s) {x : E} (hx : x ∈ s) {a : 𝕜} (ha : ∥a∥ ≤ 1) : a • x ∈ s :=
+  mem_of_subset_of_mem (hs a ha) (smul_mem_smul_set hx)
 
-lemma balanced_univ : balanced 𝕜 (univ : set E) := λ a ha, subset_univ _
+theorem balanced_univ : Balanced 𝕜 (Univ : Set E) := fun a ha => subset_univ _
 
-lemma balanced.union (hA : balanced 𝕜 A) (hB : balanced 𝕜 B) : balanced 𝕜 (A ∪ B) :=
-begin
-  intros a ha t ht,
-  rw smul_set_union at ht,
-  exact ht.imp (λ x, hA _ ha x) (λ x, hB _ ha x),
-end
+theorem Balanced.union (hA : Balanced 𝕜 A) (hB : Balanced 𝕜 B) : Balanced 𝕜 (A ∪ B) := by
+  intro a ha t ht
+  rw [smul_set_union] at ht
+  exact ht.imp (fun x => hA _ ha x) fun x => hB _ ha x
 
-lemma balanced.inter (hA : balanced 𝕜 A) (hB : balanced 𝕜 B) : balanced 𝕜 (A ∩ B) :=
-begin
-  rintro a ha _ ⟨x, ⟨hx₁, hx₂⟩, rfl⟩,
-  exact ⟨hA _ ha ⟨_, hx₁, rfl⟩, hB _ ha ⟨_, hx₂, rfl⟩⟩,
-end
+theorem Balanced.inter (hA : Balanced 𝕜 A) (hB : Balanced 𝕜 B) : Balanced 𝕜 (A ∩ B) := by
+  rintro a ha _ ⟨x, ⟨hx₁, hx₂⟩, rfl⟩
+  exact ⟨hA _ ha ⟨_, hx₁, rfl⟩, hB _ ha ⟨_, hx₂, rfl⟩⟩
 
-end has_scalar
+end HasScalar
 
-section add_comm_monoid
-variables [add_comm_monoid E] [module 𝕜 E] {s t u v A B : set E}
+section AddCommMonoidₓ
 
-lemma balanced.add (hA₁ : balanced 𝕜 A) (hA₂ : balanced 𝕜 B) : balanced 𝕜 (A + B) :=
-begin
-  rintro a ha _ ⟨_, ⟨x, y, hx, hy, rfl⟩, rfl⟩,
-  rw smul_add,
-  exact add_mem_add (hA₁ _ ha ⟨_, hx, rfl⟩) (hA₂ _ ha ⟨_, hy, rfl⟩),
-end
+variable [AddCommMonoidₓ E] [Module 𝕜 E] {s t u v A B : Set E}
 
-lemma zero_singleton_balanced : balanced 𝕜 ({0} : set E) :=
-λ a ha, by simp only [smul_set_singleton, smul_zero]
+theorem Balanced.add (hA₁ : Balanced 𝕜 A) (hA₂ : Balanced 𝕜 B) : Balanced 𝕜 (A + B) := by
+  rintro a ha _ ⟨_, ⟨x, y, hx, hy, rfl⟩, rfl⟩
+  rw [smul_add]
+  exact add_mem_add (hA₁ _ ha ⟨_, hx, rfl⟩) (hA₂ _ ha ⟨_, hy, rfl⟩)
 
-end add_comm_monoid
-end semi_normed_ring
+theorem zero_singleton_balanced : Balanced 𝕜 ({0} : Set E) := fun a ha => by
+  simp only [smul_set_singleton, smul_zero]
 
-section normed_comm_ring
-variables [normed_comm_ring 𝕜] [add_comm_monoid E] [module 𝕜 E] {A B : set E} (a : 𝕜)
+end AddCommMonoidₓ
 
-lemma balanced.smul (hA : balanced 𝕜 A) : balanced 𝕜 (a • A) :=
-begin
-  rintro b hb _ ⟨_, ⟨x, hx, rfl⟩, rfl⟩,
-  exact ⟨b • x, hA _ hb ⟨_, hx, rfl⟩, smul_comm _ _ _⟩,
-end
+end SemiNormedRing
 
-end normed_comm_ring
+section NormedCommRing
 
-section normed_field
-variables [normed_field 𝕜] [normed_ring 𝕝] [normed_space 𝕜 𝕝] [add_comm_group E] [module 𝕜 E]
-  [smul_with_zero 𝕝 E] [is_scalar_tower 𝕜 𝕝 E] {s t u v A B : set E} {a b : 𝕜}
+variable [NormedCommRing 𝕜] [AddCommMonoidₓ E] [Module 𝕜 E] {A B : Set E} (a : 𝕜)
+
+theorem Balanced.smul (hA : Balanced 𝕜 A) : Balanced 𝕜 (a • A) := by
+  rintro b hb _ ⟨_, ⟨x, hx, rfl⟩, rfl⟩
+  exact ⟨b • x, hA _ hb ⟨_, hx, rfl⟩, smul_comm _ _ _⟩
+
+end NormedCommRing
+
+section NormedField
+
+variable [NormedField 𝕜] [NormedRing 𝕝] [NormedSpace 𝕜 𝕝] [AddCommGroupₓ E] [Module 𝕜 E] [SmulWithZero 𝕝 E]
+  [IsScalarTower 𝕜 𝕝 E] {s t u v A B : Set E} {a b : 𝕜}
 
 /-- Scalar multiplication (by possibly different types) of a balanced set is monotone. -/
-lemma balanced.smul_mono (hs : balanced 𝕝 s) {a : 𝕝} {b : 𝕜} (h : ∥a∥ ≤ ∥b∥) : a • s ⊆ b • s :=
-begin
-  obtain rfl | hb := eq_or_ne b 0,
-  { rw norm_zero at h,
-    rw norm_eq_zero.1 (h.antisymm $ norm_nonneg _),
-    obtain rfl | h := s.eq_empty_or_nonempty,
-    { simp_rw [smul_set_empty] },
-    { simp_rw [zero_smul_set h] } },
-  rintro _ ⟨x, hx, rfl⟩,
-  refine ⟨b⁻¹ • a • x, _, smul_inv_smul₀ hb _⟩,
-  rw ←smul_assoc,
-  refine hs _ _ (smul_mem_smul_set hx),
-  rw [norm_smul, norm_inv, ←div_eq_inv_mul],
-  exact div_le_one_of_le h (norm_nonneg _),
-end
+theorem Balanced.smul_mono (hs : Balanced 𝕝 s) {a : 𝕝} {b : 𝕜} (h : ∥a∥ ≤ ∥b∥) : a • s ⊆ b • s := by
+  obtain rfl | hb := eq_or_ne b 0
+  · rw [norm_zero] at h
+    rw [norm_eq_zero.1 (h.antisymm <| norm_nonneg _)]
+    obtain rfl | h := s.eq_empty_or_nonempty
+    · simp_rw [smul_set_empty]
+      
+    · simp_rw [zero_smul_set h]
+      
+    
+  rintro _ ⟨x, hx, rfl⟩
+  refine' ⟨b⁻¹ • a • x, _, smul_inv_smul₀ hb _⟩
+  rw [← smul_assoc]
+  refine' hs _ _ (smul_mem_smul_set hx)
+  rw [norm_smul, norm_inv, ← div_eq_inv_mul]
+  exact div_le_one_of_le h (norm_nonneg _)
 
 /-- A balanced set absorbs itself. -/
-lemma balanced.absorbs_self (hA : balanced 𝕜 A) : absorbs 𝕜 A A :=
-begin
-  refine ⟨1, zero_lt_one, λ a ha x hx, _⟩,
-  rw mem_smul_set_iff_inv_smul_mem₀ (norm_pos_iff.1 $ zero_lt_one.trans_le ha),
-  refine hA a⁻¹ _ (smul_mem_smul_set hx),
-  rw norm_inv,
-  exact inv_le_one ha,
-end
+theorem Balanced.absorbs_self (hA : Balanced 𝕜 A) : Absorbs 𝕜 A A := by
+  refine' ⟨1, zero_lt_one, fun a ha x hx => _⟩
+  rw [mem_smul_set_iff_inv_smul_mem₀ (norm_pos_iff.1 <| zero_lt_one.trans_le ha)]
+  refine' hA a⁻¹ _ (smul_mem_smul_set hx)
+  rw [norm_inv]
+  exact inv_le_one ha
 
-lemma balanced.subset_smul (hA : balanced 𝕜 A) (ha : 1 ≤ ∥a∥) : A ⊆ a • A :=
-begin
-  refine (subset_set_smul_iff₀ _).2 (hA (a⁻¹) _),
-  { rintro rfl,
-    rw norm_zero at ha,
-    exact zero_lt_one.not_le ha },
-  { rw norm_inv,
-    exact inv_le_one ha }
-end
+theorem Balanced.subset_smul (hA : Balanced 𝕜 A) (ha : 1 ≤ ∥a∥) : A ⊆ a • A := by
+  refine' (subset_set_smul_iff₀ _).2 (hA a⁻¹ _)
+  · rintro rfl
+    rw [norm_zero] at ha
+    exact zero_lt_one.not_le ha
+    
+  · rw [norm_inv]
+    exact inv_le_one ha
+    
 
-lemma balanced.smul_eq (hA : balanced 𝕜 A) (ha : ∥a∥ = 1) : a • A = A :=
-(hA _ ha.le).antisymm $ hA.subset_smul ha.ge
+theorem Balanced.smul_eq (hA : Balanced 𝕜 A) (ha : ∥a∥ = 1) : a • A = A :=
+  (hA _ ha.le).antisymm <| hA.subset_smul ha.Ge
 
-lemma absorbs.inter (hs : absorbs 𝕜 s u) (ht : absorbs 𝕜 t u) : absorbs 𝕜 (s ∩ t) u :=
-begin
-  obtain ⟨a, ha, hs⟩ := hs,
-  obtain ⟨b, hb, ht⟩ := ht,
-  have h : 0 < max a b := lt_max_of_lt_left ha,
-  refine ⟨max a b, lt_max_of_lt_left ha, λ c hc, _⟩,
-  rw smul_set_inter₀ (norm_pos_iff.1 $ h.trans_le hc),
-  exact subset_inter (hs _ $ le_of_max_le_left hc) (ht _ $ le_of_max_le_right hc),
-end
+theorem Absorbs.inter (hs : Absorbs 𝕜 s u) (ht : Absorbs 𝕜 t u) : Absorbs 𝕜 (s ∩ t) u := by
+  obtain ⟨a, ha, hs⟩ := hs
+  obtain ⟨b, hb, ht⟩ := ht
+  have h : 0 < max a b := lt_max_of_lt_left ha
+  refine' ⟨max a b, lt_max_of_lt_left ha, fun c hc => _⟩
+  rw [smul_set_inter₀ (norm_pos_iff.1 <| h.trans_le hc)]
+  exact subset_inter (hs _ <| le_of_max_le_left hc) (ht _ <| le_of_max_le_right hc)
 
-@[simp] lemma absorbs_inter : absorbs 𝕜 (s ∩ t) u ↔ absorbs 𝕜 s u ∧ absorbs 𝕜 t u :=
-⟨λ h, ⟨h.mono_left $ inter_subset_left _ _, h.mono_left $ inter_subset_right _ _⟩,
-  λ h, h.1.inter h.2⟩
+@[simp]
+theorem absorbs_inter : Absorbs 𝕜 (s ∩ t) u ↔ Absorbs 𝕜 s u ∧ Absorbs 𝕜 t u :=
+  ⟨fun h => ⟨h.mono_left <| inter_subset_left _ _, h.mono_left <| inter_subset_right _ _⟩, fun h => h.1.inter h.2⟩
 
-lemma absorbent_univ : absorbent 𝕜 (univ : set E) :=
-begin
-  refine λ x, ⟨1, zero_lt_one, λ a ha, _⟩,
-  rw smul_set_univ₀ (norm_pos_iff.1 $ zero_lt_one.trans_le ha),
-  exact trivial,
-end
+theorem absorbent_univ : Absorbent 𝕜 (Univ : Set E) := by
+  refine' fun x => ⟨1, zero_lt_one, fun a ha => _⟩
+  rw [smul_set_univ₀ (norm_pos_iff.1 <| zero_lt_one.trans_le ha)]
+  exact trivialₓ
 
-variables [topological_space E] [has_continuous_smul 𝕜 E]
+variable [TopologicalSpace E] [HasContinuousSmul 𝕜 E]
 
 /-- Every neighbourhood of the origin is absorbent. -/
-lemma absorbent_nhds_zero (hA : A ∈ 𝓝 (0 : E)) : absorbent 𝕜 A :=
-begin
-  intro x,
-  obtain ⟨w, hw₁, hw₂, hw₃⟩ := mem_nhds_iff.mp hA,
-  have hc : continuous (λ t : 𝕜, t • x) := continuous_id.smul continuous_const,
-  obtain ⟨r, hr₁, hr₂⟩ := metric.is_open_iff.mp (hw₂.preimage hc) 0
-    (by rwa [mem_preimage, zero_smul]),
-  have hr₃ := inv_pos.mpr (half_pos hr₁),
-  refine ⟨(r / 2)⁻¹, hr₃, λ a ha₁, _⟩,
-  have ha₂ : 0 < ∥a∥ := hr₃.trans_le ha₁,
-  refine (mem_smul_set_iff_inv_smul_mem₀ (norm_pos_iff.mp ha₂) _ _).2 (hw₁ $ hr₂ _),
-  rw [metric.mem_ball, dist_zero_right, norm_inv],
-  calc ∥a∥⁻¹ ≤ r/2 : (inv_le (half_pos hr₁) ha₂).mp ha₁
-  ...       < r : half_lt_self hr₁,
-end
+theorem absorbent_nhds_zero (hA : A ∈ 𝓝 (0 : E)) : Absorbent 𝕜 A := by
+  intro x
+  obtain ⟨w, hw₁, hw₂, hw₃⟩ := mem_nhds_iff.mp hA
+  have hc : Continuous fun t : 𝕜 => t • x := continuous_id.smul continuous_const
+  obtain ⟨r, hr₁, hr₂⟩ :=
+    metric.is_open_iff.mp (hw₂.preimage hc) 0
+      (by
+        rwa [mem_preimage, zero_smul])
+  have hr₃ := inv_pos.mpr (half_pos hr₁)
+  refine' ⟨(r / 2)⁻¹, hr₃, fun a ha₁ => _⟩
+  have ha₂ : 0 < ∥a∥ := hr₃.trans_le ha₁
+  refine' (mem_smul_set_iff_inv_smul_mem₀ (norm_pos_iff.mp ha₂) _ _).2 (hw₁ <| hr₂ _)
+  rw [Metric.mem_ball, dist_zero_right, norm_inv]
+  calc ∥a∥⁻¹ ≤ r / 2 := (inv_le (half_pos hr₁) ha₂).mp ha₁ _ < r := half_lt_self hr₁
 
 /-- The union of `{0}` with the interior of a balanced set is balanced. -/
-lemma balanced_zero_union_interior (hA : balanced 𝕜 A) : balanced 𝕜 ((0 : set E) ∪ interior A) :=
-begin
-  intros a ha,
-  obtain rfl | h := eq_or_ne a 0,
-  { rw zero_smul_set,
-    exacts [subset_union_left _ _, ⟨0, or.inl rfl⟩] },
-  { rw [←image_smul, image_union],
-    apply union_subset_union,
-    { rw [image_zero, smul_zero],
-      refl },
-    { calc a • interior A ⊆ interior (a • A) : (is_open_map_smul₀ h).image_interior_subset A
-                      ... ⊆ interior A       : interior_mono (hA _ ha) } }
-end
+theorem balanced_zero_union_interior (hA : Balanced 𝕜 A) : Balanced 𝕜 ((0 : Set E) ∪ Interior A) := by
+  intro a ha
+  obtain rfl | h := eq_or_ne a 0
+  · rw [zero_smul_set]
+    exacts[subset_union_left _ _, ⟨0, Or.inl rfl⟩]
+    
+  · rw [← image_smul, image_union]
+    apply union_subset_union
+    · rw [image_zero, smul_zero]
+      rfl
+      
+    · calc a • Interior A ⊆ Interior (a • A) := (is_open_map_smul₀ h).image_interior_subset A _ ⊆ Interior A :=
+          interior_mono (hA _ ha)
+      
+    
 
 /-- The interior of a balanced set is balanced if it contains the origin. -/
-lemma balanced.interior (hA : balanced 𝕜 A) (h : (0 : E) ∈ interior A) : balanced 𝕜 (interior A) :=
-begin
-  rw ←union_eq_self_of_subset_left (singleton_subset_iff.2 h),
-  exact balanced_zero_union_interior hA,
-end
+theorem Balanced.interior (hA : Balanced 𝕜 A) (h : (0 : E) ∈ Interior A) : Balanced 𝕜 (Interior A) := by
+  rw [← union_eq_self_of_subset_left (singleton_subset_iff.2 h)]
+  exact balanced_zero_union_interior hA
 
-lemma balanced.closure (hA : balanced 𝕜 A) : balanced 𝕜 (closure A) :=
-λ a ha,
-  (image_closure_subset_closure_image $ continuous_id.const_smul _).trans $ closure_mono $ hA _ ha
+theorem Balanced.closure (hA : Balanced 𝕜 A) : Balanced 𝕜 (Closure A) := fun a ha =>
+  (image_closure_subset_closure_image <| continuous_id.const_smul _).trans <| closure_mono <| hA _ ha
 
-end normed_field
+end NormedField
 
-section nondiscrete_normed_field
-variables [nondiscrete_normed_field 𝕜] [add_comm_group E] [module 𝕜 E] {s : set E}
+section NondiscreteNormedField
 
-lemma absorbs_zero_iff : absorbs 𝕜 s 0 ↔ (0 : E) ∈ s :=
-begin
-  refine ⟨_, λ h, ⟨1, zero_lt_one, λ a _, zero_subset.2 $ zero_mem_smul_set h⟩⟩,
-  rintro ⟨r, hr, h⟩,
-  obtain ⟨a, ha⟩ := normed_space.exists_lt_norm 𝕜 𝕜 r,
-  have := h _ ha.le,
-  rwa [zero_subset, zero_mem_smul_set_iff] at this,
-  exact norm_ne_zero_iff.1 (hr.trans ha).ne',
-end
+variable [NondiscreteNormedField 𝕜] [AddCommGroupₓ E] [Module 𝕜 E] {s : Set E}
 
-lemma absorbent.zero_mem (hs : absorbent 𝕜 s) : (0 : E) ∈ s :=
-absorbs_zero_iff.1 $ absorbent_iff_forall_absorbs_singleton.1 hs _
+theorem absorbs_zero_iff : Absorbs 𝕜 s 0 ↔ (0 : E) ∈ s := by
+  refine' ⟨_, fun h => ⟨1, zero_lt_one, fun a _ => zero_subset.2 <| zero_mem_smul_set h⟩⟩
+  rintro ⟨r, hr, h⟩
+  obtain ⟨a, ha⟩ := NormedSpace.exists_lt_norm 𝕜 𝕜 r
+  have := h _ ha.le
+  rwa [zero_subset, zero_mem_smul_set_iff] at this
+  exact norm_ne_zero_iff.1 (hr.trans ha).ne'
 
-end nondiscrete_normed_field
+theorem Absorbent.zero_mem (hs : Absorbent 𝕜 s) : (0 : E) ∈ s :=
+  absorbs_zero_iff.1 <| absorbent_iff_forall_absorbs_singleton.1 hs _
+
+end NondiscreteNormedField
+

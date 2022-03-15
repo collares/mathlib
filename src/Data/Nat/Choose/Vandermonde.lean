@@ -3,9 +3,8 @@ Copyright (c) 2021 Johan Commelin. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johan Commelin
 -/
-
-import data.polynomial.coeff
-import data.nat.choose.basic
+import Mathbin.Data.Polynomial.Coeff
+import Mathbin.Data.Nat.Choose.Basic
 
 /-!
 
@@ -19,19 +18,19 @@ https://en.wikipedia.org/wiki/Vandermonde%27s_identity#Algebraic_proof .
 
 -/
 
-open_locale big_operators
 
-open polynomial finset.nat
+open_locale BigOperators
+
+open Polynomial Finset.Nat
 
 /-- Vandermonde's identity -/
-lemma nat.add_choose_eq (m n k : ℕ) :
-  (m + n).choose k = ∑ (ij : ℕ × ℕ) in antidiagonal k, m.choose ij.1 * n.choose ij.2 :=
-begin
-  calc (m + n).choose k
-      = ((X + 1) ^ (m + n)).coeff k : _
-  ... = ((X + 1) ^ m * (X + 1) ^ n).coeff k : by rw pow_add
-  ... = ∑ (ij : ℕ × ℕ) in antidiagonal k, m.choose ij.1 * n.choose ij.2 : _,
-  { rw [coeff_X_add_one_pow, nat.cast_id], },
-  { rw [coeff_mul, finset.sum_congr rfl],
-    simp only [coeff_X_add_one_pow, nat.cast_id, eq_self_iff_true, imp_true_iff], }
-end
+theorem Nat.add_choose_eq (m n k : ℕ) :
+    (m + n).choose k = ∑ ij : ℕ × ℕ in antidiagonal k, m.choose ij.1 * n.choose ij.2 := by
+  calc (m + n).choose k = ((X + 1) ^ (m + n)).coeff k := _ _ = ((X + 1) ^ m * (X + 1) ^ n).coeff k := by
+      rw [pow_addₓ]_ = ∑ ij : ℕ × ℕ in antidiagonal k, m.choose ij.1 * n.choose ij.2 := _
+  · rw [coeff_X_add_one_pow, Nat.cast_idₓ]
+    
+  · rw [coeff_mul, Finset.sum_congr rfl]
+    simp only [coeff_X_add_one_pow, Nat.cast_idₓ, eq_self_iff_true, imp_true_iff]
+    
+

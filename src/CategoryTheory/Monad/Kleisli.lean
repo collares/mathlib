@@ -3,9 +3,8 @@ Copyright (c) 2020 Wojciech Nawrocki. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Wojciech Nawrocki, Bhavik Mehta
 -/
-
-import category_theory.adjunction.basic
-import category_theory.monad.basic
+import Mathbin.CategoryTheory.Adjunction.Basic
+import Mathbin.CategoryTheory.Monad.Basic
 
 /-! # Kleisli category on a monad
 
@@ -15,82 +14,86 @@ adjunction which gives rise to the monad `(T, η_ T, μ_ T)`.
 ## References
 * [Riehl, *Category theory in context*, Definition 5.2.9][riehl2017]
 -/
-namespace category_theory
 
-universes v u -- morphism levels before object levels. See note [category_theory universes].
 
-variables {C : Type u} [category.{v} C]
+namespace CategoryTheory
 
-/--
-The objects for the Kleisli category of the functor (usually monad) `T : C ⥤ C`, which are the same
+universe v u
+
+-- morphism levels before object levels. See note [category_theory universes].
+variable {C : Type u} [Category.{v} C]
+
+/-- The objects for the Kleisli category of the functor (usually monad) `T : C ⥤ C`, which are the same
 thing as objects of the base category `C`.
 -/
 @[nolint unused_arguments]
-def kleisli (T : monad C) := C
+def Kleisli (T : Monad C) :=
+  C
 
-namespace kleisli
+namespace Kleisli
 
-variables (T : monad C)
+variable (T : Monad C)
 
-instance [inhabited C] (T : monad C) : inhabited (kleisli T) := ⟨(default : C)⟩
+instance [Inhabited C] (T : Monad C) : Inhabited (Kleisli T) :=
+  ⟨(default : C)⟩
 
 /-- The Kleisli category on a monad `T`.
     cf Definition 5.2.9 in [Riehl][riehl2017]. -/
-instance kleisli.category : category (kleisli T) :=
-{ hom  := λ (X Y : C), X ⟶ (T : C ⥤ C).obj Y,
-  id   := λ X, T.η.app X,
-  comp := λ X Y Z f g, f ≫ (T : C ⥤ C).map g ≫ T.μ.app Z,
-  id_comp' := λ X Y f,
-  begin
-    rw [← T.η.naturality_assoc f, T.left_unit],
-    apply category.comp_id,
-  end,
-  assoc'   := λ W X Y Z f g h,
-  begin
-    simp only [functor.map_comp, category.assoc, monad.assoc],
-    erw T.μ.naturality_assoc,
-  end }
+instance Kleisli.category : Category (Kleisli T) where
+  Hom := fun X Y : C => X ⟶ (T : C ⥤ C).obj Y
+  id := fun X => T.η.app X
+  comp := fun X Y Z f g => f ≫ (T : C ⥤ C).map g ≫ T.μ.app Z
+  id_comp' := fun X Y f => by
+    rw [← T.η.naturality_assoc f, T.left_unit]
+    apply category.comp_id
+  assoc' := fun W X Y Z f g h => by
+    simp only [functor.map_comp, category.assoc, monad.assoc]
+    erw [T.μ.naturality_assoc]
 
-namespace adjunction
+namespace Adjunction
 
 /-- The left adjoint of the adjunction which induces the monad `(T, η_ T, μ_ T)`. -/
-@[simps] def to_kleisli : C ⥤ kleisli T :=
-{ obj       := λ X, (X : kleisli T),
-  map       := λ X Y f, (f ≫ T.η.app Y : _),
-  map_comp' := λ X Y Z f g, by { unfold_projs, simp [← T.η.naturality g] } }
+@[simps]
+def toKleisli : C ⥤ Kleisli T where
+  obj := fun X => (X : Kleisli T)
+  map := fun X Y f => (f ≫ T.η.app Y : _)
+  map_comp' := fun X Y Z f g => by
+    unfold_projs
+    simp [← T.η.naturality g]
 
 /-- The right adjoint of the adjunction which induces the monad `(T, η_ T, μ_ T)`. -/
-@[simps] def from_kleisli : kleisli T ⥤ C :=
-{ obj       := λ X, T.obj X,
-  map       := λ X Y f, T.map f ≫ T.μ.app Y,
-  map_id'   := λ X, T.right_unit _,
-  map_comp' := λ X Y Z f g,
-  begin
-    unfold_projs,
-    simp only [functor.map_comp, category.assoc],
-    erw [← T.μ.naturality_assoc g, T.assoc],
-    refl,
-  end }
+@[simps]
+def fromKleisli : Kleisli T ⥤ C where
+  obj := fun X => T.obj X
+  map := fun X Y f => T.map f ≫ T.μ.app Y
+  map_id' := fun X => T.right_unit _
+  map_comp' := fun X Y Z f g => by
+    unfold_projs
+    simp only [functor.map_comp, category.assoc]
+    erw [← T.μ.naturality_assoc g, T.assoc]
+    rfl
 
 /-- The Kleisli adjunction which gives rise to the monad `(T, η_ T, μ_ T)`.
     cf Lemma 5.2.11 of [Riehl][riehl2017]. -/
-def adj : to_kleisli T ⊣ from_kleisli T :=
-adjunction.mk_of_hom_equiv
-{ hom_equiv := λ X Y, equiv.refl (X ⟶ T.obj Y),
-  hom_equiv_naturality_left_symm' := λ X Y Z f g,
-  begin
-    unfold_projs,
-    dsimp,
-    rw [category.assoc, ← T.η.naturality_assoc g, functor.id_map],
-    dsimp,
-    simp [monad.left_unit],
-  end }
+def adj : toKleisli T ⊣ fromKleisli T :=
+  Adjunction.mkOfHomEquiv
+    { homEquiv := fun X Y => Equivₓ.refl (X ⟶ T.obj Y),
+      hom_equiv_naturality_left_symm' := fun X Y Z f g => by
+        unfold_projs
+        dsimp
+        rw [category.assoc, ← T.η.naturality_assoc g, functor.id_map]
+        dsimp
+        simp [monad.left_unit] }
 
 /-- The composition of the adjunction gives the original functor. -/
-def to_kleisli_comp_from_kleisli_iso_self : to_kleisli T ⋙ from_kleisli T ≅ T :=
-nat_iso.of_components (λ X, iso.refl _) (λ X Y f, by { dsimp, simp })
+def toKleisliCompFromKleisliIsoSelf : toKleisli T ⋙ fromKleisli T ≅ T :=
+  NatIso.ofComponents (fun X => Iso.refl _) fun X Y f => by
+    dsimp
+    simp
 
-end adjunction
-end kleisli
+end Adjunction
 
-end category_theory
+end Kleisli
+
+end CategoryTheory
+

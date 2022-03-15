@@ -3,8 +3,8 @@ Copyright (c) 2020 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import algebra.category.Group.basic
-import category_theory.limits.shapes.zero
+import Mathbin.Algebra.Category.Group.Basic
+import Mathbin.CategoryTheory.Limits.Shapes.Zero
 
 /-!
 # The category of (commutative) (additive) groups has a zero object.
@@ -13,27 +13,44 @@ import category_theory.limits.shapes.zero
 rather than from the existence of a zero object.
 -/
 
-open category_theory
-open category_theory.limits
+
+open CategoryTheory
+
+open CategoryTheory.Limits
 
 universe u
 
-namespace Group
+namespace Groupₓₓ
 
-@[to_additive AddGroup.has_zero_object]
-instance : has_zero_object Group :=
-{ zero := 1,
-  unique_to := λ X, ⟨⟨1⟩, λ f, by { ext, cases x, erw monoid_hom.map_one, refl, }⟩,
-  unique_from := λ X, ⟨⟨1⟩, λ f, by ext⟩, }
+@[to_additive AddGroupₓₓ.hasZeroObject]
+instance : HasZeroObject Groupₓₓ where
+  zero := 1
+  uniqueTo := fun X =>
+    ⟨⟨1⟩, fun f => by
+      ext
+      cases x
+      erw [MonoidHom.map_one]
+      rfl⟩
+  uniqueFrom := fun X =>
+    ⟨⟨1⟩, fun f => by
+      ext⟩
 
-end Group
+end Groupₓₓ
 
-namespace CommGroup
+namespace CommGroupₓₓ
 
-@[to_additive AddCommGroup.has_zero_object]
-instance : has_zero_object CommGroup :=
-{ zero := 1,
-  unique_to := λ X, ⟨⟨1⟩, λ f, by { ext, cases x, erw monoid_hom.map_one, refl, }⟩,
-  unique_from := λ X, ⟨⟨1⟩, λ f, by ext⟩, }
+@[to_additive AddCommGroupₓₓ.hasZeroObject]
+instance : HasZeroObject CommGroupₓₓ where
+  zero := 1
+  uniqueTo := fun X =>
+    ⟨⟨1⟩, fun f => by
+      ext
+      cases x
+      erw [MonoidHom.map_one]
+      rfl⟩
+  uniqueFrom := fun X =>
+    ⟨⟨1⟩, fun f => by
+      ext⟩
 
-end CommGroup
+end CommGroupₓₓ
+

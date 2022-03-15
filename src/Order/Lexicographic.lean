@@ -3,9 +3,9 @@ Copyright (c) 2019 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison, Minchao Wu
 -/
-import data.equiv.basic
-import data.prod
-import tactic.basic
+import Mathbin.Data.Equiv.Basic
+import Mathbin.Data.Prod
+import Mathbin.Tactic.Basic
 
 /-!
 # Lexicographic order
@@ -31,102 +31,151 @@ Related files are:
 * `data.sigma.order`: Lexicographic order on `Σ i, α i`.
 -/
 
-universes u v
+
+universe u v
 
 /-- A type synonym to equip a type with its lexicographic order. -/
-def lex (α : Type u) := α
+def Lex (α : Type u) :=
+  α
 
-variables {α : Type u} {β : Type v} {γ : Type*}
+variable {α : Type u} {β : Type v} {γ : Type _}
 
 /-- `to_lex` is the identity function to the `lex` of a type.  -/
-@[pattern] def to_lex : α ≃ lex α := ⟨id, id, λ h, rfl, λ h, rfl⟩
+@[matchPattern]
+def toLex : α ≃ Lex α :=
+  ⟨id, id, fun h => rfl, fun h => rfl⟩
 
 /-- `of_lex` is the identity function from the `lex` of a type.  -/
-@[pattern] def of_lex : lex α ≃ α := to_lex.symm
+@[matchPattern]
+def ofLex : Lex α ≃ α :=
+  toLex.symm
 
-@[simp] lemma to_lex_symm_eq : (@to_lex α).symm = of_lex := rfl
-@[simp] lemma of_lex_symm_eq : (@of_lex α).symm = to_lex := rfl
-@[simp] lemma to_lex_of_lex (a : lex α) : to_lex (of_lex a) = a := rfl
-@[simp] lemma of_lex_to_lex (a : α) : of_lex (to_lex a) = a := rfl
-@[simp] lemma to_lex_inj {a b : α} : to_lex a = to_lex b ↔ a = b := iff.rfl
-@[simp] lemma of_lex_inj {a b : lex α} :  of_lex a = of_lex b ↔ a = b := iff.rfl
+@[simp]
+theorem to_lex_symm_eq : (@toLex α).symm = ofLex :=
+  rfl
+
+@[simp]
+theorem of_lex_symm_eq : (@ofLex α).symm = toLex :=
+  rfl
+
+@[simp]
+theorem to_lex_of_lex (a : Lex α) : toLex (ofLex a) = a :=
+  rfl
+
+@[simp]
+theorem of_lex_to_lex (a : α) : ofLex (toLex a) = a :=
+  rfl
+
+@[simp]
+theorem to_lex_inj {a b : α} : toLex a = toLex b ↔ a = b :=
+  Iff.rfl
+
+@[simp]
+theorem of_lex_inj {a b : Lex α} : ofLex a = ofLex b ↔ a = b :=
+  Iff.rfl
 
 /-- A recursor for `lex`. Use as `induction x using lex.rec`. -/
-protected def lex.rec {β : lex α → Sort*} (h : Π a, β (to_lex a)) : Π a, β a := λ a, h (of_lex a)
+protected def Lex.rec {β : Lex α → Sort _} (h : ∀ a, β (toLex a)) : ∀ a, β a := fun a => h (ofLex a)
 
-namespace prod.lex
+namespace Prod.Lex
 
-notation α ` ×ₗ `:35 β:34 := lex (prod α β)
+-- mathport name: «expr ×ₗ »
+notation:35 α " ×ₗ " β:34 => Lex (Prod α β)
 
-meta instance [has_to_format α] [has_to_format β] : has_to_format (α ×ₗ β) :=
-prod.has_to_format
+unsafe instance [has_to_format α] [has_to_format β] : has_to_format (α ×ₗ β) :=
+  prod.has_to_format
 
-instance decidable_eq (α β : Type*) [decidable_eq α] [decidable_eq β] : decidable_eq (α ×ₗ β) :=
-prod.decidable_eq
+instance decidableEq (α β : Type _) [DecidableEq α] [DecidableEq β] : DecidableEq (α ×ₗ β) :=
+  Prod.decidableEq
 
-instance inhabited (α β : Type*) [inhabited α] [inhabited β] : inhabited (α ×ₗ β) :=
-prod.inhabited
+instance inhabited (α β : Type _) [Inhabited α] [Inhabited β] : Inhabited (α ×ₗ β) :=
+  Prod.inhabited
 
 /-- Dictionary / lexicographic ordering on pairs.  -/
-instance has_le (α β : Type*) [has_lt α] [has_le β] : has_le (α ×ₗ β) :=
-{ le := prod.lex (<) (≤) }
+instance hasLe (α β : Type _) [LT α] [LE β] : LE (α ×ₗ β) where
+  le := Prod.Lex (· < ·) (· ≤ ·)
 
-instance has_lt (α β : Type*) [has_lt α] [has_lt β] : has_lt (α ×ₗ β) :=
-{ lt := prod.lex (<) (<) }
+instance hasLt (α β : Type _) [LT α] [LT β] : LT (α ×ₗ β) where
+  lt := Prod.Lex (· < ·) (· < ·)
 
-lemma le_iff [has_lt α] [has_le β] (a b : α × β) :
-  to_lex a ≤ to_lex b ↔ a.1 < b.1 ∨ a.1 = b.1 ∧ a.2 ≤ b.2 := prod.lex_def (<) (≤)
+theorem le_iff [LT α] [LE β] (a b : α × β) : toLex a ≤ toLex b ↔ a.1 < b.1 ∨ a.1 = b.1 ∧ a.2 ≤ b.2 :=
+  Prod.lex_def (· < ·) (· ≤ ·)
 
-lemma lt_iff [has_lt α] [has_lt β] (a b : α × β) :
-  to_lex a < to_lex b ↔ a.1 < b.1 ∨ a.1 = b.1 ∧ a.2 < b.2 := prod.lex_def (<) (<)
+theorem lt_iff [LT α] [LT β] (a b : α × β) : toLex a < toLex b ↔ a.1 < b.1 ∨ a.1 = b.1 ∧ a.2 < b.2 :=
+  Prod.lex_def (· < ·) (· < ·)
 
 /-- Dictionary / lexicographic preorder for pairs. -/
-instance preorder (α β : Type*) [preorder α] [preorder β] : preorder (α ×ₗ β) :=
-{ le_refl := by
-  { haveI : is_refl β (≤) := ⟨le_refl⟩,
-    exact refl_of (prod.lex _ _), },
-  le_trans := λ _ _ _, by
-  { haveI : is_trans α (<) := ⟨λ _ _ _, lt_trans⟩,
-    haveI : is_trans β (≤) := ⟨λ _ _ _, le_trans⟩,
-    exact trans_of (prod.lex _ _) },
-  lt_iff_le_not_le := λ x₁ x₂, match x₁, x₂ with
-  | to_lex (a₁, b₁), to_lex (a₂, b₂) := begin
-      split,
-      { rintros (⟨_, _, _, _, hlt⟩ | ⟨_, _, _, hlt⟩),
-        { split,
-          { left, assumption },
-          { rintro ⟨l,r⟩,
-            { apply lt_asymm hlt, assumption },
-            { apply lt_irrefl _ hlt } } },
-        { split,
-          { right, rw lt_iff_le_not_le at hlt, exact hlt.1 },
-          { rintro ⟨l,r⟩,
-            { apply lt_irrefl a₁, assumption },
-            { rw lt_iff_le_not_le at hlt, apply hlt.2, assumption } } } },
-      { rintros ⟨⟨h₁ll, h₁lr⟩, h₂r⟩,
-        { left, assumption },
-        { right, rw lt_iff_le_not_le, split,
-          { assumption },
-          { intro h, apply h₂r, right, exact h } } }
-    end
-  end,
-  .. prod.lex.has_le α β,
-  .. prod.lex.has_lt α β }
+instance preorder (α β : Type _) [Preorderₓ α] [Preorderₓ β] : Preorderₓ (α ×ₗ β) :=
+  { Prod.Lex.hasLe α β, Prod.Lex.hasLt α β with
+    le_refl :=
+      have : IsRefl β (· ≤ ·) := ⟨le_reflₓ⟩
+      refl_of (Prod.Lex _ _),
+    le_trans := fun _ _ _ => by
+      have : IsTrans α (· < ·) := ⟨fun _ _ _ => lt_transₓ⟩
+      have : IsTrans β (· ≤ ·) := ⟨fun _ _ _ => le_transₓ⟩
+      exact trans_of (Prod.Lex _ _),
+    lt_iff_le_not_le := fun x₁ x₂ =>
+      match x₁, x₂ with
+      | toLex (a₁, b₁), toLex (a₂, b₂) => by
+        constructor
+        · rintro (⟨_, _, _, _, hlt⟩ | ⟨_, _, _, hlt⟩)
+          · constructor
+            · left
+              assumption
+              
+            · rintro ⟨l, r⟩
+              · apply lt_asymmₓ hlt
+                assumption
+                
+              · apply lt_irreflₓ _ hlt
+                
+              
+            
+          · constructor
+            · right
+              rw [lt_iff_le_not_leₓ] at hlt
+              exact hlt.1
+              
+            · rintro ⟨l, r⟩
+              · apply lt_irreflₓ a₁
+                assumption
+                
+              · rw [lt_iff_le_not_leₓ] at hlt
+                apply hlt.2
+                assumption
+                
+              
+            
+          
+        · rintro ⟨⟨h₁ll, h₁lr⟩, h₂r⟩
+          · left
+            assumption
+            
+          · right
+            rw [lt_iff_le_not_leₓ]
+            constructor
+            · assumption
+              
+            · intro h
+              apply h₂r
+              right
+              exact h
+              
+            
+           }
 
 /-- Dictionary / lexicographic partial_order for pairs. -/
-instance partial_order (α β : Type*) [partial_order α] [partial_order β] : partial_order (α ×ₗ β) :=
-{ le_antisymm := by
-  { haveI : is_strict_order α (<) := { irrefl := lt_irrefl, trans := λ _ _ _, lt_trans },
-    haveI : is_antisymm β (≤) := ⟨λ _ _, le_antisymm⟩,
-    exact @antisymm _ (prod.lex _ _) _, },
-  .. prod.lex.preorder α β }
+instance partialOrder (α β : Type _) [PartialOrderₓ α] [PartialOrderₓ β] : PartialOrderₓ (α ×ₗ β) :=
+  { Prod.Lex.preorder α β with
+    le_antisymm := by
+      have : IsStrictOrder α (· < ·) := { irrefl := lt_irreflₓ, trans := fun _ _ _ => lt_transₓ }
+      have : IsAntisymm β (· ≤ ·) := ⟨fun _ _ => le_antisymmₓ⟩
+      exact @antisymm _ (Prod.Lex _ _) _ }
 
 /-- Dictionary / lexicographic linear_order for pairs. -/
-instance linear_order (α β : Type*) [linear_order α] [linear_order β] : linear_order (α ×ₗ β) :=
-{ le_total := total_of (prod.lex _ _),
-  decidable_le := prod.lex.decidable _ _,
-  decidable_lt := prod.lex.decidable _ _,
-  decidable_eq := lex.decidable_eq _ _,
-  .. prod.lex.partial_order α β }
+instance linearOrder (α β : Type _) [LinearOrderₓ α] [LinearOrderₓ β] : LinearOrderₓ (α ×ₗ β) :=
+  { Prod.Lex.partialOrder α β with le_total := total_of (Prod.Lex _ _), decidableLe := Prod.Lex.decidable _ _,
+    decidableLt := Prod.Lex.decidable _ _, DecidableEq := Lex.decidableEq _ _ }
 
-end prod.lex
+end Prod.Lex
+

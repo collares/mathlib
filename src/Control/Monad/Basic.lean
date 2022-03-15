@@ -3,8 +3,8 @@ Copyright (c) 2019 Simon Hudon. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Simon Hudon
 -/
-import tactic.basic
-import data.equiv.basic
+import Mathbin.Tactic.Basic
+import Mathbin.Data.Equiv.Basic
 
 /-!
 # Monad
@@ -35,40 +35,44 @@ functor, applicative, monad, simp
 
 -/
 
-mk_simp_attribute monad_norm none with functor_norm
 
-attribute [ext] reader_t.ext state_t.ext except_t.ext option_t.ext
-attribute [functor_norm]   bind_assoc pure_bind bind_pure
-attribute [monad_norm] seq_eq_bind_map
-universes u v
+-- ././Mathport/Syntax/Translate/Tactic/Mathlib/Core.lean:59:9: unsupported: weird string
+mk_simp_attribute monad_norm from functor_norm
+
+attribute [ext] ReaderTₓ.ext StateTₓ.ext ExceptTₓ.ext OptionTₓ.ext
+
+attribute [functor_norm] bind_assoc pure_bind bind_pureₓ
+
+attribute [monad_norm] seq_eq_bind_mapₓ
+
+universe u v
 
 @[monad_norm]
-lemma map_eq_bind_pure_comp
-  (m : Type u → Type v) [monad m] [is_lawful_monad m] {α β : Type u} (f : α → β) (x : m α) :
-  f <$> x = x >>= pure ∘ f := by rw bind_pure_comp_eq_map
+theorem map_eq_bind_pure_comp (m : Type u → Type v) [Monadₓ m] [IsLawfulMonad m] {α β : Type u} (f : α → β) (x : m α) :
+    f <$> x = x >>= pure ∘ f := by
+  rw [bind_pure_comp_eq_map]
 
 /-- run a `state_t` program and discard the final state -/
-def state_t.eval {m : Type u → Type v} [functor m] {σ α} (cmd : state_t σ m α) (s : σ) : m α :=
-prod.fst <$> cmd.run s
+def StateTₓ.eval {m : Type u → Type v} [Functor m] {σ α} (cmd : StateTₓ σ m α) (s : σ) : m α :=
+  Prod.fst <$> cmd.run s
 
-universes u₀ u₁ v₀ v₁
+universe u₀ u₁ v₀ v₁
 
 /-- reduce the equivalence between two state monads to the equivalence between
 their respective function spaces -/
-def state_t.equiv {m₁ : Type u₀ → Type v₀} {m₂ : Type u₁ → Type v₁}
-  {α₁ σ₁ : Type u₀} {α₂ σ₂ : Type u₁} (F : (σ₁ → m₁ (α₁ × σ₁)) ≃ (σ₂ → m₂ (α₂ × σ₂))) :
-  state_t σ₁ m₁ α₁ ≃ state_t σ₂ m₂ α₂ :=
-{ to_fun := λ ⟨f⟩, ⟨F f⟩,
-  inv_fun := λ ⟨f⟩, ⟨F.symm f⟩,
-  left_inv := λ ⟨f⟩, congr_arg state_t.mk $ F.left_inv _,
-  right_inv := λ ⟨f⟩, congr_arg state_t.mk $ F.right_inv _ }
+def StateTₓ.equiv {m₁ : Type u₀ → Type v₀} {m₂ : Type u₁ → Type v₁} {α₁ σ₁ : Type u₀} {α₂ σ₂ : Type u₁}
+    (F : (σ₁ → m₁ (α₁ × σ₁)) ≃ (σ₂ → m₂ (α₂ × σ₂))) : StateTₓ σ₁ m₁ α₁ ≃ StateTₓ σ₂ m₂ α₂ where
+  toFun := fun ⟨f⟩ => ⟨F f⟩
+  invFun := fun ⟨f⟩ => ⟨F.symm f⟩
+  left_inv := fun ⟨f⟩ => congr_argₓ StateTₓ.mk <| F.left_inv _
+  right_inv := fun ⟨f⟩ => congr_argₓ StateTₓ.mk <| F.right_inv _
 
 /-- reduce the equivalence between two reader monads to the equivalence between
 their respective function spaces -/
-def reader_t.equiv {m₁ : Type u₀ → Type v₀} {m₂ : Type u₁ → Type v₁}
-  {α₁ ρ₁ : Type u₀} {α₂ ρ₂ : Type u₁} (F : (ρ₁ → m₁ α₁) ≃ (ρ₂ → m₂ α₂)) :
-  reader_t ρ₁ m₁ α₁ ≃ reader_t ρ₂ m₂ α₂ :=
-{ to_fun := λ ⟨f⟩, ⟨F f⟩,
-  inv_fun := λ ⟨f⟩, ⟨F.symm f⟩,
-  left_inv := λ ⟨f⟩, congr_arg reader_t.mk $ F.left_inv _,
-  right_inv := λ ⟨f⟩, congr_arg reader_t.mk $ F.right_inv _ }
+def ReaderTₓ.equiv {m₁ : Type u₀ → Type v₀} {m₂ : Type u₁ → Type v₁} {α₁ ρ₁ : Type u₀} {α₂ ρ₂ : Type u₁}
+    (F : (ρ₁ → m₁ α₁) ≃ (ρ₂ → m₂ α₂)) : ReaderTₓ ρ₁ m₁ α₁ ≃ ReaderTₓ ρ₂ m₂ α₂ where
+  toFun := fun ⟨f⟩ => ⟨F f⟩
+  invFun := fun ⟨f⟩ => ⟨F.symm f⟩
+  left_inv := fun ⟨f⟩ => congr_argₓ ReaderTₓ.mk <| F.left_inv _
+  right_inv := fun ⟨f⟩ => congr_argₓ ReaderTₓ.mk <| F.right_inv _
+

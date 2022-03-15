@@ -5,78 +5,87 @@ Authors: Johannes Hölzl
 
 Binder elimination
 -/
-import order.complete_lattice
+import Mathbin.Order.CompleteLattice
 
-namespace old_conv
-open tactic monad
+namespace OldConv
 
-meta instance : monad_fail old_conv :=
-{ fail := λ α s, (λr e, tactic.fail (to_fmt s) : old_conv α), ..old_conv.monad }
+open Tactic Monadₓ
 
-meta instance : has_monad_lift tactic old_conv :=
-⟨λα, lift_tactic⟩
+unsafe instance : MonadFail old_conv :=
+  { old_conv.monad with fail := fun α s => (fun r e => tactic.fail (to_fmt s) : old_conv α) }
 
-meta instance (α : Type) : has_coe (tactic α) (old_conv α) :=
-⟨monad_lift⟩
+unsafe instance : HasMonadLift tactic old_conv :=
+  ⟨fun α => lift_tactic⟩
 
-meta def current_relation : old_conv name := λr lhs, return ⟨r, lhs, none⟩
+unsafe instance (α : Type) : Coe (tactic α) (old_conv α) :=
+  ⟨monadLift⟩
 
-meta def head_beta : old_conv unit :=
-λ r e, do n ← tactic.head_beta e, return ⟨(), n, none⟩
+unsafe def current_relation : old_conv Name := fun r lhs => return ⟨r, lhs, none⟩
 
-/- congr should forward data! -/
-meta def congr_arg : old_conv unit → old_conv unit := congr_core (return ())
-meta def congr_fun : old_conv unit → old_conv unit := λc, congr_core c (return ())
+unsafe def head_beta : old_conv Unit := fun r e => do
+  let n ← tactic.head_beta e
+  return ⟨(), n, none⟩
 
-meta def congr_rule (congr : expr) (cs : list (list expr → old_conv unit)) :
-  old_conv unit :=
-λr lhs, do
-  meta_rhs ← infer_type lhs >>= mk_meta_var, -- is maybe overly restricted for `heq`
-  t ← mk_app r [lhs, meta_rhs],
-  ((), meta_pr) ← solve_aux t (do
-    apply congr,
-    focus $ cs.map $ λc, (do
-      xs ← intros,
-      conversion (head_beta >> c xs)),
-    done),
-  rhs ← instantiate_mvars meta_rhs,
-  pr ← instantiate_mvars meta_pr,
+-- congr should forward data!
+unsafe def congr_arg : old_conv Unit → old_conv Unit :=
+  congr_core (return ())
+
+unsafe def congr_fun : old_conv Unit → old_conv Unit := fun c => congr_core c (return ())
+
+unsafe def congr_rule (congr : expr) (cs : List (List expr → old_conv Unit)) : old_conv Unit := fun r lhs => do
+  let meta_rhs ← infer_type lhs >>= mk_meta_var
+  let t
+    ←-- is maybe overly restricted for `heq`
+        mk_app
+        r [lhs, meta_rhs]
+  let ((), meta_pr) ←
+    solve_aux t do
+        apply congr
+        focus <|
+            cs fun c => do
+              let xs ← intros
+              conversion (head_beta >> c xs)
+        done
+  let rhs ← instantiate_mvars meta_rhs
+  let pr ← instantiate_mvars meta_pr
   return ⟨(), rhs, some pr⟩
 
-meta def congr_binder (congr : name) (cs : expr → old_conv unit) : old_conv unit := do
-  e ← mk_const congr,
-  congr_rule e [λbs, do [b] ← return bs, cs b]
+unsafe def congr_binder (congr : Name) (cs : expr → old_conv Unit) : old_conv Unit := do
+  let e ← mk_const congr
+  congr_rule e
+      [fun bs => do
+        let [b] ← return bs
+        cs b]
 
-meta def funext' : (expr → old_conv unit) → old_conv unit := congr_binder ``_root_.funext
+unsafe def funext' : (expr → old_conv Unit) → old_conv Unit :=
+  congr_binder `` _root_.funext
 
-meta def propext' {α : Type} (c : old_conv α) : old_conv α := λr lhs, (do
-  guard (r = `iff),
-  c r lhs)
-<|> (do
-  guard (r = `eq),
-  ⟨res, rhs, pr⟩ ← c `iff lhs,
-  match pr with
-  | some pr := return ⟨res, rhs, (expr.const `propext [] : expr) lhs rhs pr⟩
-  | none := return ⟨res, rhs, none⟩
-  end)
+unsafe def propext' {α : Type} (c : old_conv α) : old_conv α := fun r lhs =>
+  (do
+      guardₓ (r = `iff)
+      c r lhs) <|>
+    do
+    guardₓ (r = `eq)
+    let ⟨res, rhs, pr⟩ ← c `iff lhs
+    match pr with
+      | some pr => return ⟨res, rhs, (expr.const `propext [] : expr) lhs rhs pr⟩
+      | none => return ⟨res, rhs, none⟩
 
-meta def apply (pr : expr) : old_conv unit :=
-λ r e, do
-  sl ← simp_lemmas.mk.add pr,
+unsafe def apply (pr : expr) : old_conv Unit := fun r e => do
+  let sl ← simp_lemmas.mk.add pr
   apply_lemmas sl r e
 
-meta def applyc (n : name) : old_conv unit :=
-λ r e, do
-  sl ← simp_lemmas.mk.add_simp n,
+unsafe def applyc (n : Name) : old_conv Unit := fun r e => do
+  let sl ← simp_lemmas.mk.add_simp n
   apply_lemmas sl r e
 
-meta def apply' (n : name) : old_conv unit := do
-  e ← mk_const n,
+unsafe def apply' (n : Name) : old_conv Unit := do
+  let e ← mk_const n
   congr_rule e []
 
-end old_conv
+end OldConv
 
-open expr tactic old_conv
+open Expr Tactic OldConv
 
 /- Binder elimination:
 
@@ -94,116 +103,141 @@ Provide a mechanism to rewrite:
 Here ..x.. are binders, maybe also some constants which provide commutativity rules with `B`.
 
 -/
+unsafe structure binder_eq_elim where
+  match_binder : expr → tactic (expr × expr)
+  -- returns the bound type and body
+  adapt_rel : old_conv Unit → old_conv Unit
+  -- optionally adapt `eq` to `iff`
+  apply_comm : old_conv Unit
+  -- apply commutativity rule
+  apply_congr : (expr → old_conv Unit) → old_conv Unit
+  -- apply congruence rule
+  apply_elim_eq : old_conv Unit
 
-meta structure binder_eq_elim :=
-(match_binder  : expr → tactic (expr × expr))    -- returns the bound type and body
-(adapt_rel     : old_conv unit → old_conv unit)          -- optionally adapt `eq` to `iff`
-(apply_comm    : old_conv unit)                      -- apply commutativity rule
-(apply_congr   : (expr → old_conv unit) → old_conv unit) -- apply congruence rule
-(apply_elim_eq : old_conv unit)                      -- (B (x : β) (h : x = t), s x) = s t
+-- (B (x : β) (h : x = t), s x) = s t
+unsafe def binder_eq_elim.check_eq (b : binder_eq_elim) (x : expr) : expr → tactic Unit
+  | quote.1 (@Eq (%%ₓβ) (%%ₓl) (%%ₓr)) => guardₓ (l = x ∧ ¬x.occurs r ∨ r = x ∧ ¬x.occurs l)
+  | _ => fail "no match"
 
-meta def binder_eq_elim.check_eq (b : binder_eq_elim) (x : expr) : expr → tactic unit
-| `(@eq %%β %%l %%r) := guard ((l = x ∧ ¬ x.occurs r) ∨ (r = x ∧ ¬ x.occurs l))
-| _ := fail "no match"
+unsafe def binder_eq_elim.pull (b : binder_eq_elim) (x : expr) : old_conv Unit := do
+  let (β, f) ← lhs >>= lift_tactic ∘ b.match_binder
+  guardₓ ¬x β <|>
+      b x β <|> do
+        b fun x => binder_eq_elim.pull
+        b
 
-meta def binder_eq_elim.pull (b : binder_eq_elim) (x : expr) : old_conv unit := do
-  (β, f) ← lhs >>= (lift_tactic ∘ b.match_binder),
-  guard (¬ x.occurs β)
-  <|> b.check_eq x β
-  <|> (do
-    b.apply_congr $ λx, binder_eq_elim.pull,
-    b.apply_comm)
+unsafe def binder_eq_elim.push (b : binder_eq_elim) : old_conv Unit :=
+  b.apply_elim_eq <|>
+    (do
+        b
+        b fun x => binder_eq_elim.push) <|>
+      do
+      b <| b
+      binder_eq_elim.push
 
-meta def binder_eq_elim.push (b : binder_eq_elim) : old_conv unit :=
-  b.apply_elim_eq
-<|> (do
-  b.apply_comm,
-  b.apply_congr $ λx, binder_eq_elim.push)
-<|> (do
-  b.apply_congr $ b.pull,
-  binder_eq_elim.push)
+unsafe def binder_eq_elim.check (b : binder_eq_elim) (x : expr) : expr → tactic Unit
+  | e => do
+    let (β, f) ← b.match_binder e
+    b x β <|> do
+        let lam n bi d bd ← return f
+        let x ← mk_local' n bi d
+        binder_eq_elim.check <| bd x
 
-meta def binder_eq_elim.check (b : binder_eq_elim) (x : expr) : expr → tactic unit
-| e := do
-  (β, f) ← b.match_binder e,
-  b.check_eq x β
-  <|> (do
-    (lam n bi d bd) ← return f,
-    x ← mk_local' n bi d,
-    binder_eq_elim.check $ bd.instantiate_var x)
+unsafe def binder_eq_elim.old_conv (b : binder_eq_elim) : old_conv Unit := do
+  let (β, f) ← lhs >>= lift_tactic ∘ b.match_binder
+  let lam n bi d bd ← return f
+  let x ← mk_local' n bi d
+  b x (bd x)
+  b b
 
-meta def binder_eq_elim.old_conv (b : binder_eq_elim) : old_conv unit := do
-  (β, f) ← lhs >>= (lift_tactic ∘ b.match_binder),
-  (lam n bi d bd) ← return f,
-  x ← mk_local' n bi d,
-  b.check x (bd.instantiate_var x),
-  b.adapt_rel b.push
+theorem exists_elim_eq_left.{u, v} {α : Sort u} (a : α) (p : ∀ a' : α, a' = a → Prop) :
+    (∃ (a' : α)(h : a' = a), p a' h) ↔ p a rfl :=
+  ⟨fun ⟨a', ⟨h, p_h⟩⟩ =>
+    match a', h, p_h with
+    | _, rfl, h => h,
+    fun h => ⟨a, rfl, h⟩⟩
 
-theorem {u v} exists_elim_eq_left {α : Sort u} (a : α) (p : Π(a':α), a' = a → Prop) :
-  (∃(a':α)(h : a' = a), p a' h) ↔ p a rfl :=
-⟨λ⟨a', ⟨h, p_h⟩⟩, match a', h, p_h with ._, rfl, h := h end, λh, ⟨a, rfl, h⟩⟩
+theorem exists_elim_eq_right.{u, v} {α : Sort u} (a : α) (p : ∀ a' : α, a = a' → Prop) :
+    (∃ (a' : α)(h : a = a'), p a' h) ↔ p a rfl :=
+  ⟨fun ⟨a', ⟨h, p_h⟩⟩ =>
+    match a', h, p_h with
+    | _, rfl, h => h,
+    fun h => ⟨a, rfl, h⟩⟩
 
-theorem {u v} exists_elim_eq_right {α : Sort u} (a : α) (p : Π(a':α), a = a' → Prop) :
-  (∃(a':α)(h : a = a'), p a' h) ↔ p a rfl :=
-⟨λ⟨a', ⟨h, p_h⟩⟩, match a', h, p_h with ._, rfl, h := h end, λh, ⟨a, rfl, h⟩⟩
+unsafe def exists_eq_elim : binder_eq_elim where
+  match_binder := fun e => do
+    let quote.1 (@Exists (%%ₓβ) (%%ₓf)) ← return e
+    return (β, f)
+  adapt_rel := propext'
+  apply_comm := applyc `` exists_comm
+  apply_congr := congr_binder `` exists_congr
+  apply_elim_eq := apply' `` exists_elim_eq_left <|> apply' `` exists_elim_eq_right
 
-meta def exists_eq_elim : binder_eq_elim :=
-{ match_binder  := λe, (do `(@Exists %%β %%f) ← return e, return (β, f)),
-  adapt_rel     := propext',
-  apply_comm    := applyc ``exists_comm,
-  apply_congr   := congr_binder ``exists_congr,
-  apply_elim_eq := apply' ``exists_elim_eq_left <|> apply' ``exists_elim_eq_right }
+theorem forall_comm.{u, v} {α : Sort u} {β : Sort v} (p : α → β → Prop) : (∀ a b, p a b) ↔ ∀ b a, p a b :=
+  ⟨fun h b a => h a b, fun h b a => h a b⟩
 
-theorem {u v} forall_comm {α : Sort u} {β : Sort v} (p : α → β → Prop) :
-  (∀a b, p a b) ↔ (∀b a, p a b) :=
-⟨assume h b a, h a b, assume h b a, h a b⟩
+theorem forall_elim_eq_left.{u, v} {α : Sort u} (a : α) (p : ∀ a' : α, a' = a → Prop) :
+    (∀ a' : α h : a' = a, p a' h) ↔ p a rfl :=
+  ⟨fun h => h a rfl, fun h a' h_eq =>
+    match a', h_eq with
+    | _, rfl => h⟩
 
-theorem {u v} forall_elim_eq_left {α : Sort u} (a : α) (p : Π(a':α), a' = a → Prop) :
-  (∀(a':α)(h : a' = a), p a' h) ↔ p a rfl :=
-⟨λh, h a rfl, λh a' h_eq, match a', h_eq with ._, rfl := h end⟩
+theorem forall_elim_eq_right.{u, v} {α : Sort u} (a : α) (p : ∀ a' : α, a = a' → Prop) :
+    (∀ a' : α h : a = a', p a' h) ↔ p a rfl :=
+  ⟨fun h => h a rfl, fun h a' h_eq =>
+    match a', h_eq with
+    | _, rfl => h⟩
 
-theorem {u v} forall_elim_eq_right {α : Sort u} (a : α) (p : Π(a':α), a = a' → Prop) :
-  (∀(a':α)(h : a = a'), p a' h) ↔ p a rfl :=
-⟨λh, h a rfl, λh a' h_eq, match a', h_eq with ._, rfl := h end⟩
+unsafe def forall_eq_elim : binder_eq_elim where
+  match_binder := fun e => do
+    let expr.pi n bi d bd ← return e
+    return (d, expr.lam n bi d bd)
+  adapt_rel := propext'
+  apply_comm := applyc `` forall_comm
+  apply_congr := congr_binder `` forall_congrₓ
+  apply_elim_eq := apply' `` forall_elim_eq_left <|> apply' `` forall_elim_eq_right
 
-meta def forall_eq_elim : binder_eq_elim :=
-{ match_binder  := λe, (do (expr.pi n bi d bd) ← return e, return (d, expr.lam n bi d bd)),
-  adapt_rel     := propext',
-  apply_comm    := applyc ``forall_comm,
-  apply_congr   := congr_binder ``forall_congr,
-  apply_elim_eq := apply' ``forall_elim_eq_left <|> apply' ``forall_elim_eq_right }
+unsafe def supr_eq_elim : binder_eq_elim where
+  match_binder := fun e => do
+    let quote.1 (@supr (%%ₓα) (%%ₓcl) (%%ₓβ) (%%ₓf)) ← return e
+    return (β, f)
+  adapt_rel := fun c => do
+    let r ← current_relation
+    guardₓ (r = `eq)
+    c
+  apply_comm := applyc `` supr_comm
+  apply_congr := congr_argₓ ∘ funext'
+  apply_elim_eq := applyc `` supr_supr_eq_left <|> applyc `` supr_supr_eq_right
 
-meta def supr_eq_elim : binder_eq_elim :=
-{ match_binder  := λe, (do `(@supr %%α %%cl %%β %%f) ← return e, return (β, f)),
-  adapt_rel     := λc, (do r ← current_relation, guard (r = `eq), c),
-  apply_comm    := applyc ``supr_comm,
-  apply_congr   := congr_arg ∘ funext',
-  apply_elim_eq := applyc ``supr_supr_eq_left <|> applyc ``supr_supr_eq_right }
+unsafe def infi_eq_elim : binder_eq_elim where
+  match_binder := fun e => do
+    let quote.1 (@infi (%%ₓα) (%%ₓcl) (%%ₓβ) (%%ₓf)) ← return e
+    return (β, f)
+  adapt_rel := fun c => do
+    let r ← current_relation
+    guardₓ (r = `eq)
+    c
+  apply_comm := applyc `` infi_comm
+  apply_congr := congr_argₓ ∘ funext'
+  apply_elim_eq := applyc `` infi_infi_eq_left <|> applyc `` infi_infi_eq_right
 
-meta def infi_eq_elim : binder_eq_elim :=
-{ match_binder  := λe, (do `(@infi %%α %%cl %%β %%f) ← return e, return (β, f)),
-  adapt_rel     := λc, (do r ← current_relation, guard (r = `eq), c),
-  apply_comm    := applyc ``infi_comm,
-  apply_congr   := congr_arg ∘ funext',
-  apply_elim_eq := applyc ``infi_infi_eq_left <|> applyc ``infi_infi_eq_right }
+universe u v w w₂
 
-
-universes u v w w₂
-variables {α : Type u} {β : Type v} {ι : Sort w} {ι₂ : Sort w₂} {s t : set α} {a : α}
+variable {α : Type u} {β : Type v} {ι : Sort w} {ι₂ : Sort w₂} {s t : Set α} {a : α}
 
 section
-variables [complete_lattice α]
 
-example {s : set β} {f : β → α} : Inf (set.image f s) = (⨅ a ∈ s, f a) :=
-begin
-  simp [Inf_eq_infi, infi_and],
-  conversion infi_eq_elim.old_conv,
+variable [CompleteLattice α]
+
+example {s : Set β} {f : β → α} : inf (Set.Image f s) = ⨅ a ∈ s, f a := by
+  simp [Inf_eq_infi, infi_and]
+  run_tac
+    conversion infi_eq_elim.old_conv
+
+example {s : Set β} {f : β → α} : sup (Set.Image f s) = ⨆ a ∈ s, f a := by
+  simp [Sup_eq_supr, supr_and]
+  run_tac
+    conversion supr_eq_elim.old_conv
+
 end
 
-example {s : set β} {f : β → α} : Sup (set.image f s) = (⨆ a ∈ s, f a) :=
-begin
-  simp [Sup_eq_supr, supr_and],
-  conversion supr_eq_elim.old_conv,
-end
-
-end

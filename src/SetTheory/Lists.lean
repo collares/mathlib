@@ -3,7 +3,7 @@ Copyright (c) 2018 Mario Carneiro. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Mario Carneiro
 -/
-import data.list.basic
+import Mathbin.Data.List.Basic
 
 /-!
 # A computable model of ZFA without infinity
@@ -40,361 +40,415 @@ This calls for a two-steps definition of ZFA lists:
 The next step is to define ZFA sets as lists quotiented by `lists.equiv`.
 (-/
 
-variables {α : Type*}
+
+variable {α : Type _}
 
 /-- Prelists, helper type to define `lists`. `lists' α ff` are the "atoms", a copy of `α`.
 `lists' α tt` are the "proper" ZFA prelists, inductively defined from the empty ZFA prelist and from
 appending a ZFA prelist to a proper ZFA prelist. It is made so that you can't append anything to an
 atom while having only one appending function for appending both atoms and proper ZFC prelists to a
 proper ZFA prelist. -/
-@[derive decidable_eq]
-inductive {u} lists' (α : Type u) : bool → Type u
-| atom : α → lists' ff
-| nil : lists' tt
-| cons' {b} : lists' b → lists' tt → lists' tt
+inductive Lists'.{u} (α : Type u) : Bool → Type u
+  | atom : α → Lists' false
+  | nil : Lists' true
+  | cons' {b} : Lists' b → Lists' true → Lists' true
+  deriving DecidableEq
 
 /-- Hereditarily finite list, aka ZFA list. A ZFA list is either an "atom" (`b = ff`), corresponding
 to an element of `α`, or a "proper" ZFA list, inductively defined from the empty ZFA list and from
 appending a ZFA list to a proper ZFA list. -/
-def lists (α : Type*) := Σ b, lists' α b
+def Lists (α : Type _) :=
+  Σb, Lists' α b
 
-namespace lists'
+namespace Lists'
 
-instance [inhabited α] : ∀ b, inhabited (lists' α b)
-| tt := ⟨nil⟩
-| ff := ⟨atom default⟩
+instance [Inhabited α] : ∀ b, Inhabited (Lists' α b)
+  | tt => ⟨nil⟩
+  | ff => ⟨atom default⟩
 
 /-- Appending a ZFA list to a proper ZFA prelist. -/
-def cons : lists α → lists' α tt → lists' α tt
-| ⟨b, a⟩ l := cons' a l
+def cons : Lists α → Lists' α true → Lists' α true
+  | ⟨b, a⟩, l => cons' a l
 
 /-- Converts a ZFA prelist to a `list` of ZFA lists. Atoms are sent to `[]`. -/
-@[simp] def to_list : ∀ {b}, lists' α b → list (lists α)
-| _ (atom a)    := []
-| _ nil         := []
-| _ (cons' a l) := ⟨_, a⟩ :: l.to_list
+@[simp]
+def toList : ∀ {b}, Lists' α b → List (Lists α)
+  | _, atom a => []
+  | _, nil => []
+  | _, cons' a l => ⟨_, a⟩ :: l.toList
 
-@[simp] theorem to_list_cons (a : lists α) (l) :
-  to_list (cons a l) = a :: l.to_list :=
-by cases a; simp [cons]
+@[simp]
+theorem to_list_cons (a : Lists α) l : toList (cons a l) = a :: l.toList := by
+  cases a <;> simp [cons]
 
 /-- Converts a `list` of ZFA lists to a proper ZFA prelist. -/
-@[simp] def of_list : list (lists α) → lists' α tt
-| []       := nil
-| (a :: l) := cons a (of_list l)
+@[simp]
+def ofList : List (Lists α) → Lists' α true
+  | [] => nil
+  | a :: l => cons a (of_list l)
 
-@[simp] theorem to_of_list (l : list (lists α)) : to_list (of_list l) = l :=
-by induction l; simp *
+@[simp]
+theorem to_of_list (l : List (Lists α)) : toList (ofList l) = l := by
+  induction l <;> simp [*]
 
-@[simp] theorem of_to_list : ∀ (l : lists' α tt), of_list (to_list l) = l :=
-suffices ∀ b (h : tt = b) (l : lists' α b),
-  let l' : lists' α tt := by rw h; exact l in
-  of_list (to_list l') = l', from this _ rfl,
-λ b h l, begin
-  induction l, {cases h}, {exact rfl},
-  case lists'.cons' : b a l IH₁ IH₂
-  { intro, change l' with cons' a l,
-    simpa [cons] using IH₂ rfl }
+@[simp]
+theorem of_to_list : ∀ l : Lists' α true, ofList (toList l) = l :=
+  suffices
+    ∀ b h : tt = b l : Lists' α b,
+      let l' : Lists' α true := by
+        rw [h] <;> exact l
+      ofList (toList l') = l'
+    from this _ rfl
+  fun b h l => by
+  induction l
+  · cases h
+    
+  · exact rfl
+    
+  case lists'.cons' b a l IH₁ IH₂ =>
+    intro
+    change l' with cons' a l
+    simpa [cons] using IH₂ rfl
+
+end Lists'
+
+mutual
+  inductive Lists.Equiv : Lists α → Lists α → Prop
+    | refl l : Lists.Equiv l l
+    | antisymm {l₁ l₂ : Lists' α true} : Lists'.Subset l₁ l₂ → Lists'.Subset l₂ l₁ → Lists.Equiv ⟨_, l₁⟩ ⟨_, l₂⟩
+  inductive Lists'.Subset : Lists' α true → Lists' α true → Prop
+    | nil {l} : Lists'.Subset Lists'.nil l
+    | cons {a a' l l'} :
+      Lists.Equiv a a' → a' ∈ Lists'.toList l' → Lists'.Subset l l' → Lists'.Subset (Lists'.cons a l) l'
 end
 
-end lists'
-
-mutual inductive lists.equiv, lists'.subset
-with lists.equiv : lists α → lists α → Prop
-| refl (l) : lists.equiv l l
-| antisymm {l₁ l₂ : lists' α tt} :
-  lists'.subset l₁ l₂ → lists'.subset l₂ l₁ → lists.equiv ⟨_, l₁⟩ ⟨_, l₂⟩
-with lists'.subset : lists' α tt → lists' α tt → Prop
-| nil {l} : lists'.subset lists'.nil l
-| cons {a a' l l'} : lists.equiv a a' → a' ∈ lists'.to_list l' →
-  lists'.subset l l' → lists'.subset (lists'.cons a l) l'
-local infix ` ~ `:50 := lists.equiv
+-- mathport name: «expr ~ »
+local infixl:50 " ~ " => Lists.Equiv
 
 /-- Equivalence of ZFA lists. Defined inductively. -/
-add_decl_doc lists.equiv
+add_decl_doc Lists.Equiv
 
 /-- Subset relation for ZFA lists. Defined inductively. -/
-add_decl_doc lists'.subset
+add_decl_doc Lists'.Subset
 
-namespace lists'
+namespace Lists'
 
-instance : has_subset (lists' α tt) := ⟨lists'.subset⟩
+instance : HasSubset (Lists' α true) :=
+  ⟨Lists'.Subset⟩
 
 /-- ZFA prelist membership. A ZFA list is in a ZFA prelist if some element of this ZFA prelist is
 equivalent as a ZFA list to this ZFA list. -/
-instance {b} : has_mem (lists α) (lists' α b) :=
-⟨λ a l, ∃ a' ∈ l.to_list, a ~ a'⟩
+instance {b} : HasMem (Lists α) (Lists' α b) :=
+  ⟨fun a l => ∃ a' ∈ l.toList, a ~ a'⟩
 
-theorem mem_def {b a} {l : lists' α b} :
-  a ∈ l ↔ ∃ a' ∈ l.to_list, a ~ a' := iff.rfl
+theorem mem_def {b a} {l : Lists' α b} : a ∈ l ↔ ∃ a' ∈ l.toList, a ~ a' :=
+  Iff.rfl
 
-@[simp] theorem mem_cons {a y l} : a ∈ @cons α y l ↔ a ~ y ∨ a ∈ l :=
-by simp [mem_def, or_and_distrib_right, exists_or_distrib]
+@[simp]
+theorem mem_cons {a y l} : a ∈ @cons α y l ↔ a ~ y ∨ a ∈ l := by
+  simp [mem_def, or_and_distrib_right, exists_or_distrib]
 
-theorem cons_subset {a} {l₁ l₂ : lists' α tt} :
-  lists'.cons a l₁ ⊆ l₂ ↔ a ∈ l₂ ∧ l₁ ⊆ l₂ :=
-begin
-  refine ⟨λ h, _, λ ⟨⟨a', m, e⟩, s⟩, subset.cons e m s⟩,
-  generalize_hyp h' : lists'.cons a l₁ = l₁' at h,
-  cases h with l a' a'' l l' e m s, {cases a, cases h'},
-  cases a, cases a', cases h', exact ⟨⟨_, m, e⟩, s⟩
-end
+theorem cons_subset {a} {l₁ l₂ : Lists' α true} : Lists'.cons a l₁ ⊆ l₂ ↔ a ∈ l₂ ∧ l₁ ⊆ l₂ := by
+  refine' ⟨fun h => _, fun ⟨⟨a', m, e⟩, s⟩ => subset.cons e m s⟩
+  generalize h' : Lists'.cons a l₁ = l₁'  at h
+  cases' h with l a' a'' l l' e m s
+  · cases a
+    cases h'
+    
+  cases a
+  cases a'
+  cases h'
+  exact ⟨⟨_, m, e⟩, s⟩
 
-theorem of_list_subset {l₁ l₂ : list (lists α)} (h : l₁ ⊆ l₂) :
-  lists'.of_list l₁ ⊆ lists'.of_list l₂ :=
-begin
-  induction l₁, {exact subset.nil},
-  refine subset.cons (lists.equiv.refl _) _ (l₁_ih (list.subset_of_cons_subset h)),
-  simp at h, simp [h]
-end
+theorem of_list_subset {l₁ l₂ : List (Lists α)} (h : l₁ ⊆ l₂) : Lists'.ofList l₁ ⊆ Lists'.ofList l₂ := by
+  induction l₁
+  · exact subset.nil
+    
+  refine' subset.cons (Lists.Equiv.refl _) _ (l₁_ih (List.subset_of_cons_subsetₓ h))
+  simp at h
+  simp [h]
 
-@[refl] theorem subset.refl {l : lists' α tt} : l ⊆ l :=
-by rw ← lists'.of_to_list l; exact
-   of_list_subset (list.subset.refl _)
+@[refl]
+theorem Subset.refl {l : Lists' α true} : l ⊆ l := by
+  rw [← Lists'.of_to_list l] <;> exact of_list_subset (List.Subset.refl _)
 
-theorem subset_nil {l : lists' α tt} :
-  l ⊆ lists'.nil → l = lists'.nil :=
-begin
-  rw ← of_to_list l,
-  induction to_list l; intro h, {refl},
+theorem subset_nil {l : Lists' α true} : l ⊆ Lists'.nil → l = Lists'.nil := by
+  rw [← of_to_list l]
+  induction to_list l <;> intro h
+  · rfl
+    
   rcases cons_subset.1 h with ⟨⟨_, ⟨⟩, _⟩, _⟩
-end
 
-theorem mem_of_subset' {a} {l₁ l₂ : lists' α tt}
-  (s : l₁ ⊆ l₂) (h : a ∈ l₁.to_list) : a ∈ l₂ :=
-begin
-  induction s with _ a a' l l' e m s IH, {cases h},
-  simp at h, rcases h with rfl|h,
-  exacts [⟨_, m, e⟩, IH h]
-end
+theorem mem_of_subset' {a} {l₁ l₂ : Lists' α true} (s : l₁ ⊆ l₂) (h : a ∈ l₁.toList) : a ∈ l₂ := by
+  induction' s with _ a a' l l' e m s IH
+  · cases h
+    
+  simp at h
+  rcases h with (rfl | h)
+  exacts[⟨_, m, e⟩, IH h]
 
-theorem subset_def {l₁ l₂ : lists' α tt} :
-  l₁ ⊆ l₂ ↔ ∀ a ∈ l₁.to_list, a ∈ l₂ :=
-⟨λ H a, mem_of_subset' H, λ H, begin
-  rw ← of_to_list l₁,
-  revert H, induction to_list l₁; intro,
-  { exact subset.nil },
-  { simp at H, exact cons_subset.2 ⟨H.1, ih H.2⟩ }
-end⟩
+theorem subset_def {l₁ l₂ : Lists' α true} : l₁ ⊆ l₂ ↔ ∀, ∀ a ∈ l₁.toList, ∀, a ∈ l₂ :=
+  ⟨fun H a => mem_of_subset' H, fun H => by
+    rw [← of_to_list l₁]
+    revert H
+    induction to_list l₁ <;> intro
+    · exact subset.nil
+      
+    · simp at H
+      exact cons_subset.2 ⟨H.1, ih H.2⟩
+      ⟩
 
-end lists'
+end Lists'
 
-namespace lists
+namespace Lists
 
 /-- Sends `a : α` to the corresponding atom in `lists α`. -/
-@[pattern] def atom (a : α) : lists α := ⟨_, lists'.atom a⟩
+@[matchPattern]
+def atom (a : α) : Lists α :=
+  ⟨_, Lists'.atom a⟩
 
 /-- Converts a proper ZFA prelist to a ZFA list. -/
-@[pattern] def of' (l : lists' α tt) : lists α := ⟨_, l⟩
+@[matchPattern]
+def of' (l : Lists' α true) : Lists α :=
+  ⟨_, l⟩
 
 /-- Converts a ZFA list to a `list` of ZFA lists. Atoms are sent to `[]`. -/
-@[simp] def to_list : lists α → list (lists α)
-| ⟨b, l⟩ := l.to_list
+@[simp]
+def toList : Lists α → List (Lists α)
+  | ⟨b, l⟩ => l.toList
 
 /-- Predicate stating that a ZFA list is proper. -/
-def is_list (l : lists α) : Prop := l.1
+def IsList (l : Lists α) : Prop :=
+  l.1
 
 /-- Converts a `list` of ZFA lists to a ZFA list. -/
-def of_list (l : list (lists α)) : lists α := of' (lists'.of_list l)
+def ofList (l : List (Lists α)) : Lists α :=
+  of' (Lists'.ofList l)
 
-theorem is_list_to_list (l : list (lists α)) : is_list (of_list l) :=
-eq.refl _
+theorem is_list_to_list (l : List (Lists α)) : IsList (ofList l) :=
+  Eq.refl _
 
-theorem to_of_list (l : list (lists α)) : to_list (of_list l) = l :=
-by simp [of_list, of']
+theorem to_of_list (l : List (Lists α)) : toList (ofList l) = l := by
+  simp [of_list, of']
 
-theorem of_to_list : ∀ {l : lists α}, is_list l → of_list (to_list l) = l
-| ⟨tt, l⟩ _ := by simp [of_list, of']
+theorem of_to_list : ∀ {l : Lists α}, IsList l → ofList (toList l) = l
+  | ⟨tt, l⟩, _ => by
+    simp [of_list, of']
 
-instance : inhabited (lists α) :=
-⟨of' lists'.nil⟩
+instance : Inhabited (Lists α) :=
+  ⟨of' Lists'.nil⟩
 
-instance [decidable_eq α] : decidable_eq (lists α) :=
-by unfold lists; apply_instance
+instance [DecidableEq α] : DecidableEq (Lists α) := by
+  unfold Lists <;> infer_instance
 
-instance [has_sizeof α] : has_sizeof (lists α) :=
-by unfold lists; apply_instance
+instance [SizeOf α] : SizeOf (Lists α) := by
+  unfold Lists <;> infer_instance
 
 /-- A recursion principle for pairs of ZFA lists and proper ZFA prelists. -/
-def induction_mut (C : lists α → Sort*) (D : lists' α tt → Sort*)
-  (C0 : ∀ a, C (atom a)) (C1 : ∀ l, D l → C (of' l))
-  (D0 : D lists'.nil) (D1 : ∀ a l, C a → D l → D (lists'.cons a l)) :
-  pprod (∀ l, C l) (∀ l, D l) :=
-begin
-  suffices : ∀ {b} (l : lists' α b),
-    pprod (C ⟨_, l⟩) (match b, l with
-    | tt, l := D l
-    | ff, l := punit
-    end),
-  { exact ⟨λ ⟨b, l⟩, (this _).1, λ l, (this l).2⟩ },
-  intros, induction l with a b a l IH₁ IH₂,
-  { exact ⟨C0 _, ⟨⟩⟩ },
-  { exact ⟨C1 _ D0, D0⟩ },
-  { suffices, {exact ⟨C1 _ this, this⟩},
-    exact D1 ⟨_, _⟩ _ IH₁.1 IH₂.2 }
-end
+def inductionMut (C : Lists α → Sort _) (D : Lists' α true → Sort _) (C0 : ∀ a, C (atom a)) (C1 : ∀ l, D l → C (of' l))
+    (D0 : D Lists'.nil) (D1 : ∀ a l, C a → D l → D (Lists'.cons a l)) : PProd (∀ l, C l) (∀ l, D l) := by
+  suffices
+    ∀ {b} l : Lists' α b,
+      PProd (C ⟨_, l⟩)
+        (match b, l with
+        | tt, l => D l
+        | ff, l => PUnit)
+    by
+    exact ⟨fun ⟨b, l⟩ => (this _).1, fun l => (this l).2⟩
+  intros
+  induction' l with a b a l IH₁ IH₂
+  · exact ⟨C0 _, ⟨⟩⟩
+    
+  · exact ⟨C1 _ D0, D0⟩
+    
+  · suffices
+    · exact ⟨C1 _ this, this⟩
+      
+    exact D1 ⟨_, _⟩ _ IH₁.1 IH₂.2
+    
 
 /-- Membership of ZFA list. A ZFA list belongs to a proper ZFA list if it belongs to the latter as a
 proper ZFA prelist. An atom has no members. -/
-def mem (a : lists α) : lists α → Prop
-| ⟨ff, l⟩ := false
-| ⟨tt, l⟩ := a ∈ l
+def Mem (a : Lists α) : Lists α → Prop
+  | ⟨ff, l⟩ => False
+  | ⟨tt, l⟩ => a ∈ l
 
-instance : has_mem (lists α) (lists α) := ⟨mem⟩
+instance : HasMem (Lists α) (Lists α) :=
+  ⟨Mem⟩
 
-theorem is_list_of_mem {a : lists α} : ∀ {l : lists α}, a ∈ l → is_list l
-| ⟨_, lists'.nil⟩       _ := rfl
-| ⟨_, lists'.cons' _ _⟩ _ := rfl
+theorem is_list_of_mem {a : Lists α} : ∀ {l : Lists α}, a ∈ l → IsList l
+  | ⟨_, Lists'.nil⟩, _ => rfl
+  | ⟨_, Lists'.cons' _ _⟩, _ => rfl
 
-theorem equiv.antisymm_iff {l₁ l₂ : lists' α tt} :
-  of' l₁ ~ of' l₂ ↔ l₁ ⊆ l₂ ∧ l₂ ⊆ l₁ :=
-begin
-  refine ⟨λ h, _, λ ⟨h₁, h₂⟩, equiv.antisymm h₁ h₂⟩,
-  cases h with _ _ _ h₁ h₂,
-  { simp [lists'.subset.refl] }, { exact ⟨h₁, h₂⟩ }
+theorem Equiv.antisymm_iff {l₁ l₂ : Lists' α true} : of' l₁ ~ of' l₂ ↔ l₁ ⊆ l₂ ∧ l₂ ⊆ l₁ := by
+  refine' ⟨fun h => _, fun ⟨h₁, h₂⟩ => equiv.antisymm h₁ h₂⟩
+  cases' h with _ _ _ h₁ h₂
+  · simp [Lists'.Subset.refl]
+    
+  · exact ⟨h₁, h₂⟩
+    
+
+attribute [refl] Equivₓ.refl
+
+theorem equiv_atom {a} {l : Lists α} : atom a ~ l ↔ atom a = l :=
+  ⟨fun h => by
+    cases h <;> rfl, fun h => h ▸ Equiv.refl _⟩
+
+theorem Equiv.symm {l₁ l₂ : Lists α} (h : l₁ ~ l₂) : l₂ ~ l₁ := by
+  cases' h with _ _ _ h₁ h₂ <;> [rfl, exact equiv.antisymm h₂ h₁]
+
+theorem Equiv.trans : ∀ {l₁ l₂ l₃ : Lists α}, l₁ ~ l₂ → l₂ ~ l₃ → l₁ ~ l₃ := by
+  let trans := fun l₁ : Lists α => ∀ ⦃l₂ l₃⦄, l₁ ~ l₂ → l₂ ~ l₃ → l₁ ~ l₃
+  suffices PProd (∀ l₁, trans l₁) (∀ l : Lists' α tt, ∀ l' ∈ l.toList, ∀, trans l') by
+    exact this.1
+  apply induction_mut
+  · intro a l₂ l₃ h₁ h₂
+    rwa [← equiv_atom.1 h₁] at h₂
+    
+  · intro l₁ IH l₂ l₃ h₁ h₂
+    cases' h₁ with _ _ l₂
+    · exact h₂
+      
+    cases' h₂ with _ _ l₃
+    · exact h₁
+      
+    cases' equiv.antisymm_iff.1 h₁ with hl₁ hr₁
+    cases' equiv.antisymm_iff.1 h₂ with hl₂ hr₂
+    apply equiv.antisymm_iff.2 <;> constructor <;> apply Lists'.subset_def.2
+    · intro a₁ m₁
+      rcases Lists'.mem_of_subset' hl₁ m₁ with ⟨a₂, m₂, e₁₂⟩
+      rcases Lists'.mem_of_subset' hl₂ m₂ with ⟨a₃, m₃, e₂₃⟩
+      exact ⟨a₃, m₃, IH _ m₁ e₁₂ e₂₃⟩
+      
+    · intro a₃ m₃
+      rcases Lists'.mem_of_subset' hr₂ m₃ with ⟨a₂, m₂, e₃₂⟩
+      rcases Lists'.mem_of_subset' hr₁ m₂ with ⟨a₁, m₁, e₂₁⟩
+      exact ⟨a₁, m₁, (IH _ m₁ e₂₁.symm e₃₂.symm).symm⟩
+      
+    
+  · rintro _ ⟨⟩
+    
+  · intro a l IH₁ IH₂
+    simpa [IH₁] using IH₂
+    
+
+instance : Setoidₓ (Lists α) :=
+  ⟨(· ~ ·), Equiv.refl, @Equiv.symm _, @Equiv.trans _⟩
+
+section Decidable
+
+@[simp]
+def Equiv.decidableMeas :
+    (PSum (Σ'l₁ : Lists α, Lists α) <| PSum (Σ'l₁ : Lists' α true, Lists' α true) (Σ'a : Lists α, Lists' α true)) → ℕ
+  | PSum.inl ⟨l₁, l₂⟩ => sizeof l₁ + sizeof l₂
+  | PSum.inr <| PSum.inl ⟨l₁, l₂⟩ => sizeof l₁ + sizeof l₂
+  | PSum.inr <| PSum.inr ⟨l₁, l₂⟩ => sizeof l₁ + sizeof l₂
+
+open WellFoundedTactics
+
+theorem sizeof_pos {b} (l : Lists' α b) : 0 < sizeof l := by
+  cases l <;>
+    run_tac
+      andthen unfold_sizeof trivial_nat_lt
+
+theorem lt_sizeof_cons' {b} (a : Lists' α b) l : sizeof (⟨b, a⟩ : Lists α) < sizeof (Lists'.cons' a l) := by
+  run_tac
+    unfold_sizeof
+  apply sizeof_pos
+
+mutual
+  @[instance]
+  def Equiv.decidable [DecidableEq α] : ∀ l₁ l₂ : Lists α, Decidable (l₁ ~ l₂)
+    | ⟨ff, l₁⟩, ⟨ff, l₂⟩ =>
+      decidableOfIff' (l₁ = l₂) <| by
+        cases l₁ <;>
+          refine'
+            equiv_atom.trans
+              (by
+                simp [atom])
+    | ⟨ff, l₁⟩, ⟨tt, l₂⟩ =>
+      is_false <| by
+        rintro ⟨⟩
+    | ⟨tt, l₁⟩, ⟨ff, l₂⟩ =>
+      is_false <| by
+        rintro ⟨⟩
+    | ⟨tt, l₁⟩, ⟨tt, l₂⟩ => by
+      have :=
+        have : sizeof l₁ + sizeof l₂ < sizeof (⟨tt, l₁⟩ : Lists α) + sizeof (⟨tt, l₂⟩ : Lists α) := by
+          run_tac
+            default_dec_tac
+        subset.decidable l₁ l₂
+      have :=
+        have : sizeof l₂ + sizeof l₁ < sizeof (⟨tt, l₁⟩ : Lists α) + sizeof (⟨tt, l₂⟩ : Lists α) := by
+          run_tac
+            default_dec_tac
+        subset.decidable l₂ l₁
+      exact decidableOfIff' _ equiv.antisymm_iff
+  @[instance]
+  def Subset.decidable [DecidableEq α] : ∀ l₁ l₂ : Lists' α true, Decidable (l₁ ⊆ l₂)
+    | Lists'.nil, l₂ => isTrue Subset.nil
+    | @Lists'.cons' _ b a l₁, l₂ => by
+      have :=
+        have : sizeof (⟨b, a⟩ : Lists α) + sizeof l₂ < sizeof (Lists'.cons' a l₁) + sizeof l₂ :=
+          add_lt_add_right (lt_sizeof_cons' _ _) _
+        mem.decidable ⟨b, a⟩ l₂
+      have :=
+        have : sizeof l₁ + sizeof l₂ < sizeof (Lists'.cons' a l₁) + sizeof l₂ := by
+          run_tac
+            default_dec_tac
+        subset.decidable l₁ l₂
+      exact decidableOfIff' _ (@Lists'.cons_subset _ ⟨_, _⟩ _ _)
+  @[instance]
+  def Mem.decidable [DecidableEq α] : ∀ a : Lists α l : Lists' α true, Decidable (a ∈ l)
+    | a, Lists'.nil =>
+      is_false <| by
+        rintro ⟨_, ⟨⟩, _⟩
+    | a, Lists'.cons' b l₂ => by
+      have :=
+        have : sizeof a + sizeof (⟨_, b⟩ : Lists α) < sizeof a + sizeof (Lists'.cons' b l₂) :=
+          add_lt_add_left (lt_sizeof_cons' _ _) _
+        equiv.decidable a ⟨_, b⟩
+      have :=
+        have : sizeof a + sizeof l₂ < sizeof a + sizeof (Lists'.cons' b l₂) := by
+          run_tac
+            default_dec_tac
+        mem.decidable a l₂
+      refine' decidableOfIff' (a ~ ⟨_, b⟩ ∨ a ∈ l₂) _
+      rw [← Lists'.mem_cons]
+      rfl
 end
 
-attribute [refl] equiv.refl
+end Decidable
 
-theorem equiv_atom {a} {l : lists α} : atom a ~ l ↔ atom a = l :=
-⟨λ h, by cases h; refl, λ h, h ▸ equiv.refl _⟩
+end Lists
 
-theorem equiv.symm {l₁ l₂ : lists α} (h : l₁ ~ l₂) : l₂ ~ l₁ :=
-by cases h with _ _ _ h₁ h₂; [refl, exact equiv.antisymm h₂ h₁]
+namespace Lists'
 
-theorem equiv.trans : ∀ {l₁ l₂ l₃ : lists α}, l₁ ~ l₂ → l₂ ~ l₃ → l₁ ~ l₃ :=
-begin
-  let trans := λ (l₁ : lists α), ∀ ⦃l₂ l₃⦄, l₁ ~ l₂ → l₂ ~ l₃ → l₁ ~ l₃,
-  suffices : pprod (∀ l₁, trans l₁)
-    (∀ (l : lists' α tt) (l' ∈ l.to_list), trans l'), {exact this.1},
-  apply induction_mut,
-  { intros a l₂ l₃ h₁ h₂,
-    rwa ← equiv_atom.1 h₁ at h₂ },
-  { intros l₁ IH l₂ l₃ h₁ h₂,
-    cases h₁ with _ _ l₂, {exact h₂},
-    cases h₂ with _ _ l₃, {exact h₁},
-    cases equiv.antisymm_iff.1 h₁ with hl₁ hr₁,
-    cases equiv.antisymm_iff.1 h₂ with hl₂ hr₂,
-    apply equiv.antisymm_iff.2; split; apply lists'.subset_def.2,
-    { intros a₁ m₁,
-      rcases lists'.mem_of_subset' hl₁ m₁ with ⟨a₂, m₂, e₁₂⟩,
-      rcases lists'.mem_of_subset' hl₂ m₂ with ⟨a₃, m₃, e₂₃⟩,
-      exact ⟨a₃, m₃, IH _ m₁ e₁₂ e₂₃⟩ },
-    { intros a₃ m₃,
-      rcases lists'.mem_of_subset' hr₂ m₃ with ⟨a₂, m₂, e₃₂⟩,
-      rcases lists'.mem_of_subset' hr₁ m₂ with ⟨a₁, m₁, e₂₁⟩,
-      exact ⟨a₁, m₁, (IH _ m₁ e₂₁.symm e₃₂.symm).symm⟩ } },
-  { rintro _ ⟨⟩ },
-  { intros a l IH₁ IH₂, simpa [IH₁] using IH₂ }
-end
+theorem mem_equiv_left {l : Lists' α true} : ∀ {a a'}, a ~ a' → (a ∈ l ↔ a' ∈ l) :=
+  suffices ∀ {a a'}, a ~ a' → a ∈ l → a' ∈ l from fun a a' e => ⟨this e, this e.symm⟩
+  fun a₁ a₂ e₁ ⟨a₃, m₃, e₂⟩ => ⟨_, m₃, e₁.symm.trans e₂⟩
 
-instance : setoid (lists α) :=
-⟨(~), equiv.refl, @equiv.symm _, @equiv.trans _⟩
+theorem mem_of_subset {a} {l₁ l₂ : Lists' α true} (s : l₁ ⊆ l₂) : a ∈ l₁ → a ∈ l₂
+  | ⟨a', m, e⟩ => (mem_equiv_left e).2 (mem_of_subset' s m)
 
-section decidable
+theorem Subset.trans {l₁ l₂ l₃ : Lists' α true} (h₁ : l₁ ⊆ l₂) (h₂ : l₂ ⊆ l₃) : l₁ ⊆ l₃ :=
+  subset_def.2 fun a₁ m₁ => mem_of_subset h₂ <| mem_of_subset' h₁ m₁
 
-@[simp] def equiv.decidable_meas :
-  (psum (Σ' (l₁ : lists α), lists α) $
-   psum (Σ' (l₁ : lists' α tt), lists' α tt)
-   Σ' (a : lists α), lists' α tt) → ℕ
-| (psum.inl ⟨l₁, l₂⟩) := sizeof l₁ + sizeof l₂
-| (psum.inr $ psum.inl ⟨l₁, l₂⟩) := sizeof l₁ + sizeof l₂
-| (psum.inr $ psum.inr ⟨l₁, l₂⟩) := sizeof l₁ + sizeof l₂
+end Lists'
 
-open well_founded_tactics
+def Finsets (α : Type _) :=
+  Quotientₓ (@Lists.setoid α)
 
-theorem sizeof_pos {b} (l : lists' α b) : 0 < sizeof l :=
-by cases l; unfold_sizeof; trivial_nat_lt
+namespace Finsets
 
-theorem lt_sizeof_cons' {b} (a : lists' α b) (l) :
-  sizeof (⟨b, a⟩ : lists α) < sizeof (lists'.cons' a l) :=
-by {unfold_sizeof, apply sizeof_pos}
+instance : HasEmptyc (Finsets α) :=
+  ⟨⟦Lists.of' Lists'.nil⟧⟩
 
-@[instance] mutual def equiv.decidable, subset.decidable, mem.decidable [decidable_eq α]
-with equiv.decidable : ∀ l₁ l₂ : lists α, decidable (l₁ ~ l₂)
-| ⟨ff, l₁⟩ ⟨ff, l₂⟩ := decidable_of_iff' (l₁ = l₂) $
-  by cases l₁; refine equiv_atom.trans (by simp [atom])
-| ⟨ff, l₁⟩ ⟨tt, l₂⟩ := is_false $ by rintro ⟨⟩
-| ⟨tt, l₁⟩ ⟨ff, l₂⟩ := is_false $ by rintro ⟨⟩
-| ⟨tt, l₁⟩ ⟨tt, l₂⟩ := begin
-  haveI :=
-    have sizeof l₁ + sizeof l₂ <
-         sizeof (⟨tt, l₁⟩ : lists α) + sizeof (⟨tt, l₂⟩ : lists α),
-    by default_dec_tac,
-    subset.decidable l₁ l₂,
-  haveI :=
-    have sizeof l₂ + sizeof l₁ <
-         sizeof (⟨tt, l₁⟩ : lists α) + sizeof (⟨tt, l₂⟩ : lists α),
-    by default_dec_tac,
-    subset.decidable l₂ l₁,
-  exact decidable_of_iff' _ equiv.antisymm_iff,
-end
-with subset.decidable : ∀ l₁ l₂ : lists' α tt, decidable (l₁ ⊆ l₂)
-| lists'.nil l₂ := is_true subset.nil
-| (@lists'.cons' _ b a l₁) l₂ := begin
-  haveI :=
-    have sizeof (⟨b, a⟩ : lists α) + sizeof l₂ <
-         sizeof (lists'.cons' a l₁) + sizeof l₂,
-    from add_lt_add_right (lt_sizeof_cons' _ _) _,
-    mem.decidable ⟨b, a⟩ l₂,
-  haveI :=
-    have sizeof l₁ + sizeof l₂ <
-         sizeof (lists'.cons' a l₁) + sizeof l₂,
-    by default_dec_tac,
-    subset.decidable l₁ l₂,
-  exact decidable_of_iff' _ (@lists'.cons_subset _ ⟨_, _⟩ _ _)
-end
-with mem.decidable : ∀ (a : lists α) (l : lists' α tt), decidable (a ∈ l)
-| a lists'.nil := is_false $ by rintro ⟨_, ⟨⟩, _⟩
-| a (lists'.cons' b l₂) := begin
-  haveI :=
-    have sizeof a + sizeof (⟨_, b⟩ : lists α) <
-         sizeof a + sizeof (lists'.cons' b l₂),
-    from add_lt_add_left (lt_sizeof_cons' _ _) _,
-    equiv.decidable a ⟨_, b⟩,
-  haveI :=
-    have sizeof a + sizeof l₂ <
-         sizeof a + sizeof (lists'.cons' b l₂),
-    by default_dec_tac,
-    mem.decidable a l₂,
-  refine decidable_of_iff' (a ~ ⟨_, b⟩ ∨ a ∈ l₂) _,
-  rw ← lists'.mem_cons, refl
-end
-using_well_founded
-{ rel_tac := λ _ _, `[exact ⟨_, measure_wf equiv.decidable_meas⟩],
-  dec_tac := `[assumption] }
+instance : Inhabited (Finsets α) :=
+  ⟨∅⟩
 
-end decidable
+instance [DecidableEq α] : DecidableEq (Finsets α) := by
+  unfold Finsets <;> infer_instance
 
-end lists
+end Finsets
 
-namespace lists'
-
-theorem mem_equiv_left {l : lists' α tt} :
-  ∀ {a a'}, a ~ a' → (a ∈ l ↔ a' ∈ l) :=
-suffices ∀ {a a'}, a ~ a' → a ∈ l → a' ∈ l,
-  from λ a a' e, ⟨this e, this e.symm⟩,
-λ a₁ a₂ e₁ ⟨a₃, m₃, e₂⟩, ⟨_, m₃, e₁.symm.trans e₂⟩
-
-theorem mem_of_subset {a} {l₁ l₂ : lists' α tt}
-  (s : l₁ ⊆ l₂) : a ∈ l₁ → a ∈ l₂ | ⟨a', m, e⟩ :=
-(mem_equiv_left e).2 (mem_of_subset' s m)
-
-theorem subset.trans {l₁ l₂ l₃ : lists' α tt}
-  (h₁ : l₁ ⊆ l₂) (h₂ : l₂ ⊆ l₃) : l₁ ⊆ l₃ :=
-subset_def.2 $ λ a₁ m₁, mem_of_subset h₂ $ mem_of_subset' h₁ m₁
-
-end lists'
-
-def finsets (α : Type*) := quotient (@lists.setoid α)
-
-namespace finsets
-
-instance : has_emptyc (finsets α) := ⟨⟦lists.of' lists'.nil⟧⟩
-
-instance : inhabited (finsets α) := ⟨∅⟩
-
-instance [decidable_eq α] : decidable_eq (finsets α) :=
-by unfold finsets; apply_instance
-
-end finsets

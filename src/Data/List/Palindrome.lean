@@ -3,8 +3,7 @@ Copyright (c) 2020 Google LLC. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chris Wong
 -/
-
-import data.list.basic
+import Mathbin.Data.List.Basic
 
 /-!
 # Palindromes
@@ -25,44 +24,45 @@ principle. Also provided are conversions to and from other equivalent definition
 palindrome, reverse, induction
 -/
 
-open list
 
-variables {α : Type*}
+open List
 
-/--
-`palindrome l` asserts that `l` is a palindrome. This is defined inductively:
+variable {α : Type _}
+
+/-- `palindrome l` asserts that `l` is a palindrome. This is defined inductively:
 
 * The empty list is a palindrome;
 * A list with one element is a palindrome;
 * Adding the same element to both ends of a palindrome results in a bigger palindrome.
 -/
-inductive palindrome : list α → Prop
-| nil : palindrome []
-| singleton : ∀ x, palindrome [x]
-| cons_concat : ∀ x {l}, palindrome l → palindrome (x :: (l ++ [x]))
+inductive Palindrome : List α → Prop
+  | nil : Palindrome []
+  | singleton : ∀ x, Palindrome [x]
+  | cons_concat : ∀ x {l}, Palindrome l → Palindrome (x :: (l ++ [x]))
 
-namespace palindrome
+namespace Palindrome
 
-lemma reverse_eq {l : list α} (p : palindrome l) : reverse l = l :=
-palindrome.rec_on p rfl (λ _, rfl) (λ x l p h, by simp [h])
+theorem reverse_eq {l : List α} (p : Palindrome l) : reverse l = l :=
+  Palindrome.rec_on p rfl (fun _ => rfl) fun x l p h => by
+    simp [h]
 
-lemma of_reverse_eq {l : list α} : reverse l = l → palindrome l :=
-begin
-  refine bidirectional_rec_on l (λ _, palindrome.nil) (λ a _, palindrome.singleton a) _,
-  intros x l y hp hr,
-  rw [reverse_cons, reverse_append] at hr,
-  rw head_eq_of_cons_eq hr,
-  have : palindrome l, from hp (append_inj_left' (tail_eq_of_cons_eq hr) rfl),
-  exact palindrome.cons_concat x this
-end
+theorem of_reverse_eq {l : List α} : reverse l = l → Palindrome l := by
+  refine' bidirectional_rec_on l (fun _ => Palindrome.nil) (fun a _ => Palindrome.singleton a) _
+  intro x l y hp hr
+  rw [reverse_cons, reverse_append] at hr
+  rw [head_eq_of_cons_eq hr]
+  have : Palindrome l := hp (append_inj_left' (tail_eq_of_cons_eq hr) rfl)
+  exact Palindrome.cons_concat x this
 
-lemma iff_reverse_eq {l : list α} : palindrome l ↔ reverse l = l :=
-iff.intro reverse_eq of_reverse_eq
+theorem iff_reverse_eq {l : List α} : Palindrome l ↔ reverse l = l :=
+  Iff.intro reverse_eq of_reverse_eq
 
-lemma append_reverse (l : list α) : palindrome (l ++ reverse l) :=
-by { apply of_reverse_eq, rw [reverse_append, reverse_reverse] }
+theorem append_reverse (l : List α) : Palindrome (l ++ reverse l) := by
+  apply of_reverse_eq
+  rw [reverse_append, reverse_reverse]
 
-instance [decidable_eq α] (l : list α) : decidable (palindrome l) :=
-decidable_of_iff' _ iff_reverse_eq
+instance [DecidableEq α] (l : List α) : Decidable (Palindrome l) :=
+  decidableOfIff' _ iff_reverse_eq
 
-end palindrome
+end Palindrome
+

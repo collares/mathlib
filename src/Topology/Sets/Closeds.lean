@@ -3,7 +3,7 @@ Copyright (c) 2020 Floris van Doorn. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Floris van Doorn, Yaël Dillies
 -/
-import topology.sets.opens
+import Mathbin.Topology.Sets.Opens
 
 /-!
 # Closed sets
@@ -17,91 +17,165 @@ For a topological space `α`,
 * `clopens α`: The type of clopen sets.
 -/
 
-open set
 
-variables {α β : Type*} [topological_space α] [topological_space β]
+open Set
 
-namespace topological_space
+variable {α β : Type _} [TopologicalSpace α] [TopologicalSpace β]
+
+namespace TopologicalSpace
 
 /-! ### Closed sets -/
 
+
 /-- The type of closed subsets of a topological space. -/
-structure closeds (α : Type*) [topological_space α] :=
-(carrier : set α)
-(closed' : is_closed carrier)
+structure Closeds (α : Type _) [TopologicalSpace α] where
+  Carrier : Set α
+  closed' : IsClosed carrier
 
-namespace closeds
-variables {α}
+namespace Closeds
 
-instance : set_like (closeds α) α :=
-{ coe := closeds.carrier,
-  coe_injective' := λ s t h, by { cases s, cases t, congr' } }
+variable {α}
 
-lemma closed (s : closeds α) : is_closed (s : set α) := s.closed'
+instance : SetLike (Closeds α) α where
+  coe := Closeds.Carrier
+  coe_injective' := fun s t h => by
+    cases s
+    cases t
+    congr
 
-@[ext] protected lemma ext {s t : closeds α} (h : (s : set α) = t) : s = t := set_like.ext' h
+theorem closed (s : Closeds α) : IsClosed (s : Set α) :=
+  s.closed'
 
-@[simp] lemma coe_mk (s : set α) (h) : (mk s h : set α) = s := rfl
+@[ext]
+protected theorem ext {s t : Closeds α} (h : (s : Set α) = t) : s = t :=
+  SetLike.ext' h
 
-instance : has_sup (closeds α) := ⟨λ s t, ⟨s ∪ t, s.closed.union t.closed⟩⟩
-instance : has_inf (closeds α) := ⟨λ s t, ⟨s ∩ t, s.closed.inter t.closed⟩⟩
-instance : has_top (closeds α) := ⟨⟨univ, is_closed_univ⟩⟩
-instance : has_bot (closeds α) := ⟨⟨∅, is_closed_empty⟩⟩
+@[simp]
+theorem coe_mk (s : Set α) h : (mk s h : Set α) = s :=
+  rfl
 
-instance : distrib_lattice (closeds α) :=
-set_like.coe_injective.distrib_lattice _ (λ _ _, rfl) (λ _ _, rfl)
-instance : bounded_order (closeds α) := bounded_order.lift (coe : _ → set α) (λ _ _, id) rfl rfl
+instance : HasSup (Closeds α) :=
+  ⟨fun s t => ⟨s ∪ t, s.closed.union t.closed⟩⟩
+
+instance : HasInf (Closeds α) :=
+  ⟨fun s t => ⟨s ∩ t, s.closed.inter t.closed⟩⟩
+
+instance : HasTop (Closeds α) :=
+  ⟨⟨Univ, is_closed_univ⟩⟩
+
+instance : HasBot (Closeds α) :=
+  ⟨⟨∅, is_closed_empty⟩⟩
+
+instance : DistribLattice (Closeds α) :=
+  SetLike.coe_injective.DistribLattice _ (fun _ _ => rfl) fun _ _ => rfl
+
+instance : BoundedOrder (Closeds α) :=
+  BoundedOrder.lift (coe : _ → Set α) (fun _ _ => id) rfl rfl
 
 /-- The type of closed sets is inhabited, with default element the empty set. -/
-instance : inhabited (closeds α) := ⟨⊥⟩
+instance : Inhabited (Closeds α) :=
+  ⟨⊥⟩
 
-@[simp] lemma coe_sup (s t : closeds α) : (↑(s ⊔ t) : set α) = s ∪ t := rfl
-@[simp] lemma coe_inf (s t : closeds α) : (↑(s ⊓ t) : set α) = s ∩ t := rfl
-@[simp] lemma coe_top : (↑(⊤ : closeds α) : set α) = univ := rfl
-@[simp] lemma coe_bot : (↑(⊥ : closeds α) : set α) = ∅ := rfl
+@[simp]
+theorem coe_sup (s t : Closeds α) : (↑(s⊔t) : Set α) = s ∪ t :=
+  rfl
 
-end closeds
+@[simp]
+theorem coe_inf (s t : Closeds α) : (↑(s⊓t) : Set α) = s ∩ t :=
+  rfl
+
+@[simp]
+theorem coe_top : (↑(⊤ : Closeds α) : Set α) = univ :=
+  rfl
+
+@[simp]
+theorem coe_bot : (↑(⊥ : Closeds α) : Set α) = ∅ :=
+  rfl
+
+end Closeds
 
 /-! ### Clopen sets -/
 
+
 /-- The type of clopen sets of a topological space. -/
-structure clopens (α : Type*) [topological_space α] :=
-(carrier : set α)
-(clopen' : is_clopen carrier)
+structure Clopens (α : Type _) [TopologicalSpace α] where
+  Carrier : Set α
+  clopen' : IsClopen carrier
 
-namespace clopens
+namespace Clopens
 
-instance : set_like (clopens α) α :=
-{ coe := λ s, s.carrier,
-  coe_injective' := λ s t h, by { cases s, cases t, congr' } }
+instance : SetLike (Clopens α) α where
+  coe := fun s => s.Carrier
+  coe_injective' := fun s t h => by
+    cases s
+    cases t
+    congr
 
-lemma clopen (s : clopens α) : is_clopen (s : set α) := s.clopen'
+theorem clopen (s : Clopens α) : IsClopen (s : Set α) :=
+  s.clopen'
 
 /-- Reinterpret a compact open as an open. -/
-@[simps] def to_opens (s : clopens α) : opens α := ⟨s, s.clopen.is_open⟩
+@[simps]
+def toOpens (s : Clopens α) : Opens α :=
+  ⟨s, s.clopen.IsOpen⟩
 
-@[ext] protected lemma ext {s t : clopens α} (h : (s : set α) = t) : s = t := set_like.ext' h
+@[ext]
+protected theorem ext {s t : Clopens α} (h : (s : Set α) = t) : s = t :=
+  SetLike.ext' h
 
-@[simp] lemma coe_mk (s : set α) (h) : (mk s h : set α) = s := rfl
+@[simp]
+theorem coe_mk (s : Set α) h : (mk s h : Set α) = s :=
+  rfl
 
-instance : has_sup (clopens α) := ⟨λ s t, ⟨s ∪ t, s.clopen.union t.clopen⟩⟩
-instance : has_inf (clopens α) := ⟨λ s t, ⟨s ∩ t, s.clopen.inter t.clopen⟩⟩
-instance : has_top (clopens α) := ⟨⟨⊤, is_clopen_univ⟩⟩
-instance : has_bot (clopens α) := ⟨⟨⊥, is_clopen_empty⟩⟩
-instance : has_sdiff (clopens α) := ⟨λ s t, ⟨s \ t, s.clopen.diff t.clopen⟩⟩
-instance : has_compl (clopens α) := ⟨λ s, ⟨sᶜ, s.clopen.compl⟩⟩
+instance : HasSup (Clopens α) :=
+  ⟨fun s t => ⟨s ∪ t, s.clopen.union t.clopen⟩⟩
 
-instance : boolean_algebra (clopens α) :=
-set_like.coe_injective.boolean_algebra _ (λ _ _, rfl) (λ _ _, rfl) rfl rfl (λ _, rfl) (λ _ _, rfl)
+instance : HasInf (Clopens α) :=
+  ⟨fun s t => ⟨s ∩ t, s.clopen.inter t.clopen⟩⟩
 
-@[simp] lemma coe_sup (s t : clopens α) : (↑(s ⊔ t) : set α) = s ∪ t := rfl
-@[simp] lemma coe_inf (s t : clopens α) : (↑(s ⊓ t) : set α) = s ∩ t := rfl
-@[simp] lemma coe_top : (↑(⊤ : clopens α) : set α) = univ := rfl
-@[simp] lemma coe_bot : (↑(⊥ : clopens α) : set α) = ∅ := rfl
-@[simp] lemma coe_sdiff (s t : clopens α) : (↑(s \ t) : set α) = s \ t := rfl
-@[simp] lemma coe_compl (s : clopens α) : (↑sᶜ : set α) = sᶜ := rfl
+instance : HasTop (Clopens α) :=
+  ⟨⟨⊤, is_clopen_univ⟩⟩
 
-instance : inhabited (clopens α) := ⟨⊥⟩
+instance : HasBot (Clopens α) :=
+  ⟨⟨⊥, is_clopen_empty⟩⟩
 
-end clopens
-end topological_space
+instance : HasSdiff (Clopens α) :=
+  ⟨fun s t => ⟨s \ t, s.clopen.diff t.clopen⟩⟩
+
+instance : HasCompl (Clopens α) :=
+  ⟨fun s => ⟨sᶜ, s.clopen.Compl⟩⟩
+
+instance : BooleanAlgebra (Clopens α) :=
+  SetLike.coe_injective.BooleanAlgebra _ (fun _ _ => rfl) (fun _ _ => rfl) rfl rfl (fun _ => rfl) fun _ _ => rfl
+
+@[simp]
+theorem coe_sup (s t : Clopens α) : (↑(s⊔t) : Set α) = s ∪ t :=
+  rfl
+
+@[simp]
+theorem coe_inf (s t : Clopens α) : (↑(s⊓t) : Set α) = s ∩ t :=
+  rfl
+
+@[simp]
+theorem coe_top : (↑(⊤ : Clopens α) : Set α) = univ :=
+  rfl
+
+@[simp]
+theorem coe_bot : (↑(⊥ : Clopens α) : Set α) = ∅ :=
+  rfl
+
+@[simp]
+theorem coe_sdiff (s t : Clopens α) : (↑(s \ t) : Set α) = s \ t :=
+  rfl
+
+@[simp]
+theorem coe_compl (s : Clopens α) : (↑(sᶜ) : Set α) = sᶜ :=
+  rfl
+
+instance : Inhabited (Clopens α) :=
+  ⟨⊥⟩
+
+end Clopens
+
+end TopologicalSpace
+

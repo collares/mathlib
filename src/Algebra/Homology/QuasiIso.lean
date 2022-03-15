@@ -3,7 +3,7 @@ Copyright (c) 2021 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import algebra.homology.homology
+import Mathbin.Algebra.Homology.Homology
 
 /-!
 # Quasi-isomorphisms
@@ -16,33 +16,35 @@ Prove the 2-out-of-3 property.
 Define the derived category as the localization at quasi-isomorphisms?
 -/
 
-open category_theory
-open category_theory.limits
 
-universes v u
+open CategoryTheory
 
-variables {ι : Type*}
-variables {V : Type u} [category.{v} V] [has_zero_morphisms V] [has_zero_object V]
-variables [has_equalizers V] [has_images V] [has_image_maps V] [has_cokernels V]
-variables {c : complex_shape ι} {C D E : homological_complex V c}
+open CategoryTheory.Limits
 
-/--
-A chain map is a quasi-isomorphism if it induces isomorphisms on homology.
+universe v u
+
+variable {ι : Type _}
+
+variable {V : Type u} [Category.{v} V] [HasZeroMorphisms V] [HasZeroObject V]
+
+variable [HasEqualizers V] [HasImages V] [HasImageMaps V] [HasCokernels V]
+
+variable {c : ComplexShape ι} {C D E : HomologicalComplex V c}
+
+/-- A chain map is a quasi-isomorphism if it induces isomorphisms on homology.
 -/
-class quasi_iso (f : C ⟶ D) : Prop :=
-(is_iso : ∀ i, is_iso ((homology_functor V c i).map f))
+class QuasiIso (f : C ⟶ D) : Prop where
+  IsIso : ∀ i, IsIso ((homologyFunctor V c i).map f)
 
-attribute [instance] quasi_iso.is_iso
+attribute [instance] QuasiIso.is_iso
 
-@[priority 100]
-instance quasi_iso_of_iso (f : C ⟶ D) [is_iso f] : quasi_iso f :=
-{ is_iso := λ i, begin
-    change is_iso (((homology_functor V c i).map_iso (as_iso f)).hom),
-    apply_instance,
-  end }
+instance (priority := 100) quasi_iso_of_iso (f : C ⟶ D) [IsIso f] : QuasiIso f where
+  IsIso := fun i => by
+    change is_iso ((homologyFunctor V c i).mapIso (as_iso f)).Hom
+    infer_instance
 
-instance quasi_iso_comp (f : C ⟶ D) [quasi_iso f] (g : D ⟶ E) [quasi_iso g] : quasi_iso (f ≫ g) :=
-{ is_iso := λ i, begin
-    rw functor.map_comp,
-    apply_instance,
-  end }
+instance quasi_iso_comp (f : C ⟶ D) [QuasiIso f] (g : D ⟶ E) [QuasiIso g] : QuasiIso (f ≫ g) where
+  IsIso := fun i => by
+    rw [functor.map_comp]
+    infer_instance
+

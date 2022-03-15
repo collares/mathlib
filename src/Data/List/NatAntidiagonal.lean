@@ -3,7 +3,7 @@ Copyright (c) 2019 Johan Commelin. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johan Commelin
 -/
-import data.list.range
+import Mathbin.Data.List.Range
 
 /-!
 # Antidiagonals in ℕ × ℕ as lists
@@ -18,70 +18,76 @@ Files `data.multiset.nat_antidiagonal` and `data.finset.nat_antidiagonal` succes
 `list` definition we have here into `multiset` and `finset`.
 -/
 
-open list function nat
 
-namespace list
-namespace nat
+open List Function Nat
+
+namespace List
+
+namespace Nat
 
 /-- The antidiagonal of a natural number `n` is the list of pairs `(i, j)` such that `i + j = n`. -/
-def antidiagonal (n : ℕ) : list (ℕ × ℕ) :=
-(range (n+1)).map (λ i, (i, n - i))
+def antidiagonal (n : ℕ) : List (ℕ × ℕ) :=
+  (range (n + 1)).map fun i => (i, n - i)
 
 /-- A pair (i, j) is contained in the antidiagonal of `n` if and only if `i + j = n`. -/
-@[simp] lemma mem_antidiagonal {n : ℕ} {x : ℕ × ℕ} :
-  x ∈ antidiagonal n ↔ x.1 + x.2 = n :=
-begin
-  rw [antidiagonal, mem_map], split,
-  { rintros ⟨i, hi, rfl⟩, rw [mem_range, lt_succ_iff] at hi, exact add_tsub_cancel_of_le hi },
-  { rintro rfl, refine ⟨x.fst, _, _⟩,
-    { rw [mem_range, add_assoc, lt_add_iff_pos_right], exact zero_lt_succ _ },
-    { exact prod.ext rfl (add_tsub_cancel_left _ _) } }
-end
+@[simp]
+theorem mem_antidiagonal {n : ℕ} {x : ℕ × ℕ} : x ∈ antidiagonal n ↔ x.1 + x.2 = n := by
+  rw [antidiagonal, mem_map]
+  constructor
+  · rintro ⟨i, hi, rfl⟩
+    rw [mem_range, lt_succ_iff] at hi
+    exact add_tsub_cancel_of_le hi
+    
+  · rintro rfl
+    refine' ⟨x.fst, _, _⟩
+    · rw [mem_range, add_assocₓ, lt_add_iff_pos_right]
+      exact zero_lt_succ _
+      
+    · exact Prod.extₓ rfl (add_tsub_cancel_left _ _)
+      
+    
 
 /-- The length of the antidiagonal of `n` is `n + 1`. -/
-@[simp] lemma length_antidiagonal (n : ℕ) : (antidiagonal n).length = n+1 :=
-by rw [antidiagonal, length_map, length_range]
+@[simp]
+theorem length_antidiagonal (n : ℕ) : (antidiagonal n).length = n + 1 := by
+  rw [antidiagonal, length_map, length_range]
 
 /-- The antidiagonal of `0` is the list `[(0, 0)]` -/
-@[simp] lemma antidiagonal_zero : antidiagonal 0 = [(0, 0)] :=
-rfl
+@[simp]
+theorem antidiagonal_zero : antidiagonal 0 = [(0, 0)] :=
+  rfl
 
 /-- The antidiagonal of `n` does not contain duplicate entries. -/
-lemma nodup_antidiagonal (n : ℕ) : nodup (antidiagonal n) :=
-nodup_map (@left_inverse.injective ℕ (ℕ × ℕ) prod.fst (λ i, (i, n-i)) $ λ i, rfl) (nodup_range _)
+theorem nodup_antidiagonal (n : ℕ) : Nodupₓ (antidiagonal n) :=
+  nodup_map ((@LeftInverse.injective ℕ (ℕ × ℕ) Prod.fst fun i => (i, n - i)) fun i => rfl) (nodup_range _)
 
-@[simp] lemma antidiagonal_succ {n : ℕ} :
-  antidiagonal (n + 1) = (0, n + 1) :: ((antidiagonal n).map (prod.map nat.succ id)) :=
-begin
-  simp only [antidiagonal, range_succ_eq_map, map_cons, true_and, nat.add_succ_sub_one, add_zero,
-    id.def, eq_self_iff_true, tsub_zero, map_map, prod.map_mk],
-  apply congr (congr rfl _) rfl,
-  ext; simp,
-end
+@[simp]
+theorem antidiagonal_succ {n : ℕ} : antidiagonal (n + 1) = (0, n + 1) :: (antidiagonal n).map (Prod.map Nat.succ id) :=
+  by
+  simp only [antidiagonal, range_succ_eq_map, map_cons, true_andₓ, Nat.add_succ_sub_one, add_zeroₓ, id.def,
+    eq_self_iff_true, tsub_zero, map_map, Prod.map_mkₓ]
+  apply congr (congr rfl _) rfl
+  ext <;> simp
 
-lemma antidiagonal_succ' {n : ℕ} :
-  antidiagonal (n + 1) = ((antidiagonal n).map (prod.map id nat.succ)) ++ [(n + 1, 0)] :=
-begin
-  simp only [antidiagonal, range_succ, add_tsub_cancel_left, map_append,
-    append_assoc, tsub_self, singleton_append, map_map, map],
-  congr' 1,
-  apply map_congr,
-  simp [le_of_lt, nat.succ_eq_add_one, nat.sub_add_comm] { contextual := tt },
-end
+theorem antidiagonal_succ' {n : ℕ} :
+    antidiagonal (n + 1) = (antidiagonal n).map (Prod.map id Nat.succ) ++ [(n + 1, 0)] := by
+  simp only [antidiagonal, range_succ, add_tsub_cancel_left, map_append, append_assoc, tsub_self, singleton_append,
+    map_map, map]
+  congr 1
+  apply map_congr
+  simp (config := { contextual := true })[le_of_ltₓ, Nat.succ_eq_add_one, Nat.sub_add_commₓ]
 
-lemma antidiagonal_succ_succ' {n : ℕ} :
-  antidiagonal (n + 2) =
-  (0, n + 2) :: ((antidiagonal n).map (prod.map nat.succ nat.succ)) ++ [(n + 2, 0)] :=
-by { rw antidiagonal_succ', simpa }
+theorem antidiagonal_succ_succ' {n : ℕ} :
+    antidiagonal (n + 2) = (0, n + 2) :: (antidiagonal n).map (Prod.map Nat.succ Nat.succ) ++ [(n + 2, 0)] := by
+  rw [antidiagonal_succ']
+  simpa
 
-lemma map_swap_antidiagonal {n : ℕ} :
-  (antidiagonal n).map prod.swap = (antidiagonal n).reverse :=
-begin
-  rw [antidiagonal, map_map, prod.swap, ← list.map_reverse,
-    range_eq_range', reverse_range', ← range_eq_range', map_map],
-  apply map_congr,
-  simp [nat.sub_sub_self, lt_succ_iff] { contextual := tt },
-end
+theorem map_swap_antidiagonal {n : ℕ} : (antidiagonal n).map Prod.swap = (antidiagonal n).reverse := by
+  rw [antidiagonal, map_map, Prod.swap, ← List.map_reverse, range_eq_range', reverse_range', ← range_eq_range', map_map]
+  apply map_congr
+  simp (config := { contextual := true })[Nat.sub_sub_selfₓ, lt_succ_iff]
 
-end nat
-end list
+end Nat
+
+end List
+

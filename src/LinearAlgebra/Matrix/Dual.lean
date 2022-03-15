@@ -3,8 +3,9 @@ Copyright (c) 2019 Johannes Hölzl. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johannes Hölzl, Patrick Massot, Casper Putz, Anne Baanen
 -/
-import linear_algebra.dual
-import linear_algebra.matrix.to_lin
+import Mathbin.LinearAlgebra.Dual
+import Mathbin.LinearAlgebra.Matrix.ToLin
+
 /-!
 # Dual space, linear maps and matrices.
 
@@ -17,32 +18,25 @@ matrix, linear_map, transpose, dual
 -/
 
 
-open_locale matrix
+open_locale Matrix
 
-section transpose
+section Transpose
 
-variables {K V₁ V₂ ι₁ ι₂ : Type*} [field K]
-          [add_comm_group V₁] [module K V₁]
-          [add_comm_group V₂] [module K V₂]
-          [fintype ι₁] [fintype ι₂] [decidable_eq ι₁] [decidable_eq ι₂]
-          {B₁ : basis ι₁ K V₁}
-          {B₂ : basis ι₂ K V₂}
+variable {K V₁ V₂ ι₁ ι₂ : Type _} [Field K] [AddCommGroupₓ V₁] [Module K V₁] [AddCommGroupₓ V₂] [Module K V₂]
+  [Fintype ι₁] [Fintype ι₂] [DecidableEq ι₁] [DecidableEq ι₂] {B₁ : Basis ι₁ K V₁} {B₂ : Basis ι₂ K V₂}
 
-@[simp] lemma linear_map.to_matrix_transpose (u : V₁ →ₗ[K] V₂) :
-  linear_map.to_matrix B₂.dual_basis B₁.dual_basis (module.dual.transpose u) =
-    (linear_map.to_matrix B₁ B₂ u)ᵀ :=
-begin
-  ext i j,
-  simp only [linear_map.to_matrix_apply, module.dual.transpose_apply, B₁.dual_basis_repr,
-             B₂.dual_basis_apply, matrix.transpose_apply, linear_map.comp_apply]
-end
+@[simp]
+theorem LinearMap.to_matrix_transpose (u : V₁ →ₗ[K] V₂) :
+    LinearMap.toMatrix B₂.dualBasis B₁.dualBasis (Module.Dual.transpose u) = (LinearMap.toMatrix B₁ B₂ u)ᵀ := by
+  ext i j
+  simp only [LinearMap.to_matrix_apply, Module.Dual.transpose_apply, B₁.dual_basis_repr, B₂.dual_basis_apply,
+    Matrix.transpose_apply, LinearMap.comp_apply]
 
-@[simp] lemma matrix.to_lin_transpose (M : matrix ι₁ ι₂ K) :
-  matrix.to_lin B₁.dual_basis B₂.dual_basis Mᵀ =
-    module.dual.transpose (matrix.to_lin B₂ B₁ M) :=
-begin
-  apply (linear_map.to_matrix B₁.dual_basis B₂.dual_basis).injective,
-  rw [linear_map.to_matrix_to_lin, linear_map.to_matrix_transpose, linear_map.to_matrix_to_lin]
-end
+@[simp]
+theorem Matrix.to_lin_transpose (M : Matrix ι₁ ι₂ K) :
+    Matrix.toLin B₁.dualBasis B₂.dualBasis Mᵀ = Module.Dual.transpose (Matrix.toLin B₂ B₁ M) := by
+  apply (LinearMap.toMatrix B₁.dual_basis B₂.dual_basis).Injective
+  rw [LinearMap.to_matrix_to_lin, LinearMap.to_matrix_transpose, LinearMap.to_matrix_to_lin]
 
-end transpose
+end Transpose
+

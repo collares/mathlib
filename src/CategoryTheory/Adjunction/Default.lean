@@ -1,3 +1,4 @@
-import category_theory.adjunction.limits
-import category_theory.adjunction.opposites
-import category_theory.adjunction.reflective
+import Mathbin.CategoryTheory.Adjunction.Limits
+import Mathbin.CategoryTheory.Adjunction.Opposites
+import Mathbin.CategoryTheory.Adjunction.Reflective
+

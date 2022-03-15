@@ -3,9 +3,10 @@ Copyright (c) 2020 Eric Wieser. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Eric Wieser
 -/
-import group_theory.perm.basic
-import data.fintype.basic
-import group_theory.subgroup.basic
+import Mathbin.GroupTheory.Perm.Basic
+import Mathbin.Data.Fintype.Basic
+import Mathbin.GroupTheory.Subgroup.Basic
+
 /-!
 # Lemmas about subgroups within the permutations (self-equivalences) of a type `α`
 
@@ -19,50 +20,47 @@ The presence of these instances induces a `fintype` instance on the `quotient_gr
 these subgroups.
 -/
 
-namespace equiv
-namespace perm
 
-universes u
+namespace Equivₓ
 
-instance sum_congr_hom.decidable_mem_range {α β : Type*}
-  [decidable_eq α] [decidable_eq β] [fintype α] [fintype β] :
-  decidable_pred (∈ (sum_congr_hom α β).range) :=
-λ x, infer_instance
+namespace Perm
 
-@[simp]
-lemma sum_congr_hom.card_range {α β : Type*}
-  [fintype (sum_congr_hom α β).range] [fintype (perm α × perm β)] :
-  fintype.card (sum_congr_hom α β).range = fintype.card (perm α × perm β) :=
-fintype.card_eq.mpr ⟨(of_injective (sum_congr_hom α β) sum_congr_hom_injective).symm⟩
+universe u
 
-instance sigma_congr_right_hom.decidable_mem_range {α : Type*} {β : α → Type*}
-  [decidable_eq α] [∀ a, decidable_eq (β a)] [fintype α] [∀ a, fintype (β a)] :
-  decidable_pred (∈ (sigma_congr_right_hom β).range) :=
-λ x, infer_instance
+instance sumCongrHom.decidableMemRange {α β : Type _} [DecidableEq α] [DecidableEq β] [Fintype α] [Fintype β] :
+    DecidablePred (· ∈ (sumCongrHom α β).range) := fun x => inferInstance
 
 @[simp]
-lemma sigma_congr_right_hom.card_range {α : Type*} {β : α → Type*}
-  [fintype (sigma_congr_right_hom β).range] [fintype (Π a, perm (β a))] :
-  fintype.card (sigma_congr_right_hom β).range = fintype.card (Π a, perm (β a)) :=
-fintype.card_eq.mpr ⟨(of_injective (sigma_congr_right_hom β) sigma_congr_right_hom_injective).symm⟩
+theorem sumCongrHom.card_range {α β : Type _} [Fintype (sumCongrHom α β).range] [Fintype (Perm α × Perm β)] :
+    Fintype.card (sumCongrHom α β).range = Fintype.card (Perm α × Perm β) :=
+  Fintype.card_eq.mpr ⟨(ofInjective (sumCongrHom α β) sum_congr_hom_injective).symm⟩
 
-instance subtype_congr_hom.decidable_mem_range {α : Type*} (p : α → Prop) [decidable_pred p]
-  [fintype (perm {a // p a} × perm {a // ¬ p a})] [decidable_eq (perm α)] :
-  decidable_pred (∈ (subtype_congr_hom p).range) :=
-λ x, infer_instance
+instance sigmaCongrRightHom.decidableMemRange {α : Type _} {β : α → Type _} [DecidableEq α] [∀ a, DecidableEq (β a)]
+    [Fintype α] [∀ a, Fintype (β a)] : DecidablePred (· ∈ (sigmaCongrRightHom β).range) := fun x => inferInstance
 
 @[simp]
-lemma subtype_congr_hom.card_range {α : Type*} (p : α → Prop) [decidable_pred p]
-  [fintype (subtype_congr_hom p).range] [fintype (perm {a // p a} × perm {a // ¬ p a})] :
-  fintype.card (subtype_congr_hom p).range = fintype.card (perm {a // p a} × perm {a // ¬ p a}) :=
-fintype.card_eq.mpr ⟨(of_injective (subtype_congr_hom p) (subtype_congr_hom_injective p)).symm⟩
+theorem sigmaCongrRightHom.card_range {α : Type _} {β : α → Type _} [Fintype (sigmaCongrRightHom β).range]
+    [Fintype (∀ a, Perm (β a))] : Fintype.card (sigmaCongrRightHom β).range = Fintype.card (∀ a, Perm (β a)) :=
+  Fintype.card_eq.mpr ⟨(ofInjective (sigmaCongrRightHom β) sigma_congr_right_hom_injective).symm⟩
+
+instance subtypeCongrHom.decidableMemRange {α : Type _} (p : α → Prop) [DecidablePred p]
+    [Fintype (Perm { a // p a } × Perm { a // ¬p a })] [DecidableEq (Perm α)] :
+    DecidablePred (· ∈ (subtypeCongrHom p).range) := fun x => inferInstance
+
+@[simp]
+theorem subtypeCongrHom.card_range {α : Type _} (p : α → Prop) [DecidablePred p] [Fintype (subtypeCongrHom p).range]
+    [Fintype (Perm { a // p a } × Perm { a // ¬p a })] :
+    Fintype.card (subtypeCongrHom p).range = Fintype.card (Perm { a // p a } × Perm { a // ¬p a }) :=
+  Fintype.card_eq.mpr ⟨(ofInjective (subtypeCongrHom p) (subtype_congr_hom_injective p)).symm⟩
 
 /-- **Cayley's theorem**: Every group G is isomorphic to a subgroup of the symmetric group acting on
 `G`. Note that we generalize this to an arbitrary "faithful" group action by `G`. Setting `H = G`
 recovers the usual statement of Cayley's theorem via `right_cancel_monoid.to_has_faithful_scalar` -/
-noncomputable def subgroup_of_mul_action (G H : Type*) [group G] [mul_action G H]
-  [has_faithful_scalar G H] : G ≃* (mul_action.to_perm_hom G H).range :=
-mul_equiv.of_left_inverse' _ (classical.some_spec mul_action.to_perm_injective.has_left_inverse)
+noncomputable def subgroupOfMulAction (G H : Type _) [Groupₓ G] [MulAction G H] [HasFaithfulScalar G H] :
+    G ≃* (MulAction.toPermHom G H).range :=
+  MulEquiv.ofLeftInverse' _ (Classical.some_spec MulAction.to_perm_injective.HasLeftInverse)
 
-end perm
-end equiv
+end Perm
+
+end Equivₓ
+

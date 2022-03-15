@@ -4,14 +4,15 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johannes Hölzl (CMU)
 -/
 prelude
-import init.meta.tactic
-import init.meta.match_tactic
-import init.meta.mk_dec_eq_instance
-import init.data.list.instances
-import logic.relator
+import Leanbin.Init.Meta.Tactic
+import Leanbin.Init.Meta.MatchTactic
+import Leanbin.Init.Meta.MkDecEqInstance
+import Leanbin.Init.Data.List.Instances
+import Mathbin.Logic.Relator
 
-open tactic expr list monad
-namespace transfer
+open Tactic Expr List Monadₓ
+
+namespace Transfer
 
 /- Transfer rules are of the shape:
 
@@ -39,158 +40,171 @@ TODO: currently the used relation must be fixed by the matched rule or through t
   inference. Maybe we want to replace this by type inference similar to Isabelle's transfer.
 
 -/
+private unsafe structure rel_data where
+  in_type : expr
+  out_type : expr
+  relation : expr
 
+unsafe instance has_to_tactic_format_rel_data : has_to_tactic_format rel_data :=
+  ⟨fun r => do
+    let R ← pp r.relation
+    let α ← pp r.in_type
+    let β ← pp r.out_type
+    return f! "({R }: rel ({α }) ({β}))"⟩
 
-private meta structure rel_data :=
-(in_type : expr)
-(out_type : expr)
-(relation : expr)
+private unsafe structure rule_data where
+  pr : expr
+  uparams : List Name
+  -- levels not in pat
+  params : List (expr × Bool)
+  -- fst : local constant, snd = tt → param appears in pattern
+  uargs : List Name
+  -- levels not in pat
+  args : List (expr × rel_data)
+  -- fst : local constant
+  pat : pattern
+  -- `R c`
+  output : expr
 
-meta instance has_to_tactic_format_rel_data : has_to_tactic_format rel_data :=
-⟨λr, do
-  R ← pp r.relation,
-  α ← pp r.in_type,
-  β ← pp r.out_type,
-  return format!"({R}: rel ({α}) ({β}))" ⟩
+-- right-hand side `d` of rel equation `R c d`
+unsafe instance has_to_tactic_format_rule_data : has_to_tactic_format rule_data :=
+  ⟨fun r => do
+    let pr ← pp r.pr
+    let up ← pp r.uparams
+    let mp ← pp r.params
+    let ua ← pp r.uargs
+    let ma ← pp r.args
+    let pat ← pp r.pat.target
+    let output ← pp r.output
+    return f! "\{ ⟨{pat }⟩ pr: {pr } → {output }, {up } {mp } {ua } {ma} }}"⟩
 
-private meta structure rule_data :=
-(pr      : expr)
-(uparams : list name)              -- levels not in pat
-(params  : list (expr × bool))     -- fst : local constant, snd = tt → param appears in pattern
-(uargs   : list name)              -- levels not in pat
-(args    : list (expr × rel_data)) -- fst : local constant
-(pat     : pattern)                -- `R c`
-(output  : expr)                   -- right-hand side `d` of rel equation `R c d`
+private unsafe def get_lift_fun : expr → tactic (List rel_data × expr)
+  | e =>
+    (do
+        guardb (is_constant_of (get_app_fn e) `` Relator.LiftFun)
+        let [α, β, γ, δ, R, S] ← return <| get_app_args e
+        let (ps, r) ← get_lift_fun S
+        return (rel_data.mk α β R :: ps, r)) <|>
+      return ([], e)
 
-meta instance has_to_tactic_format_rule_data : has_to_tactic_format rule_data :=
-⟨λr, do
-  pr ← pp r.pr,
-  up ← pp r.uparams,
-  mp ← pp r.params,
-  ua ← pp r.uargs,
-  ma ← pp r.args,
-  pat ← pp r.pat.target,
-  output ← pp r.output,
-  return format!"{{ ⟨{pat}⟩ pr: {pr} → {output}, {up} {mp} {ua} {ma} }}" ⟩
+private unsafe def mark_occurences (e : expr) : List expr → List (expr × Bool)
+  | [] => []
+  | h :: t =>
+    let xs := mark_occurences t
+    (h, occurs h e || any xs fun ⟨e, oc⟩ => oc && occurs h e) :: xs
 
-private meta def get_lift_fun : expr → tactic (list rel_data × expr)
-| e :=
-  do
-  { guardb (is_constant_of (get_app_fn e) ``relator.lift_fun),
-    [α, β, γ, δ, R, S] ← return $ get_app_args e,
-    (ps, r) ← get_lift_fun S,
-    return (rel_data.mk α β R :: ps, r)} <|>
-  return ([], e)
+private unsafe def analyse_rule (u' : List Name) (pr : expr) : tactic rule_data := do
+  let t ← infer_type pr
+  let (params, app (app r f) g) ← mk_local_pis t
+  let (arg_rels, R) ← get_lift_fun r
+  let args ←
+    (enum arg_rels).mmap fun ⟨n, a⟩ => Prod.mk <$> mk_local_def (mkSimpleName ("a_" ++ reprₓ n)) a.in_type <*> pure a
+  let a_vars ← return <| Prod.fst <$> args
+  let p ← head_beta (app_of_list f a_vars)
+  let p_data ← return <| mark_occurences (app R p) params
+  let p_vars ← return <| List.map Prod.fst (p_data.filter fun x => ↑x.2)
+  let u ← return <| collect_univ_params (app R p) ∩ u'
+  let pat ← mk_pattern (level.param <$> u) (p_vars ++ a_vars) (app R p) (level.param <$> u) (p_vars ++ a_vars)
+  return <| rule_data.mk pr (u' u) p_data u args pat g
 
-private meta def mark_occurences (e : expr) : list expr → list (expr × bool)
-| []       := []
-| (h :: t) := let xs := mark_occurences t in
-  (h, occurs h e || any xs (λ⟨e, oc⟩, oc && occurs h e)) :: xs
+unsafe def analyse_decls : List Name → tactic (List rule_data) :=
+  mmapₓ fun n => do
+    let d ← get_decl n
+    let c ← return d.univ_params.length
+    let ls ← (repeat () c).mmap fun _ => mk_fresh_name
+    analyse_rule ls (const n (ls level.param))
 
-private meta def analyse_rule (u' : list name) (pr : expr) : tactic rule_data := do
-  t ← infer_type pr,
-  (params, app (app r f) g) ← mk_local_pis t,
-  (arg_rels, R) ← get_lift_fun r,
-  args    ← (enum arg_rels).mmap $ λ⟨n, a⟩,
-    prod.mk <$> mk_local_def (mk_simple_name ("a_" ++ repr n)) a.in_type <*> pure a,
-  a_vars  ← return $ prod.fst <$> args,
-  p       ← head_beta (app_of_list f a_vars),
-  p_data  ← return $ mark_occurences (app R p) params,
-  p_vars  ← return $ list.map prod.fst (p_data.filter (λx, ↑x.2)),
-  u       ← return $ collect_univ_params (app R p) ∩ u',
-  pat     ← mk_pattern (level.param <$> u) (p_vars ++ a_vars) (app R p) (level.param <$> u)
-    (p_vars ++ a_vars),
-  return $ rule_data.mk pr (u'.remove_all u) p_data u args pat g
+private unsafe def split_params_args : List (expr × Bool) → List expr → List (expr × Option expr) × List expr
+  | (lc, tt) :: ps, e :: es =>
+    let (ps', es') := split_params_args ps es
+    ((lc, some e) :: ps', es')
+  | (lc, ff) :: ps, es =>
+    let (ps', es') := split_params_args ps es
+    ((lc, none) :: ps', es')
+  | _, es => ([], es)
 
-meta def analyse_decls : list name → tactic (list rule_data) :=
-mmap (λn, do
-  d ← get_decl n,
-  c ← return d.univ_params.length,
-  ls ← (repeat () c).mmap (λ_, mk_fresh_name),
-  analyse_rule ls (const n (ls.map level.param)))
-
-private meta def split_params_args :
-  list (expr × bool) → list expr → list (expr × option expr) × list expr
-| ((lc, tt) :: ps) (e :: es) := let (ps', es') :=
-  split_params_args ps es in ((lc, some e) :: ps', es')
-| ((lc, ff) :: ps) es        := let (ps', es') :=
-  split_params_args ps es in ((lc, none) :: ps', es')
-| _ es := ([], es)
-
-private meta def param_substitutions (ctxt : list expr) :
-  list (expr × option expr) → tactic (list (name × expr) × list expr)
-| (((local_const n _ bi t), s) :: ps) := do
-  (e, m)  ← match s with
-  | (some e) := return (e, [])
-  | none     :=
-    let ctxt' := list.filter (λv, occurs v t) ctxt in
-    let ty := pis ctxt' t in
-    if bi = binder_info.inst_implicit then do
-      guard (bi = binder_info.inst_implicit),
-      e ← instantiate_mvars ty >>= mk_instance,
-      return (e, [])
-    else do
-      mv ← mk_meta_var ty,
-      return (app_of_list mv ctxt', [mv])
-  end,
-  sb ← return $ instantiate_local n e,
-  ps ← return $ prod.map sb ((<$>) sb) <$> ps,
-  (ms, vs) ← param_substitutions ps,
-  return ((n, e) :: ms, m ++ vs)
-| _ := return ([], [])
+private unsafe def param_substitutions (ctxt : List expr) :
+    List (expr × Option expr) → tactic (List (Name × expr) × List expr)
+  | (local_const n _ bi t, s) :: ps => do
+    let (e, m) ←
+      match s with
+        | some e => return (e, [])
+        | none =>
+          let ctxt' := List.filterₓ (fun v => occurs v t) ctxt
+          let ty := pis ctxt' t
+          if bi = BinderInfo.inst_implicit then do
+            guardₓ (bi = BinderInfo.inst_implicit)
+            let e ← instantiate_mvars ty >>= mk_instance
+            return (e, [])
+          else do
+            let mv ← mk_meta_var ty
+            return (app_of_list mv ctxt', [mv])
+    let sb ← return <| instantiate_local n e
+    let ps ← return <| Prod.map sb ((· <$> ·) sb) <$> ps
+    let (ms, vs) ← param_substitutions ps
+    return ((n, e) :: ms, m ++ vs)
+  | _ => return ([], [])
 
 /- input expression a type `R a`, it finds a type `b`, s.t. there is a proof of the type `R a b`.
 It return (`a`, pr : `R a b`) -/
-meta def compute_transfer : list rule_data → list expr → expr → tactic (expr × expr × list expr)
-| rds ctxt e := do
-  -- Select matching rule
-  (i, ps, args, ms, rd) ← first (rds.map (λrd, do
-    (l, m)     ← match_pattern rd.pat e semireducible,
-    level_map  ← rd.uparams.mmap $ λl, prod.mk l <$> mk_meta_univ,
-    inst_univ  ← return $ λe, instantiate_univ_params e (level_map ++ zip rd.uargs l),
-    (ps, args) ← return $ split_params_args (rd.params.map (prod.map inst_univ id)) m,
-    (ps, ms)   ← param_substitutions ctxt ps, /- this checks type class parameters -/
-    return (instantiate_locals ps ∘ inst_univ, ps, args, ms, rd))) <|>
-  (do trace e, fail "no matching rule"),
+unsafe def compute_transfer : List rule_data → List expr → expr → tactic (expr × expr × List expr)
+  | rds, ctxt, e => do
+    let-- Select matching rule
+      (i, ps, args, ms, rd)
+      ←-- this checks type class parameters
+            first
+            (rds.map fun rd => do
+              let (l, m) ← match_pattern rd.pat e semireducible
+              let level_map ← rd.uparams.mmap fun l => Prod.mk l <$> mk_meta_univ
+              let inst_univ ← return fun e => instantiate_univ_params e (level_map ++ zipₓ rd.uargs l)
+              let (ps, args) ← return <| split_params_args (rd.params.map (Prod.map inst_univ id)) m
+              let (ps, ms) ← param_substitutions ctxt ps
+              return (instantiate_locals ps ∘ inst_univ, ps, args, ms, rd)) <|>
+          do
+          trace e
+          fail "no matching rule"
+    let (bs, hs, mss) ←
+      ((-- Argument has function type
+                -- Transfer argument
+                zipₓ
+                rd.args args).mmap
+            fun ⟨⟨_, d⟩, e⟩ => do
+            let (args, r) ← get_lift_fun (i d.relation)
+            let ((a_vars, b_vars), (R_vars, bnds)) ←
+              ((enum args).mmap fun ⟨n, arg⟩ => do
+                    let a ← mk_local_def (s! "a{n}") arg.in_type
+                    let b ← mk_local_def (s! "b{n}") arg.out_type
+                    let R ← mk_local_def (s! "R{n}") (arg.relation a b)
+                    return ((a, b), (R, [a, b, R]))) >>=
+                  return ∘ Prod.map unzip unzip ∘ unzip
+            let rds' ← R_vars.mmap (analyse_rule [])
+            let a ← return <| i e
+            let a' ← head_beta (app_of_list a a_vars)
+            let (b, pr, ms) ← compute_transfer (rds ++ rds') (ctxt ++ a_vars) (app r a')
+            let b' ← head_eta (lambdas b_vars b)
+            return (b', [a, b', lambdas (List.join bnds) pr], ms)) >>=
+          return ∘ Prod.map id unzip ∘ unzip
+    let b
+      ←-- Combine
+          head_beta
+          (app_of_list (i rd.output) bs)
+    let pr ← return <| app_of_list (i rd.pr) (Prod.snd <$> ps ++ List.join hs)
+    return (b, pr, ms ++ mss)
 
-  (bs, hs, mss) ← (zip rd.args args).mmap (λ⟨⟨_, d⟩, e⟩, do
-    -- Argument has function type
-    (args, r) ← get_lift_fun (i d.relation),
-    ((a_vars, b_vars), (R_vars, bnds)) ← (enum args).mmap (λ⟨n, arg⟩, do
-      a ← mk_local_def sformat!"a{n}" arg.in_type,
-      b ← mk_local_def sformat!"b{n}" arg.out_type,
-      R ← mk_local_def sformat!"R{n}" (arg.relation a b),
-      return ((a, b), (R, [a, b, R]))) >>= (return ∘ prod.map unzip unzip ∘ unzip),
-    rds'      ← R_vars.mmap (analyse_rule []),
+end Transfer
 
-    -- Transfer argument
-    a           ← return $ i e,
-    a'          ← head_beta (app_of_list a a_vars),
-    (b, pr, ms) ← compute_transfer (rds ++ rds') (ctxt ++ a_vars) (app r a'),
-    b'          ← head_eta (lambdas b_vars b),
-    return (b', [a, b', lambdas (list.join bnds) pr], ms)) >>= (return ∘ prod.map id unzip ∘ unzip),
+open Transfer
 
-  -- Combine
-  b  ← head_beta (app_of_list (i rd.output) bs),
-  pr ← return $ app_of_list (i rd.pr) (prod.snd <$> ps ++ list.join hs),
-  return (b, pr, ms ++ mss.join)
+unsafe def tactic.transfer (ds : List Name) : tactic Unit := do
+  let rds ← analyse_decls ds
+  let tgt ← target
+  guardₓ ¬tgt <|> fail "Target contains (universe) meta variables. This is not supported by transfer."
+  let (new_tgt, pr, ms) ← compute_transfer rds [] ((const `iff [] : expr) tgt)
+  let new_pr ← mk_meta_var new_tgt
+  -- Setup final tactic state
+      exact
+      ((const `iff.mpr [] : expr) tgt new_tgt pr new_pr)
+  let ms ← ms.mmap fun m => get_assignment m >> return [] <|> return [m]
+  let gs ← get_goals
+  set_goals (ms ++ new_pr :: gs)
 
-end transfer
-
-open transfer
-
-meta def tactic.transfer (ds : list name) : tactic unit := do
-  rds ← analyse_decls ds,
-  tgt ← target,
-
-  (guard (¬ tgt.has_meta_var) <|>
-    fail "Target contains (universe) meta variables. This is not supported by transfer."),
-
-  (new_tgt, pr, ms) ← compute_transfer rds [] ((const `iff [] : expr) tgt),
-  new_pr ← mk_meta_var new_tgt,
-
-  /- Setup final tactic state -/
-  exact ((const `iff.mpr [] : expr) tgt new_tgt pr new_pr),
-  ms ← ms.mmap (λm, (get_assignment m >> return []) <|> return [m]),
-  gs ← get_goals,
-  set_goals (ms.join ++ new_pr :: gs)

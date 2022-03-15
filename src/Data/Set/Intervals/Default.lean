@@ -1,2 +1,3 @@
-import data.set.intervals.disjoint
-import data.set.intervals.unordered_interval
+import Mathbin.Data.Set.Intervals.Disjoint
+import Mathbin.Data.Set.Intervals.UnorderedInterval
+

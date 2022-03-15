@@ -3,8 +3,7 @@ Copyright (c) 2021 Anne Baanen. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Anne Baanen
 -/
-
-import data.fun_like.basic
+import Mathbin.Data.FunLike.Basic
 
 /-!
 # Typeclass for a type `F` with an injective map to `A ↪ B`
@@ -120,28 +119,32 @@ instead of linearly increasing the work per `my_embedding`-related declaration.
 
 -/
 
+
 /-- The class `embedding_like F α β` expresses that terms of type `F` have an
 injective coercion to injective functions `α ↪ β`.
 -/
-class embedding_like (F : Sort*) (α β : out_param Sort*)
-  extends fun_like F α (λ _, β) :=
-(injective' : ∀ (f : F), @function.injective α β (coe f))
+class EmbeddingLike (F : Sort _) (α β : outParam (Sort _)) extends FunLike F α fun _ => β where
+  injective' : ∀ f : F, @Function.Injective α β (coe f)
 
-namespace embedding_like
+namespace EmbeddingLike
 
-variables {F α β γ : Sort*} [i : embedding_like F α β]
+variable {F α β γ : Sort _} [i : EmbeddingLike F α β]
 
 include i
 
-protected lemma injective (f : F) : function.injective f := injective' f
+protected theorem injective (f : F) : Function.Injective f :=
+  injective' f
 
-@[simp] lemma apply_eq_iff_eq (f : F) {x y : α} : f x = f y ↔ x = y :=
-(embedding_like.injective f).eq_iff
+@[simp]
+theorem apply_eq_iff_eq (f : F) {x y : α} : f x = f y ↔ x = y :=
+  (EmbeddingLike.injective f).eq_iff
 
 omit i
 
-@[simp] lemma comp_injective {F : Sort*} [embedding_like F β γ] (f : α → β) (e : F) :
-  function.injective (e ∘ f) ↔ function.injective f :=
-(embedding_like.injective e).of_comp_iff f
+@[simp]
+theorem comp_injective {F : Sort _} [EmbeddingLike F β γ] (f : α → β) (e : F) :
+    Function.Injective (e ∘ f) ↔ Function.Injective f :=
+  (EmbeddingLike.injective e).of_comp_iff f
 
-end embedding_like
+end EmbeddingLike
+

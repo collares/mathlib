@@ -3,10 +3,10 @@ Copyright (c) 2018 Johannes Hölzl. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johannes Hölzl, Callum Sutton, Yury Kudryashov
 -/
-import data.equiv.mul_add
-import algebra.field.basic
-import algebra.ring.opposite
-import algebra.big_operators.basic
+import Mathbin.Data.Equiv.MulAdd
+import Mathbin.Algebra.Field.Basic
+import Mathbin.Algebra.Ring.Opposite
+import Mathbin.Algebra.BigOperators.Basic
 
 /-!
 # (Semi)ring equivs
@@ -36,252 +36,302 @@ multiplication in `equiv.perm`, and multiplication in `category_theory.End`, not
 equiv, mul_equiv, add_equiv, ring_equiv, mul_aut, add_aut, ring_aut
 -/
 
-open_locale big_operators
 
-variables {F α β R S S' : Type*}
+open_locale BigOperators
 
-set_option old_structure_cmd true
+variable {F α β R S S' : Type _}
 
 /-- An equivalence between two (semi)rings that preserves the algebraic structure. -/
-structure ring_equiv (R S : Type*) [has_mul R] [has_add R] [has_mul S] [has_add S]
-  extends R ≃ S, R ≃* S, R ≃+ S
+structure RingEquiv (R S : Type _) [Mul R] [Add R] [Mul S] [Add S] extends R ≃ S, R ≃* S, R ≃+ S
 
-infix ` ≃+* `:25 := ring_equiv
+-- mathport name: «expr ≃+* »
+infixl:25 " ≃+* " => RingEquiv
 
 /-- The "plain" equivalence of types underlying an equivalence of (semi)rings. -/
-add_decl_doc ring_equiv.to_equiv
+add_decl_doc RingEquiv.toEquiv
 
 /-- The equivalence of additive monoids underlying an equivalence of (semi)rings. -/
-add_decl_doc ring_equiv.to_add_equiv
+add_decl_doc RingEquiv.toAddEquiv
 
 /-- The equivalence of multiplicative monoids underlying an equivalence of (semi)rings. -/
-add_decl_doc ring_equiv.to_mul_equiv
+add_decl_doc RingEquiv.toMulEquiv
 
 /-- `ring_equiv_class F R S` states that `F` is a type of ring structure preserving equivalences.
 You should extend this class when you extend `ring_equiv`. -/
-class ring_equiv_class (F : Type*) (R S : out_param Type*)
-  [has_mul R] [has_add R] [has_mul S] [has_add S]
-  extends mul_equiv_class F R S :=
-(map_add : ∀ (f : F) a b, f (a + b) = f a + f b)
+class RingEquivClass (F : Type _) (R S : outParam (Type _)) [Mul R] [Add R] [Mul S] [Add S] extends
+  MulEquivClass F R S where
+  map_add : ∀ f : F a b, f (a + b) = f a + f b
 
-namespace ring_equiv_class
+namespace RingEquivClass
 
-@[priority 100] -- See note [lower instance priority]
-instance to_add_equiv_class (F R S : Type*)
-  [has_mul R] [has_add R] [has_mul S] [has_add S] [h : ring_equiv_class F R S] :
-  add_equiv_class F R S :=
-{ coe := coe_fn,
-  .. h }
+-- See note [lower instance priority]
+instance (priority := 100) toAddEquivClass (F R S : Type _) [Mul R] [Add R] [Mul S] [Add S] [h : RingEquivClass F R S] :
+    AddEquivClass F R S :=
+  { h with coe := coeFn }
 
-@[priority 100] -- See note [lower instance priority]
-instance to_ring_hom_class (F R S : Type*)
-  [non_assoc_semiring R] [non_assoc_semiring S] [h : ring_equiv_class F R S] :
-  ring_hom_class F R S :=
-{ coe := coe_fn,
-  coe_injective' := fun_like.coe_injective,
-  map_zero := map_zero,
-  map_one := map_one,
-  .. h }
+-- See note [lower instance priority]
+instance (priority := 100) toRingHomClass (F R S : Type _) [NonAssocSemiringₓ R] [NonAssocSemiringₓ S]
+    [h : RingEquivClass F R S] : RingHomClass F R S :=
+  { h with coe := coeFn, coe_injective' := FunLike.coe_injective, map_zero := map_zero, map_one := map_one }
 
-end ring_equiv_class
+end RingEquivClass
 
-instance [has_mul α] [has_add α] [has_mul β] [has_add β] [ring_equiv_class F α β] :
-  has_coe_t F (α ≃+* β) :=
-⟨λ f, { to_fun := f, inv_fun := equiv_like.inv f, left_inv := equiv_like.left_inv f,
-  right_inv := equiv_like.right_inv f, map_mul' := map_mul f, map_add' := map_add f }⟩
+instance [Mul α] [Add α] [Mul β] [Add β] [RingEquivClass F α β] : CoeTₓ F (α ≃+* β) :=
+  ⟨fun f =>
+    { toFun := f, invFun := EquivLike.inv f, left_inv := EquivLike.left_inv f, right_inv := EquivLike.right_inv f,
+      map_mul' := map_mul f, map_add' := map_add f }⟩
 
-namespace ring_equiv
+namespace RingEquiv
 
-section basic
+section Basic
 
-variables [has_mul R] [has_add R] [has_mul S] [has_add S] [has_mul S'] [has_add S']
+variable [Mul R] [Add R] [Mul S] [Add S] [Mul S'] [Add S']
 
-instance : ring_equiv_class (R ≃+* S) R S :=
-{ coe := to_fun,
-  inv := inv_fun,
-  coe_injective' := λ e f h₁ h₂, by { cases e, cases f, congr' },
-  map_add := map_add',
-  map_mul := map_mul',
-  left_inv := ring_equiv.left_inv,
-  right_inv := ring_equiv.right_inv }
+instance : RingEquivClass (R ≃+* S) R S where
+  coe := toFun
+  inv := invFun
+  coe_injective' := fun e f h₁ h₂ => by
+    cases e
+    cases f
+    congr
+  map_add := map_add'
+  map_mul := map_mul'
+  left_inv := RingEquiv.left_inv
+  right_inv := RingEquiv.right_inv
 
-instance : has_coe_to_fun (R ≃+* S) (λ _, R → S) := ⟨ring_equiv.to_fun⟩
+instance : CoeFun (R ≃+* S) fun _ => R → S :=
+  ⟨RingEquiv.toFun⟩
 
-@[simp] lemma to_fun_eq_coe (f : R ≃+* S) : f.to_fun = f := rfl
+@[simp]
+theorem to_fun_eq_coe (f : R ≃+* S) : f.toFun = f :=
+  rfl
 
 /-- A ring isomorphism preserves multiplication. -/
-protected lemma map_mul (e : R ≃+* S) (x y : R) : e (x * y) = e x * e y := map_mul e x y
+protected theorem map_mul (e : R ≃+* S) (x y : R) : e (x * y) = e x * e y :=
+  map_mul e x y
 
 /-- A ring isomorphism preserves addition. -/
-protected lemma map_add (e : R ≃+* S) (x y : R) : e (x + y) = e x + e y := map_add e x y
+protected theorem map_add (e : R ≃+* S) (x y : R) : e (x + y) = e x + e y :=
+  map_add e x y
 
 /-- Two ring isomorphisms agree if they are defined by the
     same underlying function. -/
-@[ext] lemma ext {f g : R ≃+* S} (h : ∀ x, f x = g x) : f = g := fun_like.ext f g h
+@[ext]
+theorem ext {f g : R ≃+* S} (h : ∀ x, f x = g x) : f = g :=
+  FunLike.ext f g h
 
-@[simp] theorem coe_mk (e e' h₁ h₂ h₃ h₄) :
-  ⇑(⟨e, e', h₁, h₂, h₃, h₄⟩ : R ≃+* S) = e := rfl
+@[simp]
+theorem coe_mk e e' h₁ h₂ h₃ h₄ : ⇑(⟨e, e', h₁, h₂, h₃, h₄⟩ : R ≃+* S) = e :=
+  rfl
 
-@[simp] theorem mk_coe (e : R ≃+* S) (e' h₁ h₂ h₃ h₄) :
-  (⟨e, e', h₁, h₂, h₃, h₄⟩ : R ≃+* S) = e := ext $ λ _, rfl
+@[simp]
+theorem mk_coe (e : R ≃+* S) e' h₁ h₂ h₃ h₄ : (⟨e, e', h₁, h₂, h₃, h₄⟩ : R ≃+* S) = e :=
+  ext fun _ => rfl
 
-protected lemma congr_arg {f : R ≃+* S} {x x' : R} : x = x' → f x = f x' := fun_like.congr_arg f
+protected theorem congr_arg {f : R ≃+* S} {x x' : R} : x = x' → f x = f x' :=
+  FunLike.congr_arg f
 
-protected lemma congr_fun {f g : R ≃+* S} (h : f = g) (x : R) : f x = g x := fun_like.congr_fun h x
+protected theorem congr_fun {f g : R ≃+* S} (h : f = g) (x : R) : f x = g x :=
+  FunLike.congr_fun h x
 
-protected lemma ext_iff {f g : R ≃+* S} : f = g ↔ ∀ x, f x = g x := fun_like.ext_iff
+protected theorem ext_iff {f g : R ≃+* S} : f = g ↔ ∀ x, f x = g x :=
+  FunLike.ext_iff
 
-@[simp] lemma to_add_equiv_eq_coe (f : R ≃+* S) : f.to_add_equiv = ↑f := rfl
+@[simp]
+theorem to_add_equiv_eq_coe (f : R ≃+* S) : f.toAddEquiv = ↑f :=
+  rfl
 
-@[simp] lemma to_mul_equiv_eq_coe (f : R ≃+* S) : f.to_mul_equiv = ↑f := rfl
+@[simp]
+theorem to_mul_equiv_eq_coe (f : R ≃+* S) : f.toMulEquiv = ↑f :=
+  rfl
 
-@[simp, norm_cast] lemma coe_to_mul_equiv (f : R ≃+* S) : ⇑(f : R ≃* S) = f := rfl
+@[simp, norm_cast]
+theorem coe_to_mul_equiv (f : R ≃+* S) : ⇑(f : R ≃* S) = f :=
+  rfl
 
-@[simp, norm_cast] lemma coe_to_add_equiv (f : R ≃+* S) : ⇑(f : R ≃+ S) = f := rfl
+@[simp, norm_cast]
+theorem coe_to_add_equiv (f : R ≃+* S) : ⇑(f : R ≃+ S) = f :=
+  rfl
 
 /-- The `ring_equiv` between two semirings with a unique element. -/
-def ring_equiv_of_unique_of_unique {M N}
-  [unique M] [unique N] [has_add M] [has_mul M] [has_add N] [has_mul N] : M ≃+* N :=
-{ ..add_equiv.add_equiv_of_unique_of_unique,
-  ..mul_equiv.mul_equiv_of_unique_of_unique}
+def ringEquivOfUniqueOfUnique {M N} [Unique M] [Unique N] [Add M] [Mul M] [Add N] [Mul N] : M ≃+* N :=
+  { AddEquiv.addEquivOfUniqueOfUnique, MulEquiv.mulEquivOfUniqueOfUnique with }
 
-instance {M N} [unique M] [unique N] [has_add M] [has_mul M] [has_add N] [has_mul N] :
-  unique (M ≃+* N) :=
-{ default := ring_equiv_of_unique_of_unique,
-  uniq := λ _, ext $ λ x, subsingleton.elim _ _ }
+instance {M N} [Unique M] [Unique N] [Add M] [Mul M] [Add N] [Mul N] : Unique (M ≃+* N) where
+  default := ringEquivOfUniqueOfUnique
+  uniq := fun _ => ext fun x => Subsingleton.elimₓ _ _
 
 variable (R)
 
 /-- The identity map is a ring isomorphism. -/
-@[refl] protected def refl : R ≃+* R := { .. mul_equiv.refl R, .. add_equiv.refl R }
+@[refl]
+protected def refl : R ≃+* R :=
+  { MulEquiv.refl R, AddEquiv.refl R with }
 
-@[simp] lemma refl_apply (x : R) : ring_equiv.refl R x = x := rfl
+@[simp]
+theorem refl_apply (x : R) : RingEquiv.refl R x = x :=
+  rfl
 
-@[simp] lemma coe_add_equiv_refl : (ring_equiv.refl R : R ≃+ R) = add_equiv.refl R := rfl
+@[simp]
+theorem coe_add_equiv_refl : (RingEquiv.refl R : R ≃+ R) = AddEquiv.refl R :=
+  rfl
 
-@[simp] lemma coe_mul_equiv_refl : (ring_equiv.refl R : R ≃* R) = mul_equiv.refl R := rfl
+@[simp]
+theorem coe_mul_equiv_refl : (RingEquiv.refl R : R ≃* R) = MulEquiv.refl R :=
+  rfl
 
-instance : inhabited (R ≃+* R) := ⟨ring_equiv.refl R⟩
+instance : Inhabited (R ≃+* R) :=
+  ⟨RingEquiv.refl R⟩
 
-variables {R}
+variable {R}
 
 /-- The inverse of a ring isomorphism is a ring isomorphism. -/
-@[symm] protected def symm (e : R ≃+* S) : S ≃+* R :=
-{ .. e.to_mul_equiv.symm, .. e.to_add_equiv.symm }
+@[symm]
+protected def symm (e : R ≃+* S) : S ≃+* R :=
+  { e.toMulEquiv.symm, e.toAddEquiv.symm with }
 
 /-- See Note [custom simps projection] -/
-def simps.symm_apply (e : R ≃+* S) : S → R := e.symm
+def Simps.symmApply (e : R ≃+* S) : S → R :=
+  e.symm
 
-initialize_simps_projections ring_equiv (to_fun → apply, inv_fun → symm_apply)
+initialize_simps_projections RingEquiv (toFun → apply, invFun → symmApply)
 
-@[simp] lemma inv_fun_eq_symm (f : R ≃+* S) : f.inv_fun = f.symm := rfl
+@[simp]
+theorem inv_fun_eq_symm (f : R ≃+* S) : f.invFun = f.symm :=
+  rfl
 
-@[simp] lemma symm_symm (e : R ≃+* S) : e.symm.symm = e := ext $ λ x, rfl
+@[simp]
+theorem symm_symm (e : R ≃+* S) : e.symm.symm = e :=
+  ext fun x => rfl
 
-lemma symm_bijective : function.bijective (ring_equiv.symm : (R ≃+* S) → (S ≃+* R)) :=
-equiv.bijective ⟨ring_equiv.symm, ring_equiv.symm, symm_symm, symm_symm⟩
+theorem symm_bijective : Function.Bijective (RingEquiv.symm : R ≃+* S → S ≃+* R) :=
+  Equivₓ.bijective ⟨RingEquiv.symm, RingEquiv.symm, symm_symm, symm_symm⟩
 
-@[simp] lemma mk_coe' (e : R ≃+* S) (f h₁ h₂ h₃ h₄) :
-  (ring_equiv.mk f ⇑e h₁ h₂ h₃ h₄ : S ≃+* R) = e.symm :=
-symm_bijective.injective $ ext $ λ x, rfl
+@[simp]
+theorem mk_coe' (e : R ≃+* S) f h₁ h₂ h₃ h₄ : (RingEquiv.mk f (⇑e) h₁ h₂ h₃ h₄ : S ≃+* R) = e.symm :=
+  symm_bijective.Injective <| ext fun x => rfl
 
-@[simp] lemma symm_mk (f : R → S) (g h₁ h₂ h₃ h₄) :
-  (mk f g h₁ h₂ h₃ h₄).symm =
-  { to_fun := g, inv_fun := f, ..(mk f g h₁ h₂ h₃ h₄).symm} := rfl
+@[simp]
+theorem symm_mk (f : R → S) g h₁ h₂ h₃ h₄ :
+    (mk f g h₁ h₂ h₃ h₄).symm = { (mk f g h₁ h₂ h₃ h₄).symm with toFun := g, invFun := f } :=
+  rfl
 
 /-- Transitivity of `ring_equiv`. -/
-@[trans] protected def trans (e₁ : R ≃+* S) (e₂ : S ≃+* S') : R ≃+* S' :=
-{ .. (e₁.to_mul_equiv.trans e₂.to_mul_equiv), .. (e₁.to_add_equiv.trans e₂.to_add_equiv) }
+@[trans]
+protected def trans (e₁ : R ≃+* S) (e₂ : S ≃+* S') : R ≃+* S' :=
+  { e₁.toMulEquiv.trans e₂.toMulEquiv, e₁.toAddEquiv.trans e₂.toAddEquiv with }
 
-@[simp] lemma trans_apply (e₁ : R ≃+* S) (e₂ : S ≃+* S') (a : R) :
-  e₁.trans e₂ a = e₂ (e₁ a) := rfl
+@[simp]
+theorem trans_apply (e₁ : R ≃+* S) (e₂ : S ≃+* S') (a : R) : e₁.trans e₂ a = e₂ (e₁ a) :=
+  rfl
 
-protected lemma bijective (e : R ≃+* S) : function.bijective e := equiv_like.bijective e
-protected lemma injective (e : R ≃+* S) : function.injective e := equiv_like.injective e
-protected lemma surjective (e : R ≃+* S) : function.surjective e := equiv_like.surjective e
+protected theorem bijective (e : R ≃+* S) : Function.Bijective e :=
+  EquivLike.bijective e
 
-@[simp] lemma apply_symm_apply (e : R ≃+* S) : ∀ x, e (e.symm x) = x := e.to_equiv.apply_symm_apply
-@[simp] lemma symm_apply_apply (e : R ≃+* S) : ∀ x, e.symm (e x) = x := e.to_equiv.symm_apply_apply
+protected theorem injective (e : R ≃+* S) : Function.Injective e :=
+  EquivLike.injective e
 
-lemma image_eq_preimage (e : R ≃+* S) (s : set R) : e '' s = e.symm ⁻¹' s :=
-e.to_equiv.image_eq_preimage s
+protected theorem surjective (e : R ≃+* S) : Function.Surjective e :=
+  EquivLike.surjective e
 
-end basic
+@[simp]
+theorem apply_symm_apply (e : R ≃+* S) : ∀ x, e (e.symm x) = x :=
+  e.toEquiv.apply_symm_apply
 
-section opposite
-open mul_opposite
+@[simp]
+theorem symm_apply_apply (e : R ≃+* S) : ∀ x, e.symm (e x) = x :=
+  e.toEquiv.symm_apply_apply
+
+theorem image_eq_preimage (e : R ≃+* S) (s : Set R) : e '' s = e.symm ⁻¹' s :=
+  e.toEquiv.image_eq_preimage s
+
+end Basic
+
+section Opposite
+
+open MulOpposite
 
 /-- A ring iso `α ≃+* β` can equivalently be viewed as a ring iso `αᵐᵒᵖ ≃+* βᵐᵒᵖ`. -/
 @[simps]
-protected def op {α β} [has_add α] [has_mul α] [has_add β] [has_mul β] :
-  (α ≃+* β) ≃ (αᵐᵒᵖ ≃+* βᵐᵒᵖ) :=
-{ to_fun    := λ f, { ..f.to_add_equiv.mul_op, ..f.to_mul_equiv.op},
-  inv_fun   := λ f, { ..add_equiv.mul_op.symm f.to_add_equiv, ..mul_equiv.op.symm f.to_mul_equiv },
-  left_inv  := λ f, by { ext, refl },
-  right_inv := λ f, by { ext, refl } }
+protected def op {α β} [Add α] [Mul α] [Add β] [Mul β] : α ≃+* β ≃ (αᵐᵒᵖ ≃+* βᵐᵒᵖ) where
+  toFun := fun f => { f.toAddEquiv.mulOp, f.toMulEquiv.op with }
+  invFun := fun f => { AddEquiv.mulOp.symm f.toAddEquiv, MulEquiv.op.symm f.toMulEquiv with }
+  left_inv := fun f => by
+    ext
+    rfl
+  right_inv := fun f => by
+    ext
+    rfl
 
 /-- The 'unopposite' of a ring iso `αᵐᵒᵖ ≃+* βᵐᵒᵖ`. Inverse to `ring_equiv.op`. -/
-@[simp] protected def unop {α β} [has_add α] [has_mul α] [has_add β] [has_mul β] :
-  (αᵐᵒᵖ ≃+* βᵐᵒᵖ) ≃ (α ≃+* β) := ring_equiv.op.symm
+@[simp]
+protected def unop {α β} [Add α] [Mul α] [Add β] [Mul β] : αᵐᵒᵖ ≃+* βᵐᵒᵖ ≃ (α ≃+* β) :=
+  RingEquiv.op.symm
 
-section comm_semiring
+section CommSemiringₓ
 
-variables (R) [comm_semiring R]
+variable (R) [CommSemiringₓ R]
 
 /-- A commutative ring is isomorphic to its opposite. -/
-def to_opposite : R ≃+* Rᵐᵒᵖ :=
-{ map_add' := λ x y, rfl,
-  map_mul' := λ x y, mul_comm (op y) (op x),
-  .. mul_opposite.op_equiv }
+def toOpposite : R ≃+* Rᵐᵒᵖ :=
+  { MulOpposite.opEquiv with map_add' := fun x y => rfl, map_mul' := fun x y => mul_comm (op y) (op x) }
 
 @[simp]
-lemma to_opposite_apply (r : R) : to_opposite R r = op r := rfl
+theorem to_opposite_apply (r : R) : toOpposite R r = op r :=
+  rfl
 
 @[simp]
-lemma to_opposite_symm_apply (r : Rᵐᵒᵖ) : (to_opposite R).symm r = unop r := rfl
+theorem to_opposite_symm_apply (r : Rᵐᵒᵖ) : (toOpposite R).symm r = unop r :=
+  rfl
 
-end comm_semiring
+end CommSemiringₓ
 
-end opposite
+end Opposite
 
-section non_unital_semiring
+section NonUnitalSemiringₓ
 
-variables [non_unital_non_assoc_semiring R] [non_unital_non_assoc_semiring S]
-  (f : R ≃+* S) (x y : R)
+variable [NonUnitalNonAssocSemiringₓ R] [NonUnitalNonAssocSemiringₓ S] (f : R ≃+* S) (x y : R)
 
 /-- A ring isomorphism sends zero to zero. -/
-protected lemma map_zero : f 0 = 0 := map_zero f
+protected theorem map_zero : f 0 = 0 :=
+  map_zero f
 
 variable {x}
 
-protected lemma map_eq_zero_iff : f x = 0 ↔ x = 0 := add_equiv_class.map_eq_zero_iff f
+protected theorem map_eq_zero_iff : f x = 0 ↔ x = 0 :=
+  AddEquivClass.map_eq_zero_iff f
 
-lemma map_ne_zero_iff : f x ≠ 0 ↔ x ≠ 0 := add_equiv_class.map_ne_zero_iff f
+theorem map_ne_zero_iff : f x ≠ 0 ↔ x ≠ 0 :=
+  AddEquivClass.map_ne_zero_iff f
 
-end non_unital_semiring
+end NonUnitalSemiringₓ
 
-section semiring
+section Semiringₓ
 
-variables [non_assoc_semiring R] [non_assoc_semiring S] (f : R ≃+* S) (x y : R)
+variable [NonAssocSemiringₓ R] [NonAssocSemiringₓ S] (f : R ≃+* S) (x y : R)
 
 /-- A ring isomorphism sends one to one. -/
-protected lemma map_one : f 1 = 1 := map_one f
+protected theorem map_one : f 1 = 1 :=
+  map_one f
 
 variable {x}
 
-protected lemma map_eq_one_iff : f x = 1 ↔ x = 1 := mul_equiv_class.map_eq_one_iff f
+protected theorem map_eq_one_iff : f x = 1 ↔ x = 1 :=
+  MulEquivClass.map_eq_one_iff f
 
-lemma map_ne_one_iff : f x ≠ 1 ↔ x ≠ 1 := mul_equiv_class.map_ne_one_iff f
+theorem map_ne_one_iff : f x ≠ 1 ↔ x ≠ 1 :=
+  MulEquivClass.map_ne_one_iff f
 
 /-- Produce a ring isomorphism from a bijective ring homomorphism. -/
-noncomputable def of_bijective (f : R →+* S) (hf : function.bijective f) : R ≃+* S :=
-{ .. equiv.of_bijective f hf, .. f }
+noncomputable def ofBijective (f : R →+* S) (hf : Function.Bijective f) : R ≃+* S :=
+  { Equivₓ.ofBijective f hf, f with }
 
-@[simp] lemma coe_of_bijective (f : R →+* S) (hf : function.bijective f) :
-  (of_bijective f hf : R → S) = f := rfl
+@[simp]
+theorem coe_of_bijective (f : R →+* S) (hf : Function.Bijective f) : (ofBijective f hf : R → S) = f :=
+  rfl
 
-lemma of_bijective_apply (f : R →+* S) (hf : function.bijective f) (x : R) :
-  of_bijective f hf x = f x := rfl
+theorem of_bijective_apply (f : R →+* S) (hf : Function.Bijective f) (x : R) : ofBijective f hf x = f x :=
+  rfl
 
 /-- A family of ring isomorphisms `Π j, (R j ≃+* S j)` generates a
 ring isomorphisms between `Π j, R j` and `Π j, S j`.
@@ -290,213 +340,226 @@ This is the `ring_equiv` version of `equiv.Pi_congr_right`, and the dependent ve
 `ring_equiv.arrow_congr`.
 -/
 @[simps apply]
-def Pi_congr_right {ι : Type*} {R S : ι → Type*}
-  [Π i, semiring (R i)] [Π i, semiring (S i)]
-  (e : Π i, R i ≃+* S i) : (Π i, R i) ≃+* Π i, S i :=
-{ to_fun := λ x j, e j (x j),
-  inv_fun := λ x j, (e j).symm (x j),
-  .. @mul_equiv.Pi_congr_right ι R S _ _ (λ i, (e i).to_mul_equiv),
-  .. @add_equiv.Pi_congr_right ι R S _ _ (λ i, (e i).to_add_equiv) }
+def piCongrRight {ι : Type _} {R S : ι → Type _} [∀ i, Semiringₓ (R i)] [∀ i, Semiringₓ (S i)] (e : ∀ i, R i ≃+* S i) :
+    (∀ i, R i) ≃+* ∀ i, S i :=
+  { @MulEquiv.piCongrRight ι R S _ _ fun i => (e i).toMulEquiv,
+    @AddEquiv.piCongrRight ι R S _ _ fun i => (e i).toAddEquiv with toFun := fun x j => e j (x j),
+    invFun := fun x j => (e j).symm (x j) }
 
 @[simp]
-lemma Pi_congr_right_refl {ι : Type*} {R : ι → Type*} [Π i, semiring (R i)] :
-  Pi_congr_right (λ i, ring_equiv.refl (R i)) = ring_equiv.refl _ := rfl
+theorem Pi_congr_right_refl {ι : Type _} {R : ι → Type _} [∀ i, Semiringₓ (R i)] :
+    (piCongrRight fun i => RingEquiv.refl (R i)) = RingEquiv.refl _ :=
+  rfl
 
 @[simp]
-lemma Pi_congr_right_symm {ι : Type*} {R S : ι → Type*}
-  [Π i, semiring (R i)] [Π i, semiring (S i)]
-  (e : Π i, R i ≃+* S i) : (Pi_congr_right e).symm = (Pi_congr_right $ λ i, (e i).symm) := rfl
+theorem Pi_congr_right_symm {ι : Type _} {R S : ι → Type _} [∀ i, Semiringₓ (R i)] [∀ i, Semiringₓ (S i)]
+    (e : ∀ i, R i ≃+* S i) : (piCongrRight e).symm = Pi_congr_right fun i => (e i).symm :=
+  rfl
 
 @[simp]
-lemma Pi_congr_right_trans {ι : Type*} {R S T : ι → Type*}
-  [Π i, semiring (R i)] [Π i, semiring (S i)] [Π i, semiring (T i)]
-  (e : Π i, R i ≃+* S i) (f : Π i, S i ≃+* T i) :
-  (Pi_congr_right e).trans (Pi_congr_right f) = (Pi_congr_right $ λ i, (e i).trans (f i)) := rfl
+theorem Pi_congr_right_trans {ι : Type _} {R S T : ι → Type _} [∀ i, Semiringₓ (R i)] [∀ i, Semiringₓ (S i)]
+    [∀ i, Semiringₓ (T i)] (e : ∀ i, R i ≃+* S i) (f : ∀ i, S i ≃+* T i) :
+    (piCongrRight e).trans (piCongrRight f) = Pi_congr_right fun i => (e i).trans (f i) :=
+  rfl
 
-end semiring
+end Semiringₓ
 
 section
 
-variables [ring R] [ring S] (f : R ≃+* S) (x y : R)
+variable [Ringₓ R] [Ringₓ S] (f : R ≃+* S) (x y : R)
 
-protected lemma map_neg : f (-x) = -f x := map_neg f x
+protected theorem map_neg : f (-x) = -f x :=
+  map_neg f x
 
-protected lemma map_sub : f (x - y) = f x - f y := map_sub f x y
+protected theorem map_sub : f (x - y) = f x - f y :=
+  map_sub f x y
 
-@[simp] lemma map_neg_one : f (-1) = -1 := f.map_one ▸ f.map_neg 1
+@[simp]
+theorem map_neg_one : f (-1) = -1 :=
+  f.map_one ▸ f.map_neg 1
 
 end
 
-section semiring_hom
+section SemiringHom
 
-variables [non_assoc_semiring R] [non_assoc_semiring S] [non_assoc_semiring S']
+variable [NonAssocSemiringₓ R] [NonAssocSemiringₓ S] [NonAssocSemiringₓ S']
 
 /-- Reinterpret a ring equivalence as a ring homomorphism. -/
-def to_ring_hom (e : R ≃+* S) : R →+* S :=
-{ .. e.to_mul_equiv.to_monoid_hom, .. e.to_add_equiv.to_add_monoid_hom }
+def toRingHom (e : R ≃+* S) : R →+* S :=
+  { e.toMulEquiv.toMonoidHom, e.toAddEquiv.toAddMonoidHom with }
 
-lemma to_ring_hom_injective : function.injective (to_ring_hom : (R ≃+* S) → R →+* S) :=
-λ f g h, ring_equiv.ext (ring_hom.ext_iff.1 h)
+theorem to_ring_hom_injective : Function.Injective (toRingHom : R ≃+* S → R →+* S) := fun f g h =>
+  RingEquiv.ext (RingHom.ext_iff.1 h)
 
-instance has_coe_to_ring_hom : has_coe (R ≃+* S) (R →+* S) := ⟨ring_equiv.to_ring_hom⟩
+instance hasCoeToRingHom : Coe (R ≃+* S) (R →+* S) :=
+  ⟨RingEquiv.toRingHom⟩
 
-lemma to_ring_hom_eq_coe (f : R ≃+* S) : f.to_ring_hom = ↑f := rfl
+theorem to_ring_hom_eq_coe (f : R ≃+* S) : f.toRingHom = ↑f :=
+  rfl
 
-@[simp, norm_cast] lemma coe_to_ring_hom (f : R ≃+* S) : ⇑(f : R →+* S) = f := rfl
+@[simp, norm_cast]
+theorem coe_to_ring_hom (f : R ≃+* S) : ⇑(f : R →+* S) = f :=
+  rfl
 
-lemma coe_ring_hom_inj_iff {R S : Type*} [non_assoc_semiring R] [non_assoc_semiring S]
-  (f g : R ≃+* S) :
-  f = g ↔ (f : R →+* S) = g :=
-⟨congr_arg _, λ h, ext $ ring_hom.ext_iff.mp h⟩
+theorem coe_ring_hom_inj_iff {R S : Type _} [NonAssocSemiringₓ R] [NonAssocSemiringₓ S] (f g : R ≃+* S) :
+    f = g ↔ (f : R →+* S) = g :=
+  ⟨congr_argₓ _, fun h => ext <| RingHom.ext_iff.mp h⟩
 
 /-- Reinterpret a ring equivalence as a monoid homomorphism. -/
-abbreviation to_monoid_hom (e : R ≃+* S) : R →* S := e.to_ring_hom.to_monoid_hom
+abbrev toMonoidHom (e : R ≃+* S) : R →* S :=
+  e.toRingHom.toMonoidHom
 
 /-- Reinterpret a ring equivalence as an `add_monoid` homomorphism. -/
-abbreviation to_add_monoid_hom (e : R ≃+* S) : R →+ S := e.to_ring_hom.to_add_monoid_hom
+abbrev toAddMonoidHom (e : R ≃+* S) : R →+ S :=
+  e.toRingHom.toAddMonoidHom
 
 /-- The two paths coercion can take to an `add_monoid_hom` are equivalent -/
-lemma to_add_monoid_hom_commutes (f : R ≃+* S) :
-  (f : R →+* S).to_add_monoid_hom = (f : R ≃+ S).to_add_monoid_hom :=
-rfl
+theorem to_add_monoid_hom_commutes (f : R ≃+* S) : (f : R →+* S).toAddMonoidHom = (f : R ≃+ S).toAddMonoidHom :=
+  rfl
 
 /-- The two paths coercion can take to an `monoid_hom` are equivalent -/
-lemma to_monoid_hom_commutes (f : R ≃+* S) :
-  (f : R →+* S).to_monoid_hom = (f : R ≃* S).to_monoid_hom :=
-rfl
+theorem to_monoid_hom_commutes (f : R ≃+* S) : (f : R →+* S).toMonoidHom = (f : R ≃* S).toMonoidHom :=
+  rfl
 
 /-- The two paths coercion can take to an `equiv` are equivalent -/
-lemma to_equiv_commutes (f : R ≃+* S) :
-  (f : R ≃+ S).to_equiv = (f : R ≃* S).to_equiv :=
-rfl
+theorem to_equiv_commutes (f : R ≃+* S) : (f : R ≃+ S).toEquiv = (f : R ≃* S).toEquiv :=
+  rfl
 
 @[simp]
-lemma to_ring_hom_refl : (ring_equiv.refl R).to_ring_hom = ring_hom.id R := rfl
+theorem to_ring_hom_refl : (RingEquiv.refl R).toRingHom = RingHom.id R :=
+  rfl
 
 @[simp]
-lemma to_monoid_hom_refl : (ring_equiv.refl R).to_monoid_hom = monoid_hom.id R := rfl
+theorem to_monoid_hom_refl : (RingEquiv.refl R).toMonoidHom = MonoidHom.id R :=
+  rfl
 
 @[simp]
-lemma to_add_monoid_hom_refl : (ring_equiv.refl R).to_add_monoid_hom = add_monoid_hom.id R := rfl
+theorem to_add_monoid_hom_refl : (RingEquiv.refl R).toAddMonoidHom = AddMonoidHom.id R :=
+  rfl
 
 @[simp]
-lemma to_ring_hom_apply_symm_to_ring_hom_apply (e : R ≃+* S) :
-  ∀ (y : S), e.to_ring_hom (e.symm.to_ring_hom y) = y :=
-e.to_equiv.apply_symm_apply
+theorem to_ring_hom_apply_symm_to_ring_hom_apply (e : R ≃+* S) : ∀ y : S, e.toRingHom (e.symm.toRingHom y) = y :=
+  e.toEquiv.apply_symm_apply
 
 @[simp]
-lemma symm_to_ring_hom_apply_to_ring_hom_apply (e : R ≃+* S) :
-  ∀ (x : R), e.symm.to_ring_hom (e.to_ring_hom x) = x :=
-equiv.symm_apply_apply (e.to_equiv)
+theorem symm_to_ring_hom_apply_to_ring_hom_apply (e : R ≃+* S) : ∀ x : R, e.symm.toRingHom (e.toRingHom x) = x :=
+  Equivₓ.symm_apply_apply e.toEquiv
 
 @[simp]
-lemma to_ring_hom_trans (e₁ : R ≃+* S) (e₂ : S ≃+* S') :
-  (e₁.trans e₂).to_ring_hom = e₂.to_ring_hom.comp e₁.to_ring_hom := rfl
+theorem to_ring_hom_trans (e₁ : R ≃+* S) (e₂ : S ≃+* S') : (e₁.trans e₂).toRingHom = e₂.toRingHom.comp e₁.toRingHom :=
+  rfl
 
 @[simp]
-lemma to_ring_hom_comp_symm_to_ring_hom (e : R ≃+* S) :
-  e.to_ring_hom.comp e.symm.to_ring_hom = ring_hom.id _ :=
-by { ext, simp }
+theorem to_ring_hom_comp_symm_to_ring_hom (e : R ≃+* S) : e.toRingHom.comp e.symm.toRingHom = RingHom.id _ := by
+  ext
+  simp
 
 @[simp]
-lemma symm_to_ring_hom_comp_to_ring_hom (e : R ≃+* S) :
-  e.symm.to_ring_hom.comp e.to_ring_hom = ring_hom.id _ :=
-by { ext, simp }
+theorem symm_to_ring_hom_comp_to_ring_hom (e : R ≃+* S) : e.symm.toRingHom.comp e.toRingHom = RingHom.id _ := by
+  ext
+  simp
 
-/--
-Construct an equivalence of rings from homomorphisms in both directions, which are inverses.
+/-- Construct an equivalence of rings from homomorphisms in both directions, which are inverses.
 -/
-def of_hom_inv (hom : R →+* S) (inv : S →+* R)
-  (hom_inv_id : inv.comp hom = ring_hom.id R) (inv_hom_id : hom.comp inv = ring_hom.id S) :
-  R ≃+* S :=
-{ inv_fun := inv,
-  left_inv := λ x, ring_hom.congr_fun hom_inv_id x,
-  right_inv := λ x, ring_hom.congr_fun inv_hom_id x,
-  ..hom }
+def ofHomInv (hom : R →+* S) (inv : S →+* R) (hom_inv_id : inv.comp hom = RingHom.id R)
+    (inv_hom_id : hom.comp inv = RingHom.id S) : R ≃+* S :=
+  { hom with invFun := inv, left_inv := fun x => RingHom.congr_fun hom_inv_id x,
+    right_inv := fun x => RingHom.congr_fun inv_hom_id x }
 
 @[simp]
-lemma of_hom_inv_apply (hom : R →+* S) (inv : S →+* R) (hom_inv_id inv_hom_id) (r : R) :
-  (of_hom_inv hom inv hom_inv_id inv_hom_id) r = hom r := rfl
+theorem of_hom_inv_apply (hom : R →+* S) (inv : S →+* R) hom_inv_id inv_hom_id (r : R) :
+    (ofHomInv hom inv hom_inv_id inv_hom_id) r = hom r :=
+  rfl
 
 @[simp]
-lemma of_hom_inv_symm_apply (hom : R →+* S) (inv : S →+* R) (hom_inv_id inv_hom_id) (s : S) :
-  (of_hom_inv hom inv hom_inv_id inv_hom_id).symm s = inv s := rfl
+theorem of_hom_inv_symm_apply (hom : R →+* S) (inv : S →+* R) hom_inv_id inv_hom_id (s : S) :
+    (ofHomInv hom inv hom_inv_id inv_hom_id).symm s = inv s :=
+  rfl
 
-end semiring_hom
+end SemiringHom
 
-section big_operators
+section BigOperators
 
-lemma map_list_prod [semiring R] [semiring S] (f : R ≃+* S) (l : list R) :
-  f l.prod = (l.map f).prod := f.to_ring_hom.map_list_prod l
+theorem map_list_prod [Semiringₓ R] [Semiringₓ S] (f : R ≃+* S) (l : List R) : f l.Prod = (l.map f).Prod :=
+  f.toRingHom.map_list_prod l
 
-lemma map_list_sum [non_assoc_semiring R] [non_assoc_semiring S] (f : R ≃+* S) (l : list R) :
-  f l.sum = (l.map f).sum := f.to_ring_hom.map_list_sum l
+theorem map_list_sum [NonAssocSemiringₓ R] [NonAssocSemiringₓ S] (f : R ≃+* S) (l : List R) : f l.Sum = (l.map f).Sum :=
+  f.toRingHom.map_list_sum l
 
 /-- An isomorphism into the opposite ring acts on the product by acting on the reversed elements -/
-lemma unop_map_list_prod [semiring R] [semiring S] (f : R ≃+* Sᵐᵒᵖ) (l : list R) :
-  mul_opposite.unop (f l.prod) = (l.map (mul_opposite.unop ∘ f)).reverse.prod :=
-f.to_ring_hom.unop_map_list_prod l
+theorem unop_map_list_prod [Semiringₓ R] [Semiringₓ S] (f : R ≃+* Sᵐᵒᵖ) (l : List R) :
+    MulOpposite.unop (f l.Prod) = (l.map (MulOpposite.unop ∘ f)).reverse.Prod :=
+  f.toRingHom.unop_map_list_prod l
 
-lemma map_multiset_prod [comm_semiring R] [comm_semiring S] (f : R ≃+* S) (s : multiset R) :
-  f s.prod = (s.map f).prod := f.to_ring_hom.map_multiset_prod s
+theorem map_multiset_prod [CommSemiringₓ R] [CommSemiringₓ S] (f : R ≃+* S) (s : Multiset R) :
+    f s.Prod = (s.map f).Prod :=
+  f.toRingHom.map_multiset_prod s
 
-lemma map_multiset_sum [non_assoc_semiring R] [non_assoc_semiring S]
-  (f : R ≃+* S) (s : multiset R) : f s.sum = (s.map f).sum := f.to_ring_hom.map_multiset_sum s
+theorem map_multiset_sum [NonAssocSemiringₓ R] [NonAssocSemiringₓ S] (f : R ≃+* S) (s : Multiset R) :
+    f s.Sum = (s.map f).Sum :=
+  f.toRingHom.map_multiset_sum s
 
-lemma map_prod {α : Type*} [comm_semiring R] [comm_semiring S] (g : R ≃+* S) (f : α → R)
-  (s : finset α) : g (∏ x in s, f x) = ∏ x in s, g (f x) :=
-g.to_ring_hom.map_prod f s
+theorem map_prod {α : Type _} [CommSemiringₓ R] [CommSemiringₓ S] (g : R ≃+* S) (f : α → R) (s : Finset α) :
+    g (∏ x in s, f x) = ∏ x in s, g (f x) :=
+  g.toRingHom.map_prod f s
 
-lemma map_sum {α : Type*} [non_assoc_semiring R] [non_assoc_semiring S]
-  (g : R ≃+* S) (f : α → R) (s : finset α) : g (∑ x in s, f x) = ∑ x in s, g (f x) :=
-g.to_ring_hom.map_sum f s
+theorem map_sum {α : Type _} [NonAssocSemiringₓ R] [NonAssocSemiringₓ S] (g : R ≃+* S) (f : α → R) (s : Finset α) :
+    g (∑ x in s, f x) = ∑ x in s, g (f x) :=
+  g.toRingHom.map_sum f s
 
-end big_operators
+end BigOperators
 
-section division_ring
+section DivisionRing
 
-variables {K K' : Type*} [division_ring K] [division_ring K']
-  (g : K ≃+* K') (x y : K)
+variable {K K' : Type _} [DivisionRing K] [DivisionRing K'] (g : K ≃+* K') (x y : K)
 
-lemma map_inv : g x⁻¹ = (g x)⁻¹ := g.to_ring_hom.map_inv x
+theorem map_inv : g x⁻¹ = (g x)⁻¹ :=
+  g.toRingHom.map_inv x
 
-lemma map_div : g (x / y) = g x / g y := g.to_ring_hom.map_div x y
+theorem map_div : g (x / y) = g x / g y :=
+  g.toRingHom.map_div x y
 
-end division_ring
+end DivisionRing
 
-section group_power
+section GroupPower
 
-variables [semiring R] [semiring S]
+variable [Semiringₓ R] [Semiringₓ S]
 
-protected lemma map_pow (f : R ≃+* S) (a) : ∀ n : ℕ, f (a ^ n) = (f a) ^ n := map_pow f a
+protected theorem map_pow (f : R ≃+* S) a : ∀ n : ℕ, f (a ^ n) = f a ^ n :=
+  map_pow f a
 
-end group_power
+end GroupPower
 
-end ring_equiv
+end RingEquiv
 
-namespace mul_equiv
+namespace MulEquiv
 
 /-- Gives a `ring_equiv` from a `mul_equiv` preserving addition.-/
-def to_ring_equiv {R : Type*} {S : Type*} [has_add R] [has_add S] [has_mul R] [has_mul S]
-  (h : R ≃* S) (H : ∀ x y : R, h (x + y) = h x + h y) : R ≃+* S :=
-{..h.to_equiv, ..h, ..add_equiv.mk' h.to_equiv H }
+def toRingEquiv {R : Type _} {S : Type _} [Add R] [Add S] [Mul R] [Mul S] (h : R ≃* S)
+    (H : ∀ x y : R, h (x + y) = h x + h y) : R ≃+* S :=
+  { h.toEquiv, h, AddEquiv.mk' h.toEquiv H with }
 
-end mul_equiv
+end MulEquiv
 
-namespace ring_equiv
+namespace RingEquiv
 
-variables [has_add R] [has_add S] [has_mul R] [has_mul S]
+variable [Add R] [Add S] [Mul R] [Mul S]
 
-@[simp] theorem self_trans_symm (e : R ≃+* S) : e.trans e.symm = ring_equiv.refl R := ext e.3
-@[simp] theorem symm_trans_self (e : R ≃+* S) : e.symm.trans e = ring_equiv.refl S := ext e.4
+@[simp]
+theorem self_trans_symm (e : R ≃+* S) : e.trans e.symm = RingEquiv.refl R :=
+  ext e.3
+
+@[simp]
+theorem symm_trans_self (e : R ≃+* S) : e.symm.trans e = RingEquiv.refl S :=
+  ext e.4
 
 /-- If two rings are isomorphic, and the second is a domain, then so is the first. -/
-protected lemma is_domain
-  {A : Type*} (B : Type*) [ring A] [ring B] [is_domain B]
-  (e : A ≃+* B) : is_domain A :=
-{ eq_zero_or_eq_zero_of_mul_eq_zero := λ x y hxy,
-    have e x * e y = 0, by rw [← e.map_mul, hxy, e.map_zero],
-    by simpa using eq_zero_or_eq_zero_of_mul_eq_zero this,
-  exists_pair_ne := ⟨e.symm 0, e.symm 1, e.symm.injective.ne zero_ne_one⟩ }
+protected theorem is_domain {A : Type _} (B : Type _) [Ringₓ A] [Ringₓ B] [IsDomain B] (e : A ≃+* B) : IsDomain A :=
+  { eq_zero_or_eq_zero_of_mul_eq_zero := fun x y hxy => by
+      have : e x * e y = 0 := by
+        rw [← e.map_mul, hxy, e.map_zero]
+      simpa using eq_zero_or_eq_zero_of_mul_eq_zero this,
+    exists_pair_ne := ⟨e.symm 0, e.symm 1, e.symm.Injective.Ne zero_ne_one⟩ }
 
-end ring_equiv
+end RingEquiv
+

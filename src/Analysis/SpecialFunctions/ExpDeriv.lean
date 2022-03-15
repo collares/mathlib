@@ -3,9 +3,9 @@ Copyright (c) 2018 Chris Hughes. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chris Hughes, Abhimanyu Pallavi Sudhir, Jean Lo, Calle Sönne
 -/
-import analysis.calculus.inverse
-import analysis.complex.real_deriv
-import analysis.special_functions.exp
+import Mathbin.Analysis.Calculus.Inverse
+import Mathbin.Analysis.Complex.RealDeriv
+import Mathbin.Analysis.SpecialFunctions.Exp
 
 /-!
 # Complex and real exponential
@@ -17,271 +17,265 @@ In this file we prove that `complex.exp` and `real.exp` are infinitely smooth fu
 exp, derivative
 -/
 
-noncomputable theory
 
-open filter asymptotics set function
-open_locale classical topological_space
+noncomputable section
 
-namespace complex
+open Filter Asymptotics Set Function
+
+open_locale Classical TopologicalSpace
+
+namespace Complex
 
 /-- The complex exponential is everywhere differentiable, with the derivative `exp x`. -/
-lemma has_deriv_at_exp (x : ℂ) : has_deriv_at exp (exp x) x :=
-begin
-  rw has_deriv_at_iff_is_o_nhds_zero,
-  have : (1 : ℕ) < 2 := by norm_num,
-  refine (is_O.of_bound (∥exp x∥) _).trans_is_o (is_o_pow_id this),
-  filter_upwards [metric.ball_mem_nhds (0 : ℂ) zero_lt_one],
-  simp only [metric.mem_ball, dist_zero_right, norm_pow],
-  exact λ z hz, exp_bound_sq x z hz.le,
-end
+theorem has_deriv_at_exp (x : ℂ) : HasDerivAt exp (exp x) x := by
+  rw [has_deriv_at_iff_is_o_nhds_zero]
+  have : (1 : ℕ) < 2 := by
+    norm_num
+  refine' (is_O.of_bound ∥exp x∥ _).trans_is_o (is_o_pow_id this)
+  filter_upwards [Metric.ball_mem_nhds (0 : ℂ) zero_lt_one]
+  simp only [Metric.mem_ball, dist_zero_right, norm_pow]
+  exact fun z hz => exp_bound_sq x z hz.le
 
-lemma differentiable_exp : differentiable ℂ exp :=
-λx, (has_deriv_at_exp x).differentiable_at
+theorem differentiable_exp : Differentiable ℂ exp := fun x => (has_deriv_at_exp x).DifferentiableAt
 
-lemma differentiable_at_exp {x : ℂ} : differentiable_at ℂ exp x :=
-differentiable_exp x
+theorem differentiable_at_exp {x : ℂ} : DifferentiableAt ℂ exp x :=
+  differentiable_exp x
 
-@[simp] lemma deriv_exp : deriv exp = exp :=
-funext $ λ x, (has_deriv_at_exp x).deriv
+@[simp]
+theorem deriv_exp : deriv exp = exp :=
+  funext fun x => (has_deriv_at_exp x).deriv
 
-@[simp] lemma iter_deriv_exp : ∀ n : ℕ, (deriv^[n] exp) = exp
-| 0 := rfl
-| (n+1) := by rw [iterate_succ_apply, deriv_exp, iter_deriv_exp n]
+@[simp]
+theorem iter_deriv_exp : ∀ n : ℕ, (deriv^[n]) exp = exp
+  | 0 => rfl
+  | n + 1 => by
+    rw [iterate_succ_apply, deriv_exp, iter_deriv_exp n]
 
-lemma cont_diff_exp : ∀ {n}, cont_diff ℂ n exp :=
-begin
-  refine cont_diff_all_iff_nat.2 (λ n, _),
-  induction n with n ihn,
-  { exact cont_diff_zero.2 continuous_exp },
-  { rw cont_diff_succ_iff_deriv,
-    use differentiable_exp,
-    rwa deriv_exp }
-end
+theorem cont_diff_exp : ∀ {n}, ContDiff ℂ n exp := by
+  refine' cont_diff_all_iff_nat.2 fun n => _
+  induction' n with n ihn
+  · exact cont_diff_zero.2 continuous_exp
+    
+  · rw [cont_diff_succ_iff_deriv]
+    use differentiable_exp
+    rwa [deriv_exp]
+    
 
-lemma has_strict_deriv_at_exp (x : ℂ) : has_strict_deriv_at exp (exp x) x :=
-cont_diff_exp.cont_diff_at.has_strict_deriv_at' (has_deriv_at_exp x) le_rfl
+theorem has_strict_deriv_at_exp (x : ℂ) : HasStrictDerivAt exp (exp x) x :=
+  cont_diff_exp.ContDiffAt.has_strict_deriv_at' (has_deriv_at_exp x) le_rfl
 
-lemma has_strict_fderiv_at_exp_real (x : ℂ) :
-  has_strict_fderiv_at exp (exp x • (1 : ℂ →L[ℝ] ℂ)) x :=
-(has_strict_deriv_at_exp x).complex_to_real_fderiv
+theorem has_strict_fderiv_at_exp_real (x : ℂ) : HasStrictFderivAt exp (exp x • (1 : ℂ →L[ℝ] ℂ)) x :=
+  (has_strict_deriv_at_exp x).complex_to_real_fderiv
 
-lemma is_open_map_exp : is_open_map exp :=
-open_map_of_strict_deriv has_strict_deriv_at_exp exp_ne_zero
+theorem is_open_map_exp : IsOpenMap exp :=
+  open_map_of_strict_deriv has_strict_deriv_at_exp exp_ne_zero
 
-end complex
-
-section
-variables {f : ℂ → ℂ} {f' x : ℂ} {s : set ℂ}
-
-lemma has_strict_deriv_at.cexp (hf : has_strict_deriv_at f f' x) :
-  has_strict_deriv_at (λ x, complex.exp (f x)) (complex.exp (f x) * f') x :=
-(complex.has_strict_deriv_at_exp (f x)).comp x hf
-
-lemma has_deriv_at.cexp (hf : has_deriv_at f f' x) :
-  has_deriv_at (λ x, complex.exp (f x)) (complex.exp (f x) * f') x :=
-(complex.has_deriv_at_exp (f x)).comp x hf
-
-lemma has_deriv_within_at.cexp (hf : has_deriv_within_at f f' s x) :
-  has_deriv_within_at (λ x, complex.exp (f x)) (complex.exp (f x) * f') s x :=
-(complex.has_deriv_at_exp (f x)).comp_has_deriv_within_at x hf
-
-lemma deriv_within_cexp (hf : differentiable_within_at ℂ f s x)
-  (hxs : unique_diff_within_at ℂ s x) :
-  deriv_within (λx, complex.exp (f x)) s x = complex.exp (f x) * (deriv_within f s x) :=
-hf.has_deriv_within_at.cexp.deriv_within hxs
-
-@[simp] lemma deriv_cexp (hc : differentiable_at ℂ f x) :
-  deriv (λx, complex.exp (f x)) x = complex.exp (f x) * (deriv f x) :=
-hc.has_deriv_at.cexp.deriv
-
-end
+end Complex
 
 section
-variables {f : ℝ → ℂ} {f' : ℂ} {x : ℝ} {s : set ℝ}
 
-open complex
+variable {f : ℂ → ℂ} {f' x : ℂ} {s : Set ℂ}
 
-lemma has_strict_deriv_at.cexp_real (h : has_strict_deriv_at f f' x) :
-  has_strict_deriv_at (λ x, exp (f x)) (exp (f x) * f') x :=
-(has_strict_fderiv_at_exp_real (f x)).comp_has_strict_deriv_at x h
+theorem HasStrictDerivAt.cexp (hf : HasStrictDerivAt f f' x) :
+    HasStrictDerivAt (fun x => Complex.exp (f x)) (Complex.exp (f x) * f') x :=
+  (Complex.has_strict_deriv_at_exp (f x)).comp x hf
 
-lemma has_deriv_at.cexp_real (h : has_deriv_at f f' x) :
-  has_deriv_at (λ x, exp (f x)) (exp (f x) * f') x :=
-(has_strict_fderiv_at_exp_real (f x)).has_fderiv_at.comp_has_deriv_at x h
+theorem HasDerivAt.cexp (hf : HasDerivAt f f' x) : HasDerivAt (fun x => Complex.exp (f x)) (Complex.exp (f x) * f') x :=
+  (Complex.has_deriv_at_exp (f x)).comp x hf
 
-lemma has_deriv_within_at.cexp_real (h : has_deriv_within_at f f' s x) :
-  has_deriv_within_at (λ x, exp (f x)) (exp (f x) * f') s x :=
-(has_strict_fderiv_at_exp_real (f x)).has_fderiv_at.comp_has_deriv_within_at x h
+theorem HasDerivWithinAt.cexp (hf : HasDerivWithinAt f f' s x) :
+    HasDerivWithinAt (fun x => Complex.exp (f x)) (Complex.exp (f x) * f') s x :=
+  (Complex.has_deriv_at_exp (f x)).comp_has_deriv_within_at x hf
+
+theorem deriv_within_cexp (hf : DifferentiableWithinAt ℂ f s x) (hxs : UniqueDiffWithinAt ℂ s x) :
+    derivWithin (fun x => Complex.exp (f x)) s x = Complex.exp (f x) * derivWithin f s x :=
+  hf.HasDerivWithinAt.cexp.derivWithin hxs
+
+@[simp]
+theorem deriv_cexp (hc : DifferentiableAt ℂ f x) :
+    deriv (fun x => Complex.exp (f x)) x = Complex.exp (f x) * deriv f x :=
+  hc.HasDerivAt.cexp.deriv
 
 end
 
 section
 
-variables {E : Type*} [normed_group E] [normed_space ℂ E] {f : E → ℂ} {f' : E →L[ℂ] ℂ}
-  {x : E} {s : set E}
+variable {f : ℝ → ℂ} {f' : ℂ} {x : ℝ} {s : Set ℝ}
 
-lemma has_strict_fderiv_at.cexp (hf : has_strict_fderiv_at f f' x) :
-  has_strict_fderiv_at (λ x, complex.exp (f x)) (complex.exp (f x) • f') x :=
-(complex.has_strict_deriv_at_exp (f x)).comp_has_strict_fderiv_at x hf
+open Complex
 
-lemma has_fderiv_within_at.cexp (hf : has_fderiv_within_at f f' s x) :
-  has_fderiv_within_at (λ x, complex.exp (f x)) (complex.exp (f x) • f') s x :=
-(complex.has_deriv_at_exp (f x)).comp_has_fderiv_within_at x hf
+theorem HasStrictDerivAt.cexp_real (h : HasStrictDerivAt f f' x) :
+    HasStrictDerivAt (fun x => exp (f x)) (exp (f x) * f') x :=
+  (has_strict_fderiv_at_exp_real (f x)).comp_has_strict_deriv_at x h
 
-lemma has_fderiv_at.cexp (hf : has_fderiv_at f f' x) :
-  has_fderiv_at (λ x, complex.exp (f x)) (complex.exp (f x) • f') x :=
-has_fderiv_within_at_univ.1 $ hf.has_fderiv_within_at.cexp
+theorem HasDerivAt.cexp_real (h : HasDerivAt f f' x) : HasDerivAt (fun x => exp (f x)) (exp (f x) * f') x :=
+  (has_strict_fderiv_at_exp_real (f x)).HasFderivAt.comp_has_deriv_at x h
 
-lemma differentiable_within_at.cexp (hf : differentiable_within_at ℂ f s x) :
-  differentiable_within_at ℂ (λ x, complex.exp (f x)) s x :=
-hf.has_fderiv_within_at.cexp.differentiable_within_at
-
-@[simp] lemma differentiable_at.cexp (hc : differentiable_at ℂ f x) :
-  differentiable_at ℂ (λx, complex.exp (f x)) x :=
-hc.has_fderiv_at.cexp.differentiable_at
-
-lemma differentiable_on.cexp (hc : differentiable_on ℂ f s) :
-  differentiable_on ℂ (λx, complex.exp (f x)) s :=
-λx h, (hc x h).cexp
-
-@[simp] lemma differentiable.cexp (hc : differentiable ℂ f) :
-  differentiable ℂ (λx, complex.exp (f x)) :=
-λx, (hc x).cexp
-
-lemma cont_diff.cexp {n} (h : cont_diff ℂ n f) :
-  cont_diff ℂ n (λ x, complex.exp (f x)) :=
-complex.cont_diff_exp.comp h
-
-lemma cont_diff_at.cexp {n} (hf : cont_diff_at ℂ n f x) :
-  cont_diff_at ℂ n (λ x, complex.exp (f x)) x :=
-complex.cont_diff_exp.cont_diff_at.comp x hf
-
-lemma cont_diff_on.cexp {n} (hf : cont_diff_on ℂ n f s) :
-  cont_diff_on ℂ n (λ x, complex.exp (f x)) s :=
-complex.cont_diff_exp.comp_cont_diff_on  hf
-
-lemma cont_diff_within_at.cexp {n} (hf : cont_diff_within_at ℂ n f s x) :
-  cont_diff_within_at ℂ n (λ x, complex.exp (f x)) s x :=
-complex.cont_diff_exp.cont_diff_at.comp_cont_diff_within_at x hf
+theorem HasDerivWithinAt.cexp_real (h : HasDerivWithinAt f f' s x) :
+    HasDerivWithinAt (fun x => exp (f x)) (exp (f x) * f') s x :=
+  (has_strict_fderiv_at_exp_real (f x)).HasFderivAt.comp_has_deriv_within_at x h
 
 end
 
-namespace real
+section
 
-variables {x y z : ℝ}
+variable {E : Type _} [NormedGroup E] [NormedSpace ℂ E] {f : E → ℂ} {f' : E →L[ℂ] ℂ} {x : E} {s : Set E}
 
-lemma has_strict_deriv_at_exp (x : ℝ) : has_strict_deriv_at exp (exp x) x :=
-(complex.has_strict_deriv_at_exp x).real_of_complex
+theorem HasStrictFderivAt.cexp (hf : HasStrictFderivAt f f' x) :
+    HasStrictFderivAt (fun x => Complex.exp (f x)) (Complex.exp (f x) • f') x :=
+  (Complex.has_strict_deriv_at_exp (f x)).comp_has_strict_fderiv_at x hf
 
-lemma has_deriv_at_exp (x : ℝ) : has_deriv_at exp (exp x) x :=
-(complex.has_deriv_at_exp x).real_of_complex
+theorem HasFderivWithinAt.cexp (hf : HasFderivWithinAt f f' s x) :
+    HasFderivWithinAt (fun x => Complex.exp (f x)) (Complex.exp (f x) • f') s x :=
+  (Complex.has_deriv_at_exp (f x)).comp_has_fderiv_within_at x hf
 
-lemma cont_diff_exp {n} : cont_diff ℝ n exp :=
-complex.cont_diff_exp.real_of_complex
+theorem HasFderivAt.cexp (hf : HasFderivAt f f' x) :
+    HasFderivAt (fun x => Complex.exp (f x)) (Complex.exp (f x) • f') x :=
+  has_fderiv_within_at_univ.1 <| hf.HasFderivWithinAt.cexp
 
-lemma differentiable_exp : differentiable ℝ exp :=
-λx, (has_deriv_at_exp x).differentiable_at
+theorem DifferentiableWithinAt.cexp (hf : DifferentiableWithinAt ℂ f s x) :
+    DifferentiableWithinAt ℂ (fun x => Complex.exp (f x)) s x :=
+  hf.HasFderivWithinAt.cexp.DifferentiableWithinAt
 
-lemma differentiable_at_exp : differentiable_at ℝ exp x :=
-differentiable_exp x
+@[simp]
+theorem DifferentiableAt.cexp (hc : DifferentiableAt ℂ f x) : DifferentiableAt ℂ (fun x => Complex.exp (f x)) x :=
+  hc.HasFderivAt.cexp.DifferentiableAt
 
-@[simp] lemma deriv_exp : deriv exp = exp :=
-funext $ λ x, (has_deriv_at_exp x).deriv
+theorem DifferentiableOn.cexp (hc : DifferentiableOn ℂ f s) : DifferentiableOn ℂ (fun x => Complex.exp (f x)) s :=
+  fun x h => (hc x h).cexp
 
-@[simp] lemma iter_deriv_exp : ∀ n : ℕ, (deriv^[n] exp) = exp
-| 0 := rfl
-| (n+1) := by rw [iterate_succ_apply, deriv_exp, iter_deriv_exp n]
+@[simp]
+theorem Differentiable.cexp (hc : Differentiable ℂ f) : Differentiable ℂ fun x => Complex.exp (f x) := fun x =>
+  (hc x).cexp
 
-end real
+theorem ContDiff.cexp {n} (h : ContDiff ℂ n f) : ContDiff ℂ n fun x => Complex.exp (f x) :=
+  Complex.cont_diff_exp.comp h
 
+theorem ContDiffAt.cexp {n} (hf : ContDiffAt ℂ n f x) : ContDiffAt ℂ n (fun x => Complex.exp (f x)) x :=
+  Complex.cont_diff_exp.ContDiffAt.comp x hf
+
+theorem ContDiffOn.cexp {n} (hf : ContDiffOn ℂ n f s) : ContDiffOn ℂ n (fun x => Complex.exp (f x)) s :=
+  Complex.cont_diff_exp.comp_cont_diff_on hf
+
+theorem ContDiffWithinAt.cexp {n} (hf : ContDiffWithinAt ℂ n f s x) :
+    ContDiffWithinAt ℂ n (fun x => Complex.exp (f x)) s x :=
+  Complex.cont_diff_exp.ContDiffAt.comp_cont_diff_within_at x hf
+
+end
+
+namespace Real
+
+variable {x y z : ℝ}
+
+theorem has_strict_deriv_at_exp (x : ℝ) : HasStrictDerivAt exp (exp x) x :=
+  (Complex.has_strict_deriv_at_exp x).real_of_complex
+
+theorem has_deriv_at_exp (x : ℝ) : HasDerivAt exp (exp x) x :=
+  (Complex.has_deriv_at_exp x).real_of_complex
+
+theorem cont_diff_exp {n} : ContDiff ℝ n exp :=
+  Complex.cont_diff_exp.real_of_complex
+
+theorem differentiable_exp : Differentiable ℝ exp := fun x => (has_deriv_at_exp x).DifferentiableAt
+
+theorem differentiable_at_exp : DifferentiableAt ℝ exp x :=
+  differentiable_exp x
+
+@[simp]
+theorem deriv_exp : deriv exp = exp :=
+  funext fun x => (has_deriv_at_exp x).deriv
+
+@[simp]
+theorem iter_deriv_exp : ∀ n : ℕ, (deriv^[n]) exp = exp
+  | 0 => rfl
+  | n + 1 => by
+    rw [iterate_succ_apply, deriv_exp, iter_deriv_exp n]
+
+end Real
 
 section
+
 /-! Register lemmas for the derivatives of the composition of `real.exp` with a differentiable
 function, for standalone use and use with `simp`. -/
 
-variables {f : ℝ → ℝ} {f' x : ℝ} {s : set ℝ}
 
-lemma has_strict_deriv_at.exp (hf : has_strict_deriv_at f f' x) :
-  has_strict_deriv_at (λ x, real.exp (f x)) (real.exp (f x) * f') x :=
-(real.has_strict_deriv_at_exp (f x)).comp x hf
+variable {f : ℝ → ℝ} {f' x : ℝ} {s : Set ℝ}
 
-lemma has_deriv_at.exp (hf : has_deriv_at f f' x) :
-  has_deriv_at (λ x, real.exp (f x)) (real.exp (f x) * f') x :=
-(real.has_deriv_at_exp (f x)).comp x hf
+theorem HasStrictDerivAt.exp (hf : HasStrictDerivAt f f' x) :
+    HasStrictDerivAt (fun x => Real.exp (f x)) (Real.exp (f x) * f') x :=
+  (Real.has_strict_deriv_at_exp (f x)).comp x hf
 
-lemma has_deriv_within_at.exp (hf : has_deriv_within_at f f' s x) :
-  has_deriv_within_at (λ x, real.exp (f x)) (real.exp (f x) * f') s x :=
-(real.has_deriv_at_exp (f x)).comp_has_deriv_within_at x hf
+theorem HasDerivAt.exp (hf : HasDerivAt f f' x) : HasDerivAt (fun x => Real.exp (f x)) (Real.exp (f x) * f') x :=
+  (Real.has_deriv_at_exp (f x)).comp x hf
 
-lemma deriv_within_exp (hf : differentiable_within_at ℝ f s x)
-  (hxs : unique_diff_within_at ℝ s x) :
-  deriv_within (λx, real.exp (f x)) s x = real.exp (f x) * (deriv_within f s x) :=
-hf.has_deriv_within_at.exp.deriv_within hxs
+theorem HasDerivWithinAt.exp (hf : HasDerivWithinAt f f' s x) :
+    HasDerivWithinAt (fun x => Real.exp (f x)) (Real.exp (f x) * f') s x :=
+  (Real.has_deriv_at_exp (f x)).comp_has_deriv_within_at x hf
 
-@[simp] lemma deriv_exp (hc : differentiable_at ℝ f x) :
-  deriv (λx, real.exp (f x)) x = real.exp (f x) * (deriv f x) :=
-hc.has_deriv_at.exp.deriv
+theorem deriv_within_exp (hf : DifferentiableWithinAt ℝ f s x) (hxs : UniqueDiffWithinAt ℝ s x) :
+    derivWithin (fun x => Real.exp (f x)) s x = Real.exp (f x) * derivWithin f s x :=
+  hf.HasDerivWithinAt.exp.derivWithin hxs
+
+@[simp]
+theorem deriv_exp (hc : DifferentiableAt ℝ f x) : deriv (fun x => Real.exp (f x)) x = Real.exp (f x) * deriv f x :=
+  hc.HasDerivAt.exp.deriv
 
 end
 
 section
+
 /-! Register lemmas for the derivatives of the composition of `real.exp` with a differentiable
 function, for standalone use and use with `simp`. -/
 
-variables {E : Type*} [normed_group E] [normed_space ℝ E] {f : E → ℝ} {f' : E →L[ℝ] ℝ}
-  {x : E} {s : set E}
 
-lemma cont_diff.exp {n} (hf : cont_diff ℝ n f) :
-  cont_diff ℝ n (λ x, real.exp (f x)) :=
-real.cont_diff_exp.comp hf
+variable {E : Type _} [NormedGroup E] [NormedSpace ℝ E] {f : E → ℝ} {f' : E →L[ℝ] ℝ} {x : E} {s : Set E}
 
-lemma cont_diff_at.exp {n} (hf : cont_diff_at ℝ n f x) :
-  cont_diff_at ℝ n (λ x, real.exp (f x)) x :=
-real.cont_diff_exp.cont_diff_at.comp x hf
+theorem ContDiff.exp {n} (hf : ContDiff ℝ n f) : ContDiff ℝ n fun x => Real.exp (f x) :=
+  Real.cont_diff_exp.comp hf
 
-lemma cont_diff_on.exp {n} (hf : cont_diff_on ℝ n f s) :
-  cont_diff_on ℝ n (λ x, real.exp (f x)) s :=
-real.cont_diff_exp.comp_cont_diff_on  hf
+theorem ContDiffAt.exp {n} (hf : ContDiffAt ℝ n f x) : ContDiffAt ℝ n (fun x => Real.exp (f x)) x :=
+  Real.cont_diff_exp.ContDiffAt.comp x hf
 
-lemma cont_diff_within_at.exp {n} (hf : cont_diff_within_at ℝ n f s x) :
-  cont_diff_within_at ℝ n (λ x, real.exp (f x)) s x :=
-real.cont_diff_exp.cont_diff_at.comp_cont_diff_within_at x hf
+theorem ContDiffOn.exp {n} (hf : ContDiffOn ℝ n f s) : ContDiffOn ℝ n (fun x => Real.exp (f x)) s :=
+  Real.cont_diff_exp.comp_cont_diff_on hf
 
-lemma has_fderiv_within_at.exp (hf : has_fderiv_within_at f f' s x) :
-  has_fderiv_within_at (λ x, real.exp (f x)) (real.exp (f x) • f') s x :=
-(real.has_deriv_at_exp (f x)).comp_has_fderiv_within_at x hf
+theorem ContDiffWithinAt.exp {n} (hf : ContDiffWithinAt ℝ n f s x) :
+    ContDiffWithinAt ℝ n (fun x => Real.exp (f x)) s x :=
+  Real.cont_diff_exp.ContDiffAt.comp_cont_diff_within_at x hf
 
-lemma has_fderiv_at.exp (hf : has_fderiv_at f f' x) :
-  has_fderiv_at (λ x, real.exp (f x)) (real.exp (f x) • f') x :=
-(real.has_deriv_at_exp (f x)).comp_has_fderiv_at x hf
+theorem HasFderivWithinAt.exp (hf : HasFderivWithinAt f f' s x) :
+    HasFderivWithinAt (fun x => Real.exp (f x)) (Real.exp (f x) • f') s x :=
+  (Real.has_deriv_at_exp (f x)).comp_has_fderiv_within_at x hf
 
-lemma has_strict_fderiv_at.exp (hf : has_strict_fderiv_at f f' x) :
-  has_strict_fderiv_at (λ x, real.exp (f x)) (real.exp (f x) • f') x :=
-(real.has_strict_deriv_at_exp (f x)).comp_has_strict_fderiv_at x hf
+theorem HasFderivAt.exp (hf : HasFderivAt f f' x) : HasFderivAt (fun x => Real.exp (f x)) (Real.exp (f x) • f') x :=
+  (Real.has_deriv_at_exp (f x)).comp_has_fderiv_at x hf
 
-lemma differentiable_within_at.exp (hf : differentiable_within_at ℝ f s x) :
-  differentiable_within_at ℝ (λ x, real.exp (f x)) s x :=
-hf.has_fderiv_within_at.exp.differentiable_within_at
+theorem HasStrictFderivAt.exp (hf : HasStrictFderivAt f f' x) :
+    HasStrictFderivAt (fun x => Real.exp (f x)) (Real.exp (f x) • f') x :=
+  (Real.has_strict_deriv_at_exp (f x)).comp_has_strict_fderiv_at x hf
 
-@[simp] lemma differentiable_at.exp (hc : differentiable_at ℝ f x) :
-  differentiable_at ℝ (λx, real.exp (f x)) x :=
-hc.has_fderiv_at.exp.differentiable_at
+theorem DifferentiableWithinAt.exp (hf : DifferentiableWithinAt ℝ f s x) :
+    DifferentiableWithinAt ℝ (fun x => Real.exp (f x)) s x :=
+  hf.HasFderivWithinAt.exp.DifferentiableWithinAt
 
-lemma differentiable_on.exp (hc : differentiable_on ℝ f s) :
-  differentiable_on ℝ (λx, real.exp (f x)) s :=
-λ x h, (hc x h).exp
+@[simp]
+theorem DifferentiableAt.exp (hc : DifferentiableAt ℝ f x) : DifferentiableAt ℝ (fun x => Real.exp (f x)) x :=
+  hc.HasFderivAt.exp.DifferentiableAt
 
-@[simp] lemma differentiable.exp (hc : differentiable ℝ f) :
-  differentiable ℝ (λx, real.exp (f x)) :=
-λ x, (hc x).exp
+theorem DifferentiableOn.exp (hc : DifferentiableOn ℝ f s) : DifferentiableOn ℝ (fun x => Real.exp (f x)) s :=
+  fun x h => (hc x h).exp
 
-lemma fderiv_within_exp (hf : differentiable_within_at ℝ f s x)
-  (hxs : unique_diff_within_at ℝ s x) :
-  fderiv_within ℝ (λx, real.exp (f x)) s x = real.exp (f x) • (fderiv_within ℝ f s x) :=
-hf.has_fderiv_within_at.exp.fderiv_within hxs
+@[simp]
+theorem Differentiable.exp (hc : Differentiable ℝ f) : Differentiable ℝ fun x => Real.exp (f x) := fun x => (hc x).exp
 
-@[simp] lemma fderiv_exp (hc : differentiable_at ℝ f x) :
-  fderiv ℝ (λx, real.exp (f x)) x = real.exp (f x) • (fderiv ℝ f x) :=
-hc.has_fderiv_at.exp.fderiv
+theorem fderiv_within_exp (hf : DifferentiableWithinAt ℝ f s x) (hxs : UniqueDiffWithinAt ℝ s x) :
+    fderivWithin ℝ (fun x => Real.exp (f x)) s x = Real.exp (f x) • fderivWithin ℝ f s x :=
+  hf.HasFderivWithinAt.exp.fderivWithin hxs
+
+@[simp]
+theorem fderiv_exp (hc : DifferentiableAt ℝ f x) :
+    fderiv ℝ (fun x => Real.exp (f x)) x = Real.exp (f x) • fderiv ℝ f x :=
+  hc.HasFderivAt.exp.fderiv
 
 end
+

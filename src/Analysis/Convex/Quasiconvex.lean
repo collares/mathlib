@@ -3,7 +3,7 @@ Copyright (c) 2021 Yaël Dillies. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yaël Dillies
 -/
-import analysis.convex.function
+import Mathbin.Analysis.Convex.Function
 
 /-!
 # Quasiconvex and quasiconcave functions
@@ -31,176 +31,175 @@ not hard but quite a pain to go about as there are many cases to consider.
 * https://en.wikipedia.org/wiki/Quasiconvex_function
 -/
 
-open function set
 
-variables {𝕜 E F β : Type*}
+open Function Set
 
-section ordered_semiring
-variables [ordered_semiring 𝕜]
+variable {𝕜 E F β : Type _}
 
-section add_comm_monoid
-variables [add_comm_monoid E] [add_comm_monoid F]
+section OrderedSemiring
 
-section ordered_add_comm_monoid
-variables (𝕜) [ordered_add_comm_monoid β] [has_scalar 𝕜 E] (s : set E) (f : E → β)
+variable [OrderedSemiring 𝕜]
+
+section AddCommMonoidₓ
+
+variable [AddCommMonoidₓ E] [AddCommMonoidₓ F]
+
+section OrderedAddCommMonoid
+
+variable (𝕜) [OrderedAddCommMonoid β] [HasScalar 𝕜 E] (s : Set E) (f : E → β)
 
 /-- A function is quasiconvex if all its sublevels are convex.
 This means that, for all `r`, `{x ∈ s | f x ≤ r}` is `𝕜`-convex. -/
-def quasiconvex_on : Prop :=
-∀ r, convex 𝕜 {x ∈ s | f x ≤ r}
+def QuasiconvexOn : Prop :=
+  ∀ r, Convex 𝕜 { x ∈ s | f x ≤ r }
 
 /-- A function is quasiconcave if all its superlevels are convex.
 This means that, for all `r`, `{x ∈ s | r ≤ f x}` is `𝕜`-convex. -/
-def quasiconcave_on : Prop :=
-∀ r, convex 𝕜 {x ∈ s | r ≤ f x}
+def QuasiconcaveOn : Prop :=
+  ∀ r, Convex 𝕜 { x ∈ s | r ≤ f x }
 
 /-- A function is quasilinear if it is both quasiconvex and quasiconcave.
 This means that, for all `r`,
 the sets `{x ∈ s | f x ≤ r}` and `{x ∈ s | r ≤ f x}` are `𝕜`-convex. -/
-def quasilinear_on : Prop :=
-quasiconvex_on 𝕜 s f ∧ quasiconcave_on 𝕜 s f
+def QuasilinearOn : Prop :=
+  QuasiconvexOn 𝕜 s f ∧ QuasiconcaveOn 𝕜 s f
 
-variables {𝕜 s f}
+variable {𝕜 s f}
 
-lemma quasiconvex_on.dual (hf : quasiconvex_on 𝕜 s f) :
-  @quasiconcave_on 𝕜 E (order_dual β) _ _ _ _ s f :=
-hf
+theorem QuasiconvexOn.dual (hf : QuasiconvexOn 𝕜 s f) : @QuasiconcaveOn 𝕜 E (OrderDual β) _ _ _ _ s f :=
+  hf
 
-lemma quasiconcave_on.dual (hf : quasiconcave_on 𝕜 s f) :
-  @quasiconvex_on 𝕜 E (order_dual β) _ _ _ _ s f :=
-hf
+theorem QuasiconcaveOn.dual (hf : QuasiconcaveOn 𝕜 s f) : @QuasiconvexOn 𝕜 E (OrderDual β) _ _ _ _ s f :=
+  hf
 
-lemma quasilinear_on.dual (hf : quasilinear_on 𝕜 s f) :
-  @quasilinear_on 𝕜 E (order_dual β) _ _ _ _ s f :=
-⟨hf.2, hf.1⟩
+theorem QuasilinearOn.dual (hf : QuasilinearOn 𝕜 s f) : @QuasilinearOn 𝕜 E (OrderDual β) _ _ _ _ s f :=
+  ⟨hf.2, hf.1⟩
 
-lemma convex.quasiconvex_on_of_convex_le (hs : convex 𝕜 s) (h : ∀ r, convex 𝕜 {x | f x ≤ r}) :
-  quasiconvex_on 𝕜 s f :=
-λ r, hs.inter (h r)
+theorem Convex.quasiconvex_on_of_convex_le (hs : Convex 𝕜 s) (h : ∀ r, Convex 𝕜 { x | f x ≤ r }) :
+    QuasiconvexOn 𝕜 s f := fun r => hs.inter (h r)
 
-lemma convex.quasiconcave_on_of_convex_ge (hs : convex 𝕜 s) (h : ∀ r, convex 𝕜 {x | r ≤ f x}) :
-  quasiconcave_on 𝕜 s f :=
-@convex.quasiconvex_on_of_convex_le 𝕜 E (order_dual β) _ _ _ _ _ _ hs h
+theorem Convex.quasiconcave_on_of_convex_ge (hs : Convex 𝕜 s) (h : ∀ r, Convex 𝕜 { x | r ≤ f x }) :
+    QuasiconcaveOn 𝕜 s f :=
+  @Convex.quasiconvex_on_of_convex_le 𝕜 E (OrderDual β) _ _ _ _ _ _ hs h
 
-lemma quasiconvex_on.convex [is_directed β (≤)] (hf : quasiconvex_on 𝕜 s f) : convex 𝕜 s :=
-λ x y hx hy a b ha hb hab,
-  let ⟨z, hxz, hyz⟩ := exists_ge_ge (f x) (f y) in (hf _ ⟨hx, hxz⟩ ⟨hy, hyz⟩ ha hb hab).1
+theorem QuasiconvexOn.convex [IsDirected β (· ≤ ·)] (hf : QuasiconvexOn 𝕜 s f) : Convex 𝕜 s :=
+  fun x y hx hy a b ha hb hab =>
+  let ⟨z, hxz, hyz⟩ := exists_ge_ge (f x) (f y)
+  (hf _ ⟨hx, hxz⟩ ⟨hy, hyz⟩ ha hb hab).1
 
-lemma quasiconcave_on.convex [is_directed β (swap (≤))] (hf : quasiconcave_on 𝕜 s f) : convex 𝕜 s :=
-hf.dual.convex
+theorem QuasiconcaveOn.convex [IsDirected β (swap (· ≤ ·))] (hf : QuasiconcaveOn 𝕜 s f) : Convex 𝕜 s :=
+  hf.dual.Convex
 
-end ordered_add_comm_monoid
+end OrderedAddCommMonoid
 
-section linear_ordered_add_comm_monoid
-variables [linear_ordered_add_comm_monoid β]
+section LinearOrderedAddCommMonoid
 
-section has_scalar
-variables [has_scalar 𝕜 E] {s : set E} {f g : E → β}
+variable [LinearOrderedAddCommMonoid β]
 
-lemma quasiconvex_on.sup (hf : quasiconvex_on 𝕜 s f) (hg : quasiconvex_on 𝕜 s g) :
-  quasiconvex_on 𝕜 s (f ⊔ g) :=
-begin
-  intro r,
-  simp_rw [pi.sup_def, sup_le_iff, ←set.sep_inter_sep],
-  exact (hf r).inter (hg r),
-end
+section HasScalar
 
-lemma quasiconcave_on.inf (hf : quasiconcave_on 𝕜 s f) (hg : quasiconcave_on 𝕜 s g) :
-  quasiconcave_on 𝕜 s (f ⊓ g) :=
-hf.dual.sup hg
+variable [HasScalar 𝕜 E] {s : Set E} {f g : E → β}
 
-lemma quasiconvex_on_iff_le_max :
-  quasiconvex_on 𝕜 s f ↔ convex 𝕜 s ∧
-    ∀ ⦃x y : E⦄, x ∈ s → y ∈ s → ∀ ⦃a b : 𝕜⦄, 0 ≤ a → 0 ≤ b → a + b = 1 →
-      f (a • x + b • y) ≤ max (f x) (f y) :=
-⟨λ hf, ⟨hf.convex, λ x y hx hy a b ha hb hab,
-  (hf _ ⟨hx, le_max_left _ _⟩ ⟨hy, le_max_right _ _⟩ ha hb hab).2⟩,
-  λ hf r x y hx hy a b ha hb hab,
-  ⟨hf.1 hx.1 hy.1 ha hb hab, (hf.2 hx.1 hy.1 ha hb hab).trans $ max_le hx.2 hy.2⟩⟩
+theorem QuasiconvexOn.sup (hf : QuasiconvexOn 𝕜 s f) (hg : QuasiconvexOn 𝕜 s g) : QuasiconvexOn 𝕜 s (f⊔g) := by
+  intro r
+  simp_rw [Pi.sup_def, sup_le_iff, ← Set.sep_inter_sep]
+  exact (hf r).inter (hg r)
 
-lemma quasiconcave_on_iff_min_le :
-  quasiconcave_on 𝕜 s f ↔ convex 𝕜 s ∧
-    ∀ ⦃x y : E⦄, x ∈ s → y ∈ s → ∀ ⦃a b : 𝕜⦄, 0 ≤ a → 0 ≤ b → a + b = 1 →
-      min (f x) (f y) ≤ f (a • x + b • y) :=
-@quasiconvex_on_iff_le_max 𝕜 E (order_dual β) _ _ _ _ _ _
+theorem QuasiconcaveOn.inf (hf : QuasiconcaveOn 𝕜 s f) (hg : QuasiconcaveOn 𝕜 s g) : QuasiconcaveOn 𝕜 s (f⊓g) :=
+  hf.dual.sup hg
 
-lemma quasilinear_on_iff_mem_interval :
-  quasilinear_on 𝕜 s f ↔ convex 𝕜 s ∧
-    ∀ ⦃x y : E⦄, x ∈ s → y ∈ s → ∀ ⦃a b : 𝕜⦄, 0 ≤ a → 0 ≤ b → a + b = 1 →
-      f (a • x + b • y) ∈ interval (f x) (f y) :=
-begin
-  rw [quasilinear_on, quasiconvex_on_iff_le_max, quasiconcave_on_iff_min_le, and_and_and_comm,
-    and_self],
-  apply and_congr_right',
-  simp_rw [←forall_and_distrib, interval, mem_Icc, and_comm],
-end
+theorem quasiconvex_on_iff_le_max :
+    QuasiconvexOn 𝕜 s f ↔
+      Convex 𝕜 s ∧
+        ∀ ⦃x y : E⦄, x ∈ s → y ∈ s → ∀ ⦃a b : 𝕜⦄, 0 ≤ a → 0 ≤ b → a + b = 1 → f (a • x + b • y) ≤ max (f x) (f y) :=
+  ⟨fun hf =>
+    ⟨hf.Convex, fun x y hx hy a b ha hb hab => (hf _ ⟨hx, le_max_leftₓ _ _⟩ ⟨hy, le_max_rightₓ _ _⟩ ha hb hab).2⟩,
+    fun hf r x y hx hy a b ha hb hab =>
+    ⟨hf.1 hx.1 hy.1 ha hb hab, (hf.2 hx.1 hy.1 ha hb hab).trans <| max_leₓ hx.2 hy.2⟩⟩
 
-lemma quasiconvex_on.convex_lt (hf : quasiconvex_on 𝕜 s f) (r : β) : convex 𝕜 {x ∈ s | f x < r} :=
-begin
-  refine λ x y hx hy a b ha hb hab, _,
-  have h := hf _ ⟨hx.1, le_max_left _ _⟩ ⟨hy.1, le_max_right _ _⟩ ha hb hab,
-  exact ⟨h.1, h.2.trans_lt $ max_lt hx.2 hy.2⟩,
-end
+theorem quasiconcave_on_iff_min_le :
+    QuasiconcaveOn 𝕜 s f ↔
+      Convex 𝕜 s ∧
+        ∀ ⦃x y : E⦄, x ∈ s → y ∈ s → ∀ ⦃a b : 𝕜⦄, 0 ≤ a → 0 ≤ b → a + b = 1 → min (f x) (f y) ≤ f (a • x + b • y) :=
+  @quasiconvex_on_iff_le_max 𝕜 E (OrderDual β) _ _ _ _ _ _
 
-lemma quasiconcave_on.convex_gt (hf : quasiconcave_on 𝕜 s f) (r : β) : convex 𝕜 {x ∈ s | r < f x} :=
-hf.dual.convex_lt r
+theorem quasilinear_on_iff_mem_interval :
+    QuasilinearOn 𝕜 s f ↔
+      Convex 𝕜 s ∧
+        ∀ ⦃x y : E⦄,
+          x ∈ s → y ∈ s → ∀ ⦃a b : 𝕜⦄, 0 ≤ a → 0 ≤ b → a + b = 1 → f (a • x + b • y) ∈ Interval (f x) (f y) :=
+  by
+  rw [QuasilinearOn, quasiconvex_on_iff_le_max, quasiconcave_on_iff_min_le, and_and_and_comm, and_selfₓ]
+  apply and_congr_right'
+  simp_rw [← forall_and_distrib, interval, mem_Icc, and_comm]
 
-end has_scalar
+theorem QuasiconvexOn.convex_lt (hf : QuasiconvexOn 𝕜 s f) (r : β) : Convex 𝕜 { x ∈ s | f x < r } := by
+  refine' fun x y hx hy a b ha hb hab => _
+  have h := hf _ ⟨hx.1, le_max_leftₓ _ _⟩ ⟨hy.1, le_max_rightₓ _ _⟩ ha hb hab
+  exact ⟨h.1, h.2.trans_lt <| max_ltₓ hx.2 hy.2⟩
 
-section ordered_smul
-variables [has_scalar 𝕜 E] [module 𝕜 β] [ordered_smul 𝕜 β] {s : set E} {f : E → β}
+theorem QuasiconcaveOn.convex_gt (hf : QuasiconcaveOn 𝕜 s f) (r : β) : Convex 𝕜 { x ∈ s | r < f x } :=
+  hf.dual.convex_lt r
 
-lemma convex_on.quasiconvex_on (hf : convex_on 𝕜 s f) : quasiconvex_on 𝕜 s f :=
-hf.convex_le
+end HasScalar
 
-lemma concave_on.quasiconcave_on (hf : concave_on 𝕜 s f) : quasiconcave_on 𝕜 s f :=
-hf.convex_ge
+section OrderedSmul
 
-end ordered_smul
-end linear_ordered_add_comm_monoid
-end add_comm_monoid
+variable [HasScalar 𝕜 E] [Module 𝕜 β] [OrderedSmul 𝕜 β] {s : Set E} {f : E → β}
 
-section linear_ordered_add_comm_monoid
-variables [linear_ordered_add_comm_monoid E] [ordered_add_comm_monoid β] [module 𝕜 E]
-  [ordered_smul 𝕜 E] {s : set E} {f : E → β}
+theorem ConvexOn.quasiconvex_on (hf : ConvexOn 𝕜 s f) : QuasiconvexOn 𝕜 s f :=
+  hf.convex_le
 
-lemma monotone_on.quasiconvex_on (hf : monotone_on f s) (hs : convex 𝕜 s) : quasiconvex_on 𝕜 s f :=
-hf.convex_le hs
+theorem ConcaveOn.quasiconcave_on (hf : ConcaveOn 𝕜 s f) : QuasiconcaveOn 𝕜 s f :=
+  hf.convex_ge
 
-lemma monotone_on.quasiconcave_on (hf : monotone_on f s) (hs : convex 𝕜 s) :
-  quasiconcave_on 𝕜 s f :=
-hf.convex_ge hs
+end OrderedSmul
 
-lemma monotone_on.quasilinear_on (hf : monotone_on f s) (hs : convex 𝕜 s) : quasilinear_on 𝕜 s f :=
-⟨hf.quasiconvex_on hs, hf.quasiconcave_on hs⟩
+end LinearOrderedAddCommMonoid
 
-lemma antitone_on.quasiconvex_on (hf : antitone_on f s) (hs : convex 𝕜 s) : quasiconvex_on 𝕜 s f :=
-hf.convex_le hs
+end AddCommMonoidₓ
 
-lemma antitone_on.quasiconcave_on (hf : antitone_on f s) (hs : convex 𝕜 s) :
-  quasiconcave_on 𝕜 s f :=
-hf.convex_ge hs
+section LinearOrderedAddCommMonoid
 
-lemma antitone_on.quasilinear_on (hf : antitone_on f s) (hs : convex 𝕜 s) : quasilinear_on 𝕜 s f :=
-⟨hf.quasiconvex_on hs, hf.quasiconcave_on hs⟩
+variable [LinearOrderedAddCommMonoid E] [OrderedAddCommMonoid β] [Module 𝕜 E] [OrderedSmul 𝕜 E] {s : Set E} {f : E → β}
 
-lemma monotone.quasiconvex_on (hf : monotone f) : quasiconvex_on 𝕜 univ f :=
-(hf.monotone_on _).quasiconvex_on convex_univ
+theorem MonotoneOn.quasiconvex_on (hf : MonotoneOn f s) (hs : Convex 𝕜 s) : QuasiconvexOn 𝕜 s f :=
+  hf.convex_le hs
 
-lemma monotone.quasiconcave_on (hf : monotone f) : quasiconcave_on 𝕜 univ f :=
-(hf.monotone_on _).quasiconcave_on convex_univ
+theorem MonotoneOn.quasiconcave_on (hf : MonotoneOn f s) (hs : Convex 𝕜 s) : QuasiconcaveOn 𝕜 s f :=
+  hf.convex_ge hs
 
-lemma monotone.quasilinear_on (hf : monotone f) : quasilinear_on 𝕜 univ f :=
-⟨hf.quasiconvex_on, hf.quasiconcave_on⟩
+theorem MonotoneOn.quasilinear_on (hf : MonotoneOn f s) (hs : Convex 𝕜 s) : QuasilinearOn 𝕜 s f :=
+  ⟨hf.QuasiconvexOn hs, hf.QuasiconcaveOn hs⟩
 
-lemma antitone.quasiconvex_on (hf : antitone f) : quasiconvex_on 𝕜 univ f :=
-(hf.antitone_on _).quasiconvex_on convex_univ
+theorem AntitoneOn.quasiconvex_on (hf : AntitoneOn f s) (hs : Convex 𝕜 s) : QuasiconvexOn 𝕜 s f :=
+  hf.convex_le hs
 
-lemma antitone.quasiconcave_on (hf : antitone f) : quasiconcave_on 𝕜 univ f :=
-(hf.antitone_on _).quasiconcave_on convex_univ
+theorem AntitoneOn.quasiconcave_on (hf : AntitoneOn f s) (hs : Convex 𝕜 s) : QuasiconcaveOn 𝕜 s f :=
+  hf.convex_ge hs
 
-lemma antitone.quasilinear_on (hf : antitone f) : quasilinear_on 𝕜 univ f :=
-⟨hf.quasiconvex_on, hf.quasiconcave_on⟩
+theorem AntitoneOn.quasilinear_on (hf : AntitoneOn f s) (hs : Convex 𝕜 s) : QuasilinearOn 𝕜 s f :=
+  ⟨hf.QuasiconvexOn hs, hf.QuasiconcaveOn hs⟩
 
-end linear_ordered_add_comm_monoid
-end ordered_semiring
+theorem Monotone.quasiconvex_on (hf : Monotone f) : QuasiconvexOn 𝕜 Univ f :=
+  (hf.MonotoneOn _).QuasiconvexOn convex_univ
+
+theorem Monotone.quasiconcave_on (hf : Monotone f) : QuasiconcaveOn 𝕜 Univ f :=
+  (hf.MonotoneOn _).QuasiconcaveOn convex_univ
+
+theorem Monotone.quasilinear_on (hf : Monotone f) : QuasilinearOn 𝕜 Univ f :=
+  ⟨hf.QuasiconvexOn, hf.QuasiconcaveOn⟩
+
+theorem Antitone.quasiconvex_on (hf : Antitone f) : QuasiconvexOn 𝕜 Univ f :=
+  (hf.AntitoneOn _).QuasiconvexOn convex_univ
+
+theorem Antitone.quasiconcave_on (hf : Antitone f) : QuasiconcaveOn 𝕜 Univ f :=
+  (hf.AntitoneOn _).QuasiconcaveOn convex_univ
+
+theorem Antitone.quasilinear_on (hf : Antitone f) : QuasilinearOn 𝕜 Univ f :=
+  ⟨hf.QuasiconvexOn, hf.QuasiconcaveOn⟩
+
+end LinearOrderedAddCommMonoid
+
+end OrderedSemiring
+

@@ -3,7 +3,7 @@ Copyright (c) 2022 Yury G. Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury G. Kudryashov
 -/
-import topology.algebra.group_completion
+import Mathbin.Topology.Algebra.GroupCompletion
 
 /-!
 # Multiplicative action on the completion of a uniform space
@@ -14,115 +14,121 @@ continuous `(•) c` can be extended to a multiplicative action on `uniform_spac
 also provide similar instances `distrib_mul_action`, `mul_action_with_zero`, and `module`.
 -/
 
-universes u v w x y z
 
-noncomputable theory
+universe u v w x y z
 
-variables (R : Type u) (M : Type v) (N : Type w) (X : Type x) (Y : Type y)
-  [uniform_space X] [uniform_space Y]
+noncomputable section
+
+variable (R : Type u) (M : Type v) (N : Type w) (X : Type x) (Y : Type y) [UniformSpace X] [UniformSpace Y]
 
 /-- An additive action such that for all `c`, the map `λ x, c +ᵥ x` is uniformly continuous. -/
-class has_uniform_continuous_const_vadd [uniform_space X] [has_vadd M X] : Prop :=
-(uniform_continuous_const_vadd : ∀ (c : M), uniform_continuous ((+ᵥ) c : X → X))
+class HasUniformContinuousConstVadd [UniformSpace X] [HasVadd M X] : Prop where
+  uniform_continuous_const_vadd : ∀ c : M, UniformContinuous ((· +ᵥ ·) c : X → X)
 
 /-- A multiplicative action such that for all `c`, the map `λ x, c • x` is uniformly continuous. -/
 @[to_additive]
-class has_uniform_continuous_const_smul [uniform_space X] [has_scalar M X] : Prop :=
-(uniform_continuous_const_smul : ∀ (c : M), uniform_continuous ((•) c : X → X))
+class HasUniformContinuousConstSmul [UniformSpace X] [HasScalar M X] : Prop where
+  uniform_continuous_const_smul : ∀ c : M, UniformContinuous ((· • ·) c : X → X)
 
-export has_uniform_continuous_const_vadd (uniform_continuous_const_vadd)
-  has_uniform_continuous_const_smul (uniform_continuous_const_smul)
+export HasUniformContinuousConstVadd (uniform_continuous_const_vadd)
 
-section has_scalar
+export HasUniformContinuousConstSmul (uniform_continuous_const_smul)
 
-variable [has_scalar M X]
+section HasScalar
 
-@[priority 100, to_additive]
-instance has_uniform_continuous_const_smul.to_has_continuous_const_smul
-  [has_uniform_continuous_const_smul M X] : has_continuous_const_smul M X :=
-⟨λ c, (uniform_continuous_const_smul c).continuous⟩
+variable [HasScalar M X]
 
-lemma uniform_continuous.const_smul [has_uniform_continuous_const_smul M X]
-  {f : Y → X} (hf : uniform_continuous f) (c : M) :
-  uniform_continuous (c • f) :=
-(uniform_continuous_const_smul c).comp hf
+@[to_additive]
+instance (priority := 100) HasUniformContinuousConstSmul.to_has_continuous_const_smul
+    [HasUniformContinuousConstSmul M X] : HasContinuousConstSmul M X :=
+  ⟨fun c => (uniform_continuous_const_smul c).Continuous⟩
+
+theorem UniformContinuous.const_smul [HasUniformContinuousConstSmul M X] {f : Y → X} (hf : UniformContinuous f)
+    (c : M) : UniformContinuous (c • f) :=
+  (uniform_continuous_const_smul c).comp hf
 
 /-- If a scalar is central, then its right action is uniform continuous when its left action is. -/
-@[priority 100]
-instance has_uniform_continuous_const_smul.op [has_scalar Mᵐᵒᵖ X] [is_central_scalar M X]
-  [has_uniform_continuous_const_smul M X] : has_uniform_continuous_const_smul Mᵐᵒᵖ X :=
-⟨mul_opposite.rec $ λ c, begin
-  change uniform_continuous (λ m, mul_opposite.op c • m),
-  simp_rw op_smul_eq_smul,
-  exact uniform_continuous_const_smul c,
-end⟩
+instance (priority := 100) HasUniformContinuousConstSmul.op [HasScalar Mᵐᵒᵖ X] [IsCentralScalar M X]
+    [HasUniformContinuousConstSmul M X] : HasUniformContinuousConstSmul Mᵐᵒᵖ X :=
+  ⟨MulOpposite.rec fun c => by
+      change UniformContinuous fun m => MulOpposite.op c • m
+      simp_rw [op_smul_eq_smul]
+      exact uniform_continuous_const_smul c⟩
 
-end has_scalar
+end HasScalar
 
-@[to_additive] instance uniform_group.to_has_uniform_continuous_const_smul
-  {G : Type u} [group G] [uniform_space G] [uniform_group G] :
-  has_uniform_continuous_const_smul G G :=
-⟨λ c, uniform_continuous_const.mul uniform_continuous_id⟩
+@[to_additive]
+instance UniformGroup.to_has_uniform_continuous_const_smul {G : Type u} [Groupₓ G] [UniformSpace G] [UniformGroup G] :
+    HasUniformContinuousConstSmul G G :=
+  ⟨fun c => uniform_continuous_const.mul uniform_continuous_id⟩
 
-namespace uniform_space
+namespace UniformSpace
 
-namespace completion
+namespace Completion
 
-section has_scalar
+section HasScalar
 
-variable [has_scalar M X]
+variable [HasScalar M X]
 
-@[to_additive has_vadd] instance : has_scalar M (completion X) :=
-⟨λ c, completion.map ((•) c)⟩
+@[to_additive HasVadd]
+instance : HasScalar M (Completion X) :=
+  ⟨fun c => Completion.map ((· • ·) c)⟩
 
-@[to_additive] instance : has_uniform_continuous_const_smul M (completion X) :=
-⟨λ c, uniform_continuous_map⟩
+@[to_additive]
+instance : HasUniformContinuousConstSmul M (Completion X) :=
+  ⟨fun c => uniform_continuous_map⟩
 
-instance [has_scalar Mᵐᵒᵖ X] [is_central_scalar M X] : is_central_scalar M (completion X) :=
-⟨λ c a, congr_arg (λ f, completion.map f a) $ by exact funext (op_smul_eq_smul c)⟩
+instance [HasScalar Mᵐᵒᵖ X] [IsCentralScalar M X] : IsCentralScalar M (Completion X) :=
+  ⟨fun c a => (congr_argₓ fun f => Completion.map f a) <| funext (op_smul_eq_smul c)⟩
 
-variables {M X} [has_uniform_continuous_const_smul M X]
+variable {M X} [HasUniformContinuousConstSmul M X]
 
 @[simp, norm_cast, to_additive]
-lemma coe_smul (c : M) (x : X) : ↑(c • x) = (c • x : completion X) :=
-(map_coe (uniform_continuous_const_smul c) x).symm
+theorem coe_smul (c : M) (x : X) : ↑(c • x) = (c • x : Completion X) :=
+  (map_coe (uniform_continuous_const_smul c) x).symm
 
-end has_scalar
+end HasScalar
 
-@[to_additive] instance [monoid M] [mul_action M X] [has_uniform_continuous_const_smul M X] :
-  mul_action M (completion X) :=
-{ smul := (•),
-  one_smul := ext' (continuous_const_smul _) continuous_id $ λ a, by rw [← coe_smul, one_smul],
-  mul_smul := λ x y, ext' (continuous_const_smul _) ((continuous_const_smul _).const_smul _) $
-    λ a, by simp only [← coe_smul, mul_smul] }
+@[to_additive]
+instance [Monoidₓ M] [MulAction M X] [HasUniformContinuousConstSmul M X] : MulAction M (Completion X) where
+  smul := (· • ·)
+  one_smul :=
+    (ext' (continuous_const_smul _) continuous_id) fun a => by
+      rw [← coe_smul, one_smul]
+  mul_smul := fun x y =>
+    (ext' (continuous_const_smul _) ((continuous_const_smul _).const_smul _)) fun a => by
+      simp only [← coe_smul, mul_smul]
 
-instance [monoid_with_zero M] [has_zero X] [mul_action_with_zero M X]
-  [has_uniform_continuous_const_smul M X] :
-  mul_action_with_zero M (completion X) :=
-{ smul := (•),
-  smul_zero := λ r, by rw [← coe_zero, ← coe_smul, mul_action_with_zero.smul_zero r],
-  zero_smul := ext' (continuous_const_smul _) continuous_const $ λ a,
-    by rw [← coe_smul, zero_smul, coe_zero],
-  .. completion.mul_action M X }
+instance [MonoidWithZeroₓ M] [Zero X] [MulActionWithZero M X] [HasUniformContinuousConstSmul M X] :
+    MulActionWithZero M (Completion X) :=
+  { Completion.mulAction M X with smul := (· • ·),
+    smul_zero := fun r => by
+      rw [← coe_zero, ← coe_smul, MulActionWithZero.smul_zero r],
+    zero_smul :=
+      (ext' (continuous_const_smul _) continuous_const) fun a => by
+        rw [← coe_smul, zero_smul, coe_zero] }
 
-instance [monoid M] [add_group N] [distrib_mul_action M N] [uniform_space N]
-  [uniform_add_group N] [has_uniform_continuous_const_smul M N] :
-  distrib_mul_action M (completion N) :=
-{ smul := (•),
-  smul_add := λ r x y, induction_on₂ x y
-    (is_closed_eq ((continuous_fst.add continuous_snd).const_smul _)
-      ((continuous_fst.const_smul _).add (continuous_snd.const_smul _)))
-    (λ a b, by simp only [← coe_add, ← coe_smul, smul_add]),
-  smul_zero := λ r, by rw [← coe_zero, ← coe_smul, smul_zero r],
-  .. completion.mul_action M N }
+instance [Monoidₓ M] [AddGroupₓ N] [DistribMulAction M N] [UniformSpace N] [UniformAddGroup N]
+    [HasUniformContinuousConstSmul M N] : DistribMulAction M (Completion N) :=
+  { Completion.mulAction M N with smul := (· • ·),
+    smul_add := fun r x y =>
+      induction_on₂ x y
+        (is_closed_eq ((continuous_fst.add continuous_snd).const_smul _)
+          ((continuous_fst.const_smul _).add (continuous_snd.const_smul _)))
+        fun a b => by
+        simp only [← coe_add, ← coe_smul, smul_add],
+    smul_zero := fun r => by
+      rw [← coe_zero, ← coe_smul, smul_zero r] }
 
-instance [semiring R] [add_comm_group M] [module R M] [uniform_space M] [uniform_add_group M]
-  [has_uniform_continuous_const_smul R M] : module R (completion M) :=
-{ smul := (•),
-  add_smul := λ a b, ext' (continuous_const_smul _)
-    ((continuous_const_smul _).add (continuous_const_smul _)) $ λ x, by { norm_cast, rw add_smul },
-  .. completion.distrib_mul_action R M, .. completion.mul_action_with_zero R M }
+instance [Semiringₓ R] [AddCommGroupₓ M] [Module R M] [UniformSpace M] [UniformAddGroup M]
+    [HasUniformContinuousConstSmul R M] : Module R (Completion M) :=
+  { Completion.distribMulAction R M, Completion.mulActionWithZero R M with smul := (· • ·),
+    add_smul := fun a b =>
+      (ext' (continuous_const_smul _) ((continuous_const_smul _).add (continuous_const_smul _))) fun x => by
+        norm_cast
+        rw [add_smul] }
 
-end completion
+end Completion
 
-end uniform_space
+end UniformSpace
+

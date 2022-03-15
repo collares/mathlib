@@ -3,8 +3,8 @@ Copyright (c) 2020 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import data.fintype.basic
-import control.equiv_functor
+import Mathbin.Data.Fintype.Basic
+import Mathbin.Control.EquivFunctor
 
 /-!
 # `equiv_functor` instances
@@ -12,18 +12,20 @@ import control.equiv_functor
 We derive some `equiv_functor` instances, to enable `equiv_rw` to rewrite under these functions.
 -/
 
-open equiv
 
-instance equiv_functor_unique : equiv_functor unique :=
-{ map := λ α β e, equiv.unique_congr e, }
+open Equivₓ
 
-instance equiv_functor_perm : equiv_functor perm :=
-{ map := λ α β e p, (e.symm.trans p).trans e }
+instance equivFunctorUnique : EquivFunctor Unique where
+  map := fun α β e => Equivₓ.uniqueCongr e
+
+instance equivFunctorPerm : EquivFunctor Perm where
+  map := fun α β e p => (e.symm.trans p).trans e
 
 -- There is a classical instance of `is_lawful_functor finset` available,
 -- but we provide this computable alternative separately.
-instance equiv_functor_finset : equiv_functor finset :=
-{ map := λ α β e s, s.map e.to_embedding, }
+instance equivFunctorFinset : EquivFunctor Finset where
+  map := fun α β e s => s.map e.toEmbedding
 
-instance equiv_functor_fintype : equiv_functor fintype :=
-{ map := λ α β e s, by exactI fintype.of_bijective e e.bijective, }
+instance equivFunctorFintype : EquivFunctor Fintype where
+  map := fun α β e s => Fintype.ofBijective e e.bijective
+

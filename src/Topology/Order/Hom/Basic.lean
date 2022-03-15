@@ -3,8 +3,8 @@ Copyright (c) 2022 Yaël Dillies. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yaël Dillies
 -/
-import order.hom.basic
-import topology.continuous_function.basic
+import Mathbin.Order.Hom.Basic
+import Mathbin.Topology.ContinuousFunction.Basic
 
 /-!
 # Continuous order homomorphisms
@@ -25,103 +25,137 @@ be satisfied by itself and all stricter types.
 * `continuous_order_hom_class`
 -/
 
-open function
 
-variables {F α β γ δ : Type*}
+open Function
+
+variable {F α β γ δ : Type _}
 
 /-- The type of continuous monotone maps from `α` to `β`, aka Priestley homomorphisms. -/
-structure continuous_order_hom (α β : Type*) [preorder α] [preorder β] [topological_space α]
-  [topological_space β]
-  extends order_hom α β :=
-(continuous_to_fun : continuous to_fun)
+structure ContinuousOrderHom (α β : Type _) [Preorderₓ α] [Preorderₓ β] [TopologicalSpace α]
+  [TopologicalSpace β] extends OrderHom α β where
+  continuous_to_fun : Continuous to_fun
 
-infixr ` →Co `:25 := continuous_order_hom
+-- mathport name: «expr →Co »
+infixr:25 " →Co " => ContinuousOrderHom
 
 /-- `continuous_order_hom_class F α β` states that `F` is a type of continuous monotone maps.
 
 You should extend this class when you extend `continuous_order_hom`. -/
-class continuous_order_hom_class (F : Type*) (α β : out_param $ Type*) [preorder α] [preorder β]
-  [topological_space α] [topological_space β]
-  extends rel_hom_class F ((≤) : α → α → Prop) ((≤) : β → β → Prop) :=
-(map_continuous (f : F) : continuous f)
+class ContinuousOrderHomClass (F : Type _) (α β : outParam <| Type _) [Preorderₓ α] [Preorderₓ β] [TopologicalSpace α]
+  [TopologicalSpace β] extends RelHomClass F ((· ≤ ·) : α → α → Prop) ((· ≤ ·) : β → β → Prop) where
+  map_continuous (f : F) : Continuous f
 
-@[priority 100] -- See note [lower instance priority]
-instance continuous_order_hom_class.to_continuous_map_class [preorder α] [preorder β]
-  [topological_space α] [topological_space β] [continuous_order_hom_class F α β] :
-  continuous_map_class F α β :=
-{ ..‹continuous_order_hom_class F α β› }
+-- See note [lower instance priority]
+instance (priority := 100) ContinuousOrderHomClass.toContinuousMapClass [Preorderₓ α] [Preorderₓ β] [TopologicalSpace α]
+    [TopologicalSpace β] [ContinuousOrderHomClass F α β] : ContinuousMapClass F α β :=
+  { ‹ContinuousOrderHomClass F α β› with }
 
-instance [preorder α] [preorder β] [topological_space α] [topological_space β]
-  [continuous_order_hom_class F α β] :
-  has_coe_t F (α →Co β) :=
-⟨λ f, { to_fun := f, monotone' := order_hom_class.mono f, continuous_to_fun := map_continuous f }⟩
+instance [Preorderₓ α] [Preorderₓ β] [TopologicalSpace α] [TopologicalSpace β] [ContinuousOrderHomClass F α β] :
+    CoeTₓ F (α →Co β) :=
+  ⟨fun f => { toFun := f, monotone' := OrderHomClass.mono f, continuous_to_fun := map_continuous f }⟩
 
 /-! ### Top homomorphisms -/
 
-namespace continuous_order_hom
-variables [topological_space α] [preorder α] [topological_space β]
 
-section preorder
-variables [preorder β] [topological_space γ] [preorder γ] [topological_space δ] [preorder δ]
+namespace ContinuousOrderHom
+
+variable [TopologicalSpace α] [Preorderₓ α] [TopologicalSpace β]
+
+section Preorderₓ
+
+variable [Preorderₓ β] [TopologicalSpace γ] [Preorderₓ γ] [TopologicalSpace δ] [Preorderₓ δ]
 
 /-- Reinterpret a `continuous_order_hom` as a `continuous_map`. -/
-def to_continuous_map (f : α →Co β) : C(α, β) := { ..f }
+def toContinuousMap (f : α →Co β) : C(α, β) :=
+  { f with }
 
-instance : continuous_order_hom_class (α →Co β) α β :=
-{ coe := λ f, f.to_fun,
-  coe_injective' := λ f g h, by { obtain ⟨⟨_, _⟩, _⟩ := f, obtain ⟨⟨_, _⟩, _⟩ := g, congr' },
-  map_rel := λ f, f.monotone',
-  map_continuous := λ f, f.continuous_to_fun }
+instance : ContinuousOrderHomClass (α →Co β) α β where
+  coe := fun f => f.toFun
+  coe_injective' := fun f g h => by
+    obtain ⟨⟨_, _⟩, _⟩ := f
+    obtain ⟨⟨_, _⟩, _⟩ := g
+    congr
+  map_rel := fun f => f.monotone'
+  map_continuous := fun f => f.continuous_to_fun
 
 /-- Helper instance for when there's too many metavariables to apply `fun_like.has_coe_to_fun`
 directly. -/
-instance : has_coe_to_fun (α →Co β) (λ _, α → β) := fun_like.has_coe_to_fun
+instance : CoeFun (α →Co β) fun _ => α → β :=
+  FunLike.hasCoeToFun
 
-@[simp] lemma to_fun_eq_coe {f : α →Co β} : f.to_fun = (f : α → β) := rfl
+@[simp]
+theorem to_fun_eq_coe {f : α →Co β} : f.toFun = (f : α → β) :=
+  rfl
 
-@[ext] lemma ext {f g : α →Co β} (h : ∀ a, f a = g a) : f = g := fun_like.ext f g h
+@[ext]
+theorem ext {f g : α →Co β} (h : ∀ a, f a = g a) : f = g :=
+  FunLike.ext f g h
 
 /-- Copy of a `continuous_order_hom` with a new `continuous_map` equal to the old one. Useful to fix
 definitional equalities. -/
 protected def copy (f : α →Co β) (f' : α → β) (h : f' = f) : α →Co β :=
-⟨f.to_order_hom.copy f' $ by exact h, h.symm.subst f.continuous_to_fun⟩
+  ⟨f.toOrderHom.copy f' <| h, h.symm.subst f.continuous_to_fun⟩
 
-variables (α)
+variable (α)
 
 /-- `id` as a `continuous_order_hom`. -/
-protected def id : α →Co α := ⟨order_hom.id, continuous_id⟩
+protected def id : α →Co α :=
+  ⟨OrderHom.id, continuous_id⟩
 
-instance : inhabited (α →Co α) := ⟨continuous_order_hom.id _⟩
+instance : Inhabited (α →Co α) :=
+  ⟨ContinuousOrderHom.id _⟩
 
-@[simp] lemma coe_id : ⇑(continuous_order_hom.id α) = id := rfl
+@[simp]
+theorem coe_id : ⇑(ContinuousOrderHom.id α) = id :=
+  rfl
 
-variables {α}
+variable {α}
 
-@[simp] lemma id_apply (a : α) : continuous_order_hom.id α a = a := rfl
+@[simp]
+theorem id_apply (a : α) : ContinuousOrderHom.id α a = a :=
+  rfl
 
 /-- Composition of `continuous_order_hom`s as a `continuous_order_hom`. -/
-def comp (f : β →Co γ) (g : α →Co β) : continuous_order_hom α γ :=
-⟨f.to_order_hom.comp g.to_order_hom, f.continuous_to_fun.comp g.continuous_to_fun⟩
+def comp (f : β →Co γ) (g : α →Co β) : ContinuousOrderHom α γ :=
+  ⟨f.toOrderHom.comp g.toOrderHom, f.continuous_to_fun.comp g.continuous_to_fun⟩
 
-@[simp] lemma coe_comp (f : β →Co γ) (g : α →Co β) : (f.comp g : α → γ) = f ∘ g := rfl
-@[simp] lemma comp_apply (f : β →Co γ) (g : α →Co β) (a : α) : (f.comp g) a = f (g a) := rfl
-@[simp] lemma comp_assoc (f : γ →Co δ) (g : β →Co γ) (h : α →Co β) :
-  (f.comp g).comp h = f.comp (g.comp h) := rfl
-@[simp] lemma comp_id (f : α →Co β) : f.comp (continuous_order_hom.id α) = f := ext $ λ a, rfl
-@[simp] lemma id_comp (f : α →Co β) : (continuous_order_hom.id β).comp f = f := ext $ λ a, rfl
+@[simp]
+theorem coe_comp (f : β →Co γ) (g : α →Co β) : (f.comp g : α → γ) = f ∘ g :=
+  rfl
 
-lemma cancel_right {g₁ g₂ : β →Co γ} {f : α →Co β} (hf : surjective f) :
-  g₁.comp f = g₂.comp f ↔ g₁ = g₂ :=
-⟨λ h, ext $ hf.forall.2 $ fun_like.ext_iff.1 h, congr_arg _⟩
+@[simp]
+theorem comp_apply (f : β →Co γ) (g : α →Co β) (a : α) : (f.comp g) a = f (g a) :=
+  rfl
 
-lemma cancel_left {g : β →Co γ} {f₁ f₂ : α →Co β} (hg : injective g) :
-  g.comp f₁ = g.comp f₂ ↔ f₁ = f₂ :=
-⟨λ h, ext $ λ a, hg $ by rw [←comp_apply, h, comp_apply], congr_arg _⟩
+@[simp]
+theorem comp_assoc (f : γ →Co δ) (g : β →Co γ) (h : α →Co β) : (f.comp g).comp h = f.comp (g.comp h) :=
+  rfl
 
-instance : preorder (α →Co β) := preorder.lift (coe_fn : (α →Co β) → α → β)
+@[simp]
+theorem comp_id (f : α →Co β) : f.comp (ContinuousOrderHom.id α) = f :=
+  ext fun a => rfl
 
-end preorder
+@[simp]
+theorem id_comp (f : α →Co β) : (ContinuousOrderHom.id β).comp f = f :=
+  ext fun a => rfl
 
-instance [partial_order β] : partial_order (α →Co β) := partial_order.lift _ fun_like.coe_injective
+theorem cancel_right {g₁ g₂ : β →Co γ} {f : α →Co β} (hf : Surjective f) : g₁.comp f = g₂.comp f ↔ g₁ = g₂ :=
+  ⟨fun h => ext <| hf.forall.2 <| FunLike.ext_iff.1 h, congr_argₓ _⟩
 
-end continuous_order_hom
+theorem cancel_left {g : β →Co γ} {f₁ f₂ : α →Co β} (hg : Injective g) : g.comp f₁ = g.comp f₂ ↔ f₁ = f₂ :=
+  ⟨fun h =>
+    ext fun a =>
+      hg <| by
+        rw [← comp_apply, h, comp_apply],
+    congr_argₓ _⟩
+
+instance : Preorderₓ (α →Co β) :=
+  Preorderₓ.lift (coeFn : (α →Co β) → α → β)
+
+end Preorderₓ
+
+instance [PartialOrderₓ β] : PartialOrderₓ (α →Co β) :=
+  PartialOrderₓ.lift _ FunLike.coe_injective
+
+end ContinuousOrderHom
+

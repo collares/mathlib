@@ -3,12 +3,11 @@ Copyright (c) 2020 Simon Hudon. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Simon Hudon
 -/
-
-import order.omega_complete_partial_order
-import order.category.Preorder
-import category_theory.limits.shapes.products
-import category_theory.limits.shapes.equalizers
-import category_theory.limits.constructions.limits_of_products_and_equalizers
+import Mathbin.Order.OmegaCompletePartialOrder
+import Mathbin.Order.Category.Preorder
+import Mathbin.CategoryTheory.Limits.Shapes.Products
+import Mathbin.CategoryTheory.Limits.Shapes.Equalizers
+import Mathbin.CategoryTheory.Limits.Constructions.LimitsOfProductsAndEqualizers
 
 /-!
 # Category of types with a omega complete partial order
@@ -24,115 +23,115 @@ a `omega_complete_partial_order`.
 
  -/
 
-open category_theory
 
-universes u v
+open CategoryTheory
+
+universe u v
 
 /-- The category of types with a omega complete partial order. -/
-def ωCPO : Type (u+1) := bundled omega_complete_partial_order
+def ωCPO : Type (u + 1) :=
+  Bundled OmegaCompletePartialOrder
 
 namespace ωCPO
 
-open omega_complete_partial_order
+open OmegaCompletePartialOrder
 
-instance : bundled_hom @continuous_hom :=
-{ to_fun := @continuous_hom.simps.apply,
-  id := @continuous_hom.id,
-  comp := @continuous_hom.comp,
-  hom_ext := @continuous_hom.coe_inj }
+instance : BundledHom @ContinuousHom where
+  toFun := @ContinuousHom.Simps.apply
+  id := @ContinuousHom.id
+  comp := @ContinuousHom.comp
+  hom_ext := @ContinuousHom.coe_inj
 
-attribute [derive [large_category, concrete_category]] ωCPO
+deriving instance LargeCategory, ConcreteCategory for ωCPO
 
-instance : has_coe_to_sort ωCPO Type* := bundled.has_coe_to_sort
+instance : CoeSort ωCPO (Type _) :=
+  bundled.has_coe_to_sort
 
 /-- Construct a bundled ωCPO from the underlying type and typeclass. -/
-def of (α : Type*) [omega_complete_partial_order α] : ωCPO := bundled.of α
+def of (α : Type _) [OmegaCompletePartialOrder α] : ωCPO :=
+  Bundled.of α
 
-@[simp] lemma coe_of (α : Type*) [omega_complete_partial_order α] : ↥(of α) = α := rfl
+@[simp]
+theorem coe_of (α : Type _) [OmegaCompletePartialOrder α] : ↥(of α) = α :=
+  rfl
 
-instance : inhabited ωCPO := ⟨of punit⟩
+instance : Inhabited ωCPO :=
+  ⟨of PUnit⟩
 
-instance (α : ωCPO) : omega_complete_partial_order α := α.str
+instance (α : ωCPO) : OmegaCompletePartialOrder α :=
+  α.str
 
 section
 
-open category_theory.limits
+open CategoryTheory.Limits
 
-namespace has_products
+namespace HasProducts
 
 /-- The pi-type gives a cone for a product. -/
-def product {J : Type v} (f : J → ωCPO.{v}) : fan f :=
-fan.mk (of (Π j, f j)) (λ j, continuous_hom.of_mono (pi.eval_order_hom j) (λ c, rfl))
+def product {J : Type v} (f : J → ωCPO.{v}) : Fan f :=
+  Fan.mk (of (∀ j, f j)) fun j => ContinuousHom.ofMono (Pi.evalOrderHom j) fun c => rfl
 
 /-- The pi-type is a limit cone for the product. -/
-def is_product (J : Type v) (f : J → ωCPO) : is_limit (product f) :=
-{ lift := λ s,
-    ⟨⟨λ t j, s.π.app j t, λ x y h j, (s.π.app j).monotone h⟩,
-     λ x, funext (λ j, (s.π.app j).continuous x)⟩,
-  uniq' := λ s m w,
-  begin
-    ext t j,
-    change m t j = s.π.app j t,
-    rw ← w j,
-    refl,
-  end }.
+def isProduct (J : Type v) (f : J → ωCPO) : IsLimit (product f) where
+  lift := fun s =>
+    ⟨⟨fun t j => s.π.app j t, fun x y h j => (s.π.app j).Monotone h⟩, fun x => funext fun j => (s.π.app j).Continuous x⟩
+  uniq' := fun s m w => by
+    ext t j
+    change m t j = s.π.app j t
+    rw [← w j]
+    rfl
 
-instance (J : Type v) (f : J → ωCPO.{v}) : has_product f :=
-has_limit.mk ⟨_, is_product _ f⟩
+instance (J : Type v) (f : J → ωCPO.{v}) : HasProduct f :=
+  HasLimit.mk ⟨_, isProduct _ f⟩
 
-end has_products
+end HasProducts
 
-instance omega_complete_partial_order_equalizer
-  {α β : Type*} [omega_complete_partial_order α] [omega_complete_partial_order β]
-  (f g : α →𝒄 β) : omega_complete_partial_order {a : α // f a = g a} :=
-omega_complete_partial_order.subtype _ $ λ c hc,
-begin
-  rw [f.continuous, g.continuous],
-  congr' 1,
-  ext,
-  apply hc _ ⟨_, rfl⟩,
-end
+instance omegaCompletePartialOrderEqualizer {α β : Type _} [OmegaCompletePartialOrder α] [OmegaCompletePartialOrder β]
+    (f g : α →𝒄 β) : OmegaCompletePartialOrder { a : α // f a = g a } :=
+  (OmegaCompletePartialOrder.subtype _) fun c hc => by
+    rw [f.continuous, g.continuous]
+    congr 1
+    ext
+    apply hc _ ⟨_, rfl⟩
 
-namespace has_equalizers
+namespace HasEqualizers
 
 /-- The equalizer inclusion function as a `continuous_hom`. -/
-def equalizer_ι {α β : Type*} [omega_complete_partial_order α] [omega_complete_partial_order β]
-  (f g : α →𝒄 β) :
-  {a : α // f a = g a} →𝒄 α :=
-continuous_hom.of_mono (order_hom.subtype.val _) (λ c, rfl)
+def equalizerι {α β : Type _} [OmegaCompletePartialOrder α] [OmegaCompletePartialOrder β] (f g : α →𝒄 β) :
+    { a : α // f a = g a } →𝒄 α :=
+  ContinuousHom.ofMono (OrderHom.Subtype.val _) fun c => rfl
 
 /-- A construction of the equalizer fork. -/
-def equalizer {X Y : ωCPO.{v}} (f g : X ⟶ Y) :
-  fork f g :=
-@fork.of_ι _ _ _ _ _ _ (ωCPO.of {a // f a = g a}) (equalizer_ι f g)
-  (continuous_hom.ext _ _ (λ x, x.2))
+def equalizer {X Y : ωCPO.{v}} (f g : X ⟶ Y) : Fork f g :=
+  @Fork.ofι _ _ _ _ _ _ (ωCPO.of { a // f a = g a }) (equalizerι f g) (ContinuousHom.ext _ _ fun x => x.2)
 
 /-- The equalizer fork is a limit. -/
-def is_equalizer {X Y : ωCPO.{v}} (f g : X ⟶ Y) : is_limit (equalizer f g) :=
-fork.is_limit.mk' _ $ λ s,
-⟨{ to_fun := λ x, ⟨s.ι x, by apply continuous_hom.congr_fun s.condition⟩,
-    monotone' := λ x y h, s.ι.monotone h,
-    cont := λ x, subtype.ext (s.ι.continuous x) },
-  by { ext, refl },
-  λ m hm,
-  begin
-    ext,
-    apply continuous_hom.congr_fun hm,
-  end⟩
+def isEqualizer {X Y : ωCPO.{v}} (f g : X ⟶ Y) : IsLimit (equalizer f g) :=
+  (Fork.IsLimit.mk' _) fun s =>
+    ⟨{ toFun := fun x =>
+          ⟨s.ι x, by
+            apply continuous_hom.congr_fun s.condition⟩,
+        monotone' := fun x y h => s.ι.Monotone h, cont := fun x => Subtype.ext (s.ι.Continuous x) },
+      by
+      ext
+      rfl, fun m hm => by
+      ext
+      apply continuous_hom.congr_fun hm⟩
 
-end has_equalizers
+end HasEqualizers
 
-instance : has_products ωCPO.{v} :=
-λ J, { has_limit := λ F, has_limit_of_iso discrete.nat_iso_functor.symm }
+instance : HasProducts ωCPO.{v} := fun J => { HasLimit := fun F => has_limit_of_iso Discrete.natIsoFunctor.symm }
 
-instance {X Y : ωCPO.{v}} (f g : X ⟶ Y) : has_limit (parallel_pair f g) :=
-has_limit.mk ⟨_, has_equalizers.is_equalizer f g⟩
+instance {X Y : ωCPO.{v}} (f g : X ⟶ Y) : HasLimit (parallelPair f g) :=
+  HasLimit.mk ⟨_, HasEqualizers.isEqualizer f g⟩
 
-instance : has_equalizers ωCPO.{v} := has_equalizers_of_has_limit_parallel_pair _
+instance : HasEqualizers ωCPO.{v} :=
+  has_equalizers_of_has_limit_parallel_pair _
 
-instance : has_limits ωCPO.{v} := limits_from_equalizers_and_products
+instance : HasLimits ωCPO.{v} :=
+  limits_from_equalizers_and_products
 
 end
 
-
 end ωCPO
+

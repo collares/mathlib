@@ -3,10 +3,9 @@ Copyright (c) 2020 Yury Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury Kudryashov
 -/
-
-import algebra.group_power.basic
-import logic.function.iterate
-import group_theory.perm.basic
+import Mathbin.Algebra.GroupPower.Basic
+import Mathbin.Logic.Function.Iterate
+import Mathbin.GroupTheory.Perm.Basic
 
 /-!
 # Iterates of monoid and ring homomorphisms
@@ -25,169 +24,174 @@ We also prove formulas for iterates of add/mul left/right.
 homomorphism, iterate
 -/
 
-open function
 
-variables {M : Type*} {N : Type*} {G : Type*} {H : Type*}
+open Function
+
+variable {M : Type _} {N : Type _} {G : Type _} {H : Type _}
 
 /-- An auxiliary lemma that can be used to prove `⇑(f ^ n) = (⇑f^[n])`. -/
-lemma hom_coe_pow {F : Type*} [monoid F] (c : F → M → M) (h1 : c 1 = id)
-  (hmul : ∀ f g, c (f * g) = c f ∘ c g) (f : F) : ∀ n, c (f ^ n) = (c f^[n])
-| 0 := by { rw [pow_zero, h1], refl }
-| (n + 1) := by rw [pow_succ, iterate_succ', hmul, hom_coe_pow]
+theorem hom_coe_pow {F : Type _} [Monoidₓ F] (c : F → M → M) (h1 : c 1 = id) (hmul : ∀ f g, c (f * g) = c f ∘ c g)
+    (f : F) : ∀ n, c (f ^ n) = c f^[n]
+  | 0 => by
+    rw [pow_zeroₓ, h1]
+    rfl
+  | n + 1 => by
+    rw [pow_succₓ, iterate_succ', hmul, hom_coe_pow]
 
-namespace monoid_hom
+namespace MonoidHom
 
 section
 
-variables [mul_one_class M] [mul_one_class N]
+variable [MulOneClassₓ M] [MulOneClassₓ N]
 
 @[simp, to_additive]
-theorem iterate_map_one (f : M →* M) (n : ℕ) : f^[n] 1 = 1 :=
-iterate_fixed f.map_one n
+theorem iterate_map_one (f : M →* M) (n : ℕ) : (f^[n]) 1 = 1 :=
+  iterate_fixed f.map_one n
 
 @[simp, to_additive]
-theorem iterate_map_mul (f : M →* M) (n : ℕ) (x y) :
-  f^[n] (x * y) = (f^[n] x) * (f^[n] y) :=
-semiconj₂.iterate f.map_mul n x y
+theorem iterate_map_mul (f : M →* M) (n : ℕ) x y : (f^[n]) (x * y) = (f^[n]) x * (f^[n]) y :=
+  Semiconj₂.iterate f.map_mul n x y
 
 end
 
-variables [monoid M] [monoid N] [group G] [group H]
+variable [Monoidₓ M] [Monoidₓ N] [Groupₓ G] [Groupₓ H]
 
 @[simp, to_additive]
-theorem iterate_map_inv (f : G →* G) (n : ℕ) (x) :
-  f^[n] (x⁻¹) = (f^[n] x)⁻¹ :=
-commute.iterate_left f.map_inv n x
+theorem iterate_map_inv (f : G →* G) (n : ℕ) x : (f^[n]) x⁻¹ = ((f^[n]) x)⁻¹ :=
+  Commute.iterate_left f.map_inv n x
 
 @[simp, to_additive]
-theorem iterate_map_div (f : G →* G) (n : ℕ) (x y) :
-  f^[n] (x / y) = (f^[n] x) / (f^[n] y) :=
-semiconj₂.iterate f.map_div n x y
+theorem iterate_map_div (f : G →* G) (n : ℕ) x y : (f^[n]) (x / y) = (f^[n]) x / (f^[n]) y :=
+  Semiconj₂.iterate f.map_div n x y
 
-theorem iterate_map_pow (f : M →* M) (n : ℕ) (a) (m : ℕ) : f^[n] (a^m) = (f^[n] a)^m :=
-commute.iterate_left (λ x, f.map_pow x m) n a
+theorem iterate_map_pow (f : M →* M) (n : ℕ) a (m : ℕ) : (f^[n]) (a ^ m) = (f^[n]) a ^ m :=
+  Commute.iterate_left (fun x => f.map_pow x m) n a
 
-theorem iterate_map_zpow (f : G →* G) (n : ℕ) (a) (m : ℤ) : f^[n] (a^m) = (f^[n] a)^m :=
-commute.iterate_left (λ x, f.map_zpow x m) n a
+theorem iterate_map_zpow (f : G →* G) (n : ℕ) a (m : ℤ) : (f^[n]) (a ^ m) = (f^[n]) a ^ m :=
+  Commute.iterate_left (fun x => f.map_zpow x m) n a
 
-lemma coe_pow {M} [comm_monoid M] (f : monoid.End M) (n : ℕ) : ⇑(f^n) = (f^[n]) :=
-hom_coe_pow _ rfl (λ f g, rfl) _ _
+theorem coe_pow {M} [CommMonoidₓ M] (f : Monoidₓ.End M) (n : ℕ) : ⇑(f ^ n) = f^[n] :=
+  hom_coe_pow _ rfl (fun f g => rfl) _ _
 
-end monoid_hom
+end MonoidHom
 
-lemma monoid.End.coe_pow {M} [monoid M] (f : monoid.End M) (n : ℕ) : ⇑(f^n) = (f^[n]) :=
-hom_coe_pow _ rfl (λ f g, rfl) _ _
+theorem Monoidₓ.End.coe_pow {M} [Monoidₓ M] (f : Monoidₓ.End M) (n : ℕ) : ⇑(f ^ n) = f^[n] :=
+  hom_coe_pow _ rfl (fun f g => rfl) _ _
 
 -- we define these manually so that we can pick a better argument order
-namespace add_monoid_hom
-variables [add_monoid M] [add_group G]
+namespace AddMonoidHom
 
-theorem iterate_map_smul (f : M →+ M) (n m : ℕ) (x : M) :
-  f^[n] (m • x) = m • (f^[n] x) :=
-f.to_multiplicative.iterate_map_pow n x m
+variable [AddMonoidₓ M] [AddGroupₓ G]
 
-attribute [to_additive, to_additive_reorder 5] monoid_hom.iterate_map_pow
+theorem iterate_map_smul (f : M →+ M) (n m : ℕ) (x : M) : (f^[n]) (m • x) = m • (f^[n]) x :=
+  f.toMultiplicative.iterate_map_pow n x m
 
-theorem iterate_map_zsmul (f : G →+ G) (n : ℕ) (m : ℤ) (x : G) :
-  f^[n] (m • x) = m • (f^[n] x) :=
-f.to_multiplicative.iterate_map_zpow n x m
+attribute [to_additive, to_additive_reorder 5] MonoidHom.iterate_map_pow
 
-attribute [to_additive, to_additive_reorder 5] monoid_hom.iterate_map_zpow
+theorem iterate_map_zsmul (f : G →+ G) (n : ℕ) (m : ℤ) (x : G) : (f^[n]) (m • x) = m • (f^[n]) x :=
+  f.toMultiplicative.iterate_map_zpow n x m
 
-end add_monoid_hom
+attribute [to_additive, to_additive_reorder 5] MonoidHom.iterate_map_zpow
 
-lemma add_monoid.End.coe_pow {A} [add_monoid A] (f : add_monoid.End A) (n : ℕ) : ⇑(f^n) = (f^[n]) :=
-hom_coe_pow _ rfl (λ f g, rfl) _ _
+end AddMonoidHom
 
-namespace ring_hom
+theorem AddMonoidₓ.End.coe_pow {A} [AddMonoidₓ A] (f : AddMonoidₓ.End A) (n : ℕ) : ⇑(f ^ n) = f^[n] :=
+  hom_coe_pow _ rfl (fun f g => rfl) _ _
 
-section semiring
+namespace RingHom
 
-variables {R : Type*} [semiring R] (f : R →+* R) (n : ℕ) (x y : R)
+section Semiringₓ
 
-lemma coe_pow (n : ℕ) : ⇑(f^n) = (f^[n]) :=
-hom_coe_pow _ rfl (λ f g, rfl) f n
+variable {R : Type _} [Semiringₓ R] (f : R →+* R) (n : ℕ) (x y : R)
 
-theorem iterate_map_one : f^[n] 1 = 1 := f.to_monoid_hom.iterate_map_one n
+theorem coe_pow (n : ℕ) : ⇑(f ^ n) = f^[n] :=
+  hom_coe_pow _ rfl (fun f g => rfl) f n
 
-theorem iterate_map_zero : f^[n] 0 = 0 := f.to_add_monoid_hom.iterate_map_zero n
+theorem iterate_map_one : (f^[n]) 1 = 1 :=
+  f.toMonoidHom.iterate_map_one n
 
-theorem iterate_map_add : f^[n] (x + y) = (f^[n] x) + (f^[n] y) :=
-f.to_add_monoid_hom.iterate_map_add n x y
+theorem iterate_map_zero : (f^[n]) 0 = 0 :=
+  f.toAddMonoidHom.iterate_map_zero n
 
-theorem iterate_map_mul : f^[n] (x * y) = (f^[n] x) * (f^[n] y) :=
-f.to_monoid_hom.iterate_map_mul n x y
+theorem iterate_map_add : (f^[n]) (x + y) = (f^[n]) x + (f^[n]) y :=
+  f.toAddMonoidHom.iterate_map_add n x y
 
-theorem iterate_map_pow (a) (n m : ℕ) : f^[n] (a^m) = (f^[n] a)^m :=
-f.to_monoid_hom.iterate_map_pow n a m
+theorem iterate_map_mul : (f^[n]) (x * y) = (f^[n]) x * (f^[n]) y :=
+  f.toMonoidHom.iterate_map_mul n x y
 
-theorem iterate_map_smul (n m : ℕ) (x : R) :
-  f^[n] (m • x) = m • (f^[n] x) :=
-f.to_add_monoid_hom.iterate_map_smul n m x
+theorem iterate_map_pow a (n m : ℕ) : (f^[n]) (a ^ m) = (f^[n]) a ^ m :=
+  f.toMonoidHom.iterate_map_pow n a m
 
-end semiring
+theorem iterate_map_smul (n m : ℕ) (x : R) : (f^[n]) (m • x) = m • (f^[n]) x :=
+  f.toAddMonoidHom.iterate_map_smul n m x
 
-variables {R : Type*} [ring R] (f : R →+* R) (n : ℕ) (x y : R)
+end Semiringₓ
 
-theorem iterate_map_sub : f^[n] (x - y) = (f^[n] x) - (f^[n] y) :=
-f.to_add_monoid_hom.iterate_map_sub n x y
+variable {R : Type _} [Ringₓ R] (f : R →+* R) (n : ℕ) (x y : R)
 
-theorem iterate_map_neg : f^[n] (-x) = -(f^[n] x) :=
-f.to_add_monoid_hom.iterate_map_neg n x
+theorem iterate_map_sub : (f^[n]) (x - y) = (f^[n]) x - (f^[n]) y :=
+  f.toAddMonoidHom.iterate_map_sub n x y
 
-theorem iterate_map_zsmul (n : ℕ) (m : ℤ) (x : R) :
-  f^[n] (m • x) = m • (f^[n] x) :=
-f.to_add_monoid_hom.iterate_map_zsmul n m x
+theorem iterate_map_neg : (f^[n]) (-x) = -(f^[n]) x :=
+  f.toAddMonoidHom.iterate_map_neg n x
 
-end ring_hom
+theorem iterate_map_zsmul (n : ℕ) (m : ℤ) (x : R) : (f^[n]) (m • x) = m • (f^[n]) x :=
+  f.toAddMonoidHom.iterate_map_zsmul n m x
 
-lemma equiv.perm.coe_pow {α : Type*} (f : equiv.perm α) (n : ℕ) : ⇑(f ^ n) = (f^[n]) :=
-hom_coe_pow _ rfl (λ _ _, rfl) _ _
+end RingHom
+
+theorem Equivₓ.Perm.coe_pow {α : Type _} (f : Equivₓ.Perm α) (n : ℕ) : ⇑(f ^ n) = f^[n] :=
+  hom_coe_pow _ rfl (fun _ _ => rfl) _ _
 
 --what should be the namespace for this section?
-section monoid
+section Monoidₓ
 
-variables [monoid G] (a : G) (n : ℕ)
+variable [Monoidₓ G] (a : G) (n : ℕ)
 
-@[simp, to_additive] lemma mul_left_iterate : ((*) a)^[n] = (*) (a^n) :=
-nat.rec_on n (funext $ λ x, by simp) $ λ n ihn,
-funext $ λ x, by simp [iterate_succ, ihn, pow_succ', mul_assoc]
+@[simp, to_additive]
+theorem mul_left_iterate : (· * ·) a^[n] = (· * ·) (a ^ n) :=
+  (Nat.recOn n
+      (funext fun x => by
+        simp ))
+    fun n ihn =>
+    funext fun x => by
+      simp [iterate_succ, ihn, pow_succ'ₓ, mul_assoc]
 
-@[simp, to_additive] lemma mul_right_iterate : (* a)^[n] = (* a ^ n) :=
-begin
-  induction n with d hd,
-  { simpa },
-  { simp [← pow_succ, hd] }
-end
-
-@[to_additive]
-lemma mul_right_iterate_apply_one : (* a)^[n] 1 = a ^ n :=
-by simp [mul_right_iterate]
-
-end monoid
-
-section semigroup
-
-variables [semigroup G] {a b c : G}
+@[simp, to_additive]
+theorem mul_right_iterate : (· * a)^[n] = (· * a ^ n) := by
+  induction' n with d hd
+  · simpa
+    
+  · simp [← pow_succₓ, hd]
+    
 
 @[to_additive]
-lemma semiconj_by.function_semiconj_mul_left (h : semiconj_by a b c) :
-  function.semiconj ((*)a) ((*)b) ((*)c) :=
-λ j, by rw [← mul_assoc, h.eq, mul_assoc]
+theorem mul_right_iterate_apply_one : ((· * a)^[n]) 1 = a ^ n := by
+  simp [mul_right_iterate]
+
+end Monoidₓ
+
+section Semigroupₓ
+
+variable [Semigroupₓ G] {a b c : G}
 
 @[to_additive]
-lemma commute.function_commute_mul_left (h : commute a b) :
-  function.commute ((*)a) ((*)b) :=
-semiconj_by.function_semiconj_mul_left h
+theorem SemiconjBy.function_semiconj_mul_left (h : SemiconjBy a b c) :
+    Function.Semiconj ((· * ·) a) ((· * ·) b) ((· * ·) c) := fun j => by
+  rw [← mul_assoc, h.eq, mul_assoc]
 
 @[to_additive]
-lemma semiconj_by.function_semiconj_mul_right_swap (h : semiconj_by a b c) :
-  function.semiconj (*a) (*c) (*b) :=
-λ j, by simp_rw [mul_assoc, ← h.eq]
+theorem Commute.function_commute_mul_left (h : Commute a b) : Function.Commute ((· * ·) a) ((· * ·) b) :=
+  SemiconjBy.function_semiconj_mul_left h
 
 @[to_additive]
-lemma commute.function_commute_mul_right (h : commute a b) :
-  function.commute (*a) (*b) :=
-semiconj_by.function_semiconj_mul_right_swap h
+theorem SemiconjBy.function_semiconj_mul_right_swap (h : SemiconjBy a b c) :
+    Function.Semiconj (· * a) (· * c) (· * b) := fun j => by
+  simp_rw [mul_assoc, ← h.eq]
 
-end semigroup
+@[to_additive]
+theorem Commute.function_commute_mul_right (h : Commute a b) : Function.Commute (· * a) (· * b) :=
+  SemiconjBy.function_semiconj_mul_right_swap h
+
+end Semigroupₓ
+

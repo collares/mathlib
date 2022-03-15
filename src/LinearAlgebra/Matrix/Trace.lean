@@ -3,7 +3,7 @@ Copyright (c) 2019 Johannes Hölzl. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johannes Hölzl, Patrick Massot, Casper Putz, Anne Baanen
 -/
-import data.matrix.basic
+import Mathbin.Data.Matrix.Basic
 
 /-!
 # Trace of a matrix
@@ -19,80 +19,105 @@ matrix, trace, diagonal
 
 -/
 
-open_locale big_operators
-open_locale matrix
 
-namespace matrix
+open_locale BigOperators
+
+open_locale Matrix
+
+namespace Matrix
 
 section trace
 
-universes u v w
+universe u v w
 
-variables {m : Type*} (n : Type*) {p : Type*}
-variables (R : Type*) (M : Type*) [semiring R] [add_comm_monoid M] [module R M]
+variable {m : Type _} (n : Type _) {p : Type _}
 
-/--
-The diagonal of a square matrix.
+variable (R : Type _) (M : Type _) [Semiringₓ R] [AddCommMonoidₓ M] [Module R M]
+
+/-- The diagonal of a square matrix.
 -/
-def diag : (matrix n n M) →ₗ[R] n → M :=
-{ to_fun    := λ A i, A i i,
-  map_add'  := by { intros, ext, refl, },
-  map_smul' := by { intros, ext, refl, } }
+def diag : Matrix n n M →ₗ[R] n → M where
+  toFun := fun A i => A i i
+  map_add' := by
+    intros
+    ext
+    rfl
+  map_smul' := by
+    intros
+    ext
+    rfl
 
-variables {n} {R} {M}
+variable {n} {R} {M}
 
-@[simp] lemma diag_apply (A : matrix n n M) (i : n) : diag n R M A i = A i i := rfl
+@[simp]
+theorem diag_apply (A : Matrix n n M) (i : n) : diag n R M A i = A i i :=
+  rfl
 
-@[simp] lemma diag_one [decidable_eq n] :
-  diag n R R 1 = λ i, 1 := by { dunfold diag, ext, simp [one_apply_eq] }
+@[simp]
+theorem diag_one [DecidableEq n] : diag n R R 1 = fun i => 1 := by
+  dunfold diag
+  ext
+  simp [one_apply_eq]
 
-@[simp] lemma diag_transpose (A : matrix n n M) : diag n R M Aᵀ = diag n R M A := rfl
+@[simp]
+theorem diag_transpose (A : Matrix n n M) : diag n R M Aᵀ = diag n R M A :=
+  rfl
 
-@[simp] lemma diag_col_mul_row (a b : n → R) : diag n R R (col a ⬝ row b) = a * b :=
-by { ext, simp [matrix.mul_apply] }
+@[simp]
+theorem diag_col_mul_row (a b : n → R) : diag n R R (colₓ a ⬝ rowₓ b) = a * b := by
+  ext
+  simp [Matrix.mul_apply]
 
-variables (n) (R) (M)
+variable (n) (R) (M)
 
-/--
-The trace of a square matrix.
+/-- The trace of a square matrix.
 -/
-def trace [fintype n] : (matrix n n M) →ₗ[R] M :=
-{ to_fun    := λ A, ∑ i, diag n R M A i,
-  map_add'  := by { intros, apply finset.sum_add_distrib, },
-  map_smul' := by { intros, simp [finset.smul_sum], } }
+def trace [Fintype n] : Matrix n n M →ₗ[R] M where
+  toFun := fun A => ∑ i, diag n R M A i
+  map_add' := by
+    intros
+    apply Finset.sum_add_distrib
+  map_smul' := by
+    intros
+    simp [Finset.smul_sum]
 
-variables {n} {R} {M} [fintype n] [fintype m] [fintype p]
+variable {n} {R} {M} [Fintype n] [Fintype m] [Fintype p]
 
-@[simp] lemma trace_diag (A : matrix n n M) : trace n R M A = ∑ i, diag n R M A i := rfl
+@[simp]
+theorem trace_diag (A : Matrix n n M) : trace n R M A = ∑ i, diag n R M A i :=
+  rfl
 
-lemma trace_apply (A : matrix n n M) : trace n R M A = ∑ i, A i i := rfl
+theorem trace_apply (A : Matrix n n M) : trace n R M A = ∑ i, A i i :=
+  rfl
 
-@[simp] lemma trace_one [decidable_eq n] :
-  trace n R R 1 = fintype.card n :=
-have h : trace n R R 1 = ∑ i, diag n R R 1 i := rfl,
-by simp_rw [h, diag_one, finset.sum_const, nsmul_one]; refl
+@[simp]
+theorem trace_one [DecidableEq n] : trace n R R 1 = Fintype.card n := by
+  have h : trace n R R 1 = ∑ i, diag n R R 1 i := rfl
+  simp_rw [h, diag_one, Finset.sum_const, nsmul_one] <;> rfl
 
-@[simp] lemma trace_transpose (A : matrix n n M) : trace n R M Aᵀ = trace n R M A := rfl
+@[simp]
+theorem trace_transpose (A : Matrix n n M) : trace n R M Aᵀ = trace n R M A :=
+  rfl
 
-@[simp] lemma trace_transpose_mul (A : matrix m n R) (B : matrix n m R) :
-  trace n R R (Aᵀ ⬝ Bᵀ) = trace m R R (A ⬝ B) := finset.sum_comm
+@[simp]
+theorem trace_transpose_mul (A : Matrix m n R) (B : Matrix n m R) : trace n R R (Aᵀ ⬝ Bᵀ) = trace m R R (A ⬝ B) :=
+  Finset.sum_comm
 
-lemma trace_mul_comm {S : Type v} [comm_semiring S] (A : matrix m n S) (B : matrix n m S) :
-  trace m S S (A ⬝ B) = trace n S S (B ⬝ A) :=
-by rw [←trace_transpose, ←trace_transpose_mul, transpose_mul]
+theorem trace_mul_comm {S : Type v} [CommSemiringₓ S] (A : Matrix m n S) (B : Matrix n m S) :
+    trace m S S (A ⬝ B) = trace n S S (B ⬝ A) := by
+  rw [← trace_transpose, ← trace_transpose_mul, transpose_mul]
 
-lemma trace_mul_cycle {S : Type v} [comm_semiring S]
-  (A : matrix m n S) (B : matrix n p S) (C : matrix p m S) :
-  trace _ S S (A ⬝ B ⬝ C) = trace p S S (C ⬝ A ⬝ B) :=
-by rw [trace_mul_comm, matrix.mul_assoc]
+theorem trace_mul_cycle {S : Type v} [CommSemiringₓ S] (A : Matrix m n S) (B : Matrix n p S) (C : Matrix p m S) :
+    trace _ S S (A ⬝ B ⬝ C) = trace p S S (C ⬝ A ⬝ B) := by
+  rw [trace_mul_comm, Matrix.mul_assoc]
 
-lemma trace_mul_cycle' {S : Type v} [comm_semiring S]
-  (A : matrix m n S) (B : matrix n p S) (C : matrix p m S) :
-  trace _ S S (A ⬝ (B ⬝ C)) = trace p S S (C ⬝ (A ⬝ B)) :=
-by rw [←matrix.mul_assoc, trace_mul_comm]
+theorem trace_mul_cycle' {S : Type v} [CommSemiringₓ S] (A : Matrix m n S) (B : Matrix n p S) (C : Matrix p m S) :
+    trace _ S S (A ⬝ (B ⬝ C)) = trace p S S (C ⬝ (A ⬝ B)) := by
+  rw [← Matrix.mul_assoc, trace_mul_comm]
 
-@[simp] lemma trace_col_mul_row (a b : n → R) : trace n R R (col a ⬝ row b) = dot_product a b :=
-by simp [dot_product]
+@[simp]
+theorem trace_col_mul_row (a b : n → R) : trace n R R (colₓ a ⬝ rowₓ b) = dotProduct a b := by
+  simp [dot_product]
 
 /-! ### Special cases for `fin n`
 
@@ -100,18 +125,22 @@ While `simp [fin.sum_univ_succ]` can prove these, we include them for convenienc
 with `matrix.det_fin_two` etc.
 -/
 
-@[simp] lemma trace_fin_zero (A : matrix (fin 0) (fin 0) R) : trace _ R R A = 0 :=
-rfl
 
-lemma trace_fin_one (A : matrix (fin 1) (fin 1) R) : trace _ R R A = A 0 0 :=
-add_zero _
+@[simp]
+theorem trace_fin_zero (A : Matrix (Finₓ 0) (Finₓ 0) R) : trace _ R R A = 0 :=
+  rfl
 
-lemma trace_fin_two (A : matrix (fin 2) (fin 2) R) : trace _ R R A = A 0 0 + A 1 1 :=
-congr_arg ((+) _) (add_zero (A 1 1))
+theorem trace_fin_one (A : Matrix (Finₓ 1) (Finₓ 1) R) : trace _ R R A = A 0 0 :=
+  add_zeroₓ _
 
-lemma trace_fin_three (A : matrix (fin 3) (fin 3) R) : trace _ R R A = A 0 0 + A 1 1 + A 2 2 :=
-by { rw [← add_zero (A 2 2), add_assoc], refl }
+theorem trace_fin_two (A : Matrix (Finₓ 2) (Finₓ 2) R) : trace _ R R A = A 0 0 + A 1 1 :=
+  congr_argₓ ((· + ·) _) (add_zeroₓ (A 1 1))
+
+theorem trace_fin_three (A : Matrix (Finₓ 3) (Finₓ 3) R) : trace _ R R A = A 0 0 + A 1 1 + A 2 2 := by
+  rw [← add_zeroₓ (A 2 2), add_assocₓ]
+  rfl
 
 end trace
 
-end matrix
+end Matrix
+

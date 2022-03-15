@@ -3,8 +3,8 @@ Copyright (c) 2022 Damiano Testa. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Damiano Testa
 -/
-import algebra.covariant_and_contravariant
-import algebra.group_with_zero.defs
+import Mathbin.Algebra.CovariantAndContravariant
+import Mathbin.Algebra.GroupWithZero.Defs
 
 /-!
 # Multiplication by ·positive· elements is monotonic
@@ -49,172 +49,162 @@ whether an element is `0` or not, but goes smoothly after that.  A further advan
 only introduce notation for the positive elements and we do not need also the non-negative ones.
 -/
 
+
 /- I am changing the file `algebra/order/monoid_lemmas` incrementally, with the idea of
 reproducing almost all of the proofs in `algebra/order/ring` with weaker assumptions. -/
-
 universe u
+
 variable {α : Type u}
 
+-- mathport name: «exprα>0»
 /-  Notation for positive elements
 https://
 leanprover.zulipchat.com/#narrow/stream/113488-general/topic/notation.20for.20positive.20elements
 -/
-local notation `α>0` := {x : α // 0 < x}
+local notation "α>0" => { x : α // 0 < x }
 
-namespace zero_lt
+namespace ZeroLt
 
-section abbreviations_strict_mono
-variables (X : Type u) [has_mul X] [has_zero X] [has_lt X]
+section AbbreviationsStrictMono
 
-/--  `zero_lt.pos_mul_strict_mono α` is an abbreviation for
+variable (X : Type u) [Mul X] [Zero X] [LT X]
+
+/-- `zero_lt.pos_mul_strict_mono α` is an abbreviation for
 `covariant_class α>0 α (λ x y, x * y) (<)`,
 expressing that multiplication by positive elements on the left is strictly monotone. -/
-abbreviation pos_mul_strict_mono : Prop :=
-covariant_class {x : X // 0 < x} X (λ x y, x * y) (<)
+abbrev PosMulStrictMono : Prop :=
+  CovariantClass { x : X // 0 < x } X (fun x y => x * y) (· < ·)
 
-/--  `zero_lt.mul_pos_strict_mono α` is an abbreviation for
+/-- `zero_lt.mul_pos_strict_mono α` is an abbreviation for
 `covariant_class α>0 α (λ x y, y * x) (<)`,
 expressing that multiplication by positive elements on the right is strictly monotone. -/
-abbreviation mul_pos_strict_mono : Prop :=
-covariant_class {x : X // 0 < x} X (λ x y, y * x) (<)
+abbrev MulPosStrictMono : Prop :=
+  CovariantClass { x : X // 0 < x } X (fun x y => y * x) (· < ·)
 
-/--  `zero_lt.pos_mul_reflect_lt α` is an abbreviation for
+/-- `zero_lt.pos_mul_reflect_lt α` is an abbreviation for
 `contravariant_class α>0 α (λ x y, x * y) (<)`,
 expressing that multiplication by positive elements on the left is strictly reverse monotone. -/
-abbreviation pos_mul_reflect_lt : Prop :=
-contravariant_class {x : X // 0 < x} X (λ x y, x * y) (<)
+abbrev PosMulReflectLt : Prop :=
+  ContravariantClass { x : X // 0 < x } X (fun x y => x * y) (· < ·)
 
-/--  `zero_lt.mul_pos_reflect_lt α` is an abbreviation for
+/-- `zero_lt.mul_pos_reflect_lt α` is an abbreviation for
 `contravariant_class α>0 α (λ x y, y * x) (<)`,
 expressing that multiplication by positive elements on the right is strictly reverse monotone. -/
-abbreviation mul_pos_reflect_lt : Prop :=
-contravariant_class {x : X // 0 < x} X (λ x y, y * x) (<)
+abbrev MulPosReflectLt : Prop :=
+  ContravariantClass { x : X // 0 < x } X (fun x y => y * x) (· < ·)
 
-end abbreviations_strict_mono
+end AbbreviationsStrictMono
 
-section abbreviations_mono
-variables (X : Type*) [has_mul X] [has_zero X] [preorder X]
+section AbbreviationsMono
 
-/--  `zero_lt.pos_mul_mono α` is an abbreviation for
+variable (X : Type _) [Mul X] [Zero X] [Preorderₓ X]
+
+/-- `zero_lt.pos_mul_mono α` is an abbreviation for
 `covariant_class α>0 α (λ x y, x * y) (≤)`,
 expressing that multiplication by positive elements on the left is monotone. -/
-abbreviation pos_mul_mono : Prop :=
-covariant_class {x : X // 0 < x} X (λ x y, x * y) (≤)
+abbrev PosMulMono : Prop :=
+  CovariantClass { x : X // 0 < x } X (fun x y => x * y) (· ≤ ·)
 
-/--  `zero_lt.mul_pos_mono α` is an abbreviation for
+/-- `zero_lt.mul_pos_mono α` is an abbreviation for
 `covariant_class α>0 α (λ x y, y * x) (≤)`,
 expressing that multiplication by positive elements on the right is monotone. -/
-abbreviation mul_pos_mono : Prop :=
-covariant_class {x : X // 0 < x} X (λ x y, y * x) (≤)
+abbrev MulPosMono : Prop :=
+  CovariantClass { x : X // 0 < x } X (fun x y => y * x) (· ≤ ·)
 
-/--  `zero_lt.pos_mul_mono_rev α` is an abbreviation for
+/-- `zero_lt.pos_mul_mono_rev α` is an abbreviation for
 `contravariant_class α>0 α (λ x y, x * y) (≤)`,
 expressing that multiplication by positive elements on the left is reverse monotone. -/
-abbreviation pos_mul_mono_rev : Prop :=
-contravariant_class {x : X // 0 < x} X (λ x y, x * y) (≤)
+abbrev PosMulMonoRev : Prop :=
+  ContravariantClass { x : X // 0 < x } X (fun x y => x * y) (· ≤ ·)
 
-/--  `zero_lt.mul_pos_mono_rev α` is an abbreviation for
+/-- `zero_lt.mul_pos_mono_rev α` is an abbreviation for
 `contravariant_class α>0 α (λ x y, y * x) (≤)`,
 expressing that multiplication by positive elements on the right is reverse monotone. -/
-abbreviation mul_pos_mono_rev : Prop :=
-contravariant_class {x : X // 0 < x} X (λ x y, y * x) (≤)
+abbrev MulPosMonoRev : Prop :=
+  ContravariantClass { x : X // 0 < x } X (fun x y => y * x) (· ≤ ·)
 
-end abbreviations_mono
+end AbbreviationsMono
 
-section has_mul_zero_lt
-variables [has_mul α] [has_zero α] [has_lt α]
+section HasMulZeroLt
 
-lemma mul_lt_mul_left' [pos_mul_strict_mono α] {a b c : α} (bc : b < c) (a0 : 0 < a) :
-  a * b < a * c :=
-@covariant_class.elim α>0 α (λ x y, x * y) (<) _ ⟨a, a0⟩ _ _ bc
+variable [Mul α] [Zero α] [LT α]
 
-lemma mul_lt_mul_right' [mul_pos_strict_mono α]
-  {a b c : α} (bc : b < c) (a0 : 0 < a) :
-  b * a < c * a :=
-@covariant_class.elim α>0 α (λ x y, y * x) (<) _ ⟨a, a0⟩ _ _ bc
+theorem mul_lt_mul_left' [PosMulStrictMono α] {a b c : α} (bc : b < c) (a0 : 0 < a) : a * b < a * c :=
+  @CovariantClass.elim α>0 α (fun x y => x * y) (· < ·) _ ⟨a, a0⟩ _ _ bc
+
+theorem mul_lt_mul_right' [MulPosStrictMono α] {a b c : α} (bc : b < c) (a0 : 0 < a) : b * a < c * a :=
+  @CovariantClass.elim α>0 α (fun x y => y * x) (· < ·) _ ⟨a, a0⟩ _ _ bc
 
 -- proven with `a0 : 0 ≤ a` as `lt_of_mul_lt_mul_left''`
-lemma lt_of_mul_lt_mul_left' [pos_mul_reflect_lt α]
-  {a b c : α} (bc : a * b < a * c) (a0 : 0 < a) :
-  b < c :=
-@contravariant_class.elim α>0 α (λ x y, x * y) (<) _ ⟨a, a0⟩ _ _ bc
+theorem lt_of_mul_lt_mul_left' [PosMulReflectLt α] {a b c : α} (bc : a * b < a * c) (a0 : 0 < a) : b < c :=
+  @ContravariantClass.elim α>0 α (fun x y => x * y) (· < ·) _ ⟨a, a0⟩ _ _ bc
 
 -- proven with `a0 : 0 ≤ a` as `lt_of_mul_lt_mul_right''`
-lemma lt_of_mul_lt_mul_right' [mul_pos_reflect_lt α]
-  {a b c : α} (bc : b * a < c * a) (a0 : 0 < a) :
-  b < c :=
-@contravariant_class.elim α>0 α (λ x y, y * x) (<) _ ⟨a, a0⟩ _ _ bc
+theorem lt_of_mul_lt_mul_right' [MulPosReflectLt α] {a b c : α} (bc : b * a < c * a) (a0 : 0 < a) : b < c :=
+  @ContravariantClass.elim α>0 α (fun x y => y * x) (· < ·) _ ⟨a, a0⟩ _ _ bc
 
 @[simp]
-lemma mul_lt_mul_iff_left [pos_mul_strict_mono α] [pos_mul_reflect_lt α]
-  {a b c : α} (a0 : 0 < a) :
-  a * b < a * c ↔ b < c :=
-@rel_iff_cov α>0 α (λ x y, x * y) (<) _ _ ⟨a, a0⟩ _ _
+theorem mul_lt_mul_iff_left [PosMulStrictMono α] [PosMulReflectLt α] {a b c : α} (a0 : 0 < a) : a * b < a * c ↔ b < c :=
+  @rel_iff_cov α>0 α (fun x y => x * y) (· < ·) _ _ ⟨a, a0⟩ _ _
 
 @[simp]
-lemma mul_lt_mul_iff_right [mul_pos_strict_mono α] [mul_pos_reflect_lt α]
-  {a b c : α} (a0 : 0 < a) :
-  b * a < c * a ↔ b < c :=
-@rel_iff_cov α>0 α (λ x y, y * x) (<) _ _ ⟨a, a0⟩ _ _
+theorem mul_lt_mul_iff_right [MulPosStrictMono α] [MulPosReflectLt α] {a b c : α} (a0 : 0 < a) :
+    b * a < c * a ↔ b < c :=
+  @rel_iff_cov α>0 α (fun x y => y * x) (· < ·) _ _ ⟨a, a0⟩ _ _
 
-end has_mul_zero_lt
+end HasMulZeroLt
 
-section has_mul_zero_le
-variables [has_mul α] [has_zero α] [preorder α]
+section HasMulZeroLe
 
-lemma mul_le_mul_left' [pos_mul_mono α] {a b c : α} (bc : b ≤ c) (a0 : 0 < a) :
-  a * b ≤ a * c :=
-@covariant_class.elim α>0 α (λ x y, x * y) (≤) _ ⟨a, a0⟩ _ _ bc
+variable [Mul α] [Zero α] [Preorderₓ α]
 
-lemma mul_le_mul_right' [mul_pos_mono α]
-  {a b c : α} (bc : b ≤ c) (a0 : 0 < a) :
-  b * a ≤ c * a :=
-@covariant_class.elim α>0 α (λ x y, y * x) (≤) _ ⟨a, a0⟩ _ _ bc
+theorem mul_le_mul_left' [PosMulMono α] {a b c : α} (bc : b ≤ c) (a0 : 0 < a) : a * b ≤ a * c :=
+  @CovariantClass.elim α>0 α (fun x y => x * y) (· ≤ ·) _ ⟨a, a0⟩ _ _ bc
 
-lemma le_of_mul_le_mul_left' [pos_mul_mono_rev α]
-  {a b c : α} (bc : a * b ≤ a * c) (a0 : 0 < a) :
-  b ≤ c :=
-@contravariant_class.elim α>0 α (λ x y, x * y) (≤) _ ⟨a, a0⟩ _ _ bc
+theorem mul_le_mul_right' [MulPosMono α] {a b c : α} (bc : b ≤ c) (a0 : 0 < a) : b * a ≤ c * a :=
+  @CovariantClass.elim α>0 α (fun x y => y * x) (· ≤ ·) _ ⟨a, a0⟩ _ _ bc
 
-lemma le_of_mul_le_mul_right' [mul_pos_mono_rev α]
-  {a b c : α} (bc : b * a ≤ c * a) (a0 : 0 < a) :
-  b ≤ c :=
-@contravariant_class.elim α>0 α (λ x y, y * x) (≤) _ ⟨a, a0⟩ _ _ bc
+theorem le_of_mul_le_mul_left' [PosMulMonoRev α] {a b c : α} (bc : a * b ≤ a * c) (a0 : 0 < a) : b ≤ c :=
+  @ContravariantClass.elim α>0 α (fun x y => x * y) (· ≤ ·) _ ⟨a, a0⟩ _ _ bc
+
+theorem le_of_mul_le_mul_right' [MulPosMonoRev α] {a b c : α} (bc : b * a ≤ c * a) (a0 : 0 < a) : b ≤ c :=
+  @ContravariantClass.elim α>0 α (fun x y => y * x) (· ≤ ·) _ ⟨a, a0⟩ _ _ bc
 
 @[simp]
-lemma mul_le_mul_iff_left [pos_mul_mono α] [pos_mul_mono_rev α]
-  {a b c : α} (a0 : 0 < a) :
-  a * b ≤ a * c ↔ b ≤ c :=
-@rel_iff_cov α>0 α (λ x y, x * y) (≤) _ _ ⟨a, a0⟩ _ _
+theorem mul_le_mul_iff_left [PosMulMono α] [PosMulMonoRev α] {a b c : α} (a0 : 0 < a) : a * b ≤ a * c ↔ b ≤ c :=
+  @rel_iff_cov α>0 α (fun x y => x * y) (· ≤ ·) _ _ ⟨a, a0⟩ _ _
 
 @[simp]
-lemma mul_le_mul_iff_right [mul_pos_mono α] [mul_pos_mono_rev α]
-  {a b c : α} (a0 : 0 < a) :
-  b * a ≤ c * a ↔ b ≤ c :=
-@rel_iff_cov α>0 α (λ x y, y * x) (≤) _ _ ⟨a, a0⟩ _ _
+theorem mul_le_mul_iff_right [MulPosMono α] [MulPosMonoRev α] {a b c : α} (a0 : 0 < a) : b * a ≤ c * a ↔ b ≤ c :=
+  @rel_iff_cov α>0 α (fun x y => y * x) (· ≤ ·) _ _ ⟨a, a0⟩ _ _
 
-end has_mul_zero_le
+end HasMulZeroLe
 
-section mul_zero_class_partial_order
-variables [mul_zero_class α] [partial_order α]
+section MulZeroClassPartialOrder
 
-lemma lt_of_mul_lt_mul_left'' [pos_mul_reflect_lt α]
-  {a b c : α} (bc : a * b < a * c) (a0 : 0 ≤ a) :
-  b < c :=
-begin
-  by_cases a₀ : a = 0,
-  { exact (lt_irrefl (0 : α) (by simpa only [a₀, zero_mul] using bc)).elim },
-  { exact lt_of_mul_lt_mul_left' bc ((ne.symm a₀).le_iff_lt.mp a0) }
-end
+variable [MulZeroClassₓ α] [PartialOrderₓ α]
 
-lemma lt_of_mul_lt_mul_right'' [mul_pos_reflect_lt α]
-  {a b c : α} (bc : b * a < c * a) (a0 : 0 ≤ a) :
-  b < c :=
-begin
-  by_cases a₀ : a = 0,
-  { exact (lt_irrefl (0 : α) (by simpa only [a₀, mul_zero] using bc)).elim },
-  { exact lt_of_mul_lt_mul_right' bc ((ne.symm a₀).le_iff_lt.mp a0) }
-end
+theorem lt_of_mul_lt_mul_left'' [PosMulReflectLt α] {a b c : α} (bc : a * b < a * c) (a0 : 0 ≤ a) : b < c := by
+  by_cases' a₀ : a = 0
+  · exact
+      (lt_irreflₓ (0 : α)
+          (by
+            simpa only [a₀, zero_mul] using bc)).elim
+    
+  · exact lt_of_mul_lt_mul_left' bc ((Ne.symm a₀).le_iff_lt.mp a0)
+    
 
-end mul_zero_class_partial_order
-end zero_lt
+theorem lt_of_mul_lt_mul_right'' [MulPosReflectLt α] {a b c : α} (bc : b * a < c * a) (a0 : 0 ≤ a) : b < c := by
+  by_cases' a₀ : a = 0
+  · exact
+      (lt_irreflₓ (0 : α)
+          (by
+            simpa only [a₀, mul_zero] using bc)).elim
+    
+  · exact lt_of_mul_lt_mul_right' bc ((Ne.symm a₀).le_iff_lt.mp a0)
+    
+
+end MulZeroClassPartialOrder
+
+end ZeroLt
+

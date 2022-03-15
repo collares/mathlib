@@ -3,8 +3,8 @@ Copyright (c) 2022 Yuma Mizuno. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yuma Mizuno
 -/
-import category_theory.eq_to_hom
-import category_theory.bicategory.basic
+import Mathbin.CategoryTheory.EqToHom
+import Mathbin.CategoryTheory.Bicategory.Basic
 
 /-!
 # Strict bicategories
@@ -21,62 +21,77 @@ For this reason, we use `eq_to_iso`, which gives isomorphisms from equalities, i
 identities.
 -/
 
-namespace category_theory
 
-open_locale bicategory
+namespace CategoryTheory
 
-universes w v u
+open_locale Bicategory
 
-variables (B : Type u) [bicategory.{w v} B]
+universe w v u
 
-/--
-A bicategory is called `strict` if the left unitors, the right unitors, and the associators are
+variable (B : Type u) [Bicategory.{w, v} B]
+
+/-- A bicategory is called `strict` if the left unitors, the right unitors, and the associators are
 isomorphisms given by equalities.
 -/
-class bicategory.strict : Prop :=
-(id_comp' : ∀ {a b : B} (f : a ⟶ b), 𝟙 a ≫ f = f . obviously)
-(comp_id' : ∀ {a b : B} (f : a ⟶ b), f ≫ 𝟙 b = f . obviously)
-(assoc' : ∀ {a b c d : B} (f : a ⟶ b) (g : b ⟶ c) (h : c ⟶ d),
-  (f ≫ g) ≫ h = f ≫ (g ≫ h) . obviously)
-(left_unitor_eq_to_iso' : ∀ {a b : B} (f : a ⟶ b),
-  λ_ f = eq_to_iso (id_comp' f) . obviously)
-(right_unitor_eq_to_iso' : ∀ {a b : B} (f : a ⟶ b),
-  ρ_ f = eq_to_iso (comp_id' f) . obviously)
-(associator_eq_to_iso' : ∀ {a b c d : B} (f : a ⟶ b) (g : b ⟶ c) (h : c ⟶ d),
-  α_ f g h = eq_to_iso (assoc' f g h) . obviously)
+class Bicategory.Strict : Prop where
+  id_comp' : ∀ {a b : B} f : a ⟶ b, 𝟙 a ≫ f = f := by
+    run_tac
+      obviously
+  comp_id' : ∀ {a b : B} f : a ⟶ b, f ≫ 𝟙 b = f := by
+    run_tac
+      obviously
+  assoc' : ∀ {a b c d : B} f : a ⟶ b g : b ⟶ c h : c ⟶ d, (f ≫ g) ≫ h = f ≫ g ≫ h := by
+    run_tac
+      obviously
+  left_unitor_eq_to_iso' : ∀ {a b : B} f : a ⟶ b, λ_ f = eqToIso (id_comp' f) := by
+    run_tac
+      obviously
+  right_unitor_eq_to_iso' : ∀ {a b : B} f : a ⟶ b, ρ_ f = eqToIso (comp_id' f) := by
+    run_tac
+      obviously
+  associator_eq_to_iso' : ∀ {a b c d : B} f : a ⟶ b g : b ⟶ c h : c ⟶ d, α_ f g h = eqToIso (assoc' f g h) := by
+    run_tac
+      obviously
 
 restate_axiom bicategory.strict.id_comp'
+
 restate_axiom bicategory.strict.comp_id'
+
 restate_axiom bicategory.strict.assoc'
+
 restate_axiom bicategory.strict.left_unitor_eq_to_iso'
+
 restate_axiom bicategory.strict.right_unitor_eq_to_iso'
+
 restate_axiom bicategory.strict.associator_eq_to_iso'
+
 attribute [simp]
-  bicategory.strict.id_comp bicategory.strict.left_unitor_eq_to_iso
-  bicategory.strict.comp_id bicategory.strict.right_unitor_eq_to_iso
-  bicategory.strict.assoc bicategory.strict.associator_eq_to_iso
+  bicategory.strict.id_comp bicategory.strict.left_unitor_eq_to_iso bicategory.strict.comp_id bicategory.strict.right_unitor_eq_to_iso bicategory.strict.assoc bicategory.strict.associator_eq_to_iso
 
 /-- Category structure on a strict bicategory -/
-@[priority 100] -- see Note [lower instance priority]
-instance strict_bicategory.category [bicategory.strict B] : category B :=
-{ id_comp' := λ a b, bicategory.strict.id_comp,
-  comp_id' := λ a b, bicategory.strict.comp_id,
-  assoc' := λ a b c d, bicategory.strict.assoc }
+-- see Note [lower instance priority]
+instance (priority := 100) StrictBicategory.category [Bicategory.Strict B] : Category B where
+  id_comp' := fun a b => Bicategory.Strict.id_comp
+  comp_id' := fun a b => Bicategory.Strict.comp_id
+  assoc' := fun a b c d => Bicategory.Strict.assoc
 
-namespace bicategory
+namespace Bicategory
 
-variables {B}
-
-@[simp]
-lemma whisker_left_eq_to_hom {a b c : B} (f : a ⟶ b) {g h : b ⟶ c} (η : g = h) :
-  f ◁ eq_to_hom η = eq_to_hom (congr_arg2 (≫) rfl η) :=
-by { cases η, simp only [whisker_left_id, eq_to_hom_refl] }
+variable {B}
 
 @[simp]
-lemma eq_to_hom_whisker_right {a b c : B} {f g : a ⟶ b} (η : f = g) (h : b ⟶ c) :
-  eq_to_hom η ▷ h = eq_to_hom (congr_arg2 (≫) η rfl) :=
-by { cases η, simp only [whisker_right_id, eq_to_hom_refl] }
+theorem whisker_left_eq_to_hom {a b c : B} (f : a ⟶ b) {g h : b ⟶ c} (η : g = h) :
+    f ◁ eqToHom η = eqToHom (congr_arg2ₓ (· ≫ ·) rfl η) := by
+  cases η
+  simp only [whisker_left_id, eq_to_hom_refl]
 
-end bicategory
+@[simp]
+theorem eq_to_hom_whisker_right {a b c : B} {f g : a ⟶ b} (η : f = g) (h : b ⟶ c) :
+    eqToHom η ▷ h = eqToHom (congr_arg2ₓ (· ≫ ·) η rfl) := by
+  cases η
+  simp only [whisker_right_id, eq_to_hom_refl]
 
-end category_theory
+end Bicategory
+
+end CategoryTheory
+

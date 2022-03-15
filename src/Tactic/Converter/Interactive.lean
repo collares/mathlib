@@ -5,136 +5,150 @@ Authors: Lucas Allen, Keeley Hoek, Leonardo de Moura
 
 Converter monad for building simplifiers.
 -/
-import tactic.core
-import tactic.converter.old_conv
+import Mathbin.Tactic.Core
+import Mathbin.Tactic.Converter.OldConv
 
-namespace old_conv
-meta def save_info (p : pos) : old_conv unit :=
-λ r lhs, do
-  ts ← tactic.read,
-  -- TODO(Leo): include context
-  tactic.save_info_thunk p (λ _, ts.format_expr lhs) >>
-  return ⟨(), lhs, none⟩
+namespace OldConv
 
-meta def step {α : Type} (c : old_conv α) : old_conv unit :=
-c >> return ()
+unsafe def save_info (p : Pos) : old_conv Unit := fun r lhs => do
+  let ts ← tactic.read
+  (-- TODO(Leo): include context
+        tactic.save_info_thunk
+        p fun _ => ts lhs) >>
+      return ⟨(), lhs, none⟩
 
-meta def istep {α : Type} (line0 col0 line col : nat) (c : old_conv α) : old_conv unit :=
-λ r lhs ts, (@scope_trace _ line col (λ _, (c >> return ()) r lhs ts)).clamp_pos line0 line col
+unsafe def step {α : Type} (c : old_conv α) : old_conv Unit :=
+  c >> return ()
 
-meta def execute (c : old_conv unit) : tactic unit :=
-conversion c
+unsafe def istep {α : Type} (line0 col0 line col : Nat) (c : old_conv α) : old_conv Unit := fun r lhs ts =>
+  (@scopeTrace _ line col fun _ => (c >> return ()) r lhs ts).clamp_pos line0 line col
 
-namespace interactive
+unsafe def execute (c : old_conv Unit) : tactic Unit :=
+  conversion c
+
+namespace Interactive
+
 setup_tactic_parser
 
-meta def itactic : Type :=
-old_conv unit
+unsafe def itactic : Type :=
+  old_conv Unit
 
-meta def whnf : old_conv unit :=
-old_conv.whnf
+unsafe def whnf : old_conv Unit :=
+  old_conv.whnf
 
-meta def dsimp : old_conv unit :=
-old_conv.dsimp
+unsafe def dsimp : old_conv Unit :=
+  old_conv.dsimp
 
-meta def trace_state : old_conv unit :=
-old_conv.trace_lhs
+unsafe def trace_state : old_conv Unit :=
+  old_conv.trace_lhs
 
-meta def change (p : parse texpr) : old_conv unit :=
-old_conv.change p
+unsafe def change (p : parse texpr) : old_conv Unit :=
+  old_conv.change p
 
-meta def find (p : parse lean.parser.pexpr) (c : itactic) : old_conv unit :=
-λ r lhs, do
-  pat ← tactic.pexpr_to_pattern p,
-  s   ← simp_lemmas.mk_default, -- to be able to use congruence lemmas @[congr]
-  (found, new_lhs, pr) ←
-    tactic.ext_simplify_core ff {zeta := ff, beta := ff, single_pass := tt, eta := ff, proj := ff}
-      s
-      (λ u, return u)
-      (λ found s r p e, do
-        guard (not found),
-        matched ← (tactic.match_pattern pat e >> return tt) <|> return ff,
-        guard matched,
-        ⟨u, new_e, pr⟩ ← c r e,
-        return (tt, new_e, pr, ff))
-      (λ a s r p e, tactic.failed)
-      r lhs,
-  if not found then tactic.fail "find converter failed, pattern was not found"
-  else return ⟨(), new_lhs, some pr⟩
+unsafe def find (p : parse lean.parser.pexpr) (c : itactic) : old_conv Unit := fun r lhs => do
+  let pat ← tactic.pexpr_to_pattern p
+  let s ← simp_lemmas.mk_default
+  let-- to be able to use congruence lemmas @[congr]
+    (found, new_lhs, pr)
+    ←
+    tactic.ext_simplify_core false { zeta := false, beta := false, singlePass := true, eta := false, proj := false } s
+        (fun u => return u)
+        (fun found s r p e => do
+          guardₓ (Not found)
+          let matched ← tactic.match_pattern pat e >> return true <|> return false
+          guardₓ matched
+          let ⟨u, new_e, pr⟩ ← c r e
+          return (tt, new_e, pr, ff))
+        (fun a s r p e => tactic.failed) r lhs
+  if Not found then tactic.fail "find converter failed, pattern was not found" else return ⟨(), new_lhs, some pr⟩
 
-end interactive
-end old_conv
+end Interactive
 
-namespace conv
-open tactic
+end OldConv
 
-meta def replace_lhs (tac : expr → tactic (expr × expr)) : conv unit :=
-do (e, pf) ← lhs >>= tac, update_lhs e pf
+namespace Conv
+
+open Tactic
+
+unsafe def replace_lhs (tac : expr → tactic (expr × expr)) : conv Unit := do
+  let (e, pf) ← lhs >>= tac
+  update_lhs e pf
 
 -- Attempts to discharge the equality of the current `lhs` using `tac`,
 -- moving to the next goal on success.
-meta def discharge_eq_lhs (tac : tactic unit) : conv unit :=
-do pf ← lock_tactic_state (do m ← lhs >>= mk_meta_var,
-                              set_goals [m],
-                              tac >> done,
-                              instantiate_mvars m),
-   congr,
-   the_rhs ← rhs,
-   update_lhs the_rhs pf,
-   skip,
-   skip
+unsafe def discharge_eq_lhs (tac : tactic Unit) : conv Unit := do
+  let pf ←
+    lock_tactic_state do
+        let m ← lhs >>= mk_meta_var
+        set_goals [m]
+        tac >> done
+        instantiate_mvars m
+  congr
+  let the_rhs ← rhs
+  update_lhs the_rhs pf
+  skip
+  skip
 
-namespace interactive
+namespace Interactive
+
 setup_tactic_parser
-open tactic.interactive (rw_rules)
+
+open Tactic.Interactive (rw_rules)
 
 /-- The `conv` tactic provides a `conv` within a `conv`. It allows the user to return to a
 previous state of the outer conv block to continue editing an expression without having to
 start a new conv block. -/
-protected meta def conv (t : conv.interactive.itactic) : conv unit :=
-do transitivity,
-   a :: rest ← get_goals,
-   set_goals [a],
-   t,
-   all_goals reflexivity,
-   set_goals rest
+protected unsafe def conv (t : conv.interactive.itactic) : conv Unit := do
+  transitivity
+  let a :: rest ← get_goals
+  set_goals [a]
+  t
+  all_goals reflexivity
+  set_goals rest
 
-meta def erw (q : parse rw_rules) (cfg : rewrite_cfg := {md := semireducible}) : conv unit :=
-rw q cfg
+unsafe def erw (q : parse rw_rules) (cfg : RewriteCfg := { md := semireducible }) : conv Unit :=
+  rw q cfg
 
-open interactive.types
+open Interactive.Types
 
-/--
-`guard_target t` fails if the target of the conv goal is not `t`.
+/-- `guard_target t` fails if the target of the conv goal is not `t`.
 We use this tactic for writing tests.
 -/
-meta def guard_target (p : parse texpr) : conv unit :=
-do `(%%t = _) ← target, tactic.interactive.guard_expr_eq t p
+unsafe def guard_target (p : parse texpr) : conv Unit := do
+  let quote.1 ((%%ₓt) = _) ← target
+  tactic.interactive.guard_expr_eq t p
 
-end interactive
-end conv
+end Interactive
 
-namespace tactic
-namespace interactive
+end Conv
+
+namespace Tactic
+
+namespace Interactive
+
 setup_tactic_parser
 
-meta def old_conv (c : old_conv.interactive.itactic) : tactic unit :=
-do t ← target,
-   (new_t, pr) ← c.to_tactic `eq t,
-   replace_target new_t pr
+unsafe def old_conv (c : old_conv.interactive.itactic) : tactic Unit := do
+  let t ← target
+  let (new_t, pr) ← c.to_tactic `eq t
+  replace_target new_t pr
 
-meta def find (p : parse lean.parser.pexpr) (c : old_conv.interactive.itactic) : tactic unit :=
-old_conv $ old_conv.interactive.find p c
+unsafe def find (p : parse lean.parser.pexpr) (c : old_conv.interactive.itactic) : tactic Unit :=
+  old_conv <| old_conv.interactive.find p c
 
-meta def conv_lhs (loc : parse (tk "at" *> ident)?)
-              (p : parse (tk "in" *> parser.pexpr)?)
-              (c : conv.interactive.itactic) : tactic unit :=
-conv loc p (conv.interactive.to_lhs >> c)
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr ?»
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr ?»
+unsafe def conv_lhs (loc : parse («expr ?» (tk "at" *> ident))) (p : parse («expr ?» (tk "in" *> parser.pexpr)))
+    (c : conv.interactive.itactic) : tactic Unit :=
+  conv loc p (conv.interactive.to_lhs >> c)
 
-meta def conv_rhs (loc : parse (tk "at" *> ident)?)
-              (p : parse (tk "in" *> parser.pexpr)?)
-              (c : conv.interactive.itactic) : tactic unit :=
-conv loc p (conv.interactive.to_rhs >> c)
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr ?»
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr ?»
+unsafe def conv_rhs (loc : parse («expr ?» (tk "at" *> ident))) (p : parse («expr ?» (tk "in" *> parser.pexpr)))
+    (c : conv.interactive.itactic) : tactic Unit :=
+  conv loc p (conv.interactive.to_rhs >> c)
 
-end interactive
-end tactic
+end Interactive
+
+end Tactic
+

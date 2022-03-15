@@ -3,9 +3,8 @@ Copyright (c) 2020 Jean Lo. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jean Lo
 -/
-
-import topology.algebra.group
-import logic.function.iterate
+import Mathbin.Topology.Algebra.Group
+import Mathbin.Logic.Function.Iterate
 
 /-!
 # Flows and invariant sets
@@ -27,144 +26,151 @@ flow onto an invariant subset, and the time-reveral of a flow by a
 group.
 -/
 
-open set function filter
+
+open Set Function Filter
 
 /-!
 ### Invariant sets
 -/
 
-section invariant
 
-variables {τ : Type*} {α : Type*}
+section Invariant
+
+variable {τ : Type _} {α : Type _}
 
 /-- A set `s ⊆ α` is invariant under `ϕ : τ → α → α` if
     `ϕ t s ⊆ s` for all `t` in `τ`. -/
-def is_invariant (ϕ : τ → α → α) (s : set α): Prop := ∀ t, maps_to (ϕ t) s s
+def IsInvariant (ϕ : τ → α → α) (s : Set α) : Prop :=
+  ∀ t, MapsTo (ϕ t) s s
 
-variables (ϕ : τ → α → α) (s : set α)
+variable (ϕ : τ → α → α) (s : Set α)
 
-lemma is_invariant_iff_image : is_invariant ϕ s ↔ ∀ t, ϕ t '' s ⊆ s :=
-by simp_rw [is_invariant, maps_to']
+theorem is_invariant_iff_image : IsInvariant ϕ s ↔ ∀ t, ϕ t '' s ⊆ s := by
+  simp_rw [IsInvariant, maps_to']
 
 /-- A set `s ⊆ α` is forward-invariant under `ϕ : τ → α → α` if
     `ϕ t s ⊆ s` for all `t ≥ 0`. -/
-def is_fw_invariant [preorder τ] [has_zero τ] (ϕ : τ → α → α) (s : set α): Prop :=
-∀ ⦃t⦄, 0 ≤ t → maps_to (ϕ t) s s
+def IsFwInvariant [Preorderₓ τ] [Zero τ] (ϕ : τ → α → α) (s : Set α) : Prop :=
+  ∀ ⦃t⦄, 0 ≤ t → MapsTo (ϕ t) s s
 
-lemma is_invariant.is_fw_invariant [preorder τ] [has_zero τ] {ϕ : τ → α → α} {s : set α}
-  (h : is_invariant ϕ s) : is_fw_invariant ϕ s :=
-λ t ht, h t
-
-/-- If `τ` is a `canonically_ordered_add_monoid` (e.g., `ℕ` or `ℝ≥0`), then the notions
-`is_fw_invariant` and `is_invariant` are equivalent. -/
-lemma is_fw_invariant.is_invariant [canonically_ordered_add_monoid τ] {ϕ : τ → α → α} {s : set α}
-  (h : is_fw_invariant ϕ s) : is_invariant ϕ s :=
-λ t, h (zero_le t)
+theorem IsInvariant.is_fw_invariant [Preorderₓ τ] [Zero τ] {ϕ : τ → α → α} {s : Set α} (h : IsInvariant ϕ s) :
+    IsFwInvariant ϕ s := fun t ht => h t
 
 /-- If `τ` is a `canonically_ordered_add_monoid` (e.g., `ℕ` or `ℝ≥0`), then the notions
 `is_fw_invariant` and `is_invariant` are equivalent. -/
-lemma is_fw_invariant_iff_is_invariant [canonically_ordered_add_monoid τ]
-  {ϕ : τ → α → α} {s : set α} :
-  is_fw_invariant ϕ s ↔ is_invariant ϕ s :=
-⟨is_fw_invariant.is_invariant, is_invariant.is_fw_invariant⟩
+theorem IsFwInvariant.is_invariant [CanonicallyOrderedAddMonoid τ] {ϕ : τ → α → α} {s : Set α} (h : IsFwInvariant ϕ s) :
+    IsInvariant ϕ s := fun t => h (zero_le t)
 
-end invariant
+/-- If `τ` is a `canonically_ordered_add_monoid` (e.g., `ℕ` or `ℝ≥0`), then the notions
+`is_fw_invariant` and `is_invariant` are equivalent. -/
+theorem is_fw_invariant_iff_is_invariant [CanonicallyOrderedAddMonoid τ] {ϕ : τ → α → α} {s : Set α} :
+    IsFwInvariant ϕ s ↔ IsInvariant ϕ s :=
+  ⟨IsFwInvariant.is_invariant, IsInvariant.is_fw_invariant⟩
+
+end Invariant
 
 /-!
 ### Flows
 -/
 
+
 /-- A flow on a topological space `α` by an a additive topological
     monoid `τ` is a continuous monoid action of `τ` on `α`.-/
-structure flow
-  (τ : Type*) [topological_space τ] [add_monoid τ] [has_continuous_add τ]
-  (α : Type*) [topological_space α] :=
-(to_fun    : τ → α → α)
-(cont'     : continuous (uncurry to_fun))
-(map_add'  : ∀ t₁ t₂ x, to_fun (t₁ + t₂) x = to_fun t₁ (to_fun t₂ x))
-(map_zero' : ∀ x, to_fun 0 x = x)
+structure Flow (τ : Type _) [TopologicalSpace τ] [AddMonoidₓ τ] [HasContinuousAdd τ] (α : Type _)
+  [TopologicalSpace α] where
+  toFun : τ → α → α
+  cont' : Continuous (uncurry to_fun)
+  map_add' : ∀ t₁ t₂ x, to_fun (t₁ + t₂) x = to_fun t₁ (to_fun t₂ x)
+  map_zero' : ∀ x, to_fun 0 x = x
 
-namespace flow
+namespace Flow
 
-variables
-{τ : Type*} [add_monoid τ] [topological_space τ] [has_continuous_add τ]
-{α : Type*} [topological_space α]
-(ϕ : flow τ α)
+variable {τ : Type _} [AddMonoidₓ τ] [TopologicalSpace τ] [HasContinuousAdd τ] {α : Type _} [TopologicalSpace α]
+  (ϕ : Flow τ α)
 
-instance : inhabited (flow τ α) :=
-⟨{ to_fun    := λ _ x, x,
-   cont'     := continuous_snd,
-   map_add'  := λ _ _ _, rfl,
-   map_zero' := λ _, rfl }⟩
+instance : Inhabited (Flow τ α) :=
+  ⟨{ toFun := fun _ x => x, cont' := continuous_snd, map_add' := fun _ _ _ => rfl, map_zero' := fun _ => rfl }⟩
 
-instance : has_coe_to_fun (flow τ α) (λ _, τ → α → α) := ⟨flow.to_fun⟩
+instance : CoeFun (Flow τ α) fun _ => τ → α → α :=
+  ⟨Flow.toFun⟩
 
 @[ext]
-lemma ext : ∀ {ϕ₁ ϕ₂ : flow τ α}, (∀ t x, ϕ₁ t x = ϕ₂ t x) → ϕ₁ = ϕ₂
-| ⟨f₁, _, _, _⟩ ⟨f₂, _, _, _⟩ h := by { congr, funext, exact h _ _ }
+theorem ext : ∀ {ϕ₁ ϕ₂ : Flow τ α}, (∀ t x, ϕ₁ t x = ϕ₂ t x) → ϕ₁ = ϕ₂
+  | ⟨f₁, _, _, _⟩, ⟨f₂, _, _, _⟩, h => by
+    congr
+    funext
+    exact h _ _
 
 @[continuity]
-protected lemma continuous {β : Type*} [topological_space β]
-  {t : β → τ} (ht : continuous t) {f : β → α} (hf : continuous f) :
-  continuous (λ x, ϕ (t x) (f x)) :=
-ϕ.cont'.comp (ht.prod_mk hf)
+protected theorem continuous {β : Type _} [TopologicalSpace β] {t : β → τ} (ht : Continuous t) {f : β → α}
+    (hf : Continuous f) : Continuous fun x => ϕ (t x) (f x) :=
+  ϕ.cont'.comp (ht.prod_mk hf)
 
-alias flow.continuous ← continuous.flow
+alias Flow.continuous ← Continuous.flow
 
-lemma map_add (t₁ t₂ : τ) (x : α) : ϕ (t₁ + t₂) x = ϕ t₁ (ϕ t₂ x) :=
-ϕ.map_add' _ _ _
+theorem map_add (t₁ t₂ : τ) (x : α) : ϕ (t₁ + t₂) x = ϕ t₁ (ϕ t₂ x) :=
+  ϕ.map_add' _ _ _
 
-@[simp] lemma map_zero : ϕ 0 = id := funext ϕ.map_zero'
+@[simp]
+theorem map_zero : ϕ 0 = id :=
+  funext ϕ.map_zero'
 
-lemma map_zero_apply (x : α) : ϕ 0 x = x := ϕ.map_zero' x
+theorem map_zero_apply (x : α) : ϕ 0 x = x :=
+  ϕ.map_zero' x
 
 /-- Iterations of a continuous function from a topological space `α`
     to itself defines a semiflow by `ℕ` on `α`. -/
-def from_iter {g : α → α} (h : continuous g) : flow ℕ α :=
-{ to_fun    := λ n x, g^[n] x,
-  cont'     := continuous_uncurry_of_discrete_topology_left (continuous.iterate h),
-  map_add'  := iterate_add_apply _,
-  map_zero' := λ x, rfl }
+def fromIter {g : α → α} (h : Continuous g) : Flow ℕ α where
+  toFun := fun n x => (g^[n]) x
+  cont' := continuous_uncurry_of_discrete_topology_left (Continuous.iterate h)
+  map_add' := iterate_add_apply _
+  map_zero' := fun x => rfl
 
 /-- Restriction of a flow onto an invariant set. -/
-def restrict {s : set α} (h : is_invariant ϕ s) : flow τ ↥s :=
-{ to_fun    := λ t, (h t).restrict _ _ _,
-  cont'     := continuous_subtype_mk _ (ϕ.continuous continuous_fst
-    (continuous_subtype_coe.comp continuous_snd)),
-  map_add'  := λ _ _ _, subtype.ext (map_add _ _ _ _),
-  map_zero' := λ _, subtype.ext (map_zero_apply _ _)}
+def restrict {s : Set α} (h : IsInvariant ϕ s) : Flow τ ↥s where
+  toFun := fun t => (h t).restrict _ _ _
+  cont' := continuous_subtype_mk _ (ϕ.Continuous continuous_fst (continuous_subtype_coe.comp continuous_snd))
+  map_add' := fun _ _ _ => Subtype.ext (map_add _ _ _ _)
+  map_zero' := fun _ => Subtype.ext (map_zero_apply _ _)
 
-end flow
+end Flow
 
-namespace flow
+namespace Flow
 
-variables
-{τ : Type*} [add_comm_group τ] [topological_space τ] [topological_add_group τ]
-{α : Type*} [topological_space α]
-(ϕ : flow τ α)
+variable {τ : Type _} [AddCommGroupₓ τ] [TopologicalSpace τ] [TopologicalAddGroup τ] {α : Type _} [TopologicalSpace α]
+  (ϕ : Flow τ α)
 
-lemma is_invariant_iff_image_eq (s : set α) :
-  is_invariant ϕ s ↔ ∀ t, ϕ t '' s = s :=
-(is_invariant_iff_image _ _).trans (iff.intro
-  (λ h t, subset.antisymm (h t) (λ _ hx, ⟨_, h (-t) ⟨_, hx, rfl⟩, by simp [← map_add]⟩))
-  (λ h t, by rw h t))
+theorem is_invariant_iff_image_eq (s : Set α) : IsInvariant ϕ s ↔ ∀ t, ϕ t '' s = s :=
+  (is_invariant_iff_image _ _).trans
+    (Iff.intro
+      (fun h t =>
+        Subset.antisymm (h t) fun _ hx =>
+          ⟨_, h (-t) ⟨_, hx, rfl⟩, by
+            simp [← map_add]⟩)
+      fun h t => by
+      rw [h t])
 
 /-- The time-reversal of a flow `ϕ` by a (commutative, additive) group
     is defined `ϕ.reverse t x = ϕ (-t) x`. -/
-def reverse : flow τ α :=
-{ to_fun    := λ t, ϕ (-t),
-  cont'     := ϕ.continuous continuous_fst.neg continuous_snd,
-  map_add'  := λ _ _ _, by rw [neg_add, map_add],
-  map_zero' := λ _, by rw [neg_zero, map_zero_apply] }
+def reverse : Flow τ α where
+  toFun := fun t => ϕ (-t)
+  cont' := ϕ.Continuous continuous_fst.neg continuous_snd
+  map_add' := fun _ _ _ => by
+    rw [neg_add, map_add]
+  map_zero' := fun _ => by
+    rw [neg_zero, map_zero_apply]
 
 /-- The map `ϕ t` as a homeomorphism. -/
-def to_homeomorph (t : τ) : α ≃ₜ α :=
-{ to_fun := ϕ t,
-  inv_fun := ϕ (-t),
-  left_inv := λ x, by rw [← map_add, neg_add_self, map_zero_apply],
-  right_inv := λ x, by rw [← map_add, add_neg_self, map_zero_apply] }
+def toHomeomorph (t : τ) : α ≃ₜ α where
+  toFun := ϕ t
+  invFun := ϕ (-t)
+  left_inv := fun x => by
+    rw [← map_add, neg_add_selfₓ, map_zero_apply]
+  right_inv := fun x => by
+    rw [← map_add, add_neg_selfₓ, map_zero_apply]
 
-lemma image_eq_preimage (t : τ) (s : set α) : ϕ t '' s = ϕ (-t) ⁻¹' s :=
-(ϕ.to_homeomorph t).to_equiv.image_eq_preimage s
+theorem image_eq_preimage (t : τ) (s : Set α) : ϕ t '' s = ϕ (-t) ⁻¹' s :=
+  (ϕ.toHomeomorph t).toEquiv.image_eq_preimage s
 
-end flow
+end Flow
+

@@ -3,19 +3,17 @@ Copyright (c) 2019 Seul Baek. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Seul Baek
 -/
+import Mathbin.Tactic.Omega.EqElim
 
 /-
 A tactic for finding a sequence of equality
 elimination rules for a given set of constraints.
 -/
+variable {α β : Type}
 
-import tactic.omega.eq_elim
+open Tactic
 
-variables {α β : Type}
-
-open tactic
-
-namespace omega
+namespace Omega
 
 /-- The state of equality elimination proof search. `eqs` is the list of
     equality constraints, and each `t ∈ eqs` represents the constraint `0 = t`.
@@ -23,135 +21,144 @@ namespace omega
     represents the constraint `0 < t`. `ees` is the sequence of equality
     elimination steps that have been used so far to obtain the current set of
     constraints. The list `ees` grows over time until `eqs` becomes empty. -/
-@[derive inhabited]
-structure ee_state :=
-(eqs : list term)
-(les : list term)
-(ees : list ee)
+structure EeState where
+  eqs : List Term
+  les : List Term
+  ees : List Ee
+  deriving Inhabited
 
-@[reducible] meta def eqelim := state_t ee_state tactic
+@[reducible]
+unsafe def eqelim :=
+  StateTₓ EeState tactic
 
-meta def abort {α : Type} : eqelim α := ⟨λ x, failed⟩
+unsafe def abort {α : Type} : eqelim α :=
+  ⟨fun x => failed⟩
 
-private meta def mk_eqelim_state
-  (eqs les : list term) : tactic ee_state :=
-return (ee_state.mk eqs les [])
+private unsafe def mk_eqelim_state (eqs les : List Term) : tactic EeState :=
+  return (EeState.mk eqs les [])
 
 /-- Get the current list of equality constraints. -/
-meta def get_eqs : eqelim (list term) := ee_state.eqs <$> get
+unsafe def get_eqs : eqelim (List Term) :=
+  ee_state.eqs <$> get
+
 /-- Get the current list of inequality constraints. -/
-meta def get_les : eqelim (list term) := ee_state.les <$> get
+unsafe def get_les : eqelim (List Term) :=
+  ee_state.les <$> get
+
 /-- Get the current sequence of equality elimiation steps. -/
-meta def get_ees : eqelim (list ee)   := ee_state.ees <$> get
+unsafe def get_ees : eqelim (List Ee) :=
+  ee_state.ees <$> get
 
 /-- Update the list of equality constraints. -/
-meta def set_eqs (eqs : list term) : eqelim unit := modify $ λ s, {eqs := eqs, ..s}
+unsafe def set_eqs (eqs : List Term) : eqelim Unit :=
+  modifyₓ fun s => { s with eqs }
+
 /-- Update the list of inequality constraints. -/
-meta def set_les (les : list term) : eqelim unit := modify $ λ s, {les := les, ..s}
+unsafe def set_les (les : List Term) : eqelim Unit :=
+  modifyₓ fun s => { s with les }
+
 /-- Update the sequence of equality elimiation steps. -/
-meta def set_ees (es : list ee) : eqelim unit := modify $ λ s, {ees := es, ..s}
+unsafe def set_ees (es : List Ee) : eqelim Unit :=
+  modifyₓ fun s => { s with ees := es }
 
 /-- Add a new step to the sequence of equality elimination steps. -/
-meta def add_ee (e : ee) : eqelim unit := do
-es ← get_ees, set_ees (es ++ [e])
+unsafe def add_ee (e : Ee) : eqelim Unit := do
+  let es ← get_ees
+  set_ees (es ++ [e])
 
 /-- Return the first equality constraint in the current list of
     equality constraints. The returned constraint is 'popped' and
     no longer available in the state. -/
-meta def head_eq : eqelim term :=
-do eqs ← get_eqs,
-   match eqs with
-   | []         := abort
-   | (eq::eqs') := set_eqs eqs' >> pure eq
-   end
+unsafe def head_eq : eqelim Term := do
+  let eqs ← get_eqs
+  match eqs with
+    | [] => abort
+    | Eq :: eqs' => set_eqs eqs' >> pure Eq
 
-meta def run {α : Type} (eqs les : list term) (r : eqelim α) : tactic α :=
-prod.fst <$> (mk_eqelim_state eqs les >>= r.run)
+unsafe def run {α : Type} (eqs les : List Term) (r : eqelim α) : tactic α :=
+  Prod.fst <$> (mk_eqelim_state eqs les >>= r.run)
 
 /-- If `t1` succeeds and returns a value, 'commit' to that choice and
     run `t3` with the returned value as argument. Do not backtrack
     to try `t2` even if `t3` fails. If `t1` fails outright, run `t2`. -/
-meta def ee_commit (t1 : eqelim α) (t2 : eqelim β)
-  (t3 : α → eqelim β) : eqelim β :=
-do x ← ((t1 >>= return ∘ some) <|> return none),
-   match x with
-   | none     := t2
-   | (some a) := t3 a
-   end
+unsafe def ee_commit (t1 : eqelim α) (t2 : eqelim β) (t3 : α → eqelim β) : eqelim β := do
+  let x ← t1 >>= return ∘ some <|> return none
+  match x with
+    | none => t2
+    | some a => t3 a
 
-local notation t1 `!>>=` t2 `;` t3 := ee_commit t1 t2 t3
+-- mathport name: «expr !>>= ; »
+local notation t1 "!>>=" t2 ";" t3 => ee_commit t1 t2 t3
 
-private meta def of_tactic {α : Type} : tactic α → eqelim α := state_t.lift
+private unsafe def of_tactic {α : Type} : tactic α → eqelim α :=
+  StateTₓ.lift
 
 /-- GCD of all elements of the list. -/
-def gcd : list int → nat
-| []      := 0
-| (i::is) := nat.gcd i.nat_abs (gcd is)
+def gcd : List Int → Nat
+  | [] => 0
+  | i :: is => Nat.gcdₓ i.natAbs (gcd is)
 
 /-- GCD of all coefficients in a term. -/
-meta def get_gcd (t : term) : eqelim int :=
-pure ↑(gcd t.snd)
+unsafe def get_gcd (t : Term) : eqelim Int :=
+  pure ↑(gcd t.snd)
 
 /-- Divide a term by an integer if the integer divides
     the constant component of the term. It is assumed that
     the integer also divides all coefficients of the term. -/
-meta def factor (i : int) (t : term) : eqelim term :=
-if i ∣ t.fst
-then add_ee (ee.factor i) >> pure (t.div i)
-else abort
+unsafe def factor (i : Int) (t : Term) : eqelim Term :=
+  if i ∣ t.fst then add_ee (Ee.factor i) >> pure (t.div i) else abort
 
 /-- If list has a nonzero element, return the minimum element
 (by absolute value) with its index. Otherwise, return none. -/
-meta def find_min_coeff_core : list int → eqelim (int × nat)
-| []      := abort
-| (i::is) := (do
-  (j,n) ← find_min_coeff_core is,
-  if i ≠ 0 ∧ i.nat_abs ≤ j.nat_abs
-  then pure (i,0)
-  else pure (j,n+1)) <|>
-  (if i = (0 : int) then abort else pure (i,0))
+unsafe def find_min_coeff_core : List Int → eqelim (Int × Nat)
+  | [] => abort
+  | i :: is =>
+    (do
+        let (j, n) ← find_min_coeff_core is
+        if i ≠ 0 ∧ i ≤ j then pure (i, 0) else pure (j, n + 1)) <|>
+      if i = (0 : Int) then abort else pure (i, 0)
 
 /-- Find and return the smallest coefficient (by absolute value) in a term,
     along with the coefficient's variable index and the term itself.
     If the coefficient is negative, negate both the coefficient and the term
     before returning them. -/
-meta def find_min_coeff (t : term) : eqelim (int × nat × term) :=
-do (i,n) ← find_min_coeff_core t.snd,
-   if 0 < i
-   then pure (i,n,t)
-   else add_ee (ee.neg) >> pure (-i,n,t.neg)
+unsafe def find_min_coeff (t : Term) : eqelim (Int × Nat × term) := do
+  let (i, n) ← find_min_coeff_core t.snd
+  if 0 < i then pure (i, n, t) else add_ee ee.neg >> pure (-i, n, t)
 
 /-- Find an appropriate equality elimination step for the
     current state and apply it. -/
-meta def elim_eq : eqelim unit := do
-t ← head_eq,
-i ← get_gcd t,
-    factor i t !>>= (set_eqs [] >> add_ee (ee.nondiv i)) ;
-λ s, find_min_coeff s !>>= add_ee ee.drop ;
-λ ⟨i, n, u⟩,
-if i = 1
-then do eqs ← get_eqs,
-        les ← get_les,
-              set_eqs (eqs.map (cancel n u)),
-              set_les (les.map (cancel n u)),
-              add_ee (ee.cancel n)
-else let v : term := coeffs_reduce n u.fst u.snd in
-     let r : term := rhs n u.fst u.snd in
-     do eqs ← get_eqs,
-        les ← get_les,
-              set_eqs (v::eqs.map (subst n r)),
-              set_les (les.map (subst n r)),
-              add_ee (ee.reduce n),
-              elim_eq
+unsafe def elim_eq : eqelim Unit := do
+  let t ← head_eq
+  let i ← get_gcd t
+  factor i t !>>=set_eqs [] >> add_ee (ee.nondiv i);fun s =>
+      find_min_coeff s !>>=add_ee ee.drop;fun ⟨i, n, u⟩ =>
+        if i = 1 then do
+          let eqs ← get_eqs
+          let les ← get_les
+          set_eqs (eqs (cancel n u))
+          set_les (les (cancel n u))
+          add_ee (ee.cancel n)
+        else
+          let v : term := coeffs_reduce n u u
+          let r : term := rhs n u u
+          do
+          let eqs ← get_eqs
+          let les ← get_les
+          set_eqs (v :: eqs (subst n r))
+          set_les (les (subst n r))
+          add_ee (ee.reduce n)
+          elim_eq
 
 /-- Find and return the sequence of steps for eliminating
     all equality constraints in the current state. -/
-meta def elim_eqs : eqelim (list ee) :=
-elim_eq !>>= get_ees ; λ _, elim_eqs
+unsafe def elim_eqs : eqelim (List Ee) :=
+  elim_eq !>>=get_ees;fun _ => elim_eqs
 
 /-- Given a linear constrain clause, return a list of steps for eliminating its equality
 constraints. -/
-meta def find_ees : clause → tactic (list ee)
-| (eqs,les) := run eqs les elim_eqs
+unsafe def find_ees : Clause → tactic (List Ee)
+  | (eqs, les) => run eqs les elim_eqs
 
-end omega
+end Omega
+

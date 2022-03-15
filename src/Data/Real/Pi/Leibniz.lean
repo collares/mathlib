@@ -3,15 +3,19 @@ Copyright (c) 2020 Benjamin Davidson. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Benjamin Davidson
 -/
-import analysis.special_functions.trigonometric.arctan_deriv
+import Mathbin.Analysis.SpecialFunctions.Trigonometric.ArctanDeriv
 
 /-! ### Leibniz's Series for Pi -/
 
-namespace real
 
-open filter set
-open_locale classical big_operators topological_space real
-local notation `|`x`|` := abs x
+namespace Real
+
+open Filter Set
+
+open_locale Classical BigOperators TopologicalSpace Real
+
+-- mathport name: «expr| |»
+local notation "|" x "|" => abs x
 
 /-- This theorem establishes **Leibniz's series for `π`**: The alternating sum of the reciprocals
   of the odd numbers is `π/4`. Note that this is a conditionally rather than absolutely convergent
@@ -37,100 +41,118 @@ local notation `|`x`|` := abs x
   subintervals. Finally, we (6) apply the Mean Value Theorem twice, obtaining bounds on `f 1 - f u`
   and `f u - f 0` from the bounds on `f'` (note that `f 0 = 0`). -/
 theorem tendsto_sum_pi_div_four :
-  tendsto (λ k, ∑ i in finset.range k, ((-(1:ℝ))^i / (2*i+1))) at_top (𝓝 (π/4)) :=
-begin
-  rw [tendsto_iff_norm_tendsto_zero, ← tendsto_zero_iff_norm_tendsto_zero],
+    Tendsto (fun k => ∑ i in Finset.range k, -(1 : ℝ) ^ i / (2 * i + 1)) atTop (𝓝 (π / 4)) := by
+  rw [tendsto_iff_norm_tendsto_zero, ← tendsto_zero_iff_norm_tendsto_zero]
   -- (1) We introduce a useful sequence `u` of values in [0,1], then prove that another sequence
   --     constructed from `u` tends to `0` at `+∞`
-  let u := λ k : ℕ, (k:nnreal) ^ (-1 / (2 * (k:ℝ) + 1)),
-  have H : tendsto (λ k : ℕ, (1:ℝ) - (u k) + (u k) ^ (2 * (k:ℝ) + 1)) at_top (𝓝 0),
-  { convert (((tendsto_rpow_div_mul_add (-1) 2 1 two_ne_zero.symm).neg.const_add 1).add
-      tendsto_inv_at_top_zero).comp tendsto_coe_nat_at_top_at_top,
-    { ext k,
-      simp only [nnreal.coe_nat_cast, function.comp_app, nnreal.coe_rpow],
-      rw [← rpow_mul (nat.cast_nonneg k) ((-1)/(2*(k:ℝ)+1)) (2*(k:ℝ)+1),
-         @div_mul_cancel _ _ _ (2*(k:ℝ)+1)
-            (by { norm_cast, simp only [nat.succ_ne_zero, not_false_iff] }), rpow_neg_one k,
-          sub_eq_add_neg] },
-    { simp only [add_zero, add_right_neg] } },
+  let u := fun k : ℕ => (k : Nnreal) ^ (-1 / (2 * (k : ℝ) + 1))
+  have H : tendsto (fun k : ℕ => (1 : ℝ) - u k + u k ^ (2 * (k : ℝ) + 1)) at_top (𝓝 0) := by
+    convert
+      (((tendsto_rpow_div_mul_add (-1) 2 1 two_ne_zero.symm).neg.const_add 1).add tendsto_inv_at_top_zero).comp
+        tendsto_coe_nat_at_top_at_top
+    · ext k
+      simp only [Nnreal.coe_nat_cast, Function.comp_app, Nnreal.coe_rpow]
+      rw [← rpow_mul (Nat.cast_nonneg k) (-1 / (2 * (k : ℝ) + 1)) (2 * (k : ℝ) + 1),
+        @div_mul_cancel _ _ _ (2 * (k : ℝ) + 1)
+          (by
+            norm_cast
+            simp only [Nat.succ_ne_zero, not_false_iff]),
+        rpow_neg_one k, sub_eq_add_neg]
+      
+    · simp only [add_zeroₓ, add_right_negₓ]
+      
   -- (2) We convert the limit in our goal to an inequality
-  refine squeeze_zero_norm _ H,
-  intro k,
+  refine' squeeze_zero_norm _ H
+  intro k
   -- Since `k` is now fixed, we henceforth denote `u k` as `U`
-  let U := u k,
+  let U := u k
   -- (3) We introduce an auxiliary function `f`
-  let b := λ (i:ℕ) x, (-(1:ℝ))^i * x^(2*i+1) / (2*i+1),
-  let f := λ x, arctan x - (∑ i in finset.range k, b i x),
-  suffices f_bound : |f 1 - f 0| ≤ (1:ℝ) - U + U ^ (2 * (k:ℝ) + 1),
-  { rw ← norm_neg,
-    convert f_bound,
-    simp only [f], simp [b] },
+  let b := fun x => -(1 : ℝ) ^ i * x ^ (2 * i + 1) / (2 * i + 1)
+  let f := fun x => arctan x - ∑ i in Finset.range k, b i x
+  suffices f_bound : |f 1 - f 0| ≤ (1 : ℝ) - U + U ^ (2 * (k : ℝ) + 1)
+  · rw [← norm_neg]
+    convert f_bound
+    simp only [f]
+    simp [b]
+    
   -- We show that `U` is indeed in [0,1]
-  have hU1 : (U:ℝ) ≤ 1,
-  { by_cases hk : k = 0,
-    { simpa only [U, hk] using zero_rpow_le_one _ },
-    { exact rpow_le_one_of_one_le_of_nonpos (by { norm_cast, exact nat.succ_le_iff.mpr
-        (nat.pos_of_ne_zero hk) }) (le_of_lt (@div_neg_of_neg_of_pos _ _ (-(1:ℝ)) (2*k+1)
-          (neg_neg_iff_pos.mpr zero_lt_one) (by { norm_cast, exact nat.succ_pos' }))) } },
-  have hU2 := nnreal.coe_nonneg U,
+  have hU1 : (U : ℝ) ≤ 1 := by
+    by_cases' hk : k = 0
+    · simpa only [U, hk] using zero_rpow_le_one _
+      
+    · exact
+        rpow_le_one_of_one_le_of_nonpos
+          (by
+            norm_cast
+            exact nat.succ_le_iff.mpr (Nat.pos_of_ne_zeroₓ hk))
+          (le_of_ltₓ
+            (@div_neg_of_neg_of_pos _ _ (-(1 : ℝ)) (2 * k + 1) (neg_neg_iff_pos.mpr zero_lt_one)
+              (by
+                norm_cast
+                exact Nat.succ_pos')))
+      
+  have hU2 := Nnreal.coe_nonneg U
   -- (4) We compute the derivative of `f`, denoted by `f'`
-  let f' := λ x : ℝ, (-x^2) ^ k / (1 + x^2),
-  have has_deriv_at_f : ∀ x, has_deriv_at f (f' x) x,
-  { intro x,
-    have has_deriv_at_b : ∀ i ∈ finset.range k, (has_deriv_at (b i) ((-x^2)^i) x),
-    { intros i hi,
-      convert has_deriv_at.const_mul ((-1:ℝ)^i / (2*i+1)) (@has_deriv_at.pow _ _ _ _ _ (2*i+1)
-        (has_deriv_at_id x)),
-      { ext y,
-        simp only [b, id.def],
-        ring },
-      { simp only [nat.add_succ_sub_one, add_zero, mul_one, id.def, nat.cast_bit0, nat.cast_add,
-                  nat.cast_one, nat.cast_mul],
-        rw [← mul_assoc, @div_mul_cancel _ _ _ (2*(i:ℝ)+1) (by { norm_cast, linarith }),
-            pow_mul x 2 i, ← mul_pow (-1) (x^2) i],
-        ring_nf } },
-    convert (has_deriv_at_arctan x).sub (has_deriv_at.sum has_deriv_at_b),
-    have g_sum :=
-      @geom_sum_eq _ _ (-x^2) ((neg_nonpos.mpr (sq_nonneg x)).trans_lt zero_lt_one).ne k,
-    simp only [geom_sum, f'] at g_sum ⊢,
-    rw [g_sum, ← neg_add' (x^2) 1, add_comm (x^2) 1, sub_eq_add_neg, neg_div', neg_div_neg_eq],
-    ring },
-  have hderiv1 : ∀ x ∈ Icc (U:ℝ) 1, has_deriv_within_at f (f' x) (Icc (U:ℝ) 1) x :=
-    λ x hx, (has_deriv_at_f x).has_deriv_within_at,
-  have hderiv2 : ∀ x ∈ Icc 0 (U:ℝ), has_deriv_within_at f (f' x) (Icc 0 (U:ℝ)) x :=
-    λ x hx, (has_deriv_at_f x).has_deriv_within_at,
+  let f' := fun x : ℝ => -(x ^ 2) ^ k / (1 + x ^ 2)
+  have has_deriv_at_f : ∀ x, HasDerivAt f (f' x) x := by
+    intro x
+    have has_deriv_at_b : ∀, ∀ i ∈ Finset.range k, ∀, HasDerivAt (b i) (-(x ^ 2) ^ i) x := by
+      intro i hi
+      convert
+        HasDerivAt.const_mul ((-1 : ℝ) ^ i / (2 * i + 1)) (@HasDerivAt.pow _ _ _ _ _ (2 * i + 1) (has_deriv_at_id x))
+      · ext y
+        simp only [b, id.def]
+        ring
+        
+      · simp only [Nat.add_succ_sub_one, add_zeroₓ, mul_oneₓ, id.def, Nat.cast_bit0, Nat.cast_addₓ, Nat.cast_oneₓ,
+          Nat.cast_mulₓ]
+        rw [← mul_assoc,
+          @div_mul_cancel _ _ _ (2 * (i : ℝ) + 1)
+            (by
+              norm_cast
+              linarith),
+          pow_mulₓ x 2 i, ← mul_powₓ (-1) (x ^ 2) i]
+        ring_nf
+        
+    convert (has_deriv_at_arctan x).sub (HasDerivAt.sum has_deriv_at_b)
+    have g_sum := @geom_sum_eq _ _ (-(x ^ 2)) ((neg_nonpos.mpr (sq_nonneg x)).trans_lt zero_lt_one).Ne k
+    simp only [geomSum, f'] at g_sum⊢
+    rw [g_sum, ← neg_add' (x ^ 2) 1, add_commₓ (x ^ 2) 1, sub_eq_add_neg, neg_div', neg_div_neg_eq]
+    ring
+  have hderiv1 : ∀, ∀ x ∈ Icc (U : ℝ) 1, ∀, HasDerivWithinAt f (f' x) (Icc (U : ℝ) 1) x := fun x hx =>
+    (has_deriv_at_f x).HasDerivWithinAt
+  have hderiv2 : ∀, ∀ x ∈ Icc 0 (U : ℝ), ∀, HasDerivWithinAt f (f' x) (Icc 0 (U : ℝ)) x := fun x hx =>
+    (has_deriv_at_f x).HasDerivWithinAt
   -- (5) We prove a general bound for `f'` and then more precise bounds on each of two subintervals
-  have f'_bound : ∀ x ∈ Icc (-1:ℝ) 1, |f' x| ≤ |x|^(2*k),
-  { intros x hx,
-    rw [abs_div, is_absolute_value.abv_pow abs (-x^2) k, abs_neg, is_absolute_value.abv_pow abs x 2,
-        ← pow_mul],
-    refine div_le_of_nonneg_of_le_mul (abs_nonneg _) (pow_nonneg (abs_nonneg _) _) _,
-    refine le_mul_of_one_le_right (pow_nonneg (abs_nonneg _) _) _,
-    rw abs_of_nonneg ((add_nonneg zero_le_one (sq_nonneg x)) : (0 : ℝ) ≤ _),
-    exact (le_add_of_nonneg_right (sq_nonneg x) : (1 : ℝ) ≤ _) },
-  have hbound1 : ∀ x ∈ Ico (U:ℝ) 1, |f' x| ≤ 1,
-  { rintros x ⟨hx_left, hx_right⟩,
-    have hincr := pow_le_pow_of_le_left (le_trans hU2 hx_left) (le_of_lt hx_right) (2*k),
-    rw [one_pow (2*k), ← abs_of_nonneg (le_trans hU2 hx_left)] at hincr,
-    rw ← abs_of_nonneg (le_trans hU2 hx_left) at hx_right,
-    linarith [f'_bound x (mem_Icc.mpr (abs_le.mp (le_of_lt hx_right)))] },
-  have hbound2 : ∀ x ∈ Ico 0 (U:ℝ), |f' x| ≤ U ^ (2*k),
-  { rintros x ⟨hx_left, hx_right⟩,
-    have hincr := pow_le_pow_of_le_left hx_left (le_of_lt hx_right) (2*k),
-    rw ← abs_of_nonneg hx_left at hincr hx_right,
-    rw ← abs_of_nonneg hU2 at hU1 hx_right,
-    linarith [f'_bound x (mem_Icc.mpr (abs_le.mp (le_trans (le_of_lt hx_right) hU1)))] },
+  have f'_bound : ∀, ∀ x ∈ Icc (-1 : ℝ) 1, ∀, |f' x| ≤ |x| ^ (2 * k) := by
+    intro x hx
+    rw [abs_div, IsAbsoluteValue.abv_pow abs (-(x ^ 2)) k, abs_neg, IsAbsoluteValue.abv_pow abs x 2, ← pow_mulₓ]
+    refine' div_le_of_nonneg_of_le_mul (abs_nonneg _) (pow_nonneg (abs_nonneg _) _) _
+    refine' le_mul_of_one_le_right (pow_nonneg (abs_nonneg _) _) _
+    rw [abs_of_nonneg (add_nonneg zero_le_one (sq_nonneg x) : (0 : ℝ) ≤ _)]
+    exact (le_add_of_nonneg_right (sq_nonneg x) : (1 : ℝ) ≤ _)
+  have hbound1 : ∀, ∀ x ∈ Ico (U : ℝ) 1, ∀, |f' x| ≤ 1 := by
+    rintro x ⟨hx_left, hx_right⟩
+    have hincr := pow_le_pow_of_le_left (le_transₓ hU2 hx_left) (le_of_ltₓ hx_right) (2 * k)
+    rw [one_pow (2 * k), ← abs_of_nonneg (le_transₓ hU2 hx_left)] at hincr
+    rw [← abs_of_nonneg (le_transₓ hU2 hx_left)] at hx_right
+    linarith [f'_bound x (mem_Icc.mpr (abs_le.mp (le_of_ltₓ hx_right)))]
+  have hbound2 : ∀, ∀ x ∈ Ico 0 (U : ℝ), ∀, |f' x| ≤ U ^ (2 * k) := by
+    rintro x ⟨hx_left, hx_right⟩
+    have hincr := pow_le_pow_of_le_left hx_left (le_of_ltₓ hx_right) (2 * k)
+    rw [← abs_of_nonneg hx_left] at hincr hx_right
+    rw [← abs_of_nonneg hU2] at hU1 hx_right
+    linarith [f'_bound x (mem_Icc.mpr (abs_le.mp (le_transₓ (le_of_ltₓ hx_right) hU1)))]
   -- (6) We twice apply the Mean Value Theorem to obtain bounds on `f` from the bounds on `f'`
-  have mvt1 :=
-    norm_image_sub_le_of_norm_deriv_le_segment' hderiv1 hbound1 _ (right_mem_Icc.mpr hU1),
-  have mvt2 :=
-    norm_image_sub_le_of_norm_deriv_le_segment' hderiv2 hbound2 _ (right_mem_Icc.mpr hU2),
+  have mvt1 := norm_image_sub_le_of_norm_deriv_le_segment' hderiv1 hbound1 _ (right_mem_Icc.mpr hU1)
+  have mvt2 := norm_image_sub_le_of_norm_deriv_le_segment' hderiv2 hbound2 _ (right_mem_Icc.mpr hU2)
   -- The following algebra is enough to complete the proof
-  calc |f 1 - f 0| = |(f 1 - f U) + (f U - f 0)| : by ring_nf
-               ... ≤ 1 * (1-U) + U^(2*k) * (U - 0) : le_trans (abs_add (f 1 - f U) (f U - f 0))
-                                                      (add_le_add mvt1 mvt2)
-               ... = 1 - U + U^(2*k) * U : by ring
-               ... = 1 - (u k) + (u k)^(2*(k:ℝ)+1) : by { rw [← pow_succ' (U:ℝ) (2*k)], norm_cast },
-end
+  calc |f 1 - f 0| = |f 1 - f U + (f U - f 0)| := by
+      ring_nf _ ≤ 1 * (1 - U) + U ^ (2 * k) * (U - 0) :=
+      le_transₓ (abs_add (f 1 - f U) (f U - f 0)) (add_le_add mvt1 mvt2)_ = 1 - U + U ^ (2 * k) * U := by
+      ring _ = 1 - u k + u k ^ (2 * (k : ℝ) + 1) := by
+      rw [← pow_succ'ₓ (U : ℝ) (2 * k)]
+      norm_cast
 
-end real
+end Real
+

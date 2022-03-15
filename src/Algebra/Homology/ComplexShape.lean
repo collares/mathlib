@@ -3,9 +3,9 @@ Copyright (c) 2021 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johan Commelin, Scott Morrison
 -/
-import algebra.group.defs
-import data.option.basic
-import logic.relation
+import Mathbin.Algebra.Group.Defs
+import Mathbin.Data.Option.Basic
+import Mathbin.Logic.Relation
 
 /-!
 # Shapes of homological complexes
@@ -40,11 +40,12 @@ so `d : X i ⟶ X j` is nonzero only when `i = j + 1`.
 `homological_complex` with one of these shapes baked in.)
 -/
 
-open_locale classical
-noncomputable theory
 
-/--
-A `c : complex_shape ι` describes the shape of a chain complex,
+open_locale Classical
+
+noncomputable section
+
+/-- A `c : complex_shape ι` describes the shape of a chain complex,
 with chain groups indexed by `ι`.
 Typically `ι` will be `ℕ`, `ℤ`, or `fin n`.
 
@@ -57,129 +58,113 @@ This means that the shape consists of some union of lines, rays, intervals, and 
 Below we define `c.next` and `c.prev` which provide, as an `option`, these related elements.
 -/
 @[ext, nolint has_inhabited_instance]
-structure complex_shape (ι : Type*) :=
-(rel : ι → ι → Prop)
-(next_eq : ∀ {i j j'}, rel i j → rel i j' → j = j')
-(prev_eq : ∀ {i i' j}, rel i j → rel i' j → i = i')
+structure ComplexShape (ι : Type _) where
+  Rel : ι → ι → Prop
+  next_eq : ∀ {i j j'}, rel i j → rel i j' → j = j'
+  prev_eq : ∀ {i i' j}, rel i j → rel i' j → i = i'
 
-namespace complex_shape
-variables {ι : Type*}
+namespace ComplexShape
 
-/--
-The complex shape where only differentials from each `X.i` to itself are allowed.
+variable {ι : Type _}
+
+/-- The complex shape where only differentials from each `X.i` to itself are allowed.
 
 This is mostly only useful so we can describe the relation of "related in `k` steps" below.
 -/
 @[simps]
-def refl (ι : Type*) : complex_shape ι :=
-{ rel := λ i j, i = j,
-  next_eq := λ i j j' w w', w.symm.trans w',
-  prev_eq := λ i i' j w w', w.trans w'.symm, }
+def refl (ι : Type _) : ComplexShape ι where
+  Rel := fun i j => i = j
+  next_eq := fun i j j' w w' => w.symm.trans w'
+  prev_eq := fun i i' j w w' => w.trans w'.symm
 
-/--
-The reverse of a `complex_shape`.
+/-- The reverse of a `complex_shape`.
 -/
 @[simps]
-def symm (c : complex_shape ι) : complex_shape ι :=
-{ rel := λ i j, c.rel j i,
-  next_eq := λ i j j' w w', c.prev_eq w w',
-  prev_eq := λ i i' j w w', c.next_eq w w', }
+def symm (c : ComplexShape ι) : ComplexShape ι where
+  Rel := fun i j => c.Rel j i
+  next_eq := fun i j j' w w' => c.prev_eq w w'
+  prev_eq := fun i i' j w w' => c.next_eq w w'
 
 @[simp]
-lemma symm_symm (c : complex_shape ι) : c.symm.symm = c :=
-by { ext, simp, }
+theorem symm_symm (c : ComplexShape ι) : c.symm.symm = c := by
+  ext
+  simp
 
-/--
-The "composition" of two `complex_shape`s.
+/-- The "composition" of two `complex_shape`s.
 
 We need this to define "related in k steps" later.
 -/
 @[simp]
-def trans (c₁ c₂ : complex_shape ι) : complex_shape ι :=
-{ rel := relation.comp c₁.rel c₂.rel,
-  next_eq := λ i j j' w w',
-  begin
-    obtain ⟨k, w₁, w₂⟩ := w,
-    obtain ⟨k', w₁', w₂'⟩ := w',
-    rw c₁.next_eq w₁ w₁' at w₂,
-    exact c₂.next_eq w₂ w₂',
-  end,
-  prev_eq := λ i i' j w w',
-  begin
-    obtain ⟨k, w₁, w₂⟩ := w,
-    obtain ⟨k', w₁', w₂'⟩ := w',
-    rw c₂.prev_eq w₂ w₂' at w₁,
-    exact c₁.prev_eq w₁ w₁',
-  end }
+def trans (c₁ c₂ : ComplexShape ι) : ComplexShape ι where
+  Rel := Relation.Comp c₁.Rel c₂.Rel
+  next_eq := fun i j j' w w' => by
+    obtain ⟨k, w₁, w₂⟩ := w
+    obtain ⟨k', w₁', w₂'⟩ := w'
+    rw [c₁.next_eq w₁ w₁'] at w₂
+    exact c₂.next_eq w₂ w₂'
+  prev_eq := fun i i' j w w' => by
+    obtain ⟨k, w₁, w₂⟩ := w
+    obtain ⟨k', w₁', w₂'⟩ := w'
+    rw [c₂.prev_eq w₂ w₂'] at w₁
+    exact c₁.prev_eq w₁ w₁'
 
-instance subsingleton_next (c : complex_shape ι) (i : ι) :
-  subsingleton { j // c.rel i j } :=
-begin
-  fsplit,
-  rintros ⟨j, rij⟩ ⟨k, rik⟩,
-  congr,
-  exact c.next_eq rij rik,
-end
+instance subsingleton_next (c : ComplexShape ι) (i : ι) : Subsingleton { j // c.Rel i j } := by
+  fconstructor
+  rintro ⟨j, rij⟩ ⟨k, rik⟩
+  congr
+  exact c.next_eq rij rik
 
-instance subsingleton_prev (c : complex_shape ι) (j : ι) :
-  subsingleton { i // c.rel i j } :=
-begin
-  fsplit,
-  rintros ⟨i, rik⟩ ⟨j, rjk⟩,
-  congr,
-  exact c.prev_eq rik rjk,
-end
+instance subsingleton_prev (c : ComplexShape ι) (j : ι) : Subsingleton { i // c.Rel i j } := by
+  fconstructor
+  rintro ⟨i, rik⟩ ⟨j, rjk⟩
+  congr
+  exact c.prev_eq rik rjk
 
-/--
-An option-valued arbitary choice of index `j` such that `rel i j`, if such exists.
+/-- An option-valued arbitary choice of index `j` such that `rel i j`, if such exists.
 -/
-def next (c : complex_shape ι) (i : ι) : option { j // c.rel i j } :=
-option.choice _
+def next (c : ComplexShape ι) (i : ι) : Option { j // c.Rel i j } :=
+  Option.choice _
 
-/--
-An option-valued arbitary choice of index `i` such that `rel i j`, if such exists.
+/-- An option-valued arbitary choice of index `i` such that `rel i j`, if such exists.
 -/
-def prev (c : complex_shape ι) (j : ι) : option { i // c.rel i j } :=
-option.choice _
+def prev (c : ComplexShape ι) (j : ι) : Option { i // c.Rel i j } :=
+  Option.choice _
 
-lemma next_eq_some (c : complex_shape ι) {i j : ι} (h : c.rel i j) : c.next i = some ⟨j, h⟩ :=
-option.choice_eq _
+theorem next_eq_some (c : ComplexShape ι) {i j : ι} (h : c.Rel i j) : c.next i = some ⟨j, h⟩ :=
+  Option.choice_eq _
 
-lemma prev_eq_some (c : complex_shape ι) {i j : ι} (h : c.rel i j) : c.prev j = some ⟨i, h⟩ :=
-option.choice_eq _
+theorem prev_eq_some (c : ComplexShape ι) {i j : ι} (h : c.Rel i j) : c.prev j = some ⟨i, h⟩ :=
+  Option.choice_eq _
 
-/--
-The `complex_shape` allowing differentials from `X i` to `X (i+a)`.
+/-- The `complex_shape` allowing differentials from `X i` to `X (i+a)`.
 (For example when `a = 1`, a cohomology theory indexed by `ℕ` or `ℤ`)
 -/
 @[simps]
-def up' {α : Type*} [add_right_cancel_semigroup α] (a : α) : complex_shape α :=
-{ rel := λ i j , i + a = j,
-  next_eq := λ i j k hi hj, hi.symm.trans hj,
-  prev_eq := λ i j k hi hj, add_right_cancel (hi.trans hj.symm), }
+def up' {α : Type _} [AddRightCancelSemigroup α] (a : α) : ComplexShape α where
+  Rel := fun i j => i + a = j
+  next_eq := fun i j k hi hj => hi.symm.trans hj
+  prev_eq := fun i j k hi hj => add_right_cancelₓ (hi.trans hj.symm)
 
-/--
-The `complex_shape` allowing differentials from `X (j+a)` to `X j`.
+/-- The `complex_shape` allowing differentials from `X (j+a)` to `X j`.
 (For example when `a = 1`, a homology theory indexed by `ℕ` or `ℤ`)
 -/
 @[simps]
-def down' {α : Type*} [add_right_cancel_semigroup α] (a : α) : complex_shape α :=
-{ rel := λ i j , j + a = i,
-  next_eq := λ i j k hi hj, add_right_cancel (hi.trans (hj.symm)),
-  prev_eq := λ i j k hi hj, hi.symm.trans hj, }
+def down' {α : Type _} [AddRightCancelSemigroup α] (a : α) : ComplexShape α where
+  Rel := fun i j => j + a = i
+  next_eq := fun i j k hi hj => add_right_cancelₓ (hi.trans hj.symm)
+  prev_eq := fun i j k hi hj => hi.symm.trans hj
 
-/--
-The `complex_shape` appropriate for cohomology, so `d : X i ⟶ X j` only when `j = i + 1`.
+/-- The `complex_shape` appropriate for cohomology, so `d : X i ⟶ X j` only when `j = i + 1`.
 -/
 @[simps]
-def up (α : Type*) [add_right_cancel_semigroup α] [has_one α] : complex_shape α :=
-up' 1
+def up (α : Type _) [AddRightCancelSemigroup α] [One α] : ComplexShape α :=
+  up' 1
 
-/--
-The `complex_shape` appropriate for homology, so `d : X i ⟶ X j` only when `i = j + 1`.
+/-- The `complex_shape` appropriate for homology, so `d : X i ⟶ X j` only when `i = j + 1`.
 -/
 @[simps]
-def down (α : Type*) [add_right_cancel_semigroup α] [has_one α] : complex_shape α :=
-down' 1
+def down (α : Type _) [AddRightCancelSemigroup α] [One α] : ComplexShape α :=
+  down' 1
 
-end complex_shape
+end ComplexShape
+

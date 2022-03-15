@@ -3,7 +3,7 @@ Copyright (c) 2019 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import set_theory.game.state
+import Mathbin.SetTheory.Game.State
 
 /-!
 # Domineering as a combinatorial game.
@@ -19,150 +19,145 @@ Specifically to domineering, we need the fact that
 disjoint parts of the chessboard give sums of games.
 -/
 
-namespace pgame
 
-namespace domineering
+namespace Pgame
 
-open function
+namespace Domineering
+
+open Function
 
 /-- The equivalence `(x, y) ↦ (x, y+1)`. -/
 @[simps]
-def shift_up : ℤ × ℤ ≃ ℤ × ℤ :=
-(equiv.refl ℤ).prod_congr (equiv.add_right (1 : ℤ))
+def shiftUp : ℤ × ℤ ≃ ℤ × ℤ :=
+  (Equivₓ.refl ℤ).prodCongr (Equivₓ.addRight (1 : ℤ))
+
 /-- The equivalence `(x, y) ↦ (x+1, y)`. -/
 @[simps]
-def shift_right : ℤ × ℤ ≃ ℤ × ℤ :=
-(equiv.add_right (1 : ℤ)).prod_congr (equiv.refl ℤ)
+def shiftRight : ℤ × ℤ ≃ ℤ × ℤ :=
+  (Equivₓ.addRight (1 : ℤ)).prodCongr (Equivₓ.refl ℤ)
 
 /-- A Domineering board is an arbitrary finite subset of `ℤ × ℤ`. -/
-@[derive inhabited]
-def board := finset (ℤ × ℤ)
-local attribute [reducible] board
+def Board :=
+  Finset (ℤ × ℤ)deriving Inhabited
+
+attribute [local reducible] board
 
 /-- Left can play anywhere that a square and the square below it are open. -/
-def left  (b : board) : finset (ℤ × ℤ) := b ∩ b.map shift_up
+def left (b : Board) : Finset (ℤ × ℤ) :=
+  b ∩ b.map shiftUp
+
 /-- Right can play anywhere that a square and the square to the left are open. -/
-def right (b : board) : finset (ℤ × ℤ) := b ∩ b.map shift_right
+def right (b : Board) : Finset (ℤ × ℤ) :=
+  b ∩ b.map shiftRight
 
-lemma mem_left {b : board} (x : ℤ × ℤ) : x ∈ left b ↔ x ∈ b ∧ (x.1, x.2 - 1) ∈ b :=
-finset.mem_inter.trans (and_congr iff.rfl finset.mem_map_equiv)
+theorem mem_left {b : Board} (x : ℤ × ℤ) : x ∈ left b ↔ x ∈ b ∧ (x.1, x.2 - 1) ∈ b :=
+  Finset.mem_inter.trans (and_congr Iff.rfl Finset.mem_map_equiv)
 
-lemma mem_right {b : board} (x : ℤ × ℤ) : x ∈ right b ↔ x ∈ b ∧ (x.1 - 1, x.2) ∈ b :=
-finset.mem_inter.trans (and_congr iff.rfl finset.mem_map_equiv)
+theorem mem_right {b : Board} (x : ℤ × ℤ) : x ∈ right b ↔ x ∈ b ∧ (x.1 - 1, x.2) ∈ b :=
+  Finset.mem_inter.trans (and_congr Iff.rfl Finset.mem_map_equiv)
 
 /-- After Left moves, two vertically adjacent squares are removed from the board. -/
-def move_left (b : board) (m : ℤ × ℤ) : board :=
-(b.erase m).erase (m.1, m.2 - 1)
+def moveLeft (b : Board) (m : ℤ × ℤ) : Board :=
+  (b.erase m).erase (m.1, m.2 - 1)
+
 /-- After Left moves, two horizontally adjacent squares are removed from the board. -/
-def move_right (b : board) (m : ℤ × ℤ) : board :=
-(b.erase m).erase (m.1 - 1, m.2)
+def moveRight (b : Board) (m : ℤ × ℤ) : Board :=
+  (b.erase m).erase (m.1 - 1, m.2)
 
-lemma fst_pred_mem_erase_of_mem_right {b : board} {m : ℤ × ℤ} (h : m ∈ right b) :
-  (m.1 - 1, m.2) ∈ b.erase m :=
-begin
-  rw mem_right at h,
-  apply finset.mem_erase_of_ne_of_mem _ h.2,
-  exact ne_of_apply_ne prod.fst (pred_ne_self m.1),
-end
+theorem fst_pred_mem_erase_of_mem_right {b : Board} {m : ℤ × ℤ} (h : m ∈ right b) : (m.1 - 1, m.2) ∈ b.erase m := by
+  rw [mem_right] at h
+  apply Finset.mem_erase_of_ne_of_mem _ h.2
+  exact ne_of_apply_ne Prod.fst (pred_ne_self m.1)
 
-lemma snd_pred_mem_erase_of_mem_left {b : board} {m : ℤ × ℤ} (h : m ∈ left b) :
-  (m.1, m.2 - 1) ∈ b.erase m :=
-begin
-  rw mem_left at h,
-  apply finset.mem_erase_of_ne_of_mem _ h.2,
-  exact ne_of_apply_ne prod.snd (pred_ne_self m.2),
-end
+theorem snd_pred_mem_erase_of_mem_left {b : Board} {m : ℤ × ℤ} (h : m ∈ left b) : (m.1, m.2 - 1) ∈ b.erase m := by
+  rw [mem_left] at h
+  apply Finset.mem_erase_of_ne_of_mem _ h.2
+  exact ne_of_apply_ne Prod.snd (pred_ne_self m.2)
 
-lemma card_of_mem_left {b : board} {m : ℤ × ℤ} (h : m ∈ left b) : 2 ≤ finset.card b :=
-begin
-  have w₁ : m ∈ b := (finset.mem_inter.1 h).1,
-  have w₂ : (m.1, m.2 - 1) ∈ b.erase m := snd_pred_mem_erase_of_mem_left h,
-  have i₁ := finset.card_erase_lt_of_mem w₁,
-  have i₂ := nat.lt_of_le_of_lt (nat.zero_le _) (finset.card_erase_lt_of_mem w₂),
-  exact nat.lt_of_le_of_lt i₂ i₁,
-end
+theorem card_of_mem_left {b : Board} {m : ℤ × ℤ} (h : m ∈ left b) : 2 ≤ Finset.card b := by
+  have w₁ : m ∈ b := (Finset.mem_inter.1 h).1
+  have w₂ : (m.1, m.2 - 1) ∈ b.erase m := snd_pred_mem_erase_of_mem_left h
+  have i₁ := Finset.card_erase_lt_of_mem w₁
+  have i₂ := Nat.lt_of_le_of_ltₓ (Nat.zero_leₓ _) (Finset.card_erase_lt_of_mem w₂)
+  exact Nat.lt_of_le_of_ltₓ i₂ i₁
 
-lemma card_of_mem_right {b : board} {m : ℤ × ℤ} (h : m ∈ right b) : 2 ≤ finset.card b :=
-begin
-  have w₁ : m ∈ b := (finset.mem_inter.1 h).1,
-  have w₂ := fst_pred_mem_erase_of_mem_right h,
-  have i₁ := finset.card_erase_lt_of_mem w₁,
-  have i₂ := nat.lt_of_le_of_lt (nat.zero_le _) (finset.card_erase_lt_of_mem w₂),
-  exact nat.lt_of_le_of_lt i₂ i₁,
-end
+theorem card_of_mem_right {b : Board} {m : ℤ × ℤ} (h : m ∈ right b) : 2 ≤ Finset.card b := by
+  have w₁ : m ∈ b := (Finset.mem_inter.1 h).1
+  have w₂ := fst_pred_mem_erase_of_mem_right h
+  have i₁ := Finset.card_erase_lt_of_mem w₁
+  have i₂ := Nat.lt_of_le_of_ltₓ (Nat.zero_leₓ _) (Finset.card_erase_lt_of_mem w₂)
+  exact Nat.lt_of_le_of_ltₓ i₂ i₁
 
-lemma move_left_card {b : board} {m : ℤ × ℤ} (h : m ∈ left b) :
-  finset.card (move_left b m) + 2 = finset.card b :=
-begin
-  dsimp [move_left],
-  rw finset.card_erase_of_mem (snd_pred_mem_erase_of_mem_left h),
-  rw finset.card_erase_of_mem (finset.mem_of_mem_inter_left h),
-  exact tsub_add_cancel_of_le (card_of_mem_left h),
-end
+theorem move_left_card {b : Board} {m : ℤ × ℤ} (h : m ∈ left b) : Finset.card (moveLeft b m) + 2 = Finset.card b := by
+  dsimp [move_left]
+  rw [Finset.card_erase_of_mem (snd_pred_mem_erase_of_mem_left h)]
+  rw [Finset.card_erase_of_mem (Finset.mem_of_mem_inter_left h)]
+  exact tsub_add_cancel_of_le (card_of_mem_left h)
 
-lemma move_right_card {b : board} {m : ℤ × ℤ} (h : m ∈ right b) :
-  finset.card (move_right b m) + 2 = finset.card b :=
-begin
-  dsimp [move_right],
-  rw finset.card_erase_of_mem (fst_pred_mem_erase_of_mem_right h),
-  rw finset.card_erase_of_mem (finset.mem_of_mem_inter_left h),
-  exact tsub_add_cancel_of_le (card_of_mem_right h),
-end
+theorem move_right_card {b : Board} {m : ℤ × ℤ} (h : m ∈ right b) : Finset.card (moveRight b m) + 2 = Finset.card b :=
+  by
+  dsimp [move_right]
+  rw [Finset.card_erase_of_mem (fst_pred_mem_erase_of_mem_right h)]
+  rw [Finset.card_erase_of_mem (Finset.mem_of_mem_inter_left h)]
+  exact tsub_add_cancel_of_le (card_of_mem_right h)
 
-lemma move_left_smaller {b : board} {m : ℤ × ℤ} (h : m ∈ left b) :
-  finset.card (move_left b m) / 2 < finset.card b / 2 :=
-by simp [←move_left_card h, lt_add_one]
-lemma move_right_smaller {b : board} {m : ℤ × ℤ} (h : m ∈ right b) :
-  finset.card (move_right b m) / 2 < finset.card b / 2 :=
-by simp [←move_right_card h, lt_add_one]
+theorem move_left_smaller {b : Board} {m : ℤ × ℤ} (h : m ∈ left b) :
+    Finset.card (moveLeft b m) / 2 < Finset.card b / 2 := by
+  simp [← move_left_card h, lt_add_one]
+
+theorem move_right_smaller {b : Board} {m : ℤ × ℤ} (h : m ∈ right b) :
+    Finset.card (moveRight b m) / 2 < Finset.card b / 2 := by
+  simp [← move_right_card h, lt_add_one]
 
 /-- The instance describing allowed moves on a Domineering board. -/
-instance state : state board :=
-{ turn_bound := λ s, s.card / 2,
-  L := λ s, (left s).image (move_left s),
-  R := λ s, (right s).image (move_right s),
-  left_bound := λ s t m,
-  begin
-    simp only [finset.mem_image, prod.exists] at m,
-    rcases m with ⟨_, _, ⟨h, rfl⟩⟩,
+instance state : State Board where
+  turnBound := fun s => s.card / 2
+  l := fun s => (left s).Image (moveLeft s)
+  r := fun s => (right s).Image (moveRight s)
+  left_bound := fun s t m => by
+    simp only [Finset.mem_image, Prod.exists] at m
+    rcases m with ⟨_, _, ⟨h, rfl⟩⟩
     exact move_left_smaller h
-  end,
-  right_bound := λ s t m,
-  begin
-    simp only [finset.mem_image, prod.exists] at m,
-    rcases m with ⟨_, _, ⟨h, rfl⟩⟩,
+  right_bound := fun s t m => by
+    simp only [Finset.mem_image, Prod.exists] at m
+    rcases m with ⟨_, _, ⟨h, rfl⟩⟩
     exact move_right_smaller h
-  end, }
 
-end domineering
+end Domineering
 
 /-- Construct a pre-game from a Domineering board. -/
-def domineering (b : domineering.board) : pgame := pgame.of b
+def domineering (b : Domineering.Board) : Pgame :=
+  Pgame.of b
 
 /-- All games of Domineering are short, because each move removes two squares. -/
-instance short_domineering (b : domineering.board) : short (domineering b) :=
-by { dsimp [domineering], apply_instance }
+instance shortDomineering (b : Domineering.Board) : Short (domineering b) := by
+  dsimp [domineering]
+  infer_instance
 
 /-- The Domineering board with two squares arranged vertically, in which Left has the only move. -/
-def domineering.one := domineering ([(0,0), (0,1)].to_finset)
+def domineering.one :=
+  domineering [(0, 0), (0, 1)].toFinset
 
 /-- The `L` shaped Domineering board, in which Left is exactly half a move ahead. -/
-def domineering.L := domineering ([(0,2), (0,1), (0,0), (1,0)].to_finset)
+def domineering.l :=
+  domineering [(0, 2), (0, 1), (0, 0), (1, 0)].toFinset
 
-instance short_one : short domineering.one := by { dsimp [domineering.one], apply_instance }
-instance short_L : short domineering.L := by { dsimp [domineering.L], apply_instance }
+instance shortOne : Short domineering.one := by
+  dsimp [domineering.one]
+  infer_instance
+
+instance shortL : Short domineering.l := by
+  dsimp [domineering.L]
+  infer_instance
 
 -- The VM can play small games successfully:
 -- #eval to_bool (domineering.one ≈ 1)
 -- #eval to_bool (domineering.L + domineering.L ≈ 1)
-
 -- The following no longer works since Lean 3.29, since definitions by well-founded
 -- recursion no longer reduce definitionally.
-
 -- We can check that `decidable` instances reduce as expected,
 -- and so our implementation of domineering is computable.
 -- run_cmd tactic.whnf `(by apply_instance : decidable (domineering.one ≤ 1)) >>= tactic.trace
-
 -- dec_trivial can handle most of the dictionary of small games described in [conway2001]
 -- example : domineering.one ≈ 1 := dec_trivial
 -- example : domineering.L + domineering.L ≈ 1 := dec_trivial
@@ -170,12 +165,10 @@ instance short_L : short domineering.L := by { dsimp [domineering.L], apply_inst
 -- example : (domineering ([(0,0), (0,1), (0,2), (0,3)].to_finset) ≈ 2) := dec_trivial
 -- example : (domineering ([(0,0), (0,1), (1,0), (1,1)].to_finset) ≈ pgame.of_lists [1] [-1]) :=
 --   dec_trivial.
-
 -- The 3x3 grid is doable, but takes a minute...
 -- example :
 --   (domineering ([(0,0), (0,1), (0,2), (1,0), (1,1), (1,2), (2,0), (2,1), (2,2)].to_finset) ≈
 --     pgame.of_lists [1] [-1]) := dec_trivial
-
 -- The 5x5 grid is actually 0, but brute-forcing this is too challenging even for the VM.
 -- #eval to_bool (domineering ([
 --   (0,0), (0,1), (0,2), (0,3), (0,4),
@@ -184,6 +177,5 @@ instance short_L : short domineering.L := by { dsimp [domineering.L], apply_inst
 --   (3,0), (3,1), (3,2), (3,3), (3,4),
 --   (4,0), (4,1), (4,2), (4,3), (4,4)
 --   ].to_finset) ≈ 0)
+end Pgame
 
-
-end pgame

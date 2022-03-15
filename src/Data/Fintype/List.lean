@@ -3,8 +3,8 @@ Copyright (c) 2021 Yakov Pechersky. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yakov Pechersky
 -/
-import data.fintype.basic
-import data.list.perm
+import Mathbin.Data.Fintype.Basic
+import Mathbin.Data.List.Perm
 
 /-!
 
@@ -24,45 +24,42 @@ which is a TODO.
 
 -/
 
-variables {α : Type*} [decidable_eq α]
 
-open list
+variable {α : Type _} [DecidableEq α]
 
-namespace multiset
+open List
 
-/--
-The `finset` of `l : list α` that, given `m : multiset α`, have the property `⟦l⟧ = m`.
+namespace Multiset
+
+/-- The `finset` of `l : list α` that, given `m : multiset α`, have the property `⟦l⟧ = m`.
 -/
-def lists : multiset α → finset (list α) :=
-λ s, quotient.lift_on s (λ l, l.permutations.to_finset)
-(λ l l' (h : l ~ l'),
-  begin
-    ext sl,
-    simp only [mem_permutations, list.mem_to_finset],
-    exact ⟨λ hs, hs.trans h, λ hs, hs.trans h.symm⟩
-  end)
+def lists : Multiset α → Finset (List α) := fun s =>
+  Quotientₓ.liftOn s (fun l => l.permutations.toFinset) fun h : l ~ l' => by
+    ext sl
+    simp only [mem_permutations, List.mem_to_finset]
+    exact ⟨fun hs => hs.trans h, fun hs => hs.trans h.symm⟩
 
-@[simp] lemma lists_coe (l : list α) :
-  lists (l : multiset α) = l.permutations.to_finset := rfl
+@[simp]
+theorem lists_coe (l : List α) : lists (l : Multiset α) = l.permutations.toFinset :=
+  rfl
 
-@[simp] lemma mem_lists_iff (s : multiset α) (l : list α) :
-  l ∈ lists s ↔ s = ⟦l⟧ :=
-begin
-  induction s using quotient.induction_on,
+@[simp]
+theorem mem_lists_iff (s : Multiset α) (l : List α) : l ∈ lists s ↔ s = ⟦l⟧ := by
+  induction s using Quotientₓ.induction_on
   simpa using perm_comm
-end
 
-end multiset
+end Multiset
 
-instance fintype_nodup_list [fintype α] : fintype {l : list α // l.nodup} :=
-fintype.subtype ((finset.univ : finset α).powerset.bUnion (λ s, s.val.lists)) (λ l,
-  begin
-    suffices : (∃ (a : finset α), a.val = ↑l) ↔ l.nodup,
-    { simpa },
-    split,
-    { rintro ⟨s, hs⟩,
-      simpa [←multiset.coe_nodup, ←hs] using s.nodup },
-    { intro hl,
-      refine ⟨⟨↑l, hl⟩, _⟩,
-      simp }
-  end)
+instance fintypeNodupList [Fintype α] : Fintype { l : List α // l.Nodup } :=
+  Fintype.subtype ((Finset.univ : Finset α).Powerset.bUnion fun s => s.val.lists) fun l => by
+    suffices (∃ a : Finset α, a.val = ↑l) ↔ l.nodup by
+      simpa
+    constructor
+    · rintro ⟨s, hs⟩
+      simpa [← Multiset.coe_nodup, ← hs] using s.nodup
+      
+    · intro hl
+      refine' ⟨⟨↑l, hl⟩, _⟩
+      simp
+      
+

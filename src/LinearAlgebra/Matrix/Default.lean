@@ -1,8 +1,9 @@
-import linear_algebra.determinant
-import linear_algebra.matrix.basis
-import linear_algebra.matrix.block
-import linear_algebra.matrix.diagonal
-import linear_algebra.matrix.dot_product
-import linear_algebra.matrix.to_linear_equiv
-import linear_algebra.matrix.reindex
-import linear_algebra.trace
+import Mathbin.LinearAlgebra.Determinant
+import Mathbin.LinearAlgebra.Matrix.Basis
+import Mathbin.LinearAlgebra.Matrix.Block
+import Mathbin.LinearAlgebra.Matrix.Diagonal
+import Mathbin.LinearAlgebra.Matrix.DotProduct
+import Mathbin.LinearAlgebra.Matrix.ToLinearEquiv
+import Mathbin.LinearAlgebra.Matrix.Reindex
+import Mathbin.LinearAlgebra.Trace
+

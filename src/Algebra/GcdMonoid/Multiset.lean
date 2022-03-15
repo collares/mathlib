@@ -3,8 +3,8 @@ Copyright (c) 2020 Aaron Anderson. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Aaron Anderson
 -/
-import algebra.gcd_monoid.basic
-import data.multiset.lattice
+import Mathbin.Algebra.GcdMonoid.Basic
+import Mathbin.Data.Multiset.Lattice
 
 /-!
 # GCD and LCM operations on multisets
@@ -23,139 +23,190 @@ TODO: simplify with a tactic and `data.multiset.lattice`
 multiset, gcd
 -/
 
-namespace multiset
-variables {α : Type*} [cancel_comm_monoid_with_zero α] [normalized_gcd_monoid α]
+
+namespace Multiset
+
+variable {α : Type _} [CancelCommMonoidWithZero α] [NormalizedGcdMonoid α]
 
 /-! ### lcm -/
-section lcm
+
+
+section Lcm
 
 /-- Least common multiple of a multiset -/
-def lcm (s : multiset α) : α := s.fold gcd_monoid.lcm 1
+def lcm (s : Multiset α) : α :=
+  s.fold GcdMonoid.lcm 1
 
-@[simp] lemma lcm_zero : (0 : multiset α).lcm = 1 :=
-fold_zero _ _
+@[simp]
+theorem lcm_zero : (0 : Multiset α).lcm = 1 :=
+  fold_zero _ _
 
-@[simp] lemma lcm_cons (a : α) (s : multiset α) :
-  (a ::ₘ s).lcm = gcd_monoid.lcm a s.lcm :=
-fold_cons_left _ _ _ _
+@[simp]
+theorem lcm_cons (a : α) (s : Multiset α) : (a ::ₘ s).lcm = GcdMonoid.lcm a s.lcm :=
+  fold_cons_left _ _ _ _
 
-@[simp] lemma lcm_singleton {a : α} : ({a} : multiset α).lcm = normalize a :=
-(fold_singleton _ _ _).trans $ lcm_one_right _
+@[simp]
+theorem lcm_singleton {a : α} : ({a} : Multiset α).lcm = normalize a :=
+  (fold_singleton _ _ _).trans <| lcm_one_right _
 
-@[simp] lemma lcm_add (s₁ s₂ : multiset α) : (s₁ + s₂).lcm = gcd_monoid.lcm s₁.lcm s₂.lcm :=
-eq.trans (by simp [lcm]) (fold_add _ _ _ _ _)
+@[simp]
+theorem lcm_add (s₁ s₂ : Multiset α) : (s₁ + s₂).lcm = GcdMonoid.lcm s₁.lcm s₂.lcm :=
+  Eq.trans
+    (by
+      simp [lcm])
+    (fold_add _ _ _ _ _)
 
-lemma lcm_dvd {s : multiset α} {a : α} : s.lcm ∣ a ↔ (∀ b ∈ s, b ∣ a) :=
-multiset.induction_on s (by simp)
-  (by simp [or_imp_distrib, forall_and_distrib, lcm_dvd_iff] {contextual := tt})
+theorem lcm_dvd {s : Multiset α} {a : α} : s.lcm ∣ a ↔ ∀, ∀ b ∈ s, ∀, b ∣ a :=
+  Multiset.induction_on s
+    (by
+      simp )
+    (by
+      simp (config := { contextual := true })[or_imp_distrib, forall_and_distrib, lcm_dvd_iff])
 
-lemma dvd_lcm {s : multiset α} {a : α} (h : a ∈ s) : a ∣ s.lcm :=
-lcm_dvd.1 dvd_rfl _ h
+theorem dvd_lcm {s : Multiset α} {a : α} (h : a ∈ s) : a ∣ s.lcm :=
+  lcm_dvd.1 dvd_rfl _ h
 
-lemma lcm_mono {s₁ s₂ : multiset α} (h : s₁ ⊆ s₂) : s₁.lcm ∣ s₂.lcm :=
-lcm_dvd.2 $ assume b hb, dvd_lcm (h hb)
+theorem lcm_mono {s₁ s₂ : Multiset α} (h : s₁ ⊆ s₂) : s₁.lcm ∣ s₂.lcm :=
+  lcm_dvd.2 fun b hb => dvd_lcm (h hb)
 
-@[simp] lemma normalize_lcm (s : multiset α) : normalize (s.lcm) = s.lcm :=
-multiset.induction_on s (by simp) $ λ a s IH, by simp
+@[simp]
+theorem normalize_lcm (s : Multiset α) : normalize s.lcm = s.lcm :=
+  (Multiset.induction_on s
+      (by
+        simp ))
+    fun a s IH => by
+    simp
 
-@[simp] theorem lcm_eq_zero_iff [nontrivial α] (s : multiset α) : s.lcm = 0 ↔ (0 : α) ∈ s :=
-begin
-  induction s using multiset.induction_on with a s ihs,
-  { simp only [lcm_zero, one_ne_zero, not_mem_zero] },
-  { simp only [mem_cons, lcm_cons, lcm_eq_zero_iff, ihs, @eq_comm _ a] },
-end
+@[simp]
+theorem lcm_eq_zero_iff [Nontrivial α] (s : Multiset α) : s.lcm = 0 ↔ (0 : α) ∈ s := by
+  induction' s using Multiset.induction_on with a s ihs
+  · simp only [lcm_zero, one_ne_zero, not_mem_zero]
+    
+  · simp only [mem_cons, lcm_cons, lcm_eq_zero_iff, ihs, @eq_comm _ a]
+    
 
-variables [decidable_eq α]
+variable [DecidableEq α]
 
-@[simp] lemma lcm_dedup (s : multiset α) : (dedup s).lcm = s.lcm :=
-multiset.induction_on s (by simp) $ λ a s IH, begin
-  by_cases a ∈ s; simp [IH, h],
-  unfold lcm,
-  rw [← cons_erase h, fold_cons_left, ← lcm_assoc, lcm_same],
-  apply lcm_eq_of_associated_left (associated_normalize _),
-end
+@[simp]
+theorem lcm_dedup (s : Multiset α) : (dedup s).lcm = s.lcm :=
+  (Multiset.induction_on s
+      (by
+        simp ))
+    fun a s IH => by
+    by_cases' a ∈ s <;> simp [IH, h]
+    unfold lcm
+    rw [← cons_erase h, fold_cons_left, ← lcm_assoc, lcm_same]
+    apply lcm_eq_of_associated_left (associated_normalize _)
 
-@[simp] lemma lcm_ndunion (s₁ s₂ : multiset α) :
-  (ndunion s₁ s₂).lcm = gcd_monoid.lcm s₁.lcm s₂.lcm :=
-by { rw [← lcm_dedup, dedup_ext.2, lcm_dedup, lcm_add], simp }
+@[simp]
+theorem lcm_ndunion (s₁ s₂ : Multiset α) : (ndunion s₁ s₂).lcm = GcdMonoid.lcm s₁.lcm s₂.lcm := by
+  rw [← lcm_dedup, dedup_ext.2, lcm_dedup, lcm_add]
+  simp
 
-@[simp] lemma lcm_union (s₁ s₂ : multiset α) :
-  (s₁ ∪ s₂).lcm = gcd_monoid.lcm s₁.lcm s₂.lcm :=
-by { rw [← lcm_dedup, dedup_ext.2, lcm_dedup, lcm_add], simp }
+@[simp]
+theorem lcm_union (s₁ s₂ : Multiset α) : (s₁ ∪ s₂).lcm = GcdMonoid.lcm s₁.lcm s₂.lcm := by
+  rw [← lcm_dedup, dedup_ext.2, lcm_dedup, lcm_add]
+  simp
 
-@[simp] lemma lcm_ndinsert (a : α) (s : multiset α) :
-  (ndinsert a s).lcm = gcd_monoid.lcm a s.lcm :=
-by { rw [← lcm_dedup, dedup_ext.2, lcm_dedup, lcm_cons], simp }
+@[simp]
+theorem lcm_ndinsert (a : α) (s : Multiset α) : (ndinsert a s).lcm = GcdMonoid.lcm a s.lcm := by
+  rw [← lcm_dedup, dedup_ext.2, lcm_dedup, lcm_cons]
+  simp
 
-end lcm
+end Lcm
 
 /-! ### gcd -/
-section gcd
+
+
+section Gcd
 
 /-- Greatest common divisor of a multiset -/
-def gcd (s : multiset α) : α := s.fold gcd_monoid.gcd 0
+def gcd (s : Multiset α) : α :=
+  s.fold GcdMonoid.gcd 0
 
-@[simp] lemma gcd_zero : (0 : multiset α).gcd = 0 :=
-fold_zero _ _
+@[simp]
+theorem gcd_zero : (0 : Multiset α).gcd = 0 :=
+  fold_zero _ _
 
-@[simp] lemma gcd_cons (a : α) (s : multiset α) :
-  (a ::ₘ s).gcd = gcd_monoid.gcd a s.gcd :=
-fold_cons_left _ _ _ _
+@[simp]
+theorem gcd_cons (a : α) (s : Multiset α) : (a ::ₘ s).gcd = GcdMonoid.gcd a s.gcd :=
+  fold_cons_left _ _ _ _
 
-@[simp] lemma gcd_singleton {a : α} : ({a} : multiset α).gcd = normalize a :=
-(fold_singleton _ _ _).trans $ gcd_zero_right _
+@[simp]
+theorem gcd_singleton {a : α} : ({a} : Multiset α).gcd = normalize a :=
+  (fold_singleton _ _ _).trans <| gcd_zero_right _
 
-@[simp] lemma gcd_add (s₁ s₂ : multiset α) : (s₁ + s₂).gcd = gcd_monoid.gcd s₁.gcd s₂.gcd :=
-eq.trans (by simp [gcd]) (fold_add _ _ _ _ _)
+@[simp]
+theorem gcd_add (s₁ s₂ : Multiset α) : (s₁ + s₂).gcd = GcdMonoid.gcd s₁.gcd s₂.gcd :=
+  Eq.trans
+    (by
+      simp [gcd])
+    (fold_add _ _ _ _ _)
 
-lemma dvd_gcd {s : multiset α} {a : α} : a ∣ s.gcd ↔ (∀ b ∈ s, a ∣ b) :=
-multiset.induction_on s (by simp)
-  (by simp [or_imp_distrib, forall_and_distrib, dvd_gcd_iff] {contextual := tt})
+theorem dvd_gcd {s : Multiset α} {a : α} : a ∣ s.gcd ↔ ∀, ∀ b ∈ s, ∀, a ∣ b :=
+  Multiset.induction_on s
+    (by
+      simp )
+    (by
+      simp (config := { contextual := true })[or_imp_distrib, forall_and_distrib, dvd_gcd_iff])
 
-lemma gcd_dvd {s : multiset α} {a : α} (h : a ∈ s) : s.gcd ∣ a :=
-dvd_gcd.1 dvd_rfl _ h
+theorem gcd_dvd {s : Multiset α} {a : α} (h : a ∈ s) : s.gcd ∣ a :=
+  dvd_gcd.1 dvd_rfl _ h
 
-lemma gcd_mono {s₁ s₂ : multiset α} (h : s₁ ⊆ s₂) : s₂.gcd ∣ s₁.gcd :=
-dvd_gcd.2 $ assume b hb, gcd_dvd (h hb)
+theorem gcd_mono {s₁ s₂ : Multiset α} (h : s₁ ⊆ s₂) : s₂.gcd ∣ s₁.gcd :=
+  dvd_gcd.2 fun b hb => gcd_dvd (h hb)
 
-@[simp] lemma normalize_gcd (s : multiset α) : normalize (s.gcd) = s.gcd :=
-multiset.induction_on s (by simp) $ λ a s IH, by simp
+@[simp]
+theorem normalize_gcd (s : Multiset α) : normalize s.gcd = s.gcd :=
+  (Multiset.induction_on s
+      (by
+        simp ))
+    fun a s IH => by
+    simp
 
-theorem gcd_eq_zero_iff (s : multiset α) : s.gcd = 0 ↔ ∀ (x : α), x ∈ s → x = 0 :=
-begin
-  split,
-  { intros h x hx,
-    apply eq_zero_of_zero_dvd,
-    rw ← h,
-    apply gcd_dvd hx },
-  { apply s.induction_on,
-    { simp },
-    intros a s sgcd h,
-    simp [h a (mem_cons_self a s), sgcd (λ x hx, h x (mem_cons_of_mem hx))] }
-end
+theorem gcd_eq_zero_iff (s : Multiset α) : s.gcd = 0 ↔ ∀ x : α, x ∈ s → x = 0 := by
+  constructor
+  · intro h x hx
+    apply eq_zero_of_zero_dvd
+    rw [← h]
+    apply gcd_dvd hx
+    
+  · apply s.induction_on
+    · simp
+      
+    intro a s sgcd h
+    simp [h a (mem_cons_self a s), sgcd fun x hx => h x (mem_cons_of_mem hx)]
+    
 
-variables [decidable_eq α]
+variable [DecidableEq α]
 
-@[simp] lemma gcd_dedup (s : multiset α) : (dedup s).gcd = s.gcd :=
-multiset.induction_on s (by simp) $ λ a s IH, begin
-  by_cases a ∈ s; simp [IH, h],
-  unfold gcd,
-  rw [← cons_erase h, fold_cons_left, ← gcd_assoc, gcd_same],
-  apply (associated_normalize _).gcd_eq_left,
-end
+@[simp]
+theorem gcd_dedup (s : Multiset α) : (dedup s).gcd = s.gcd :=
+  (Multiset.induction_on s
+      (by
+        simp ))
+    fun a s IH => by
+    by_cases' a ∈ s <;> simp [IH, h]
+    unfold gcd
+    rw [← cons_erase h, fold_cons_left, ← gcd_assoc, gcd_same]
+    apply (associated_normalize _).gcd_eq_left
 
-@[simp] lemma gcd_ndunion (s₁ s₂ : multiset α) :
-  (ndunion s₁ s₂).gcd = gcd_monoid.gcd s₁.gcd s₂.gcd :=
-by { rw [← gcd_dedup, dedup_ext.2, gcd_dedup, gcd_add], simp }
+@[simp]
+theorem gcd_ndunion (s₁ s₂ : Multiset α) : (ndunion s₁ s₂).gcd = GcdMonoid.gcd s₁.gcd s₂.gcd := by
+  rw [← gcd_dedup, dedup_ext.2, gcd_dedup, gcd_add]
+  simp
 
-@[simp] lemma gcd_union (s₁ s₂ : multiset α) :
-  (s₁ ∪ s₂).gcd = gcd_monoid.gcd s₁.gcd s₂.gcd :=
-by { rw [← gcd_dedup, dedup_ext.2, gcd_dedup, gcd_add], simp }
+@[simp]
+theorem gcd_union (s₁ s₂ : Multiset α) : (s₁ ∪ s₂).gcd = GcdMonoid.gcd s₁.gcd s₂.gcd := by
+  rw [← gcd_dedup, dedup_ext.2, gcd_dedup, gcd_add]
+  simp
 
-@[simp] lemma gcd_ndinsert (a : α) (s : multiset α) :
-  (ndinsert a s).gcd = gcd_monoid.gcd a s.gcd :=
-by { rw [← gcd_dedup, dedup_ext.2, gcd_dedup, gcd_cons], simp }
+@[simp]
+theorem gcd_ndinsert (a : α) (s : Multiset α) : (ndinsert a s).gcd = GcdMonoid.gcd a s.gcd := by
+  rw [← gcd_dedup, dedup_ext.2, gcd_dedup, gcd_cons]
+  simp
 
-end gcd
+end Gcd
 
-end multiset
+end Multiset
+

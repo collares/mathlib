@@ -3,9 +3,8 @@ Copyright (c) 2020 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-
-import algebra.algebra.basic
-import algebra.order.smul
+import Mathbin.Algebra.Algebra.Basic
+import Mathbin.Algebra.Order.Smul
 
 /-!
 # Ordered algebras
@@ -29,29 +28,30 @@ mixin.
 ordered algebra
 -/
 
-section ordered_algebra
 
-variables {R A : Type*} {a b : A} {r : R}
+section OrderedAlgebra
 
-variables [ordered_comm_ring R] [ordered_ring A] [algebra R A] [ordered_smul R A]
+variable {R A : Type _} {a b : A} {r : R}
 
-lemma algebra_map_monotone : monotone (algebra_map R A) :=
-λ a b h,
-begin
-  rw [algebra.algebra_map_eq_smul_one, algebra.algebra_map_eq_smul_one, ←sub_nonneg, ←sub_smul],
-  transitivity (b - a) • (0 : A),
-  { simp, },
-  { exact smul_le_smul_of_nonneg zero_le_one (sub_nonneg.mpr h) }
-end
+variable [OrderedCommRing R] [OrderedRing A] [Algebra R A] [OrderedSmul R A]
 
-end ordered_algebra
+theorem algebra_map_monotone : Monotone (algebraMap R A) := fun a b h => by
+  rw [Algebra.algebra_map_eq_smul_one, Algebra.algebra_map_eq_smul_one, ← sub_nonneg, ← sub_smul]
+  trans (b - a) • (0 : A)
+  · simp
+    
+  · exact smul_le_smul_of_nonneg zero_le_one (sub_nonneg.mpr h)
+    
 
-section instances
+end OrderedAlgebra
 
-variables {R : Type*} [linear_ordered_comm_ring R]
+section Instances
 
-instance linear_ordered_comm_ring.to_ordered_smul : ordered_smul R R :=
-{ smul_lt_smul_of_pos       := ordered_semiring.mul_lt_mul_of_pos_left,
-  lt_of_smul_lt_smul_of_pos := λ a b c w₁ w₂, (mul_lt_mul_left w₂).mp w₁ }
+variable {R : Type _} [LinearOrderedCommRing R]
 
-end instances
+instance LinearOrderedCommRing.to_ordered_smul : OrderedSmul R R where
+  smul_lt_smul_of_pos := OrderedSemiring.mul_lt_mul_of_pos_left
+  lt_of_smul_lt_smul_of_pos := fun a b c w₁ w₂ => (mul_lt_mul_left w₂).mp w₁
+
+end Instances
+

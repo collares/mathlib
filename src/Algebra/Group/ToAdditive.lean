@@ -3,9 +3,9 @@ Copyright (c) 2017 Mario Carneiro. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Mario Carneiro, Yury Kudryashov, Floris van Doorn
 -/
-import tactic.transform_decl
-import tactic.algebra
-import tactic.lint.basic
+import Mathbin.Tactic.TransformDecl
+import Mathbin.Tactic.Algebra
+import Mathbin.Tactic.Lint.Basic
 
 /-!
 # Transport multiplicative to additive
@@ -24,62 +24,69 @@ Usage information is contained in the doc string of `to_additive.attr`.
   add_group (additive α)`.
 -/
 
-namespace to_additive
-open tactic
+
+namespace ToAdditive
+
+open Tactic
+
 setup_tactic_parser
 
-section performance_hack -- see Note [user attribute parameters]
+section PerformanceHack
 
-local attribute [semireducible] reflected
+-- see Note [user attribute parameters]
+attribute [local semireducible] reflected
 
 /-- Temporarily change the `has_reflect` instance for `name`. -/
-local attribute [instance, priority 9000]
-meta def hacky_name_reflect : has_reflect name :=
-λ n, `(id %%(expr.const n []) : name)
+@[local instance]
+unsafe def hacky_name_reflect : has_reflect Name := fun n => quote.1 (id (%%ₓexpr.const n []) : Name)
 
 /-- An auxiliary attribute used to store the names of the additive versions of declarations
 that have been processed by `to_additive`. -/
 @[user_attribute]
-meta def aux_attr : user_attribute (name_map name) name :=
-{ name      := `to_additive_aux,
-  descr     := "Auxiliary attribute for `to_additive`. DON'T USE IT",
-  parser    := failed,
-  cache_cfg := ⟨λ ns,
-                ns.mfoldl
-                  (λ dict n', do
-                   let n := match n' with
-                            | name.mk_string s pre := if s = "_to_additive" then pre else n'
-                            | _ := n'
-                            end,
-                    param ← aux_attr.get_param_untyped n',
-                    pure $ dict.insert n param.app_arg.const_name)
-                  mk_name_map, []⟩ }
+unsafe def aux_attr : user_attribute (name_map Name) Name where
+  Name := `to_additive_aux
+  descr := "Auxiliary attribute for `to_additive`. DON'T USE IT"
+  parser := failed
+  cache_cfg :=
+    ⟨fun ns =>
+      ns.mfoldl
+        (fun dict n' => do
+          let n :=
+            match n' with
+            | Name.mk_string s pre => if s = "_to_additive" then pre else n'
+            | _ => n'
+          let param ← aux_attr.get_param_untyped n'
+          pure <| dict n param)
+        mk_name_map,
+      []⟩
 
-end performance_hack
+end PerformanceHack
 
-section extra_attributes
+section ExtraAttributes
 
-/--
-An attribute that tells `@[to_additive]` that certain arguments of this definition are not
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr *»
+/-- An attribute that tells `@[to_additive]` that certain arguments of this definition are not
 involved when using `@[to_additive]`.
 This helps the heuristic of `@[to_additive]` by also transforming definitions if `ℕ` or another
 fixed type occurs as one of these arguments.
 -/
 @[user_attribute]
-meta def ignore_args_attr : user_attribute (name_map $ list ℕ) (list ℕ) :=
-{ name      := `to_additive_ignore_args,
-  descr     :=
-    "Auxiliary attribute for `to_additive` stating that certain arguments are not additivized.",
+unsafe def ignore_args_attr : user_attribute (name_map <| List ℕ) (List ℕ) where
+  Name := `to_additive_ignore_args
+  descr := "Auxiliary attribute for `to_additive` stating that certain arguments are not additivized."
   cache_cfg :=
-    ⟨λ ns, ns.mfoldl
-      (λ dict n, do
-        param ← ignore_args_attr.get_param_untyped n, -- see Note [user attribute parameters]
-        return $ dict.insert n (param.to_list expr.to_nat).iget)
-      mk_name_map, []⟩,
-  parser    := (lean.parser.small_nat)* }
+    ⟨fun ns =>
+      ns.mfoldl
+        (fun dict n => do
+          let param ← ignore_args_attr.get_param_untyped n
+          -- see Note [user attribute parameters]
+              return <|
+              dict n (param expr.to_nat).iget)
+        mk_name_map,
+      []⟩
+  parser := «expr *» lean.parser.small_nat
 
-/--
-An attribute that is automatically added to declarations tagged with `@[to_additive]`, if needed.
+/-- An attribute that is automatically added to declarations tagged with `@[to_additive]`, if needed.
 
 This attribute tells which argument is the type where this declaration uses the multiplicative
 structure. If there are multiple argument, we typically tag the first one.
@@ -100,22 +107,25 @@ Warning: adding `@[to_additive_reorder]` with an equal or smaller number than th
 attribute is currently not supported.
 -/
 @[user_attribute]
-meta def relevant_arg_attr : user_attribute (name_map ℕ) ℕ :=
-{ name      := `to_additive_relevant_arg,
-  descr     :=
-    "Auxiliary attribute for `to_additive` stating which arguments are the types with a " ++
-    "multiplicative structure.",
+unsafe def relevant_arg_attr : user_attribute (name_map ℕ) ℕ where
+  Name := `to_additive_relevant_arg
+  descr :=
+    "Auxiliary attribute for `to_additive` stating which arguments are the types with a " ++ "multiplicative structure."
   cache_cfg :=
-    ⟨λ ns, ns.mfoldl
-      (λ dict n, do
-        param ← relevant_arg_attr.get_param_untyped n, -- see Note [user attribute parameters]
-        -- we subtract 1 from the values provided by the user.
-        return $ dict.insert n $ param.to_nat.iget.pred)
-      mk_name_map, []⟩,
-  parser    := lean.parser.small_nat }
+    ⟨fun ns =>
+      ns.mfoldl
+        (fun dict n => do
+          let param ← relevant_arg_attr.get_param_untyped n
+          -- see Note [user attribute parameters]
+              -- we subtract 1 from the values provided by the user.
+              return <|
+              dict n <| param)
+        mk_name_map,
+      []⟩
+  parser := lean.parser.small_nat
 
-/--
-An attribute that stores all the declarations that needs their arguments reordered when
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr *»
+/-- An attribute that stores all the declarations that needs their arguments reordered when
 applying `@[to_additive]`. Currently, we only support swapping consecutive arguments.
 The list of the natural numbers contains the positions of the first of the two arguments
 to be swapped.
@@ -124,39 +134,42 @@ Example: `@[to_additive_reorder 1 4]` swaps the first two arguments and the argu
 positions 4 and 5.
 -/
 @[user_attribute]
-meta def reorder_attr : user_attribute (name_map $ list ℕ) (list ℕ) :=
-{ name      := `to_additive_reorder,
-  descr     :=
-    "Auxiliary attribute for `to_additive` that stores arguments that need to be reordered.",
+unsafe def reorder_attr : user_attribute (name_map <| List ℕ) (List ℕ) where
+  Name := `to_additive_reorder
+  descr := "Auxiliary attribute for `to_additive` that stores arguments that need to be reordered."
   cache_cfg :=
-    ⟨λ ns, ns.mfoldl
-      (λ dict n, do
-        param ← reorder_attr.get_param_untyped n, -- see Note [user attribute parameters]
-        return $ dict.insert n (param.to_list expr.to_nat).iget)
-      mk_name_map, []⟩,
-  parser    := do
-    l ← (lean.parser.small_nat)*,
-    guard (l.all (≠ 0)) <|> exceptional.fail "The reorder positions must be positive",
-    return l }
+    ⟨fun ns =>
+      ns.mfoldl
+        (fun dict n => do
+          let param ← reorder_attr.get_param_untyped n
+          -- see Note [user attribute parameters]
+              return <|
+              dict n (param expr.to_nat).iget)
+        mk_name_map,
+      []⟩
+  parser := do
+    let l ← «expr *» lean.parser.small_nat
+    guardₓ (l (· ≠ 0)) <|> exceptional.fail "The reorder positions must be positive"
+    return l
 
-end extra_attributes
+end ExtraAttributes
 
-/--
-Find the first argument of `nm` that has a multiplicative type-class on it.
+/-- Find the first argument of `nm` that has a multiplicative type-class on it.
 Returns 1 if there are no types with a multiplicative class as arguments.
 E.g. `prod.group` returns 1, and `pi.has_one` returns 2.
 -/
-meta def first_multiplicative_arg (nm : name) : tactic ℕ := do
-  d ← get_decl nm,
-  let (es, _) := d.type.pi_binders,
-  l ← es.mmap_with_index $ λ n bi, do
-  { let tgt := bi.type.pi_codomain,
-    let n_bi := bi.type.pi_binders.fst.length,
-    tt ← has_attribute' `to_additive tgt.get_app_fn.const_name | return none,
-    let n2 := tgt.get_app_args.head.get_app_fn.match_var.map $ λ m, n + n_bi - m,
-    return $ n2 },
-  let l := l.reduce_option,
-  return $ if l = [] then 1 else l.foldr min l.head
+unsafe def first_multiplicative_arg (nm : Name) : tactic ℕ := do
+  let d ← get_decl nm
+  let (es, _) := d.type.pi_binders
+  let l ←
+    es.mmapWithIndex fun n bi => do
+        let tgt := bi.type.pi_codomain
+        let n_bi := bi.type.pi_binders.fst.length
+        let tt ← has_attribute' `to_additive tgt.get_app_fn.const_name | return none
+        let n2 := tgt.get_app_args.head.get_app_fn.match_var.map fun m => n + n_bi - m
+        return <| n2
+  let l := l.reduceOption
+  return <| if l = [] then 1 else l min l
 
 /-- A command that can be used to have future uses of `to_additive` change the `src` namespace
 to the `tgt` namespace.
@@ -169,11 +182,11 @@ run_cmd to_additive.map_namespace `quotient_group `quotient_add_group
 Later uses of `to_additive` on declarations in the `quotient_group` namespace will be created
 in the `quotient_add_group` namespaces.
 -/
-meta def map_namespace (src tgt : name) : command :=
-do let n := src.mk_string "_to_additive",
-   let decl := declaration.thm n [] `(unit) (pure (reflect ())),
-   add_decl decl,
-   aux_attr.set n tgt tt
+unsafe def map_namespace (src tgt : Name) : Tactic Unit := do
+  let n := src.mk_string "_to_additive"
+  let decl := declaration.thm n [] (quote.1 Unit) (pure (reflect ()))
+  add_decl decl
+  aux_attr n tgt tt
 
 /-- `value_type` is the type of the arguments that can be provided to `to_additive`.
 `to_additive.parser` parses the provided arguments:
@@ -184,123 +197,118 @@ do let n := src.mk_string "_to_additive",
 * if `allow_auto_name` is `ff` (default) then `@[to_additive]` will check whether the given name
   can be auto-generated.
 -/
-@[derive has_reflect, derive inhabited]
-structure value_type : Type :=
-(replace_all : bool)
-(trace : bool)
-(tgt : name)
-(doc : option string)
-(allow_auto_name : bool)
+structure ValueType : Type where
+  replaceAll : Bool
+  trace : Bool
+  tgt : Name
+  doc : Option Stringₓ
+  allowAutoName : Bool
+  deriving has_reflect, Inhabited
 
 /-- `add_comm_prefix x s` returns `"comm_" ++ s` if `x = tt` and `s` otherwise. -/
-meta def add_comm_prefix : bool → string → string
-| tt s := "comm_" ++ s
-| ff s := s
+unsafe def add_comm_prefix : Bool → Stringₓ → Stringₓ
+  | tt, s => "comm_" ++ s
+  | ff, s => s
 
 /-- Dictionary used by `to_additive.guess_name` to autogenerate names. -/
-meta def tr : bool → list string → list string
-| is_comm ("one" :: "le" :: s)        := add_comm_prefix is_comm "nonneg"    :: tr ff s
-| is_comm ("one" :: "lt" :: s)        := add_comm_prefix is_comm "pos"       :: tr ff s
-| is_comm ("le" :: "one" :: s)        := add_comm_prefix is_comm "nonpos"    :: tr ff s
-| is_comm ("lt" :: "one" :: s)        := add_comm_prefix is_comm "neg"       :: tr ff s
-| is_comm ("mul" :: "single" :: s)    := add_comm_prefix is_comm "single"    :: tr ff s
-| is_comm ("mul" :: "support" :: s)   := add_comm_prefix is_comm "support"   :: tr ff s
-| is_comm ("mul" :: "tsupport" :: s)  := add_comm_prefix is_comm "tsupport"  :: tr ff s
-| is_comm ("mul" :: "indicator" :: s) := add_comm_prefix is_comm "indicator" :: tr ff s
-| is_comm ("mul" :: s)                := add_comm_prefix is_comm "add"       :: tr ff s
-| is_comm ("smul" :: s)               := add_comm_prefix is_comm "vadd"      :: tr ff s
-| is_comm ("inv" :: s)                := add_comm_prefix is_comm "neg"       :: tr ff s
-| is_comm ("div" :: s)                := add_comm_prefix is_comm "sub"       :: tr ff s
-| is_comm ("one" :: s)                := add_comm_prefix is_comm "zero"      :: tr ff s
-| is_comm ("prod" :: s)               := add_comm_prefix is_comm "sum"       :: tr ff s
-| is_comm ("finprod" :: s)            := add_comm_prefix is_comm "finsum"    :: tr ff s
-| is_comm ("pow" :: s)                := add_comm_prefix is_comm "nsmul"     :: tr ff s
-| is_comm ("npow" :: s)               := add_comm_prefix is_comm "nsmul"     :: tr ff s
-| is_comm ("zpow" :: s)               := add_comm_prefix is_comm "zsmul"     :: tr ff s
-| is_comm ("monoid" :: s)      := ("add_" ++ add_comm_prefix is_comm "monoid")    :: tr ff s
-| is_comm ("submonoid" :: s)   := ("add_" ++ add_comm_prefix is_comm "submonoid") :: tr ff s
-| is_comm ("group" :: s)       := ("add_" ++ add_comm_prefix is_comm "group")     :: tr ff s
-| is_comm ("subgroup" :: s)    := ("add_" ++ add_comm_prefix is_comm "subgroup")  :: tr ff s
-| is_comm ("semigroup" :: s)   := ("add_" ++ add_comm_prefix is_comm "semigroup") :: tr ff s
-| is_comm ("magma" :: s)       := ("add_" ++ add_comm_prefix is_comm "magma")     :: tr ff s
-| is_comm ("haar" :: s)        := ("add_" ++ add_comm_prefix is_comm "haar")      :: tr ff s
-| is_comm ("prehaar" :: s)     := ("add_" ++ add_comm_prefix is_comm "prehaar")   :: tr ff s
-| is_comm ("unit" :: s)        := ("add_" ++ add_comm_prefix is_comm "unit")      :: tr ff s
-| is_comm ("units" :: s)       := ("add_" ++ add_comm_prefix is_comm "units")     :: tr ff s
-| is_comm ("comm" :: s)        := tr tt s
-| is_comm (x :: s)             := (add_comm_prefix is_comm x :: tr ff s)
-| tt []                        := ["comm"]
-| ff []                        := []
+unsafe def tr : Bool → List Stringₓ → List Stringₓ
+  | is_comm, "one" :: "le" :: s => add_comm_prefix is_comm "nonneg" :: tr false s
+  | is_comm, "one" :: "lt" :: s => add_comm_prefix is_comm "pos" :: tr false s
+  | is_comm, "le" :: "one" :: s => add_comm_prefix is_comm "nonpos" :: tr false s
+  | is_comm, "lt" :: "one" :: s => add_comm_prefix is_comm "neg" :: tr false s
+  | is_comm, "mul" :: "single" :: s => add_comm_prefix is_comm "single" :: tr false s
+  | is_comm, "mul" :: "support" :: s => add_comm_prefix is_comm "support" :: tr false s
+  | is_comm, "mul" :: "tsupport" :: s => add_comm_prefix is_comm "tsupport" :: tr false s
+  | is_comm, "mul" :: "indicator" :: s => add_comm_prefix is_comm "indicator" :: tr false s
+  | is_comm, "mul" :: s => add_comm_prefix is_comm "add" :: tr false s
+  | is_comm, "smul" :: s => add_comm_prefix is_comm "vadd" :: tr false s
+  | is_comm, "inv" :: s => add_comm_prefix is_comm "neg" :: tr false s
+  | is_comm, "div" :: s => add_comm_prefix is_comm "sub" :: tr false s
+  | is_comm, "one" :: s => add_comm_prefix is_comm "zero" :: tr false s
+  | is_comm, "prod" :: s => add_comm_prefix is_comm "sum" :: tr false s
+  | is_comm, "finprod" :: s => add_comm_prefix is_comm "finsum" :: tr false s
+  | is_comm, "pow" :: s => add_comm_prefix is_comm "nsmul" :: tr false s
+  | is_comm, "npow" :: s => add_comm_prefix is_comm "nsmul" :: tr false s
+  | is_comm, "zpow" :: s => add_comm_prefix is_comm "zsmul" :: tr false s
+  | is_comm, "monoid" :: s => ("add_" ++ add_comm_prefix is_comm "monoid") :: tr false s
+  | is_comm, "submonoid" :: s => ("add_" ++ add_comm_prefix is_comm "submonoid") :: tr false s
+  | is_comm, "group" :: s => ("add_" ++ add_comm_prefix is_comm "group") :: tr false s
+  | is_comm, "subgroup" :: s => ("add_" ++ add_comm_prefix is_comm "subgroup") :: tr false s
+  | is_comm, "semigroup" :: s => ("add_" ++ add_comm_prefix is_comm "semigroup") :: tr false s
+  | is_comm, "magma" :: s => ("add_" ++ add_comm_prefix is_comm "magma") :: tr false s
+  | is_comm, "haar" :: s => ("add_" ++ add_comm_prefix is_comm "haar") :: tr false s
+  | is_comm, "prehaar" :: s => ("add_" ++ add_comm_prefix is_comm "prehaar") :: tr false s
+  | is_comm, "unit" :: s => ("add_" ++ add_comm_prefix is_comm "unit") :: tr false s
+  | is_comm, "units" :: s => ("add_" ++ add_comm_prefix is_comm "units") :: tr false s
+  | is_comm, "comm" :: s => tr true s
+  | is_comm, x :: s => add_comm_prefix is_comm x :: tr false s
+  | tt, [] => ["comm"]
+  | ff, [] => []
 
 /-- Autogenerate target name for `to_additive`. -/
-meta def guess_name : string → string :=
-string.map_tokens ''' $
-λ s, string.intercalate (string.singleton '_') $
-tr ff (s.split_on '_')
+unsafe def guess_name : Stringₓ → Stringₓ :=
+  (Stringₓ.mapTokens ''') fun s => Stringₓ.intercalate (Stringₓ.singleton '_') <| tr false (s.splitOn '_')
 
 /-- Return the provided target name or autogenerate one if one was not provided. -/
-meta def target_name (src tgt : name) (dict : name_map name) (allow_auto_name : bool) :
-  tactic name :=
-(if tgt.get_prefix ≠ name.anonymous ∨ allow_auto_name -- `tgt` is a full name
- then pure tgt
- else match src with
-      | (name.mk_string s pre) :=
-        do let tgt_auto := guess_name s,
-           guard (tgt.to_string ≠ tgt_auto ∨ tgt = src)
-             <|> trace ("`to_additive " ++ src.to_string ++ "`: correctly autogenerated target " ++
-               "name, you may remove the explicit " ++ tgt_auto ++ " argument."),
-           pure $ name.mk_string
-                 (if tgt = name.anonymous then tgt_auto else tgt.to_string)
-                 (pre.map_prefix dict.find)
-      | _ := fail ("to_additive: can't transport " ++ src.to_string)
-      end) >>=
-(λ res,
-  if res = src ∧ tgt ≠ src
-  then fail ("to_additive: can't transport " ++ src.to_string ++ " to itself.
-Give the desired additive name explicitly using `@[to_additive additive_name]`. ")
-  else pure res)
+unsafe def target_name (src tgt : Name) (dict : name_map Name) (allow_auto_name : Bool) : tactic Name :=
+  (if tgt.getPrefix ≠ Name.anonymous ∨ allow_auto_name then
+      -- `tgt` is a full name
+        pure
+        tgt
+    else
+      match src with
+      | Name.mk_string s pre => do
+        let tgt_auto := guess_name s
+        guardₓ (tgt ≠ tgt_auto ∨ tgt = src) <|>
+            trace
+              ("`to_additive " ++ src ++ "`: correctly autogenerated target " ++ "name, you may remove the explicit " ++
+                  tgt_auto ++
+                " argument.")
+        pure <| Name.mk_string (if tgt = Name.anonymous then tgt_auto else tgt) (pre dict)
+      | _ => fail ("to_additive: can't transport " ++ src.toString)) >>=
+    fun res =>
+    if res = src ∧ tgt ≠ src then
+      fail
+        ("to_additive: can't transport " ++ src.toString ++
+          " to itself.\nGive the desired additive name explicitly using `@[to_additive additive_name]`. ")
+    else pure res
 
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr ?»
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr ?»
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr ?»
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr ?»
 /-- the parser for the arguments to `to_additive`. -/
-meta def parser : lean.parser value_type :=
-do
-  bang ← option.is_some <$> (tk "!")?,
-  ques ← option.is_some <$> (tk "?")?,
-  tgt ← ident?,
-  e ← texpr?,
-  doc ← match e with
-      | some pe := some <$> ((to_expr pe >>= eval_expr string) : tactic string)
-      | none := pure none
-      end,
-  return ⟨bang, ques, tgt.get_or_else name.anonymous, doc, ff⟩
+unsafe def parser : lean.parser ValueType := do
+  let bang ← Option.isSome <$> «expr ?» (tk "!")
+  let ques ← Option.isSome <$> «expr ?» (tk "?")
+  let tgt ← «expr ?» ident
+  let e ← «expr ?» texpr
+  let doc ←
+    match e with
+      | some pe => some <$> (to_expr pe >>= eval_expr Stringₓ : tactic Stringₓ)
+      | none => pure none
+  return ⟨bang, ques, tgt Name.anonymous, doc, ff⟩
 
-private meta def proceed_fields_aux (src tgt : name) (prio : ℕ) (f : name → tactic (list string)) :
-  command :=
-do
-  src_fields ← f src,
-  tgt_fields ← f tgt,
-  guard (src_fields.length = tgt_fields.length) <|>
-    fail ("Failed to map fields of " ++ src.to_string),
-  (src_fields.zip tgt_fields).mmap' $
-    λ names, guard (names.fst = names.snd) <|>
-      aux_attr.set (src.append names.fst) (tgt.append names.snd) tt prio
+private unsafe def proceed_fields_aux (src tgt : Name) (prio : ℕ) (f : Name → tactic (List Stringₓ)) : Tactic Unit := do
+  let src_fields ← f src
+  let tgt_fields ← f tgt
+  guardₓ (src_fields = tgt_fields) <|> fail ("Failed to map fields of " ++ src)
+  (src_fields tgt_fields).mmap' fun names => guardₓ (names = names) <|> aux_attr (src names) (tgt names) tt prio
 
 /-- Add the `aux_attr` attribute to the structure fields of `src`
 so that future uses of `to_additive` will map them to the corresponding `tgt` fields. -/
-meta def proceed_fields (env : environment) (src tgt : name) (prio : ℕ) : command :=
-let aux := proceed_fields_aux src tgt prio in
-do
-aux (λ n, pure $ list.map name.to_string $ (env.structure_fields n).get_or_else []) >>
-aux (λ n, (list.map (λ (x : name), "to_" ++ x.to_string) <$> get_tagged_ancestors n)) >>
-aux (λ n, (env.constructors_of n).mmap $
-          λ cs, match cs with
-                | (name.mk_string s pre) :=
-                  (guard (pre = n) <|> fail "Bad constructor name") >>
-                  pure s
-                | _ := fail "Bad constructor name"
-                end)
+unsafe def proceed_fields (env : environment) (src tgt : Name) (prio : ℕ) : Tactic Unit :=
+  let aux := proceed_fields_aux src tgt prio
+  do
+  ((aux fun n => pure <| List.map Name.toString <| (env n).getOrElse []) >>
+        aux fun n => (List.map fun x : Name => "to_" ++ x) <$> get_tagged_ancestors n) >>
+      aux fun n =>
+        (env n).mmap fun cs =>
+          match cs with
+          | Name.mk_string s pre => (guardₓ (pre = n) <|> fail "Bad constructor name") >> pure s
+          | _ => fail "Bad constructor name"
 
-/--
-The attribute `to_additive` can be used to automatically transport theorems
+/-- The attribute `to_additive` can be used to automatically transport theorems
 and definitions (but not inductive types and structures) from a multiplicative
 theory to an additive theory.
 
@@ -514,84 +522,88 @@ that the new name differs from the original one.
 
 -/
 @[user_attribute]
-protected meta def attr : user_attribute unit value_type :=
-{ name      := `to_additive,
-  descr     := "Transport multiplicative to additive",
-  parser    := parser,
-  after_set := some $ λ src prio persistent, do
-    guard persistent <|> fail "`to_additive` can't be used as a local attribute",
-    env ← get_env,
-    val ← attr.get_param src,
-    dict ← aux_attr.get_cache,
-    ignore ← ignore_args_attr.get_cache,
-    relevant ← relevant_arg_attr.get_cache,
-    reorder ← reorder_attr.get_cache,
-    tgt ← target_name src val.tgt dict val.allow_auto_name,
-    aux_attr.set src tgt tt,
-    let dict := dict.insert src tgt,
-    first_mult_arg ← first_multiplicative_arg src,
-    when (first_mult_arg ≠ 1) $ relevant_arg_attr.set src first_mult_arg tt,
-    if env.contains tgt
-    then proceed_fields env src tgt prio
-    else do
-      transform_decl_with_prefix_dict dict val.replace_all val.trace relevant ignore reorder src tgt
-        [`reducible, `_refl_lemma, `simp, `norm_cast, `instance, `refl, `symm, `trans,
-          `elab_as_eliminator, `no_rsimp, `continuity, `ext, `ematch, `measurability, `alias,
-          `_ext_core, `_ext_lemma_core, `nolint],
-      mwhen (has_attribute' `simps src)
-        (trace "Apply the simps attribute after the to_additive attribute"),
-      mwhen (has_attribute' `mono src)
-        (trace $ "to_additive does not work with mono, apply the mono attribute to both" ++
-          "versions after"),
-      match val.doc with
-      | some doc := add_doc_string tgt doc
-      | none := skip
-      end }
+protected unsafe def attr : user_attribute Unit ValueType where
+  Name := `to_additive
+  descr := "Transport multiplicative to additive"
+  parser := parser
+  after_set :=
+    some fun src prio persistent => do
+      guardₓ persistent <|> fail "`to_additive` can't be used as a local attribute"
+      let env ← get_env
+      let val ← attr.get_param src
+      let dict ← aux_attr.get_cache
+      let ignore ← ignore_args_attr.get_cache
+      let relevant ← relevant_arg_attr.get_cache
+      let reorder ← reorder_attr.get_cache
+      let tgt ← target_name src val.tgt dict val.allowAutoName
+      aux_attr src tgt tt
+      let dict := dict.insert src tgt
+      let first_mult_arg ← first_multiplicative_arg src
+      when (first_mult_arg ≠ 1) <| relevant_arg_attr src first_mult_arg tt
+      if env tgt then proceed_fields env src tgt prio
+        else do
+          transform_decl_with_prefix_dict dict val val relevant ignore reorder src tgt
+              [`reducible, `_refl_lemma, `simp, `norm_cast, `instance, `refl, `symm, `trans, `elab_as_eliminator,
+                `no_rsimp, `continuity, `ext, `ematch, `measurability, `alias, `_ext_core, `_ext_lemma_core, `nolint]
+          mwhen (has_attribute' `simps src) (trace "Apply the simps attribute after the to_additive attribute")
+          mwhen (has_attribute' `mono src)
+              (trace <| "to_additive does not work with mono, apply the mono attribute to both" ++ "versions after")
+          match val with
+            | some doc => add_doc_string tgt doc
+            | none => skip
 
 add_tactic_doc
-{ name                     := "to_additive",
-  category                 := doc_category.attr,
-  decl_names               := [`to_additive.attr],
-  tags                     := ["transport", "environment", "lemma derivation"] }
+  { Name := "to_additive", category := DocCategory.attr, declNames := [`to_additive.attr],
+    tags := ["transport", "environment", "lemma derivation"] }
 
-end to_additive
+end ToAdditive
 
-/- map operations -/
-attribute [to_additive] has_mul has_one has_inv has_div
-/- the following types are supported by `@[to_additive]` and mapped to themselves. -/
-attribute [to_additive empty] empty
-attribute [to_additive pempty] pempty
-attribute [to_additive punit] punit
-attribute [to_additive unit] unit
+-- map operations
+attribute [to_additive] Mul One Inv Div
 
-section linter
+-- the following types are supported by `@[to_additive]` and mapped to themselves.
+attribute [to_additive Empty] Empty
 
-open tactic expr
+attribute [to_additive Pempty] Pempty
+
+attribute [to_additive PUnit] PUnit
+
+attribute [to_additive Unit] Unit
+
+section Linter
+
+open Tactic Expr
 
 /-- A linter that checks that multiplicative and additive lemmas have both doc strings if one of
 them has one -/
-@[linter] meta def linter.to_additive_doc : linter :=
-{ test := (λ d, do
-    let mul_name := d.to_name,
-    dict ← to_additive.aux_attr.get_cache,
-    match dict.find mul_name with
-    | some add_name := do
-      mul_doc ← try_core $ doc_string mul_name,
-      add_doc ← try_core $ doc_string add_name,
-      match mul_doc.is_some, add_doc.is_some with
-      | tt, ff := return $ some $ "declaration has a docstring, but its additive version `" ++
-          add_name.to_string ++ "` does not. You might want to pass a string argument to " ++
-          "`to_additive`."
-      | ff, tt := return $ some $ "declaration has no docstring, but its additive version `" ++
-          add_name.to_string ++ "` does. You might want to add a doc string to the declaration."
-      | _, _ := return none
-      end
-    | none := return none
-    end),
-  auto_decls := ff,
-  no_errors_found := "Multiplicative and additive lemmas are consistently documented",
-  errors_found := "The following declarations have doc strings, but their additive versions do " ++
-  "not (or vice versa).",
-  is_fast := ff }
+@[linter]
+unsafe def linter.to_additive_doc : linter where
+  test := fun d => do
+    let mul_name := d.to_name
+    let dict ← to_additive.aux_attr.get_cache
+    match dict mul_name with
+      | some add_name => do
+        let mul_doc ← try_core <| doc_string mul_name
+        let add_doc ← try_core <| doc_string add_name
+        match mul_doc, add_doc with
+          | tt, ff =>
+            return <|
+              some <|
+                "declaration has a docstring, but its additive version `" ++ add_name ++
+                    "` does not. You might want to pass a string argument to " ++
+                  "`to_additive`."
+          | ff, tt =>
+            return <|
+              some <|
+                "declaration has no docstring, but its additive version `" ++ add_name ++
+                  "` does. You might want to add a doc string to the declaration."
+          | _, _ => return none
+      | none => return none
+  auto_decls := false
+  no_errors_found := "Multiplicative and additive lemmas are consistently documented"
+  errors_found :=
+    "The following declarations have doc strings, but their additive versions do " ++ "not (or vice versa)."
+  is_fast := false
 
-end linter
+end Linter
+

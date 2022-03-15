@@ -3,10 +3,9 @@ Copyright (c) 2018 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Keeley Hoek, Scott Morrison
 -/
-
-import tactic.rewrite_search.explain
-import tactic.rewrite_search.discovery
-import tactic.rewrite_search.search
+import Mathbin.Tactic.RewriteSearch.Explain
+import Mathbin.Tactic.RewriteSearch.Discovery
+import Mathbin.Tactic.RewriteSearch.Search
 
 /-!
 # `rewrite_search`: solving goals by searching for a series of rewrites.
@@ -50,38 +49,36 @@ can be reversed.
 * `types.lean` contains data structures shared across multiple of these components.
 -/
 
-namespace tactic.interactive
 
-open lean.parser interactive interactive.types tactic.rewrite_search
+namespace Tactic.Interactive
 
-/--
-Search for a chain of rewrites to prove an equation or iff statement.
+open Lean.Parser Interactive Interactive.Types Tactic.RewriteSearch
+
+/-- Search for a chain of rewrites to prove an equation or iff statement.
 
 Collects rewrite rules, runs a graph search to find a chain of rewrites to prove the
 current target, and generates a string explanation for it.
 
 Takes an optional list of rewrite rules specified in the same way as the `rw` tactic accepts.
 -/
-meta def rewrite_search (explain : parse $ optional (tk "?"))
-  (rs : parse $ optional (list_of (rw_rule_p $ lean.parser.pexpr 0)))
-  (cfg : config := {}) : tactic unit :=
-do t ← tactic.target,
-  if t.has_meta_var then
-    tactic.fail "rewrite_search is not suitable for goals containing metavariables"
-  else tactic.skip,
-  implicit_rules ← collect_rules,
-  explicit_rules ← (rs.get_or_else []).mmap (λ ⟨_, dir, pe⟩, do e ← to_expr' pe, return (e, dir)),
-  let rules := implicit_rules ++ explicit_rules,
-  g ← mk_graph cfg rules t,
-  (_, proof, steps) ← g.find_proof,
-  tactic.exact proof,
-  if explain.is_some then explain_search_result cfg rules proof steps else skip
-
+unsafe def rewrite_search (explain : parse <| optionalₓ (tk "?"))
+    (rs : parse <| optionalₓ (list_of (rw_rule_p <| lean.parser.pexpr 0))) (cfg : config := {  }) : tactic Unit := do
+  let t ← tactic.target
+  if t then tactic.fail "rewrite_search is not suitable for goals containing metavariables" else tactic.skip
+  let implicit_rules ← collect_rules
+  let explicit_rules ←
+    (rs.getOrElse []).mmap fun ⟨_, dir, pe⟩ => do
+        let e ← to_expr' pe
+        return (e, dir)
+  let rules := implicit_rules ++ explicit_rules
+  let g ← mk_graph cfg rules t
+  let (_, proof, steps) ← g.find_proof
+  tactic.exact proof
+  if explain then explain_search_result cfg rules proof steps else skip
 
 add_tactic_doc
-{ name        := "rewrite_search",
-  category    := doc_category.tactic,
-  decl_names  := [`tactic.interactive.rewrite_search],
-  tags        := ["rewriting", "automation"] }
+  { Name := "rewrite_search", category := DocCategory.tactic, declNames := [`tactic.interactive.rewrite_search],
+    tags := ["rewriting", "automation"] }
 
-end tactic.interactive
+end Tactic.Interactive
+

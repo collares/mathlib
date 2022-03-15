@@ -3,8 +3,8 @@ Copyright (c) 2019 Scott Morrison, Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison, Bhavik Mehta
 -/
-import category_theory.functor.category
-import category_theory.isomorphism
+import Mathbin.CategoryTheory.Functor.Category
+import Mathbin.CategoryTheory.Isomorphism
 
 /-!
 # Thin categories
@@ -23,35 +23,45 @@ Further, to show two objects are isomorphic in a thin category, it suffices only
 in each direction.
 -/
 
-universes v₁ v₂ u₁ u₂
 
-namespace category_theory
+universe v₁ v₂ u₁ u₂
 
-variables {C : Type u₁}
+namespace CategoryTheory
+
+variable {C : Type u₁}
 
 section
-variables [category_struct.{v₁} C] [∀ X Y : C, subsingleton (X ⟶ Y)]
+
+variable [CategoryStruct.{v₁} C] [∀ X Y : C, Subsingleton (X ⟶ Y)]
 
 /-- Construct a category instance from a category_struct, using the fact that
     hom spaces are subsingletons to prove the axioms. -/
-def thin_category : category C := {}.
+def thinCategory : Category C :=
+  {  }
+
 end
 
 -- We don't assume anything about where the category instance on `C` came from.
 -- In particular this allows `C` to be a preorder, with the category instance inherited from the
 -- preorder structure.
-variables [category.{v₁} C] {D : Type u₂} [category.{v₂} D]
-variable [∀ X Y : C, subsingleton (X ⟶ Y)]
+variable [Category.{v₁} C] {D : Type u₂} [Category.{v₂} D]
+
+variable [∀ X Y : C, Subsingleton (X ⟶ Y)]
 
 /-- If `C` is a thin category, then `D ⥤ C` is a thin category. -/
-instance functor_thin (F₁ F₂ : D ⥤ C) : subsingleton (F₁ ⟶ F₂) :=
-⟨λ α β, nat_trans.ext α β (funext (λ _, subsingleton.elim _ _))⟩
+instance functor_thin (F₁ F₂ : D ⥤ C) : Subsingleton (F₁ ⟶ F₂) :=
+  ⟨fun α β => NatTrans.ext α β (funext fun _ => Subsingleton.elimₓ _ _)⟩
 
 /-- To show `X ≅ Y` in a thin category, it suffices to just give any morphism in each direction. -/
-def iso_of_both_ways {X Y : C} (f : X ⟶ Y) (g : Y ⟶ X) : X ≅ Y :=
-{ hom := f, inv := g }
+def isoOfBothWays {X Y : C} (f : X ⟶ Y) (g : Y ⟶ X) : X ≅ Y where
+  Hom := f
+  inv := g
 
-instance subsingleton_iso {X Y : C} : subsingleton (X ≅ Y) :=
-⟨by { intros i₁ i₂, ext1, apply subsingleton.elim }⟩
+instance subsingleton_iso {X Y : C} : Subsingleton (X ≅ Y) :=
+  ⟨by
+    intro i₁ i₂
+    ext1
+    apply Subsingleton.elimₓ⟩
 
-end category_theory
+end CategoryTheory
+

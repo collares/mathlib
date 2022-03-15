@@ -3,10 +3,10 @@ Copyright (c) 2020 Adam Topaz. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Adam Topaz
 -/
-import category_theory.monad.basic
-import category_theory.monoidal.End
-import category_theory.monoidal.Mon_
-import category_theory.category.Cat
+import Mathbin.CategoryTheory.Monad.Basic
+import Mathbin.CategoryTheory.Monoidal.End
+import Mathbin.CategoryTheory.Monoidal.Mon_
+import Mathbin.CategoryTheory.Category.Cat
 
 /-!
 
@@ -23,107 +23,147 @@ A monad "is just" a monoid in the category of endofunctors.
 
 -/
 
-namespace category_theory
-open category
 
-universes v u -- morphism levels before object levels. See note [category_theory universes].
-variables {C : Type u} [category.{v} C]
+namespace CategoryTheory
+
+open Category
+
+universe v u
+
+-- morphism levels before object levels. See note [category_theory universes].
+variable {C : Type u} [Category.{v} C]
 
 namespace Monad
-local attribute [instance, reducible] endofunctor_monoidal_category
+
+attribute [local instance, local reducible] endofunctor_monoidal_category
 
 /-- To every `Monad C` we associated a monoid object in `C ⥤ C`.-/
 @[simps]
-def to_Mon : monad C → Mon_ (C ⥤ C) := λ M,
-{ X := (M : C ⥤ C),
-  one := M.η,
-  mul := M.μ,
-  one_mul' := by { ext, simp }, -- `obviously` provides this, but slowly
-  mul_one' := by { ext, simp }, -- `obviously` provides this, but slowly
-  mul_assoc' := by { ext, dsimp, simp [M.assoc] } }
+def toMon : Monad C → Mon_ (C ⥤ C) := fun M =>
+  { x := (M : C ⥤ C), one := M.η, mul := M.μ,
+    one_mul' := by
+      ext
+      simp ,-- `obviously` provides this, but slowly
+    mul_one' := by
+      ext
+      simp ,-- `obviously` provides this, but slowly
+    mul_assoc' := by
+      ext
+      dsimp
+      simp [M.assoc] }
 
 variable (C)
+
 /-- Passing from `Monad C` to `Mon_ (C ⥤ C)` is functorial. -/
 @[simps]
-def Monad_to_Mon : monad C ⥤ Mon_ (C ⥤ C) :=
-{ obj := to_Mon,
-  map := λ _ _ f, { hom := f.to_nat_trans },
-  map_id' := by { intros X, refl }, -- `obviously` provides this, but slowly
-  map_comp' := by { intros X Y Z f g, refl, } }
+def monadToMon : Monad C ⥤ Mon_ (C ⥤ C) where
+  obj := toMon
+  map := fun _ _ f => { Hom := f.toNatTrans }
+  map_id' := by
+    intro X
+    rfl
+  -- `obviously` provides this, but slowly
+  map_comp' := by
+    intro X Y Z f g
+    rfl
+
 variable {C}
 
 /-- To every monoid object in `C ⥤ C` we associate a `Monad C`. -/
 @[simps]
-def of_Mon : Mon_ (C ⥤ C) → monad C := λ M,
-{ to_functor := M.X,
-  η' := M.one,
-  μ' := M.mul,
-  left_unit' := λ X, by { rw [←M.one.id_hcomp_app, ←nat_trans.comp_app, M.mul_one], refl },
-  right_unit' := λ X, by { rw [←M.one.hcomp_id_app, ←nat_trans.comp_app, M.one_mul], refl },
-  assoc' := λ X, by { rw [←nat_trans.hcomp_id_app, ←nat_trans.comp_app], simp } }
+def ofMon : Mon_ (C ⥤ C) → Monad C := fun M =>
+  { toFunctor := M.x, η' := M.one, μ' := M.mul,
+    left_unit' := fun X => by
+      rw [← M.one.id_hcomp_app, ← nat_trans.comp_app, M.mul_one]
+      rfl,
+    right_unit' := fun X => by
+      rw [← M.one.hcomp_id_app, ← nat_trans.comp_app, M.one_mul]
+      rfl,
+    assoc' := fun X => by
+      rw [← nat_trans.hcomp_id_app, ← nat_trans.comp_app]
+      simp }
 
 variable (C)
+
 /-- Passing from `Mon_ (C ⥤ C)` to `Monad C` is functorial. -/
 @[simps]
-def Mon_to_Monad : Mon_ (C ⥤ C) ⥤ monad C :=
-{ obj := of_Mon,
-  map := λ _ _ f,
-  { app_η' := begin
-      intro X,
-      erw [←nat_trans.comp_app, f.one_hom],
-      refl,
-    end,
-    app_μ' := begin
-      intro X,
-      erw [←nat_trans.comp_app, f.mul_hom], -- `finish` closes this goal
-      simpa only [nat_trans.naturality, nat_trans.hcomp_app, assoc, nat_trans.comp_app, of_Mon_μ],
-    end,
-    ..f.hom } }
+def monToMonad : Mon_ (C ⥤ C) ⥤ Monad C where
+  obj := ofMon
+  map := fun _ _ f =>
+    { -- `finish` closes this goal
+        f.Hom with
+      app_η' := by
+        intro X
+        erw [← nat_trans.comp_app, f.one_hom]
+        rfl,
+      app_μ' := by
+        intro X
+        erw [← nat_trans.comp_app, f.mul_hom]
+        simpa only [nat_trans.naturality, nat_trans.hcomp_app, assoc, nat_trans.comp_app, of_Mon_μ] }
 
-namespace Monad_Mon_equiv
+namespace MonadMonEquiv
+
 variable {C}
 
 /-- Isomorphism of functors used in `Monad_Mon_equiv` -/
-@[simps {rhs_md := semireducible}]
-def counit_iso : Mon_to_Monad C ⋙ Monad_to_Mon C ≅ 𝟭 _ :=
-{ hom := { app := λ _, { hom := 𝟙 _ } },
-  inv := { app := λ _, { hom := 𝟙 _ } },
-  hom_inv_id' := by { ext, simp }, -- `obviously` provides these, but slowly
-  inv_hom_id' := by { ext, simp } }
+@[simps (config := { rhsMd := semireducible })]
+def counitIso : monToMonad C ⋙ monadToMon C ≅ 𝟭 _ where
+  Hom := { app := fun _ => { Hom := 𝟙 _ } }
+  inv := { app := fun _ => { Hom := 𝟙 _ } }
+  hom_inv_id' := by
+    ext
+    simp
+  -- `obviously` provides these, but slowly
+  inv_hom_id' := by
+    ext
+    simp
 
 /-- Auxiliary definition for `Monad_Mon_equiv` -/
 @[simps]
-def unit_iso_hom : 𝟭 _ ⟶ Monad_to_Mon C ⋙ Mon_to_Monad C :=
-{ app := λ _, { app := λ _, 𝟙 _ } }
+def unitIsoHom : 𝟭 _ ⟶ monadToMon C ⋙ monToMonad C where
+  app := fun _ => { app := fun _ => 𝟙 _ }
 
 /-- Auxiliary definition for `Monad_Mon_equiv` -/
 @[simps]
-def unit_iso_inv : Monad_to_Mon C ⋙ Mon_to_Monad C ⟶ 𝟭 _ :=
-{ app := λ _, { app := λ _, 𝟙 _ } }
+def unitIsoInv : monadToMon C ⋙ monToMonad C ⟶ 𝟭 _ where
+  app := fun _ => { app := fun _ => 𝟙 _ }
 
 /-- Isomorphism of functors used in `Monad_Mon_equiv` -/
 @[simps]
-def unit_iso : 𝟭 _ ≅ Monad_to_Mon C ⋙ Mon_to_Monad C :=
-{ hom := unit_iso_hom,
-  inv := unit_iso_inv,
-  hom_inv_id' := by { ext, simp }, -- `obviously` provides these, but slowly
-  inv_hom_id' := by { ext, simp } }
+def unitIso : 𝟭 _ ≅ monadToMon C ⋙ monToMonad C where
+  Hom := unitIsoHom
+  inv := unitIsoInv
+  hom_inv_id' := by
+    ext
+    simp
+  -- `obviously` provides these, but slowly
+  inv_hom_id' := by
+    ext
+    simp
 
-end Monad_Mon_equiv
+end MonadMonEquiv
 
-open Monad_Mon_equiv
+open MonadMonEquiv
 
 /-- Oh, monads are just monoids in the category of endofunctors (equivalence of categories). -/
 @[simps]
-def Monad_Mon_equiv : (monad C) ≌ (Mon_ (C ⥤ C)) :=
-{ functor := Monad_to_Mon _,
-  inverse := Mon_to_Monad _,
-  unit_iso := unit_iso,
-  counit_iso := counit_iso,
-  functor_unit_iso_comp' := by { intros X, ext, dsimp, simp } } -- `obviously`, slowly
+def monadMonEquiv : Monad C ≌ Mon_ (C ⥤ C) where
+  Functor := monadToMon _
+  inverse := monToMonad _
+  unitIso := unitIso
+  counitIso := counitIso
+  functor_unit_iso_comp' := by
+    intro X
+    ext
+    dsimp
+    simp
 
+-- `obviously`, slowly
 -- Sanity check
-example (A : monad C) {X : C} : ((Monad_Mon_equiv C).unit_iso.app A).hom.app X = 𝟙 _ := rfl
+example (A : Monad C) {X : C} : ((monadMonEquiv C).unitIso.app A).Hom.app X = 𝟙 _ :=
+  rfl
 
 end Monad
-end category_theory
+
+end CategoryTheory
+

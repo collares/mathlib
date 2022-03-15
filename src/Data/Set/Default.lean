@@ -1,2 +1,3 @@
-import data.set.finite
-import data.set.intervals
+import Mathbin.Data.Set.Finite
+import Mathbin.Data.Set.Intervals.Default
+

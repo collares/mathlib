@@ -3,8 +3,8 @@ Copyright (c) 2016 Jeremy Avigad. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jeremy Avigad, Leonardo de Moura, Mario Carneiro, Johannes Hölzl, Damiano Testa
 -/
-import algebra.covariant_and_contravariant
-import order.monotone
+import Mathbin.Algebra.CovariantAndContravariant
+import Mathbin.Order.Monotone
 
 /-!
 # Ordered monoids
@@ -24,814 +24,850 @@ Almost no monoid is actually present in this file: most assumptions have been ge
 
 -/
 
+
 -- TODO: If possible, uniformize lemma names, taking special care of `'`,
 -- after the `ordered`-refactor is done.
+open Function
 
-open function
+variable {α β : Type _}
 
-variables {α β : Type*}
+section Mul
 
-section has_mul
-variables [has_mul α]
+variable [Mul α]
 
-section has_le
-variables [has_le α]
+section LE
+
+variable [LE α]
 
 /- The prime on this lemma is present only on the multiplicative version.  The unprimed version
 is taken by the analogous lemma for semiring, with an extra non-negativity assumption. -/
 @[to_additive add_le_add_left]
-lemma mul_le_mul_left' [covariant_class α α (*) (≤)] {b c : α} (bc : b ≤ c) (a : α) :
-  a * b ≤ a * c :=
-covariant_class.elim _ bc
+theorem mul_le_mul_left' [CovariantClass α α (· * ·) (· ≤ ·)] {b c : α} (bc : b ≤ c) (a : α) : a * b ≤ a * c :=
+  CovariantClass.elim _ bc
 
 @[to_additive le_of_add_le_add_left]
-lemma le_of_mul_le_mul_left' [contravariant_class α α (*) (≤)]
-  {a b c : α} (bc : a * b ≤ a * c) :
-  b ≤ c :=
-contravariant_class.elim _ bc
+theorem le_of_mul_le_mul_left' [ContravariantClass α α (· * ·) (· ≤ ·)] {a b c : α} (bc : a * b ≤ a * c) : b ≤ c :=
+  ContravariantClass.elim _ bc
 
 /- The prime on this lemma is present only on the multiplicative version.  The unprimed version
 is taken by the analogous lemma for semiring, with an extra non-negativity assumption. -/
 @[to_additive add_le_add_right]
-lemma mul_le_mul_right' [covariant_class α α (swap (*)) (≤)]
-  {b c : α} (bc : b ≤ c) (a : α) :
-  b * a ≤ c * a :=
-covariant_class.elim a bc
+theorem mul_le_mul_right' [CovariantClass α α (swap (· * ·)) (· ≤ ·)] {b c : α} (bc : b ≤ c) (a : α) : b * a ≤ c * a :=
+  CovariantClass.elim a bc
 
 @[to_additive le_of_add_le_add_right]
-lemma le_of_mul_le_mul_right' [contravariant_class α α (swap (*)) (≤)]
-  {a b c : α} (bc : b * a ≤ c * a) :
-  b ≤ c :=
-contravariant_class.elim a bc
+theorem le_of_mul_le_mul_right' [ContravariantClass α α (swap (· * ·)) (· ≤ ·)] {a b c : α} (bc : b * a ≤ c * a) :
+    b ≤ c :=
+  ContravariantClass.elim a bc
 
 @[simp, to_additive]
-lemma mul_le_mul_iff_left [covariant_class α α (*) (≤)] [contravariant_class α α (*) (≤)]
-  (a : α) {b c : α} :
-  a * b ≤ a * c ↔ b ≤ c :=
-rel_iff_cov α α (*) (≤) a
+theorem mul_le_mul_iff_left [CovariantClass α α (· * ·) (· ≤ ·)] [ContravariantClass α α (· * ·) (· ≤ ·)] (a : α)
+    {b c : α} : a * b ≤ a * c ↔ b ≤ c :=
+  rel_iff_cov α α (· * ·) (· ≤ ·) a
 
 @[simp, to_additive]
-lemma mul_le_mul_iff_right
-  [covariant_class α α (swap (*)) (≤)] [contravariant_class α α (swap (*)) (≤)]
-  (a : α) {b c : α} :
-  b * a ≤ c * a ↔ b ≤ c :=
-rel_iff_cov α α (swap (*)) (≤) a
+theorem mul_le_mul_iff_right [CovariantClass α α (swap (· * ·)) (· ≤ ·)] [ContravariantClass α α (swap (· * ·)) (· ≤ ·)]
+    (a : α) {b c : α} : b * a ≤ c * a ↔ b ≤ c :=
+  rel_iff_cov α α (swap (· * ·)) (· ≤ ·) a
 
-end has_le
+end LE
 
-section has_lt
-variables [has_lt α]
+section LT
 
-@[simp, to_additive]
-lemma mul_lt_mul_iff_left [covariant_class α α (*) (<)] [contravariant_class α α (*) (<)]
-  (a : α) {b c : α} :
-  a * b < a * c ↔ b < c :=
-rel_iff_cov α α (*) (<) a
+variable [LT α]
 
 @[simp, to_additive]
-lemma mul_lt_mul_iff_right
-  [covariant_class α α (swap (*)) (<)] [contravariant_class α α (swap (*)) (<)]
-  (a : α) {b c : α} :
-  b * a < c * a ↔ b < c :=
-rel_iff_cov α α (swap (*)) (<) a
+theorem mul_lt_mul_iff_left [CovariantClass α α (· * ·) (· < ·)] [ContravariantClass α α (· * ·) (· < ·)] (a : α)
+    {b c : α} : a * b < a * c ↔ b < c :=
+  rel_iff_cov α α (· * ·) (· < ·) a
+
+@[simp, to_additive]
+theorem mul_lt_mul_iff_right [CovariantClass α α (swap (· * ·)) (· < ·)] [ContravariantClass α α (swap (· * ·)) (· < ·)]
+    (a : α) {b c : α} : b * a < c * a ↔ b < c :=
+  rel_iff_cov α α (swap (· * ·)) (· < ·) a
 
 @[to_additive add_lt_add_left]
-lemma mul_lt_mul_left' [covariant_class α α (*) (<)] {b c : α} (bc : b < c) (a : α) :
-  a * b < a * c :=
-covariant_class.elim _ bc
+theorem mul_lt_mul_left' [CovariantClass α α (· * ·) (· < ·)] {b c : α} (bc : b < c) (a : α) : a * b < a * c :=
+  CovariantClass.elim _ bc
 
 @[to_additive lt_of_add_lt_add_left]
-lemma lt_of_mul_lt_mul_left' [contravariant_class α α (*) (<)]
-  {a b c : α} (bc : a * b < a * c) :
-  b < c :=
-contravariant_class.elim _ bc
+theorem lt_of_mul_lt_mul_left' [ContravariantClass α α (· * ·) (· < ·)] {a b c : α} (bc : a * b < a * c) : b < c :=
+  ContravariantClass.elim _ bc
 
 @[to_additive add_lt_add_right]
-lemma mul_lt_mul_right' [covariant_class α α (swap (*)) (<)]
-  {b c : α} (bc : b < c) (a : α) :
-  b * a < c * a :=
-covariant_class.elim a bc
+theorem mul_lt_mul_right' [CovariantClass α α (swap (· * ·)) (· < ·)] {b c : α} (bc : b < c) (a : α) : b * a < c * a :=
+  CovariantClass.elim a bc
 
 @[to_additive lt_of_add_lt_add_right]
-lemma lt_of_mul_lt_mul_right' [contravariant_class α α (swap (*)) (<)]
-  {a b c : α} (bc : b * a < c * a) :
-  b < c :=
-contravariant_class.elim a bc
+theorem lt_of_mul_lt_mul_right' [ContravariantClass α α (swap (· * ·)) (· < ·)] {a b c : α} (bc : b * a < c * a) :
+    b < c :=
+  ContravariantClass.elim a bc
 
-end has_lt
+end LT
 
-end has_mul
+end Mul
 
 -- using one
-section mul_one_class
-variables [mul_one_class α]
+section MulOneClassₓ
 
-section has_le
-variables [has_le α]
+variable [MulOneClassₓ α]
+
+section LE
+
+variable [LE α]
 
 @[simp, to_additive le_add_iff_nonneg_right]
-lemma le_mul_iff_one_le_right'
-  [covariant_class α α (*) (≤)] [contravariant_class α α (*) (≤)]
-  (a : α) {b : α} : a ≤ a * b ↔ 1 ≤ b :=
-iff.trans (by rw [mul_one]) (mul_le_mul_iff_left a)
+theorem le_mul_iff_one_le_right' [CovariantClass α α (· * ·) (· ≤ ·)] [ContravariantClass α α (· * ·) (· ≤ ·)] (a : α)
+    {b : α} : a ≤ a * b ↔ 1 ≤ b :=
+  Iff.trans
+    (by
+      rw [mul_oneₓ])
+    (mul_le_mul_iff_left a)
 
 @[simp, to_additive add_le_iff_nonpos_right]
-lemma mul_le_iff_le_one_right'
-  [covariant_class α α (*) (≤)] [contravariant_class α α (*) (≤)]
-  (a : α) {b : α} :
-  a * b ≤ a ↔ b ≤ 1 :=
-iff.trans (by rw [mul_one]) (mul_le_mul_iff_left a)
+theorem mul_le_iff_le_one_right' [CovariantClass α α (· * ·) (· ≤ ·)] [ContravariantClass α α (· * ·) (· ≤ ·)] (a : α)
+    {b : α} : a * b ≤ a ↔ b ≤ 1 :=
+  Iff.trans
+    (by
+      rw [mul_oneₓ])
+    (mul_le_mul_iff_left a)
 
 @[simp, to_additive le_add_iff_nonneg_left]
-lemma le_mul_iff_one_le_left'
-  [covariant_class α α (swap (*)) (≤)] [contravariant_class α α (swap (*)) (≤)]
-  (a : α) {b : α} :
-  a ≤ b * a ↔ 1 ≤ b :=
-iff.trans (by rw one_mul) (mul_le_mul_iff_right a)
+theorem le_mul_iff_one_le_left' [CovariantClass α α (swap (· * ·)) (· ≤ ·)]
+    [ContravariantClass α α (swap (· * ·)) (· ≤ ·)] (a : α) {b : α} : a ≤ b * a ↔ 1 ≤ b :=
+  Iff.trans
+    (by
+      rw [one_mulₓ])
+    (mul_le_mul_iff_right a)
 
 @[simp, to_additive add_le_iff_nonpos_left]
-lemma mul_le_iff_le_one_left'
-  [covariant_class α α (swap (*)) (≤)] [contravariant_class α α (swap (*)) (≤)]
-  {a b : α} :
-  a * b ≤ b ↔ a ≤ 1 :=
-iff.trans (by rw one_mul) (mul_le_mul_iff_right b)
+theorem mul_le_iff_le_one_left' [CovariantClass α α (swap (· * ·)) (· ≤ ·)]
+    [ContravariantClass α α (swap (· * ·)) (· ≤ ·)] {a b : α} : a * b ≤ b ↔ a ≤ 1 :=
+  Iff.trans
+    (by
+      rw [one_mulₓ])
+    (mul_le_mul_iff_right b)
 
-end has_le
+end LE
 
-lemma exists_square_le {α : Type*} [mul_one_class α] [linear_order α] [covariant_class α α (*) (<)]
-  (a : α) : ∃ (b : α), b * b ≤ a :=
-begin
-  by_cases h : a < 1,
-  { use a,
-    have : a*a < a*1,
-    exact mul_lt_mul_left' h a,
-    rw mul_one at this,
-    exact le_of_lt this },
-  { use 1,
-    push_neg at h,
-    rwa mul_one }
-end
+theorem exists_square_le {α : Type _} [MulOneClassₓ α] [LinearOrderₓ α] [CovariantClass α α (· * ·) (· < ·)] (a : α) :
+    ∃ b : α, b * b ≤ a := by
+  by_cases' h : a < 1
+  · use a
+    have : a * a < a * 1 := mul_lt_mul_left' h a
+    rw [mul_oneₓ] at this
+    exact le_of_ltₓ this
+    
+  · use 1
+    push_neg  at h
+    rwa [mul_oneₓ]
+    
 
-section has_lt
-variable [has_lt α]
+section LT
+
+variable [LT α]
 
 @[to_additive lt_add_of_pos_right]
-lemma lt_mul_of_one_lt_right'
-  [covariant_class α α (*) (<)]
-  (a : α) {b : α} (h : 1 < b) : a < a * b :=
-calc a = a * 1 : (mul_one _).symm
-   ... < a * b : mul_lt_mul_left' h a
+theorem lt_mul_of_one_lt_right' [CovariantClass α α (· * ·) (· < ·)] (a : α) {b : α} (h : 1 < b) : a < a * b :=
+  calc
+    a = a * 1 := (mul_oneₓ _).symm
+    _ < a * b := mul_lt_mul_left' h a
+    
 
 @[simp, to_additive lt_add_iff_pos_right]
-lemma lt_mul_iff_one_lt_right'
-  [covariant_class α α (*) (<)] [contravariant_class α α (*) (<)]
-  (a : α) {b : α} :
-  a < a * b ↔ 1 < b :=
-iff.trans (by rw mul_one) (mul_lt_mul_iff_left a)
+theorem lt_mul_iff_one_lt_right' [CovariantClass α α (· * ·) (· < ·)] [ContravariantClass α α (· * ·) (· < ·)] (a : α)
+    {b : α} : a < a * b ↔ 1 < b :=
+  Iff.trans
+    (by
+      rw [mul_oneₓ])
+    (mul_lt_mul_iff_left a)
 
 @[simp, to_additive add_lt_iff_neg_left]
-lemma mul_lt_iff_lt_one_left'
-  [covariant_class α α (*) (<)] [contravariant_class α α (*) (<)] {a b : α} :
-  a * b < a ↔ b < 1 :=
-iff.trans (by rw mul_one) (mul_lt_mul_iff_left a)
+theorem mul_lt_iff_lt_one_left' [CovariantClass α α (· * ·) (· < ·)] [ContravariantClass α α (· * ·) (· < ·)]
+    {a b : α} : a * b < a ↔ b < 1 :=
+  Iff.trans
+    (by
+      rw [mul_oneₓ])
+    (mul_lt_mul_iff_left a)
 
 @[simp, to_additive lt_add_iff_pos_left]
-lemma lt_mul_iff_one_lt_left'
-  [covariant_class α α (swap (*)) (<)] [contravariant_class α α (swap (*)) (<)]
-  (a : α) {b : α} : a < b * a ↔ 1 < b :=
-iff.trans (by rw one_mul) (mul_lt_mul_iff_right a)
+theorem lt_mul_iff_one_lt_left' [CovariantClass α α (swap (· * ·)) (· < ·)]
+    [ContravariantClass α α (swap (· * ·)) (· < ·)] (a : α) {b : α} : a < b * a ↔ 1 < b :=
+  Iff.trans
+    (by
+      rw [one_mulₓ])
+    (mul_lt_mul_iff_right a)
 
 @[simp, to_additive add_lt_iff_neg_right]
-lemma mul_lt_iff_lt_one_right'
-  [covariant_class α α (swap (*)) (<)] [contravariant_class α α (swap (*)) (<)]
-  {a : α} (b : α) :
-  a * b < b ↔ a < 1 :=
-iff.trans (by rw one_mul) (mul_lt_mul_iff_right b)
+theorem mul_lt_iff_lt_one_right' [CovariantClass α α (swap (· * ·)) (· < ·)]
+    [ContravariantClass α α (swap (· * ·)) (· < ·)] {a : α} (b : α) : a * b < b ↔ a < 1 :=
+  Iff.trans
+    (by
+      rw [one_mulₓ])
+    (mul_lt_mul_iff_right b)
 
-end has_lt
+end LT
 
-section preorder
-variable [preorder α]
+section Preorderₓ
+
+variable [Preorderₓ α]
 
 @[to_additive]
-lemma mul_le_of_le_of_le_one [covariant_class α α (*) (≤)]
-  {a b c : α} (hbc : b ≤ c) (ha : a ≤ 1) : b * a ≤ c :=
-calc  b * a ≤ b * 1 : mul_le_mul_left' ha b
-        ... = b     : mul_one b
-        ... ≤ c     : hbc
+theorem mul_le_of_le_of_le_one [CovariantClass α α (· * ·) (· ≤ ·)] {a b c : α} (hbc : b ≤ c) (ha : a ≤ 1) :
+    b * a ≤ c :=
+  calc
+    b * a ≤ b * 1 := mul_le_mul_left' ha b
+    _ = b := mul_oneₓ b
+    _ ≤ c := hbc
+    
 
 alias mul_le_of_le_of_le_one ← mul_le_one'
+
 attribute [to_additive add_nonpos] mul_le_one'
 
 @[to_additive]
-lemma lt_mul_of_lt_of_one_le [covariant_class α α (*) (≤)]
-  {a b c : α} (hbc : b < c) (ha : 1 ≤ a) : b < c * a :=
-calc  b < c     : hbc
-    ... = c * 1 : (mul_one c).symm
-    ... ≤ c * a : mul_le_mul_left' ha c
+theorem lt_mul_of_lt_of_one_le [CovariantClass α α (· * ·) (· ≤ ·)] {a b c : α} (hbc : b < c) (ha : 1 ≤ a) :
+    b < c * a :=
+  calc
+    b < c := hbc
+    _ = c * 1 := (mul_oneₓ c).symm
+    _ ≤ c * a := mul_le_mul_left' ha c
+    
 
 @[to_additive]
-lemma mul_lt_of_lt_of_le_one [covariant_class α α (*) (≤)]
-  {a b c : α} (hbc : b < c) (ha : a ≤ 1)  : b * a < c :=
-calc  b * a ≤ b * 1 : mul_le_mul_left' ha b
-        ... = b     : mul_one b
-        ... < c     : hbc
+theorem mul_lt_of_lt_of_le_one [CovariantClass α α (· * ·) (· ≤ ·)] {a b c : α} (hbc : b < c) (ha : a ≤ 1) :
+    b * a < c :=
+  calc
+    b * a ≤ b * 1 := mul_le_mul_left' ha b
+    _ = b := mul_oneₓ b
+    _ < c := hbc
+    
 
 @[to_additive]
-lemma lt_mul_of_le_of_one_lt [covariant_class α α (*) (<)]
-  {a b c : α} (hbc : b ≤ c) (ha : 1 < a) : b < c * a :=
-calc  b ≤ c     : hbc
-    ... = c * 1 : (mul_one c).symm
-    ... < c * a : mul_lt_mul_left' ha c
+theorem lt_mul_of_le_of_one_lt [CovariantClass α α (· * ·) (· < ·)] {a b c : α} (hbc : b ≤ c) (ha : 1 < a) :
+    b < c * a :=
+  calc
+    b ≤ c := hbc
+    _ = c * 1 := (mul_oneₓ c).symm
+    _ < c * a := mul_lt_mul_left' ha c
+    
 
 @[to_additive]
-lemma mul_lt_of_le_one_of_lt [covariant_class α α (swap (*)) (≤)]
-  {a b c : α} (ha : a ≤ 1) (hb : b < c) : a * b < c :=
-calc  a * b ≤ 1 * b : mul_le_mul_right' ha b
-        ... = b     : one_mul b
-        ... < c     : hb
+theorem mul_lt_of_le_one_of_lt [CovariantClass α α (swap (· * ·)) (· ≤ ·)] {a b c : α} (ha : a ≤ 1) (hb : b < c) :
+    a * b < c :=
+  calc
+    a * b ≤ 1 * b := mul_le_mul_right' ha b
+    _ = b := one_mulₓ b
+    _ < c := hb
+    
 
 @[to_additive]
-lemma mul_le_of_le_one_of_le [covariant_class α α (swap (*)) (≤)]
-  {a b c : α} (ha : a ≤ 1) (hbc : b ≤ c) :
-  a * b ≤ c :=
-calc  a * b ≤ 1 * b : mul_le_mul_right' ha b
-        ... = b     : one_mul b
-        ... ≤ c     : hbc
+theorem mul_le_of_le_one_of_le [CovariantClass α α (swap (· * ·)) (· ≤ ·)] {a b c : α} (ha : a ≤ 1) (hbc : b ≤ c) :
+    a * b ≤ c :=
+  calc
+    a * b ≤ 1 * b := mul_le_mul_right' ha b
+    _ = b := one_mulₓ b
+    _ ≤ c := hbc
+    
 
 @[to_additive]
-lemma le_mul_of_one_le_of_le [covariant_class α α (swap (*)) (≤)]
-  {a b c: α} (ha : 1 ≤ a) (hbc : b ≤ c) : b ≤ a * c :=
-calc  b ≤ c     : hbc
-    ... = 1 * c : (one_mul c).symm
-    ... ≤ a * c : mul_le_mul_right' ha c
+theorem le_mul_of_one_le_of_le [CovariantClass α α (swap (· * ·)) (· ≤ ·)] {a b c : α} (ha : 1 ≤ a) (hbc : b ≤ c) :
+    b ≤ a * c :=
+  calc
+    b ≤ c := hbc
+    _ = 1 * c := (one_mulₓ c).symm
+    _ ≤ a * c := mul_le_mul_right' ha c
+    
 
 /-- Assumes left covariance. The lemma assuming right covariance is `right.mul_lt_one`. -/
 @[to_additive "Assumes left covariance. The lemma assuming right covariance is `right.add_neg`."]
-lemma left.mul_lt_one [covariant_class α α (*) (<)]
-  {a b : α} (ha : a < 1) (hb : b < 1) : a * b < 1 :=
-calc  a * b < a * 1 : mul_lt_mul_left' hb a
-        ... = a     : mul_one a
-        ... < 1     : ha
+theorem Left.mul_lt_one [CovariantClass α α (· * ·) (· < ·)] {a b : α} (ha : a < 1) (hb : b < 1) : a * b < 1 :=
+  calc
+    a * b < a * 1 := mul_lt_mul_left' hb a
+    _ = a := mul_oneₓ a
+    _ < 1 := ha
+    
 
 /-- Assumes right covariance. The lemma assuming left covariance is `left.mul_lt_one`. -/
 @[to_additive "Assumes right covariance. The lemma assuming left covariance is `left.add_neg`"]
-lemma right.mul_lt_one [covariant_class α α (swap (*)) (<)]
-  {a b : α} (ha : a < 1) (hb : b < 1) : a * b < 1 :=
-calc  a * b < 1 * b : mul_lt_mul_right' ha b
-        ... = b     : one_mul b
-        ... < 1     : hb
+theorem Right.mul_lt_one [CovariantClass α α (swap (· * ·)) (· < ·)] {a b : α} (ha : a < 1) (hb : b < 1) : a * b < 1 :=
+  calc
+    a * b < 1 * b := mul_lt_mul_right' ha b
+    _ = b := one_mulₓ b
+    _ < 1 := hb
+    
 
 @[to_additive]
-lemma mul_lt_of_le_of_lt_one
-  [covariant_class α α (*) (<)] [covariant_class α α (swap (*)) (≤)]
-  {a b c: α} (hbc : b ≤ c) (ha : a < 1) : b * a < c :=
-calc  b * a ≤ c * a : mul_le_mul_right' hbc a
-        ... < c * 1 : mul_lt_mul_left' ha c
-        ... = c     : mul_one c
+theorem mul_lt_of_le_of_lt_one [CovariantClass α α (· * ·) (· < ·)] [CovariantClass α α (swap (· * ·)) (· ≤ ·)]
+    {a b c : α} (hbc : b ≤ c) (ha : a < 1) : b * a < c :=
+  calc
+    b * a ≤ c * a := mul_le_mul_right' hbc a
+    _ < c * 1 := mul_lt_mul_left' ha c
+    _ = c := mul_oneₓ c
+    
 
 @[to_additive]
-lemma mul_lt_of_lt_one_of_le [covariant_class α α (swap (*)) (<)]
-  {a b c : α} (ha : a < 1) (hbc : b ≤ c) : a * b < c :=
-calc  a * b < 1 * b : mul_lt_mul_right' ha b
-        ... = b     : one_mul b
-        ... ≤ c     : hbc
+theorem mul_lt_of_lt_one_of_le [CovariantClass α α (swap (· * ·)) (· < ·)] {a b c : α} (ha : a < 1) (hbc : b ≤ c) :
+    a * b < c :=
+  calc
+    a * b < 1 * b := mul_lt_mul_right' ha b
+    _ = b := one_mulₓ b
+    _ ≤ c := hbc
+    
 
 @[to_additive]
-lemma lt_mul_of_one_lt_of_le [covariant_class α α (swap (*)) (<)]
-  {a b c : α} (ha : 1 < a) (hbc : b ≤ c) : b < a * c :=
-calc  b ≤ c     : hbc
-    ... = 1 * c : (one_mul c).symm
-    ... < a * c : mul_lt_mul_right' ha c
+theorem lt_mul_of_one_lt_of_le [CovariantClass α α (swap (· * ·)) (· < ·)] {a b c : α} (ha : 1 < a) (hbc : b ≤ c) :
+    b < a * c :=
+  calc
+    b ≤ c := hbc
+    _ = 1 * c := (one_mulₓ c).symm
+    _ < a * c := mul_lt_mul_right' ha c
+    
 
 /-- Assumes left covariance. -/
 @[to_additive "Assumes left covariance."]
-lemma le_mul_of_le_of_le_one [covariant_class α α (*) (≤)]
-  {a b c : α} (ha : c ≤ a) (hb : 1 ≤ b) : c ≤ a * b :=
-calc  c ≤ a     : ha
-    ... = a * 1 : (mul_one a).symm
-    ... ≤ a * b : mul_le_mul_left' hb a
+theorem le_mul_of_le_of_le_one [CovariantClass α α (· * ·) (· ≤ ·)] {a b c : α} (ha : c ≤ a) (hb : 1 ≤ b) : c ≤ a * b :=
+  calc
+    c ≤ a := ha
+    _ = a * 1 := (mul_oneₓ a).symm
+    _ ≤ a * b := mul_le_mul_left' hb a
+    
 
-/-  This lemma is present to mimick the name of an existing one. -/
+--  This lemma is present to mimick the name of an existing one.
 @[to_additive add_nonneg]
-lemma one_le_mul [covariant_class α α (*) (≤)]
-  {a b : α} (ha : 1 ≤ a) (hb : 1 ≤ b) : 1 ≤ a * b :=
-le_mul_of_le_of_le_one ha hb
+theorem one_le_mul [CovariantClass α α (· * ·) (· ≤ ·)] {a b : α} (ha : 1 ≤ a) (hb : 1 ≤ b) : 1 ≤ a * b :=
+  le_mul_of_le_of_le_one ha hb
 
 /-- Assumes left covariance. -/
 @[to_additive "Assumes left covariance."]
-lemma lt_mul_of_lt_of_one_lt [covariant_class α α (*) (<)]
-  {a b c : α} (ha : c < a) (hb : 1 < b) : c < a * b :=
-calc  c < a     : ha
-    ... = a * 1 : (mul_one _).symm
-    ... < a * b : mul_lt_mul_left' hb a
+theorem lt_mul_of_lt_of_one_lt [CovariantClass α α (· * ·) (· < ·)] {a b c : α} (ha : c < a) (hb : 1 < b) : c < a * b :=
+  calc
+    c < a := ha
+    _ = a * 1 := (mul_oneₓ _).symm
+    _ < a * b := mul_lt_mul_left' hb a
+    
 
 /-- Assumes left covariance. -/
 @[to_additive "Assumes left covariance."]
-lemma left.mul_lt_one_of_lt_of_lt_one [covariant_class α α (*) (<)]
-  {a b c : α} (ha : a < c) (hb : b < 1) : a * b < c :=
-calc  a * b < a * 1 : mul_lt_mul_left' hb a
-        ... = a     : mul_one a
-        ... < c     : ha
+theorem Left.mul_lt_one_of_lt_of_lt_one [CovariantClass α α (· * ·) (· < ·)] {a b c : α} (ha : a < c) (hb : b < 1) :
+    a * b < c :=
+  calc
+    a * b < a * 1 := mul_lt_mul_left' hb a
+    _ = a := mul_oneₓ a
+    _ < c := ha
+    
 
 /-- Assumes right covariance. -/
 @[to_additive "Assumes right covariance."]
-lemma right.mul_lt_one_of_lt_of_lt_one [covariant_class α α (swap (*)) (<)]
-  {a b c : α} (ha : a < 1) (hb : b < c) : a * b < c :=
-calc  a * b < 1 * b : mul_lt_mul_right' ha b
-        ... = b     : one_mul b
-        ... < c     : hb
+theorem Right.mul_lt_one_of_lt_of_lt_one [CovariantClass α α (swap (· * ·)) (· < ·)] {a b c : α} (ha : a < 1)
+    (hb : b < c) : a * b < c :=
+  calc
+    a * b < 1 * b := mul_lt_mul_right' ha b
+    _ = b := one_mulₓ b
+    _ < c := hb
+    
 
 /-- Assumes right covariance. -/
-@[to_additive right.add_nonneg "Assumes right covariance."]
-lemma right.one_le_mul [covariant_class α α (swap (*)) (≤)]
-  {a b : α} (ha : 1 ≤ a) (hb : 1 ≤ b) : 1 ≤ a * b :=
-calc  1 ≤ b     : hb
-    ... = 1 * b : (one_mul b).symm
-    ... ≤ a * b : mul_le_mul_right' ha b
+@[to_additive Right.add_nonneg "Assumes right covariance."]
+theorem Right.one_le_mul [CovariantClass α α (swap (· * ·)) (· ≤ ·)] {a b : α} (ha : 1 ≤ a) (hb : 1 ≤ b) : 1 ≤ a * b :=
+  calc
+    1 ≤ b := hb
+    _ = 1 * b := (one_mulₓ b).symm
+    _ ≤ a * b := mul_le_mul_right' ha b
+    
 
 /-- Assumes right covariance. -/
-@[to_additive right.add_pos "Assumes right covariance."]
-lemma right.one_lt_mul [covariant_class α α (swap (*)) (<)]
-  {b : α} (hb : 1 < b) {a: α} (ha : 1 < a) : 1 < a * b :=
-calc  1 < b     : hb
-    ... = 1 * b : (one_mul _).symm
-    ... < a * b : mul_lt_mul_right' ha b
+@[to_additive Right.add_pos "Assumes right covariance."]
+theorem Right.one_lt_mul [CovariantClass α α (swap (· * ·)) (· < ·)] {b : α} (hb : 1 < b) {a : α} (ha : 1 < a) :
+    1 < a * b :=
+  calc
+    1 < b := hb
+    _ = 1 * b := (one_mulₓ _).symm
+    _ < a * b := mul_lt_mul_right' ha b
+    
 
-end preorder
-
+end Preorderₓ
 
 @[to_additive le_add_of_nonneg_right]
-lemma le_mul_of_one_le_right' [has_le α] [covariant_class α α (*) (≤)] {a b : α} (h : 1 ≤ b) :
-  a ≤ a * b :=
-calc  a = a * 1  : (mul_one _).symm
-    ... ≤ a * b  : mul_le_mul_left' h a
+theorem le_mul_of_one_le_right' [LE α] [CovariantClass α α (· * ·) (· ≤ ·)] {a b : α} (h : 1 ≤ b) : a ≤ a * b :=
+  calc
+    a = a * 1 := (mul_oneₓ _).symm
+    _ ≤ a * b := mul_le_mul_left' h a
+    
 
 @[to_additive add_le_of_nonpos_right]
-lemma mul_le_of_le_one_right' [has_le α] [covariant_class α α (*) (≤)] {a b : α} (h : b ≤ 1) :
-  a * b ≤ a :=
-calc  a * b ≤ a * 1 : mul_le_mul_left' h a
-        ... = a     : mul_one a
+theorem mul_le_of_le_one_right' [LE α] [CovariantClass α α (· * ·) (· ≤ ·)] {a b : α} (h : b ≤ 1) : a * b ≤ a :=
+  calc
+    a * b ≤ a * 1 := mul_le_mul_left' h a
+    _ = a := mul_oneₓ a
+    
 
-end mul_one_class
-
-@[to_additive]
-lemma mul_left_cancel'' [semigroup α] [partial_order α]
-  [contravariant_class α α (*) (≤)] {a b c : α} (h : a * b = a * c) : b = c :=
-(le_of_mul_le_mul_left' h.le).antisymm (le_of_mul_le_mul_left' h.ge)
+end MulOneClassₓ
 
 @[to_additive]
-lemma mul_right_cancel'' [semigroup α] [partial_order α]
-  [contravariant_class α α (swap (*)) (≤)] {a b c : α} (h : a * b = c * b) :
-  a = c :=
-le_antisymm (le_of_mul_le_mul_right' h.le) (le_of_mul_le_mul_right' h.ge)
+theorem mul_left_cancel'' [Semigroupₓ α] [PartialOrderₓ α] [ContravariantClass α α (· * ·) (· ≤ ·)] {a b c : α}
+    (h : a * b = a * c) : b = c :=
+  (le_of_mul_le_mul_left' h.le).antisymm (le_of_mul_le_mul_left' h.Ge)
 
+@[to_additive]
+theorem mul_right_cancel'' [Semigroupₓ α] [PartialOrderₓ α] [ContravariantClass α α (swap (· * ·)) (· ≤ ·)] {a b c : α}
+    (h : a * b = c * b) : a = c :=
+  le_antisymmₓ (le_of_mul_le_mul_right' h.le) (le_of_mul_le_mul_right' h.Ge)
+
+/-- A semigroup with a partial order and satisfying `left_cancel_semigroup`
+(i.e. `a * c < b * c → a < b`) is a `left_cancel semigroup`. -/
 /- This is not instance, since we want to have an instance from `left_cancel_semigroup`s
 to the appropriate `covariant_class`. -/
-/--  A semigroup with a partial order and satisfying `left_cancel_semigroup`
-(i.e. `a * c < b * c → a < b`) is a `left_cancel semigroup`. -/
 @[to_additive
-"An additive semigroup with a partial order and satisfying `left_cancel_add_semigroup`
-(i.e. `c + a < c + b → a < b`) is a `left_cancel add_semigroup`."]
-def contravariant.to_left_cancel_semigroup [semigroup α] [partial_order α]
-  [contravariant_class α α (*) (≤)] :
-  left_cancel_semigroup α :=
-{ mul_left_cancel := λ a b c, mul_left_cancel''
-  ..‹semigroup α› }
+      "An additive semigroup with a partial order and satisfying `left_cancel_add_semigroup`\n(i.e. `c + a < c + b → a < b`) is a `left_cancel add_semigroup`."]
+def Contravariant.toLeftCancelSemigroup [Semigroupₓ α] [PartialOrderₓ α] [ContravariantClass α α (· * ·) (· ≤ ·)] :
+    LeftCancelSemigroup α :=
+  { ‹Semigroupₓ α› with mul_left_cancel := fun a b c => mul_left_cancel'' }
 
+/-- A semigroup with a partial order and satisfying `right_cancel_semigroup`
+(i.e. `a * c < b * c → a < b`) is a `right_cancel semigroup`. -/
 /- This is not instance, since we want to have an instance from `right_cancel_semigroup`s
 to the appropriate `covariant_class`. -/
-/--  A semigroup with a partial order and satisfying `right_cancel_semigroup`
-(i.e. `a * c < b * c → a < b`) is a `right_cancel semigroup`. -/
 @[to_additive
-"An additive semigroup with a partial order and satisfying `right_cancel_add_semigroup`
-(`a + c < b + c → a < b`) is a `right_cancel add_semigroup`."]
-def contravariant.to_right_cancel_semigroup [semigroup α] [partial_order α]
-  [contravariant_class α α (swap (*)) (≤)] :
-  right_cancel_semigroup α :=
-{ mul_right_cancel := λ a b c, mul_right_cancel''
-  ..‹semigroup α› }
+      "An additive semigroup with a partial order and satisfying `right_cancel_add_semigroup`\n(`a + c < b + c → a < b`) is a `right_cancel add_semigroup`."]
+def Contravariant.toRightCancelSemigroup [Semigroupₓ α] [PartialOrderₓ α]
+    [ContravariantClass α α (swap (· * ·)) (· ≤ ·)] : RightCancelSemigroup α :=
+  { ‹Semigroupₓ α› with mul_right_cancel := fun a b c => mul_right_cancel'' }
 
-variables {a b c d : α}
+variable {a b c d : α}
 
-section left
-variables [preorder α]
+section Left
 
-section has_mul
-variables [has_mul α]
+variable [Preorderₓ α]
 
-@[to_additive]
-lemma mul_lt_mul_of_lt_of_lt
-  [covariant_class α α (*) (<)] [covariant_class α α (swap (*)) (<)]
-  (h₁ : a < b) (h₂ : c < d) : a * c < b * d :=
-calc  a * c < a * d : mul_lt_mul_left' h₂ a
-        ... < b * d : mul_lt_mul_right' h₁ d
+section Mul
 
-section contravariant_mul_lt_left_le_right
-variables [covariant_class α α (*) (<)] [covariant_class α α (swap (*)) (≤)]
+variable [Mul α]
 
 @[to_additive]
-lemma mul_lt_mul_of_le_of_lt
-  (h₁ : a ≤ b) (h₂ : c < d) : a * c < b * d :=
-(mul_le_mul_right' h₁ _).trans_lt (mul_lt_mul_left' h₂ b)
+theorem mul_lt_mul_of_lt_of_lt [CovariantClass α α (· * ·) (· < ·)] [CovariantClass α α (swap (· * ·)) (· < ·)]
+    (h₁ : a < b) (h₂ : c < d) : a * c < b * d :=
+  calc
+    a * c < a * d := mul_lt_mul_left' h₂ a
+    _ < b * d := mul_lt_mul_right' h₁ d
+    
+
+section ContravariantMulLtLeftLeRight
+
+variable [CovariantClass α α (· * ·) (· < ·)] [CovariantClass α α (swap (· * ·)) (· ≤ ·)]
+
+@[to_additive]
+theorem mul_lt_mul_of_le_of_lt (h₁ : a ≤ b) (h₂ : c < d) : a * c < b * d :=
+  (mul_le_mul_right' h₁ _).trans_lt (mul_lt_mul_left' h₂ b)
 
 @[to_additive add_lt_add]
-lemma mul_lt_mul''' (h₁ : a < b) (h₂ : c < d) : a * c < b * d :=
-mul_lt_mul_of_le_of_lt h₁.le h₂
+theorem mul_lt_mul''' (h₁ : a < b) (h₂ : c < d) : a * c < b * d :=
+  mul_lt_mul_of_le_of_lt h₁.le h₂
 
-end contravariant_mul_lt_left_le_right
-
-@[to_additive] lemma mul_eq_mul_iff_eq_and_eq {α : Type*} [semigroup α] [partial_order α]
-  [contravariant_class α α (*) (≤)] [covariant_class α α (swap (*)) (≤)]
-  [covariant_class α α (*) (<)] [contravariant_class α α (swap (*)) (≤)]
-  {a b c d : α} (hac : a ≤ c) (hbd : b ≤ d) : a * b = c * d ↔ a = c ∧ b = d :=
-begin
-  refine ⟨λ h, _, λ h, congr_arg2 (*) h.1 h.2⟩,
-  rcases hac.eq_or_lt with rfl | hac,
-  { exact ⟨rfl, mul_left_cancel'' h⟩ },
-  rcases eq_or_lt_of_le hbd with rfl | hbd,
-  { exact ⟨mul_right_cancel'' h, rfl⟩ },
-  exact ((mul_lt_mul''' hac hbd).ne h).elim,
-end
-
-variable [covariant_class α α (*) (≤)]
+end ContravariantMulLtLeftLeRight
 
 @[to_additive]
-lemma mul_lt_of_mul_lt_left (h : a * b < c) (hle : d ≤ b) :
-  a * d < c :=
-(mul_le_mul_left' hle a).trans_lt h
+theorem mul_eq_mul_iff_eq_and_eq {α : Type _} [Semigroupₓ α] [PartialOrderₓ α] [ContravariantClass α α (· * ·) (· ≤ ·)]
+    [CovariantClass α α (swap (· * ·)) (· ≤ ·)] [CovariantClass α α (· * ·) (· < ·)]
+    [ContravariantClass α α (swap (· * ·)) (· ≤ ·)] {a b c d : α} (hac : a ≤ c) (hbd : b ≤ d) :
+    a * b = c * d ↔ a = c ∧ b = d := by
+  refine' ⟨fun h => _, fun h => congr_arg2ₓ (· * ·) h.1 h.2⟩
+  rcases hac.eq_or_lt with (rfl | hac)
+  · exact ⟨rfl, mul_left_cancel'' h⟩
+    
+  rcases eq_or_lt_of_le hbd with (rfl | hbd)
+  · exact ⟨mul_right_cancel'' h, rfl⟩
+    
+  exact ((mul_lt_mul''' hac hbd).Ne h).elim
+
+variable [CovariantClass α α (· * ·) (· ≤ ·)]
 
 @[to_additive]
-lemma mul_le_of_mul_le_left (h : a * b ≤ c) (hle : d ≤ b) :
-  a * d ≤ c :=
-@act_rel_of_rel_of_act_rel _ _ _ (≤) _ ⟨λ _ _ _, le_trans⟩ a _ _ _ hle h
+theorem mul_lt_of_mul_lt_left (h : a * b < c) (hle : d ≤ b) : a * d < c :=
+  (mul_le_mul_left' hle a).trans_lt h
 
 @[to_additive]
-lemma lt_mul_of_lt_mul_left (h : a < b * c) (hle : c ≤ d) :
-  a < b * d :=
-h.trans_le (mul_le_mul_left' hle b)
+theorem mul_le_of_mul_le_left (h : a * b ≤ c) (hle : d ≤ b) : a * d ≤ c :=
+  @act_rel_of_rel_of_act_rel _ _ _ (· ≤ ·) _ ⟨fun _ _ _ => le_transₓ⟩ a _ _ _ hle h
 
 @[to_additive]
-lemma le_mul_of_le_mul_left (h : a ≤ b * c) (hle : c ≤ d) :
-  a ≤ b * d :=
-@rel_act_of_rel_of_rel_act _ _ _ (≤) _ ⟨λ _ _ _, le_trans⟩ b _ _ _ hle h
+theorem lt_mul_of_lt_mul_left (h : a < b * c) (hle : c ≤ d) : a < b * d :=
+  h.trans_le (mul_le_mul_left' hle b)
 
 @[to_additive]
-lemma mul_lt_mul_of_lt_of_le [covariant_class α α (swap (*)) (<)]
-  (h₁ : a < b) (h₂ : c ≤ d) : a * c < b * d :=
-(mul_le_mul_left' h₂ _).trans_lt (mul_lt_mul_right' h₁ d)
+theorem le_mul_of_le_mul_left (h : a ≤ b * c) (hle : c ≤ d) : a ≤ b * d :=
+  @rel_act_of_rel_of_rel_act _ _ _ (· ≤ ·) _ ⟨fun _ _ _ => le_transₓ⟩ b _ _ _ hle h
 
-end has_mul
+@[to_additive]
+theorem mul_lt_mul_of_lt_of_le [CovariantClass α α (swap (· * ·)) (· < ·)] (h₁ : a < b) (h₂ : c ≤ d) : a * c < b * d :=
+  (mul_le_mul_left' h₂ _).trans_lt (mul_lt_mul_right' h₁ d)
+
+end Mul
 
 /-!  Here we start using properties of one, on the left. -/
-section mul_one_class
-variables [mul_one_class α] [covariant_class α α (*) (≤)]
+
+
+section MulOneClassₓ
+
+variable [MulOneClassₓ α] [CovariantClass α α (· * ·) (· ≤ ·)]
 
 @[to_additive]
-lemma lt_of_mul_lt_of_one_le_left (h : a * b < c) (hle : 1 ≤ b) : a < c :=
-(le_mul_of_one_le_right' hle).trans_lt h
+theorem lt_of_mul_lt_of_one_le_left (h : a * b < c) (hle : 1 ≤ b) : a < c :=
+  (le_mul_of_one_le_right' hle).trans_lt h
 
 @[to_additive]
-lemma le_of_mul_le_of_one_le_left (h : a * b ≤ c) (hle : 1 ≤ b) : a ≤ c :=
-(le_mul_of_one_le_right' hle).trans h
+theorem le_of_mul_le_of_one_le_left (h : a * b ≤ c) (hle : 1 ≤ b) : a ≤ c :=
+  (le_mul_of_one_le_right' hle).trans h
 
 @[to_additive]
-lemma lt_of_lt_mul_of_le_one_left (h : a < b * c) (hle : c ≤ 1) : a < b :=
-h.trans_le (mul_le_of_le_one_right' hle)
+theorem lt_of_lt_mul_of_le_one_left (h : a < b * c) (hle : c ≤ 1) : a < b :=
+  h.trans_le (mul_le_of_le_one_right' hle)
 
 @[to_additive]
-lemma le_of_le_mul_of_le_one_left (h : a ≤ b * c) (hle : c ≤ 1) : a ≤ b :=
-h.trans (mul_le_of_le_one_right' hle)
+theorem le_of_le_mul_of_le_one_left (h : a ≤ b * c) (hle : c ≤ 1) : a ≤ b :=
+  h.trans (mul_le_of_le_one_right' hle)
 
 @[to_additive]
-theorem mul_lt_of_lt_of_lt_one (bc : b < c) (a1 : a < 1) :
-  b * a < c :=
-calc  b * a ≤ b * 1 : mul_le_mul_left' a1.le _
-        ... = b     : mul_one b
-        ... < c     : bc
+theorem mul_lt_of_lt_of_lt_one (bc : b < c) (a1 : a < 1) : b * a < c :=
+  calc
+    b * a ≤ b * 1 := mul_le_mul_left' a1.le _
+    _ = b := mul_oneₓ b
+    _ < c := bc
+    
 
-end mul_one_class
+end MulOneClassₓ
 
-end left
+end Left
 
-section right
+section Right
 
-section preorder
-variables [preorder α]
+section Preorderₓ
 
-section has_mul
-variables [has_mul α]
+variable [Preorderₓ α]
 
-variable [covariant_class α α (swap (*)) (≤)]
+section Mul
 
-@[to_additive]
-lemma mul_lt_of_mul_lt_right (h : a * b < c) (hle : d ≤ a) :
-  d * b < c :=
-(mul_le_mul_right' hle b).trans_lt h
+variable [Mul α]
+
+variable [CovariantClass α α (swap (· * ·)) (· ≤ ·)]
 
 @[to_additive]
-lemma mul_le_of_mul_le_right (h : a * b ≤ c) (hle : d ≤ a) :
-  d * b ≤ c :=
-(mul_le_mul_right' hle b).trans h
+theorem mul_lt_of_mul_lt_right (h : a * b < c) (hle : d ≤ a) : d * b < c :=
+  (mul_le_mul_right' hle b).trans_lt h
 
 @[to_additive]
-lemma lt_mul_of_lt_mul_right (h : a < b * c) (hle : b ≤ d) :
-  a < d * c :=
-h.trans_le (mul_le_mul_right' hle c)
+theorem mul_le_of_mul_le_right (h : a * b ≤ c) (hle : d ≤ a) : d * b ≤ c :=
+  (mul_le_mul_right' hle b).trans h
 
 @[to_additive]
-lemma le_mul_of_le_mul_right (h : a ≤ b * c) (hle : b ≤ d) :
-  a ≤ d * c :=
-h.trans (mul_le_mul_right' hle c)
+theorem lt_mul_of_lt_mul_right (h : a < b * c) (hle : b ≤ d) : a < d * c :=
+  h.trans_le (mul_le_mul_right' hle c)
 
-variable [covariant_class α α (*) (≤)]
+@[to_additive]
+theorem le_mul_of_le_mul_right (h : a ≤ b * c) (hle : b ≤ d) : a ≤ d * c :=
+  h.trans (mul_le_mul_right' hle c)
+
+variable [CovariantClass α α (· * ·) (· ≤ ·)]
 
 @[to_additive add_le_add]
-lemma mul_le_mul' (h₁ : a ≤ b) (h₂ : c ≤ d) : a * c ≤ b * d :=
-(mul_le_mul_left' h₂ _).trans (mul_le_mul_right' h₁ d)
+theorem mul_le_mul' (h₁ : a ≤ b) (h₂ : c ≤ d) : a * c ≤ b * d :=
+  (mul_le_mul_left' h₂ _).trans (mul_le_mul_right' h₁ d)
 
 @[to_additive]
-lemma mul_le_mul_three {e f : α} (h₁ : a ≤ d) (h₂ : b ≤ e) (h₃ : c ≤ f) :
-  a * b * c ≤ d * e * f :=
-mul_le_mul' (mul_le_mul' h₁ h₂) h₃
+theorem mul_le_mul_three {e f : α} (h₁ : a ≤ d) (h₂ : b ≤ e) (h₃ : c ≤ f) : a * b * c ≤ d * e * f :=
+  mul_le_mul' (mul_le_mul' h₁ h₂) h₃
 
-end has_mul
+end Mul
 
 /-!  Here we start using properties of one, on the right. -/
-section mul_one_class
-variables [mul_one_class α]
 
-section le_right
-variable [covariant_class α α (swap (*)) (≤)]
+
+section MulOneClassₓ
+
+variable [MulOneClassₓ α]
+
+section LeRight
+
+variable [CovariantClass α α (swap (· * ·)) (· ≤ ·)]
 
 @[to_additive le_add_of_nonneg_left]
-lemma le_mul_of_one_le_left' (h : 1 ≤ b) : a ≤ b * a :=
-calc  a = 1 * a : (one_mul a).symm
-    ... ≤ b * a : mul_le_mul_right' h a
+theorem le_mul_of_one_le_left' (h : 1 ≤ b) : a ≤ b * a :=
+  calc
+    a = 1 * a := (one_mulₓ a).symm
+    _ ≤ b * a := mul_le_mul_right' h a
+    
 
 @[to_additive add_le_of_nonpos_left]
-lemma mul_le_of_le_one_left' (h : b ≤ 1) : b * a ≤ a :=
-calc  b * a ≤ 1 * a : mul_le_mul_right' h a
-        ... = a     : one_mul a
+theorem mul_le_of_le_one_left' (h : b ≤ 1) : b * a ≤ a :=
+  calc
+    b * a ≤ 1 * a := mul_le_mul_right' h a
+    _ = a := one_mulₓ a
+    
 
 @[to_additive]
-lemma lt_of_mul_lt_of_one_le_right (h : a * b < c) (hle : 1 ≤ a) : b < c :=
-(le_mul_of_one_le_left' hle).trans_lt h
+theorem lt_of_mul_lt_of_one_le_right (h : a * b < c) (hle : 1 ≤ a) : b < c :=
+  (le_mul_of_one_le_left' hle).trans_lt h
 
 @[to_additive]
-lemma le_of_mul_le_of_one_le_right (h : a * b ≤ c) (hle : 1 ≤ a) : b ≤ c :=
-(le_mul_of_one_le_left' hle).trans h
+theorem le_of_mul_le_of_one_le_right (h : a * b ≤ c) (hle : 1 ≤ a) : b ≤ c :=
+  (le_mul_of_one_le_left' hle).trans h
 
 @[to_additive]
-lemma lt_of_lt_mul_of_le_one_right (h : a < b * c) (hle : b ≤ 1) : a < c :=
-h.trans_le (mul_le_of_le_one_left' hle)
+theorem lt_of_lt_mul_of_le_one_right (h : a < b * c) (hle : b ≤ 1) : a < c :=
+  h.trans_le (mul_le_of_le_one_left' hle)
 
 @[to_additive]
-lemma le_of_le_mul_of_le_one_right (h : a ≤ b * c) (hle : b ≤ 1) : a ≤ c :=
-h.trans (mul_le_of_le_one_left' hle)
+theorem le_of_le_mul_of_le_one_right (h : a ≤ b * c) (hle : b ≤ 1) : a ≤ c :=
+  h.trans (mul_le_of_le_one_left' hle)
 
-theorem mul_lt_of_lt_one_of_lt (a1 : a < 1) (bc : b < c) :
-  a * b < c :=
-calc  a * b ≤ 1 * b : mul_le_mul_right' a1.le _
-        ... = b : one_mul b
-        ... < c : bc
+theorem mul_lt_of_lt_one_of_lt (a1 : a < 1) (bc : b < c) : a * b < c :=
+  calc
+    a * b ≤ 1 * b := mul_le_mul_right' a1.le _
+    _ = b := one_mulₓ b
+    _ < c := bc
+    
 
-end le_right
+end LeRight
 
-section lt_right
+section LtRight
 
 @[to_additive lt_add_of_pos_left]
-lemma lt_mul_of_one_lt_left' [covariant_class α α (swap (*)) (<)]
-  (a : α) {b : α} (h : 1 < b) : a < b * a :=
-calc a = 1 * a : (one_mul _).symm
-   ... < b * a : mul_lt_mul_right' h a
+theorem lt_mul_of_one_lt_left' [CovariantClass α α (swap (· * ·)) (· < ·)] (a : α) {b : α} (h : 1 < b) : a < b * a :=
+  calc
+    a = 1 * a := (one_mulₓ _).symm
+    _ < b * a := mul_lt_mul_right' h a
+    
 
-end lt_right
+end LtRight
 
-end mul_one_class
+end MulOneClassₓ
 
-end preorder
+end Preorderₓ
 
-end right
+end Right
 
-section preorder
-variables [preorder α]
+section Preorderₓ
 
-section mul_one_class
-variables [mul_one_class α]
+variable [Preorderₓ α]
 
-section covariant_left
-variable [covariant_class α α (*) (≤)]
+section MulOneClassₓ
+
+variable [MulOneClassₓ α]
+
+section CovariantLeft
+
+variable [CovariantClass α α (· * ·) (· ≤ ·)]
 
 @[to_additive add_pos_of_pos_of_nonneg]
-lemma one_lt_mul_of_lt_of_le' (ha : 1 < a) (hb : 1 ≤ b) : 1 < a * b :=
-lt_of_lt_of_le ha $ le_mul_of_one_le_right' hb
+theorem one_lt_mul_of_lt_of_le' (ha : 1 < a) (hb : 1 ≤ b) : 1 < a * b :=
+  lt_of_lt_of_leₓ ha <| le_mul_of_one_le_right' hb
 
 @[to_additive add_pos]
-lemma one_lt_mul' (ha : 1 < a) (hb : 1 < b) : 1 < a * b :=
-one_lt_mul_of_lt_of_le' ha hb.le
+theorem one_lt_mul' (ha : 1 < a) (hb : 1 < b) : 1 < a * b :=
+  one_lt_mul_of_lt_of_le' ha hb.le
 
 @[to_additive]
-lemma lt_mul_of_lt_of_one_le' (hbc : b < c) (ha : 1 ≤ a) :
-  b < c * a :=
-hbc.trans_le $ le_mul_of_one_le_right' ha
+theorem lt_mul_of_lt_of_one_le' (hbc : b < c) (ha : 1 ≤ a) : b < c * a :=
+  hbc.trans_le <| le_mul_of_one_le_right' ha
 
 @[to_additive]
-lemma lt_mul_of_lt_of_one_lt' (hbc : b < c) (ha : 1 < a) :
-  b < c * a :=
-lt_mul_of_lt_of_one_le' hbc ha.le
+theorem lt_mul_of_lt_of_one_lt' (hbc : b < c) (ha : 1 < a) : b < c * a :=
+  lt_mul_of_lt_of_one_le' hbc ha.le
 
 @[to_additive]
-lemma le_mul_of_le_of_one_le (hbc : b ≤ c) (ha : 1 ≤ a) : b ≤ c * a :=
-calc  b ≤ c : hbc
-    ... = c * 1 : (mul_one c).symm
-    ... ≤ c * a : mul_le_mul_left' ha c
+theorem le_mul_of_le_of_one_le (hbc : b ≤ c) (ha : 1 ≤ a) : b ≤ c * a :=
+  calc
+    b ≤ c := hbc
+    _ = c * 1 := (mul_oneₓ c).symm
+    _ ≤ c * a := mul_le_mul_left' ha c
+    
 
 @[to_additive add_nonneg]
-lemma one_le_mul_right (ha : 1 ≤ a) (hb : 1 ≤ b) : 1 ≤ a * b :=
-calc  1 ≤ a     : ha
-    ... = a * 1 : (mul_one a).symm
-    ... ≤ a * b : mul_le_mul_left' hb a
+theorem one_le_mul_right (ha : 1 ≤ a) (hb : 1 ≤ b) : 1 ≤ a * b :=
+  calc
+    1 ≤ a := ha
+    _ = a * 1 := (mul_oneₓ a).symm
+    _ ≤ a * b := mul_le_mul_left' hb a
+    
 
-end covariant_left
+end CovariantLeft
 
-section covariant_right
-variable [covariant_class α α (swap (*)) (≤)]
+section CovariantRight
+
+variable [CovariantClass α α (swap (· * ·)) (· ≤ ·)]
 
 @[to_additive add_pos_of_nonneg_of_pos]
-lemma one_lt_mul_of_le_of_lt' (ha : 1 ≤ a) (hb : 1 < b) : 1 < a * b :=
-lt_of_lt_of_le hb $ le_mul_of_one_le_left' ha
+theorem one_lt_mul_of_le_of_lt' (ha : 1 ≤ a) (hb : 1 < b) : 1 < a * b :=
+  lt_of_lt_of_leₓ hb <| le_mul_of_one_le_left' ha
 
 @[to_additive]
-lemma lt_mul_of_one_le_of_lt (ha : 1 ≤ a) (hbc : b < c) : b < a * c :=
-hbc.trans_le $ le_mul_of_one_le_left' ha
+theorem lt_mul_of_one_le_of_lt (ha : 1 ≤ a) (hbc : b < c) : b < a * c :=
+  hbc.trans_le <| le_mul_of_one_le_left' ha
 
 @[to_additive]
-lemma lt_mul_of_one_lt_of_lt (ha : 1 < a) (hbc : b < c) : b < a * c :=
-lt_mul_of_one_le_of_lt ha.le hbc
+theorem lt_mul_of_one_lt_of_lt (ha : 1 < a) (hbc : b < c) : b < a * c :=
+  lt_mul_of_one_le_of_lt ha.le hbc
 
-end covariant_right
+end CovariantRight
 
-end mul_one_class
+end MulOneClassₓ
 
-end preorder
+end Preorderₓ
 
-section partial_order
+section PartialOrderₓ
 
 /-!  Properties assuming `partial_order`. -/
-variables [mul_one_class α] [partial_order α]
-  [covariant_class α α (*) (≤)] [covariant_class α α (swap (*)) (≤)]
+
+
+variable [MulOneClassₓ α] [PartialOrderₓ α] [CovariantClass α α (· * ·) (· ≤ ·)]
+  [CovariantClass α α (swap (· * ·)) (· ≤ ·)]
 
 @[to_additive]
-lemma mul_eq_one_iff' (ha : 1 ≤ a) (hb : 1 ≤ b) : a * b = 1 ↔ a = 1 ∧ b = 1 :=
-iff.intro
-  (assume hab : a * b = 1,
-   have a ≤ 1, from hab ▸ le_mul_of_le_of_one_le le_rfl hb,
-   have a = 1, from le_antisymm this ha,
-   have b ≤ 1, from hab ▸ le_mul_of_one_le_of_le ha le_rfl,
-   have b = 1, from le_antisymm this hb,
-   and.intro ‹a = 1› ‹b = 1›)
-  (assume ⟨ha', hb'⟩, by rw [ha', hb', mul_one])
+theorem mul_eq_one_iff' (ha : 1 ≤ a) (hb : 1 ≤ b) : a * b = 1 ↔ a = 1 ∧ b = 1 :=
+  Iff.intro
+    (fun hab : a * b = 1 =>
+      have : a ≤ 1 := hab ▸ le_mul_of_le_of_one_le le_rfl hb
+      have : a = 1 := le_antisymmₓ this ha
+      have : b ≤ 1 := hab ▸ le_mul_of_one_le_of_le ha le_rfl
+      have : b = 1 := le_antisymmₓ this hb
+      And.intro ‹a = 1› ‹b = 1›)
+    fun ⟨ha', hb'⟩ => by
+    rw [ha', hb', mul_oneₓ]
 
-end partial_order
+end PartialOrderₓ
 
-section mono
-variables [has_mul α] [preorder α] [preorder β] {f g : β → α}
+section Mono
 
-@[to_additive monotone.const_add]
-lemma monotone.const_mul' [covariant_class α α (*) (≤)] (hf : monotone f) (a : α) :
-  monotone (λ x, a * f x) :=
-λ x y h, mul_le_mul_left' (hf h) a
+variable [Mul α] [Preorderₓ α] [Preorderₓ β] {f g : β → α}
 
-@[to_additive monotone.add_const]
-lemma monotone.mul_const' [covariant_class α α (swap (*)) (≤)]
-  (hf : monotone f) (a : α) : monotone (λ x, f x * a) :=
-λ x y h, mul_le_mul_right' (hf h) a
+@[to_additive Monotone.const_add]
+theorem Monotone.const_mul' [CovariantClass α α (· * ·) (· ≤ ·)] (hf : Monotone f) (a : α) :
+    Monotone fun x => a * f x := fun x y h => mul_le_mul_left' (hf h) a
 
-/--  The product of two monotone functions is monotone. -/
-@[to_additive monotone.add "The sum of two monotone functions is monotone."]
-lemma monotone.mul' [covariant_class α α (*) (≤)] [covariant_class α α (swap (*)) (≤)]
-  (hf : monotone f) (hg : monotone g) : monotone (λ x, f x * g x) :=
-λ x y h, mul_le_mul' (hf h) (hg h)
+@[to_additive Monotone.add_const]
+theorem Monotone.mul_const' [CovariantClass α α (swap (· * ·)) (· ≤ ·)] (hf : Monotone f) (a : α) :
+    Monotone fun x => f x * a := fun x y h => mul_le_mul_right' (hf h) a
 
-section left
-variables [covariant_class α α (*) (<)]
+/-- The product of two monotone functions is monotone. -/
+@[to_additive Monotone.add "The sum of two monotone functions is monotone."]
+theorem Monotone.mul' [CovariantClass α α (· * ·) (· ≤ ·)] [CovariantClass α α (swap (· * ·)) (· ≤ ·)] (hf : Monotone f)
+    (hg : Monotone g) : Monotone fun x => f x * g x := fun x y h => mul_le_mul' (hf h) (hg h)
 
-@[to_additive strict_mono.const_add]
-lemma strict_mono.const_mul' (hf : strict_mono f) (c : α) :
-  strict_mono (λ x, c * f x) :=
-λ a b ab, mul_lt_mul_left' (hf ab) c
+section Left
 
-end left
+variable [CovariantClass α α (· * ·) (· < ·)]
 
-section right
-variables [covariant_class α α (swap (*)) (<)]
+@[to_additive StrictMono.const_add]
+theorem StrictMono.const_mul' (hf : StrictMono f) (c : α) : StrictMono fun x => c * f x := fun a b ab =>
+  mul_lt_mul_left' (hf ab) c
 
-@[to_additive strict_mono.add_const]
-lemma strict_mono.mul_const' (hf : strict_mono f) (c : α) :
-  strict_mono (λ x, f x * c) :=
-λ a b ab, mul_lt_mul_right' (hf ab) c
+end Left
 
-end right
+section Right
 
-/--  The product of two strictly monotone functions is strictly monotone. -/
-@[to_additive strict_mono.add
-"The sum of two strictly monotone functions is strictly monotone."]
-lemma strict_mono.mul' [covariant_class α α (*) (<)] [covariant_class α α (swap (*)) (<)]
-  (hf : strict_mono f) (hg : strict_mono g) :
-  strict_mono (λ x, f x * g x) :=
-λ a b ab, mul_lt_mul_of_lt_of_lt (hf ab) (hg ab)
+variable [CovariantClass α α (swap (· * ·)) (· < ·)]
 
-/--  The product of a monotone function and a strictly monotone function is strictly monotone. -/
-@[to_additive monotone.add_strict_mono
-"The sum of a monotone function and a strictly monotone function is strictly monotone."]
-lemma monotone.mul_strict_mono' [covariant_class α α (*) (<)] [covariant_class α α (swap (*)) (≤)]
-  {f g : β → α} (hf : monotone f) (hg : strict_mono g) :
-  strict_mono (λ x, f x * g x) :=
-λ x y h, mul_lt_mul_of_le_of_lt (hf h.le) (hg h)
+@[to_additive StrictMono.add_const]
+theorem StrictMono.mul_const' (hf : StrictMono f) (c : α) : StrictMono fun x => f x * c := fun a b ab =>
+  mul_lt_mul_right' (hf ab) c
 
-variables [covariant_class α α (*) (≤)] [covariant_class α α (swap (*)) (<)]
+end Right
 
-/--  The product of a strictly monotone function and a monotone function is strictly monotone. -/
-@[to_additive strict_mono.add_monotone
-"The sum of a strictly monotone function and a monotone function is strictly monotone."]
-lemma strict_mono.mul_monotone' (hf : strict_mono f) (hg : monotone g) :
-  strict_mono (λ x, f x * g x) :=
-λ x y h, mul_lt_mul_of_lt_of_le (hf h) (hg h.le)
+/-- The product of two strictly monotone functions is strictly monotone. -/
+@[to_additive StrictMono.add "The sum of two strictly monotone functions is strictly monotone."]
+theorem StrictMono.mul' [CovariantClass α α (· * ·) (· < ·)] [CovariantClass α α (swap (· * ·)) (· < ·)]
+    (hf : StrictMono f) (hg : StrictMono g) : StrictMono fun x => f x * g x := fun a b ab =>
+  mul_lt_mul_of_lt_of_lt (hf ab) (hg ab)
 
-end mono
+/-- The product of a monotone function and a strictly monotone function is strictly monotone. -/
+@[to_additive Monotone.add_strict_mono
+      "The sum of a monotone function and a strictly monotone function is strictly monotone."]
+theorem Monotone.mul_strict_mono' [CovariantClass α α (· * ·) (· < ·)] [CovariantClass α α (swap (· * ·)) (· ≤ ·)]
+    {f g : β → α} (hf : Monotone f) (hg : StrictMono g) : StrictMono fun x => f x * g x := fun x y h =>
+  mul_lt_mul_of_le_of_lt (hf h.le) (hg h)
 
-/--
-An element `a : α` is `mul_le_cancellable` if `x ↦ a * x` is order-reflecting.
+variable [CovariantClass α α (· * ·) (· ≤ ·)] [CovariantClass α α (swap (· * ·)) (· < ·)]
+
+/-- The product of a strictly monotone function and a monotone function is strictly monotone. -/
+@[to_additive StrictMono.add_monotone
+      "The sum of a strictly monotone function and a monotone function is strictly monotone."]
+theorem StrictMono.mul_monotone' (hf : StrictMono f) (hg : Monotone g) : StrictMono fun x => f x * g x := fun x y h =>
+  mul_lt_mul_of_lt_of_le (hf h) (hg h.le)
+
+end Mono
+
+/-- An element `a : α` is `mul_le_cancellable` if `x ↦ a * x` is order-reflecting.
 We will make a separate version of many lemmas that require `[contravariant_class α α (*) (≤)]` with
 `mul_le_cancellable` assumptions instead. These lemmas can then be instantiated to specific types,
 like `ennreal`, where we can replace the assumption `add_le_cancellable x` by `x ≠ ∞`.
 -/
-@[to_additive /-" An element `a : α` is `add_le_cancellable` if `x ↦ a + x` is order-reflecting.
-We will make a separate version of many lemmas that require `[contravariant_class α α (+) (≤)]` with
-`mul_le_cancellable` assumptions instead. These lemmas can then be instantiated to specific types,
-like `ennreal`, where we can replace the assumption `add_le_cancellable x` by `x ≠ ∞`. "-/
-]
-def mul_le_cancellable [has_mul α] [has_le α] (a : α) : Prop :=
-∀ ⦃b c⦄, a * b ≤ a * c → b ≤ c
+@[to_additive
+      " An element `a : α` is `add_le_cancellable` if `x ↦ a + x` is order-reflecting.\nWe will make a separate version of many lemmas that require `[contravariant_class α α (+) (≤)]` with\n`mul_le_cancellable` assumptions instead. These lemmas can then be instantiated to specific types,\nlike `ennreal`, where we can replace the assumption `add_le_cancellable x` by `x ≠ ∞`. "]
+def MulLeCancellable [Mul α] [LE α] (a : α) : Prop :=
+  ∀ ⦃b c⦄, a * b ≤ a * c → b ≤ c
 
 @[to_additive]
-lemma contravariant.mul_le_cancellable [has_mul α] [has_le α] [contravariant_class α α (*) (≤)]
-  {a : α} : mul_le_cancellable a :=
-λ b c, le_of_mul_le_mul_left'
+theorem Contravariant.mul_le_cancellable [Mul α] [LE α] [ContravariantClass α α (· * ·) (· ≤ ·)] {a : α} :
+    MulLeCancellable a := fun b c => le_of_mul_le_mul_left'
 
-namespace mul_le_cancellable
-
-@[to_additive]
-protected lemma injective [has_mul α] [partial_order α] {a : α} (ha : mul_le_cancellable a) :
-  injective ((*) a) :=
-λ b c h, le_antisymm (ha h.le) (ha h.ge)
+namespace MulLeCancellable
 
 @[to_additive]
-protected lemma inj [has_mul α] [partial_order α] {a b c : α} (ha : mul_le_cancellable a) :
-  a * b = a * c ↔ b = c :=
-ha.injective.eq_iff
+protected theorem injective [Mul α] [PartialOrderₓ α] {a : α} (ha : MulLeCancellable a) : Injective ((· * ·) a) :=
+  fun b c h => le_antisymmₓ (ha h.le) (ha h.Ge)
 
 @[to_additive]
-protected lemma injective_left [comm_semigroup α] [partial_order α] {a : α}
-  (ha : mul_le_cancellable a) : injective (* a) :=
-λ b c h, ha.injective $ by rwa [mul_comm a, mul_comm a]
+protected theorem inj [Mul α] [PartialOrderₓ α] {a b c : α} (ha : MulLeCancellable a) : a * b = a * c ↔ b = c :=
+  ha.Injective.eq_iff
 
 @[to_additive]
-protected lemma inj_left [comm_semigroup α] [partial_order α] {a b c : α}
-  (hc : mul_le_cancellable c) : a * c = b * c ↔ a = b :=
-hc.injective_left.eq_iff
-
-variable [has_le α]
-
-@[to_additive]
-protected lemma mul_le_mul_iff_left [has_mul α] [covariant_class α α (*) (≤)]
-  {a b c : α} (ha : mul_le_cancellable a) : a * b ≤ a * c ↔ b ≤ c :=
-⟨λ h, ha h, λ h, mul_le_mul_left' h a⟩
+protected theorem injective_left [CommSemigroupₓ α] [PartialOrderₓ α] {a : α} (ha : MulLeCancellable a) :
+    Injective (· * a) := fun b c h =>
+  ha.Injective <| by
+    rwa [mul_comm a, mul_comm a]
 
 @[to_additive]
-protected lemma mul_le_mul_iff_right [comm_semigroup α] [covariant_class α α (*) (≤)]
-  {a b c : α} (ha : mul_le_cancellable a) : b * a ≤ c * a ↔ b ≤ c :=
-by rw [mul_comm b, mul_comm c, ha.mul_le_mul_iff_left]
+protected theorem inj_left [CommSemigroupₓ α] [PartialOrderₓ α] {a b c : α} (hc : MulLeCancellable c) :
+    a * c = b * c ↔ a = b :=
+  hc.injective_left.eq_iff
+
+variable [LE α]
 
 @[to_additive]
-protected lemma le_mul_iff_one_le_right [mul_one_class α] [covariant_class α α (*) (≤)]
-  {a b : α} (ha : mul_le_cancellable a) : a ≤ a * b ↔ 1 ≤ b :=
-iff.trans (by rw [mul_one]) ha.mul_le_mul_iff_left
+protected theorem mul_le_mul_iff_left [Mul α] [CovariantClass α α (· * ·) (· ≤ ·)] {a b c : α}
+    (ha : MulLeCancellable a) : a * b ≤ a * c ↔ b ≤ c :=
+  ⟨fun h => ha h, fun h => mul_le_mul_left' h a⟩
 
 @[to_additive]
-protected lemma mul_le_iff_le_one_right [mul_one_class α] [covariant_class α α (*) (≤)]
-  {a b : α} (ha : mul_le_cancellable a) : a * b ≤ a ↔ b ≤ 1 :=
-iff.trans (by rw [mul_one]) ha.mul_le_mul_iff_left
+protected theorem mul_le_mul_iff_right [CommSemigroupₓ α] [CovariantClass α α (· * ·) (· ≤ ·)] {a b c : α}
+    (ha : MulLeCancellable a) : b * a ≤ c * a ↔ b ≤ c := by
+  rw [mul_comm b, mul_comm c, ha.mul_le_mul_iff_left]
 
 @[to_additive]
-protected lemma le_mul_iff_one_le_left [comm_monoid α] [covariant_class α α (*) (≤)]
-  {a b : α} (ha : mul_le_cancellable a) : a ≤ b * a ↔ 1 ≤ b :=
-by rw [mul_comm, ha.le_mul_iff_one_le_right]
+protected theorem le_mul_iff_one_le_right [MulOneClassₓ α] [CovariantClass α α (· * ·) (· ≤ ·)] {a b : α}
+    (ha : MulLeCancellable a) : a ≤ a * b ↔ 1 ≤ b :=
+  Iff.trans
+    (by
+      rw [mul_oneₓ])
+    ha.mul_le_mul_iff_left
 
 @[to_additive]
-protected lemma mul_le_iff_le_one_left [comm_monoid α] [covariant_class α α (*) (≤)]
-  {a b : α} (ha : mul_le_cancellable a) : b * a ≤ a ↔ b ≤ 1 :=
-by rw [mul_comm, ha.mul_le_iff_le_one_right]
+protected theorem mul_le_iff_le_one_right [MulOneClassₓ α] [CovariantClass α α (· * ·) (· ≤ ·)] {a b : α}
+    (ha : MulLeCancellable a) : a * b ≤ a ↔ b ≤ 1 :=
+  Iff.trans
+    (by
+      rw [mul_oneₓ])
+    ha.mul_le_mul_iff_left
 
-end mul_le_cancellable
+@[to_additive]
+protected theorem le_mul_iff_one_le_left [CommMonoidₓ α] [CovariantClass α α (· * ·) (· ≤ ·)] {a b : α}
+    (ha : MulLeCancellable a) : a ≤ b * a ↔ 1 ≤ b := by
+  rw [mul_comm, ha.le_mul_iff_one_le_right]
+
+@[to_additive]
+protected theorem mul_le_iff_le_one_left [CommMonoidₓ α] [CovariantClass α α (· * ·) (· ≤ ·)] {a b : α}
+    (ha : MulLeCancellable a) : b * a ≤ a ↔ b ≤ 1 := by
+  rw [mul_comm, ha.mul_le_iff_le_one_right]
+
+end MulLeCancellable
+

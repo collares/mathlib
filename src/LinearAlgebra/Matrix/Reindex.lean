@@ -3,8 +3,7 @@ Copyright (c) 2019 Johannes Hölzl. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johannes Hölzl, Patrick Massot, Casper Putz, Anne Baanen
 -/
-
-import linear_algebra.matrix.determinant
+import Mathbin.LinearAlgebra.Matrix.Determinant
 
 /-!
 # Changing the index type of a matrix
@@ -24,126 +23,129 @@ matrix, reindex
 
 -/
 
-namespace matrix
 
-open equiv
+namespace Matrix
 
-open_locale matrix
+open Equivₓ
 
+open_locale Matrix
 
+variable {l m n o : Type _} {l' m' n' o' : Type _} {m'' n'' : Type _}
 
-variables {l m n o : Type*} {l' m' n' o' : Type*} {m'' n'' : Type*}
-variables (R A : Type*)
+variable (R A : Type _)
 
-section add_comm_monoid
-variables [semiring R] [add_comm_monoid A] [module R A]
+section AddCommMonoidₓ
+
+variable [Semiringₓ R] [AddCommMonoidₓ A] [Module R A]
 
 /-- The natural map that reindexes a matrix's rows and columns with equivalent types,
 `matrix.reindex`, is a linear equivalence. -/
-def reindex_linear_equiv (eₘ : m ≃ m') (eₙ : n ≃ n') : matrix m n A ≃ₗ[R] matrix m' n' A :=
-{ map_add'  := λ _ _, rfl,
-  map_smul' := λ _ _, rfl,
-  ..(reindex eₘ eₙ)}
+def reindexLinearEquiv (eₘ : m ≃ m') (eₙ : n ≃ n') : Matrix m n A ≃ₗ[R] Matrix m' n' A :=
+  { reindex eₘ eₙ with map_add' := fun _ _ => rfl, map_smul' := fun _ _ => rfl }
 
-@[simp] lemma reindex_linear_equiv_apply
-  (eₘ : m ≃ m') (eₙ : n ≃ n') (M : matrix m n A) :
-  reindex_linear_equiv R A eₘ eₙ M = reindex eₘ eₙ M :=
-rfl
+@[simp]
+theorem reindex_linear_equiv_apply (eₘ : m ≃ m') (eₙ : n ≃ n') (M : Matrix m n A) :
+    reindexLinearEquiv R A eₘ eₙ M = reindex eₘ eₙ M :=
+  rfl
 
-@[simp] lemma reindex_linear_equiv_symm (eₘ : m ≃ m') (eₙ : n ≃ n') :
-  (reindex_linear_equiv R A eₘ eₙ).symm = reindex_linear_equiv R A eₘ.symm eₙ.symm :=
-rfl
+@[simp]
+theorem reindex_linear_equiv_symm (eₘ : m ≃ m') (eₙ : n ≃ n') :
+    (reindexLinearEquiv R A eₘ eₙ).symm = reindexLinearEquiv R A eₘ.symm eₙ.symm :=
+  rfl
 
-@[simp] lemma reindex_linear_equiv_refl_refl :
-  reindex_linear_equiv R A (equiv.refl m) (equiv.refl n) = linear_equiv.refl R _ :=
-linear_equiv.ext $ λ _, rfl
+@[simp]
+theorem reindex_linear_equiv_refl_refl :
+    reindexLinearEquiv R A (Equivₓ.refl m) (Equivₓ.refl n) = LinearEquiv.refl R _ :=
+  LinearEquiv.ext fun _ => rfl
 
-lemma reindex_linear_equiv_trans (e₁ : m ≃ m') (e₂ : n ≃ n') (e₁' : m' ≃ m'')
-  (e₂' : n' ≃ n'') : (reindex_linear_equiv R A e₁ e₂).trans (reindex_linear_equiv R A e₁' e₂') =
-   (reindex_linear_equiv R A (e₁.trans e₁') (e₂.trans e₂') : _ ≃ₗ[R] _) :=
-by { ext, refl }
+theorem reindex_linear_equiv_trans (e₁ : m ≃ m') (e₂ : n ≃ n') (e₁' : m' ≃ m'') (e₂' : n' ≃ n'') :
+    (reindexLinearEquiv R A e₁ e₂).trans (reindexLinearEquiv R A e₁' e₂') =
+      (reindexLinearEquiv R A (e₁.trans e₁') (e₂.trans e₂') : _ ≃ₗ[R] _) :=
+  by
+  ext
+  rfl
 
-lemma reindex_linear_equiv_comp (e₁ : m ≃ m') (e₂ : n ≃ n') (e₁' : m' ≃ m'')
-  (e₂' : n' ≃ n'') :
-  (reindex_linear_equiv R A e₁' e₂') ∘ (reindex_linear_equiv R A e₁ e₂)
-  = reindex_linear_equiv R A (e₁.trans e₁') (e₂.trans e₂') :=
-by { rw [← reindex_linear_equiv_trans], refl }
+theorem reindex_linear_equiv_comp (e₁ : m ≃ m') (e₂ : n ≃ n') (e₁' : m' ≃ m'') (e₂' : n' ≃ n'') :
+    reindexLinearEquiv R A e₁' e₂' ∘ reindexLinearEquiv R A e₁ e₂ =
+      reindexLinearEquiv R A (e₁.trans e₁') (e₂.trans e₂') :=
+  by
+  rw [← reindex_linear_equiv_trans]
+  rfl
 
-lemma reindex_linear_equiv_comp_apply (e₁ : m ≃ m') (e₂ : n ≃ n') (e₁' : m' ≃ m'')
-  (e₂' : n' ≃ n'') (M : matrix m n A) :
-  (reindex_linear_equiv R A e₁' e₂') (reindex_linear_equiv R A e₁ e₂ M) =
-    reindex_linear_equiv R A (e₁.trans e₁') (e₂.trans e₂') M :=
-minor_minor _ _ _ _ _
+theorem reindex_linear_equiv_comp_apply (e₁ : m ≃ m') (e₂ : n ≃ n') (e₁' : m' ≃ m'') (e₂' : n' ≃ n'')
+    (M : Matrix m n A) :
+    (reindexLinearEquiv R A e₁' e₂') (reindexLinearEquiv R A e₁ e₂ M) =
+      reindexLinearEquiv R A (e₁.trans e₁') (e₂.trans e₂') M :=
+  minor_minor _ _ _ _ _
 
-lemma reindex_linear_equiv_one [decidable_eq m] [decidable_eq m'] [has_one A]
-  (e : m ≃ m') : (reindex_linear_equiv R A e e (1 : matrix m m A)) = 1 :=
-minor_one_equiv e.symm
+theorem reindex_linear_equiv_one [DecidableEq m] [DecidableEq m'] [One A] (e : m ≃ m') :
+    reindexLinearEquiv R A e e (1 : Matrix m m A) = 1 :=
+  minor_one_equiv e.symm
 
-end add_comm_monoid
+end AddCommMonoidₓ
 
-section semiring
-variables [semiring R] [semiring A] [module R A]
+section Semiringₓ
 
-lemma reindex_linear_equiv_mul [fintype n] [fintype n']
-  (eₘ : m ≃ m') (eₙ : n ≃ n') (eₒ : o ≃ o') (M : matrix m n A) (N : matrix n o A) :
-  reindex_linear_equiv R A eₘ eₙ M ⬝ reindex_linear_equiv R A eₙ eₒ N =
-    reindex_linear_equiv R A eₘ eₒ (M ⬝ N) :=
-minor_mul_equiv M N _ _ _
+variable [Semiringₓ R] [Semiringₓ A] [Module R A]
 
-lemma mul_reindex_linear_equiv_one [fintype n] [fintype o] [decidable_eq o] (e₁ : o ≃ n)
-  (e₂ : o ≃ n') (M : matrix m n A) : M.mul (reindex_linear_equiv R A e₁ e₂ 1) =
-    reindex_linear_equiv R A (equiv.refl m) (e₁.symm.trans e₂) M :=
-mul_minor_one _ _ _
+theorem reindex_linear_equiv_mul [Fintype n] [Fintype n'] (eₘ : m ≃ m') (eₙ : n ≃ n') (eₒ : o ≃ o') (M : Matrix m n A)
+    (N : Matrix n o A) :
+    reindexLinearEquiv R A eₘ eₙ M ⬝ reindexLinearEquiv R A eₙ eₒ N = reindexLinearEquiv R A eₘ eₒ (M ⬝ N) :=
+  minor_mul_equiv M N _ _ _
 
-end semiring
+theorem mul_reindex_linear_equiv_one [Fintype n] [Fintype o] [DecidableEq o] (e₁ : o ≃ n) (e₂ : o ≃ n')
+    (M : Matrix m n A) :
+    M.mul (reindexLinearEquiv R A e₁ e₂ 1) = reindexLinearEquiv R A (Equivₓ.refl m) (e₁.symm.trans e₂) M :=
+  mul_minor_one _ _ _
 
-section algebra
+end Semiringₓ
 
-variables [comm_semiring R] [fintype n] [fintype m] [decidable_eq m] [decidable_eq n]
+section Algebra
 
-/--
-For square matrices with coefficients in commutative semirings, the natural map that reindexes
+variable [CommSemiringₓ R] [Fintype n] [Fintype m] [DecidableEq m] [DecidableEq n]
+
+/-- For square matrices with coefficients in commutative semirings, the natural map that reindexes
 a matrix's rows and columns with equivalent types, `matrix.reindex`, is an equivalence of algebras.
 -/
-def reindex_alg_equiv (e : m ≃ n) : matrix m m R ≃ₐ[R] matrix n n R :=
-{ to_fun    := reindex e e,
-  map_mul'  := λ a b, (reindex_linear_equiv_mul R R e e e a b).symm,
-  commutes' := λ r, by simp [algebra_map, algebra.to_ring_hom, minor_smul],
-  ..(reindex_linear_equiv R R e e) }
+def reindexAlgEquiv (e : m ≃ n) : Matrix m m R ≃ₐ[R] Matrix n n R :=
+  { reindexLinearEquiv R R e e with toFun := reindex e e,
+    map_mul' := fun a b => (reindex_linear_equiv_mul R R e e e a b).symm,
+    commutes' := fun r => by
+      simp [algebraMap, Algebra.toRingHom, minor_smul] }
 
-@[simp] lemma reindex_alg_equiv_apply (e : m ≃ n) (M : matrix m m R) :
-  reindex_alg_equiv R e M = reindex e e M :=
-rfl
+@[simp]
+theorem reindex_alg_equiv_apply (e : m ≃ n) (M : Matrix m m R) : reindexAlgEquiv R e M = reindex e e M :=
+  rfl
 
-@[simp] lemma reindex_alg_equiv_symm (e : m ≃ n) :
-  (reindex_alg_equiv R e).symm = reindex_alg_equiv R e.symm :=
-rfl
+@[simp]
+theorem reindex_alg_equiv_symm (e : m ≃ n) : (reindexAlgEquiv R e).symm = reindexAlgEquiv R e.symm :=
+  rfl
 
-@[simp] lemma reindex_alg_equiv_refl : reindex_alg_equiv R (equiv.refl m) = alg_equiv.refl :=
-alg_equiv.ext $ λ _, rfl
+@[simp]
+theorem reindex_alg_equiv_refl : reindexAlgEquiv R (Equivₓ.refl m) = AlgEquiv.refl :=
+  AlgEquiv.ext fun _ => rfl
 
-lemma reindex_alg_equiv_mul (e : m ≃ n) (M : matrix m m R) (N : matrix m m R) :
-  reindex_alg_equiv R e (M ⬝ N) = reindex_alg_equiv R e M ⬝ reindex_alg_equiv R e N :=
-(reindex_alg_equiv R e).map_mul M N
+theorem reindex_alg_equiv_mul (e : m ≃ n) (M : Matrix m m R) (N : Matrix m m R) :
+    reindexAlgEquiv R e (M ⬝ N) = reindexAlgEquiv R e M ⬝ reindexAlgEquiv R e N :=
+  (reindexAlgEquiv R e).map_mul M N
 
-end algebra
-
-/-- Reindexing both indices along the same equivalence preserves the determinant.
-
-For the `simp` version of this lemma, see `det_minor_equiv_self`.
--/
-lemma det_reindex_linear_equiv_self [comm_ring R] [fintype m] [decidable_eq m]
-  [fintype n] [decidable_eq n] (e : m ≃ n) (M : matrix m m R) :
-  det (reindex_linear_equiv R R e e M) = det M :=
-det_reindex_self e M
+end Algebra
 
 /-- Reindexing both indices along the same equivalence preserves the determinant.
 
 For the `simp` version of this lemma, see `det_minor_equiv_self`.
 -/
-lemma det_reindex_alg_equiv [comm_ring R] [fintype m] [decidable_eq m] [fintype n] [decidable_eq n]
-  (e : m ≃ n) (A : matrix m m R) :
-  det (reindex_alg_equiv R e A) = det A :=
-det_reindex_self e A
+theorem det_reindex_linear_equiv_self [CommRingₓ R] [Fintype m] [DecidableEq m] [Fintype n] [DecidableEq n] (e : m ≃ n)
+    (M : Matrix m m R) : det (reindexLinearEquiv R R e e M) = det M :=
+  det_reindex_self e M
 
-end matrix
+/-- Reindexing both indices along the same equivalence preserves the determinant.
+
+For the `simp` version of this lemma, see `det_minor_equiv_self`.
+-/
+theorem det_reindex_alg_equiv [CommRingₓ R] [Fintype m] [DecidableEq m] [Fintype n] [DecidableEq n] (e : m ≃ n)
+    (A : Matrix m m R) : det (reindexAlgEquiv R e A) = det A :=
+  det_reindex_self e A
+
+end Matrix
+

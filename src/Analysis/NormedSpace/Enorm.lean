@@ -3,7 +3,7 @@ Copyright (c) 2020 Yury G. Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury G. Kudryashov
 -/
-import analysis.normed_space.basic
+import Mathbin.Analysis.NormedSpace.Basic
 
 /-!
 # Extended norm
@@ -30,164 +30,206 @@ We do not define extended normed groups. They can be added to the chain once som
 normed space, extended norm
 -/
 
-noncomputable theory
-local attribute [instance, priority 1001] classical.prop_decidable
-open_locale ennreal
+
+noncomputable section
+
+attribute [local instance] Classical.propDecidable
+
+open_locale Ennreal
 
 /-- Extended norm on a vector space. As in the case of normed spaces, we require only
 `∥c • x∥ ≤ ∥c∥ * ∥x∥` in the definition, then prove an equality in `map_smul`. -/
-structure enorm (𝕜 : Type*) (V : Type*) [normed_field 𝕜] [add_comm_group V] [module 𝕜 V] :=
-(to_fun : V → ℝ≥0∞)
-(eq_zero' : ∀ x, to_fun x = 0 → x = 0)
-(map_add_le' : ∀ x y : V, to_fun (x + y) ≤ to_fun x + to_fun y)
-(map_smul_le' : ∀ (c : 𝕜) (x : V), to_fun (c • x) ≤ nnnorm c * to_fun x)
+structure Enorm (𝕜 : Type _) (V : Type _) [NormedField 𝕜] [AddCommGroupₓ V] [Module 𝕜 V] where
+  toFun : V → ℝ≥0∞
+  eq_zero' : ∀ x, to_fun x = 0 → x = 0
+  map_add_le' : ∀ x y : V, to_fun (x + y) ≤ to_fun x + to_fun y
+  map_smul_le' : ∀ c : 𝕜 x : V, to_fun (c • x) ≤ nnnorm c * to_fun x
 
-namespace enorm
+namespace Enorm
 
-variables {𝕜 : Type*} {V : Type*} [normed_field 𝕜] [add_comm_group V] [module 𝕜 V]
-  (e : enorm 𝕜 V)
+variable {𝕜 : Type _} {V : Type _} [NormedField 𝕜] [AddCommGroupₓ V] [Module 𝕜 V] (e : Enorm 𝕜 V)
 
-instance : has_coe_to_fun (enorm 𝕜 V) (λ _, V → ℝ≥0∞) := ⟨enorm.to_fun⟩
+instance : CoeFun (Enorm 𝕜 V) fun _ => V → ℝ≥0∞ :=
+  ⟨Enorm.toFun⟩
 
-lemma coe_fn_injective : function.injective (coe_fn : enorm 𝕜 V → (V → ℝ≥0∞)) :=
-λ e₁ e₂ h, by cases e₁; cases e₂; congr; exact h
+theorem coe_fn_injective : Function.Injective (coeFn : Enorm 𝕜 V → V → ℝ≥0∞) := fun e₁ e₂ h => by
+  cases e₁ <;> cases e₂ <;> congr <;> exact h
 
-@[ext] lemma ext {e₁ e₂ : enorm 𝕜 V} (h : ∀ x, e₁ x = e₂ x) : e₁ = e₂ :=
-coe_fn_injective $ funext h
+@[ext]
+theorem ext {e₁ e₂ : Enorm 𝕜 V} (h : ∀ x, e₁ x = e₂ x) : e₁ = e₂ :=
+  coe_fn_injective <| funext h
 
-lemma ext_iff {e₁ e₂ : enorm 𝕜 V} : e₁ = e₂ ↔ ∀ x, e₁ x = e₂ x :=
-⟨λ h x, h ▸ rfl, ext⟩
+theorem ext_iff {e₁ e₂ : Enorm 𝕜 V} : e₁ = e₂ ↔ ∀ x, e₁ x = e₂ x :=
+  ⟨fun h x => h ▸ rfl, ext⟩
 
-@[simp, norm_cast] lemma coe_inj {e₁ e₂ : enorm 𝕜 V} : (e₁ : V → ℝ≥0∞) = e₂ ↔ e₁ = e₂ :=
-coe_fn_injective.eq_iff
+@[simp, norm_cast]
+theorem coe_inj {e₁ e₂ : Enorm 𝕜 V} : (e₁ : V → ℝ≥0∞) = e₂ ↔ e₁ = e₂ :=
+  coe_fn_injective.eq_iff
 
-@[simp] lemma map_smul (c : 𝕜) (x : V) : e (c • x) = nnnorm c * e x :=
-le_antisymm (e.map_smul_le' c x) $
-begin
-  by_cases hc : c = 0, { simp [hc] },
-  calc (nnnorm c : ℝ≥0∞) * e x = nnnorm c * e (c⁻¹ • c • x) : by rw [inv_smul_smul₀ hc]
-  ... ≤ nnnorm c * (nnnorm (c⁻¹) * e (c • x)) : _
-  ... = e (c • x) : _,
-  { exact ennreal.mul_le_mul le_rfl (e.map_smul_le' _ _) },
-  { rw [← mul_assoc, nnnorm_inv, ennreal.coe_inv,
-     ennreal.mul_inv_cancel _ ennreal.coe_ne_top, one_mul]; simp [hc] }
-end
+@[simp]
+theorem map_smul (c : 𝕜) (x : V) : e (c • x) = nnnorm c * e x :=
+  le_antisymmₓ (e.map_smul_le' c x) <| by
+    by_cases' hc : c = 0
+    · simp [hc]
+      
+    calc (nnnorm c : ℝ≥0∞) * e x = nnnorm c * e (c⁻¹ • c • x) := by
+        rw [inv_smul_smul₀ hc]_ ≤ nnnorm c * (nnnorm c⁻¹ * e (c • x)) := _ _ = e (c • x) := _
+    · exact Ennreal.mul_le_mul le_rfl (e.map_smul_le' _ _)
+      
+    · rw [← mul_assoc, nnnorm_inv, Ennreal.coe_inv, Ennreal.mul_inv_cancel _ Ennreal.coe_ne_top, one_mulₓ] <;> simp [hc]
+      
 
-@[simp] lemma map_zero : e 0 = 0 :=
-by { rw [← zero_smul 𝕜 (0:V), e.map_smul], norm_num }
+@[simp]
+theorem map_zero : e 0 = 0 := by
+  rw [← zero_smul 𝕜 (0 : V), e.map_smul]
+  norm_num
 
-@[simp] lemma eq_zero_iff {x : V} : e x = 0 ↔ x = 0 :=
-⟨e.eq_zero' x, λ h, h.symm ▸ e.map_zero⟩
+@[simp]
+theorem eq_zero_iff {x : V} : e x = 0 ↔ x = 0 :=
+  ⟨e.eq_zero' x, fun h => h.symm ▸ e.map_zero⟩
 
-@[simp] lemma map_neg (x : V) : e (-x) = e x :=
-calc e (-x) = nnnorm (-1:𝕜) * e x : by rw [← map_smul, neg_one_smul]
-        ... = e x                 : by simp
+@[simp]
+theorem map_neg (x : V) : e (-x) = e x :=
+  calc
+    e (-x) = nnnorm (-1 : 𝕜) * e x := by
+      rw [← map_smul, neg_one_smul]
+    _ = e x := by
+      simp
+    
 
-lemma map_sub_rev (x y : V) : e (x - y) = e (y - x) :=
-by rw [← neg_sub, e.map_neg]
+theorem map_sub_rev (x y : V) : e (x - y) = e (y - x) := by
+  rw [← neg_sub, e.map_neg]
 
-lemma map_add_le (x y : V) : e (x + y) ≤ e x + e y := e.map_add_le' x y
+theorem map_add_le (x y : V) : e (x + y) ≤ e x + e y :=
+  e.map_add_le' x y
 
-lemma map_sub_le (x y : V) : e (x - y) ≤ e x + e y :=
-calc e (x - y) = e (x + -y)   : by rw sub_eq_add_neg
-           ... ≤ e x + e (-y) : e.map_add_le x (-y)
-           ... = e x + e y    : by rw [e.map_neg]
+theorem map_sub_le (x y : V) : e (x - y) ≤ e x + e y :=
+  calc
+    e (x - y) = e (x + -y) := by
+      rw [sub_eq_add_neg]
+    _ ≤ e x + e (-y) := e.map_add_le x (-y)
+    _ = e x + e y := by
+      rw [e.map_neg]
+    
 
-instance : partial_order (enorm 𝕜 V) :=
-{ le := λ e₁ e₂, ∀ x, e₁ x ≤ e₂ x,
-  le_refl := λ e x, le_rfl,
-  le_trans := λ e₁ e₂ e₃ h₁₂ h₂₃ x, le_trans (h₁₂ x) (h₂₃ x),
-  le_antisymm := λ e₁ e₂ h₁₂ h₂₁, ext $ λ x, le_antisymm (h₁₂ x) (h₂₁ x) }
+instance : PartialOrderₓ (Enorm 𝕜 V) where
+  le := fun e₁ e₂ => ∀ x, e₁ x ≤ e₂ x
+  le_refl := fun e x => le_rfl
+  le_trans := fun e₁ e₂ e₃ h₁₂ h₂₃ x => le_transₓ (h₁₂ x) (h₂₃ x)
+  le_antisymm := fun e₁ e₂ h₁₂ h₂₁ => ext fun x => le_antisymmₓ (h₁₂ x) (h₂₁ x)
 
 /-- The `enorm` sending each non-zero vector to infinity. -/
-noncomputable instance : has_top (enorm 𝕜 V) :=
-⟨{ to_fun := λ x, if x = 0 then 0 else ⊤,
-   eq_zero' := λ x, by { split_ifs; simp [*] },
-   map_add_le' := λ x y,
-     begin
-       split_ifs with hxy hx hy hy hx hy hy; try { simp [*] },
-       simpa [hx, hy] using hxy
-     end,
-   map_smul_le' := λ c x,
-     begin
-       split_ifs with hcx hx hx; simp only [smul_eq_zero, not_or_distrib] at hcx,
-       { simp only [mul_zero, le_refl] },
-       { have : c = 0, by tauto,
-         simp [this] },
-       { tauto },
-       { simp [hcx.1] }
-     end }⟩
+noncomputable instance : HasTop (Enorm 𝕜 V) :=
+  ⟨{ toFun := fun x => if x = 0 then 0 else ⊤,
+      eq_zero' := fun x => by
+        split_ifs <;> simp [*],
+      map_add_le' := fun x y => by
+        split_ifs with hxy hx hy hy hx hy hy <;>
+          try
+            simp [*]
+        simpa [hx, hy] using hxy,
+      map_smul_le' := fun c x => by
+        split_ifs with hcx hx hx <;> simp only [smul_eq_zero, not_or_distrib] at hcx
+        · simp only [mul_zero, le_reflₓ]
+          
+        · have : c = 0 := by
+            tauto
+          simp [this]
+          
+        · tauto
+          
+        · simp [hcx.1]
+           }⟩
 
-noncomputable instance : inhabited (enorm 𝕜 V) := ⟨⊤⟩
+noncomputable instance : Inhabited (Enorm 𝕜 V) :=
+  ⟨⊤⟩
 
-lemma top_map {x : V} (hx : x ≠ 0) : (⊤ : enorm 𝕜 V) x = ⊤ := if_neg hx
+theorem top_map {x : V} (hx : x ≠ 0) : (⊤ : Enorm 𝕜 V) x = ⊤ :=
+  if_neg hx
 
-noncomputable instance : order_top (enorm 𝕜 V) :=
-{ top := ⊤,
-  le_top := λ e x, if h : x = 0 then by simp [h] else by simp [top_map h] }
+noncomputable instance : OrderTop (Enorm 𝕜 V) where
+  top := ⊤
+  le_top := fun e x =>
+    if h : x = 0 then by
+      simp [h]
+    else by
+      simp [top_map h]
 
-noncomputable instance : semilattice_sup (enorm 𝕜 V) :=
-{ le := (≤),
-  lt := (<),
-  sup := λ e₁ e₂,
-  { to_fun := λ x, max (e₁ x) (e₂ x),
-    eq_zero' := λ x h, e₁.eq_zero_iff.1 (ennreal.max_eq_zero_iff.1 h).1,
-    map_add_le' := λ x y, max_le
-      (le_trans (e₁.map_add_le _ _) $ add_le_add (le_max_left _ _) (le_max_left _ _))
-      (le_trans (e₂.map_add_le _ _) $ add_le_add (le_max_right _ _) (le_max_right _ _)),
-    map_smul_le' := λ c x, le_of_eq $ by simp only [map_smul, ennreal.mul_max] },
-  le_sup_left := λ e₁ e₂ x, le_max_left _ _,
-  le_sup_right := λ e₁ e₂ x, le_max_right _ _,
-  sup_le := λ e₁ e₂ e₃ h₁ h₂ x, max_le (h₁ x) (h₂ x),
-  .. enorm.partial_order }
+noncomputable instance : SemilatticeSup (Enorm 𝕜 V) :=
+  { Enorm.partialOrder with le := (· ≤ ·), lt := (· < ·),
+    sup := fun e₁ e₂ =>
+      { toFun := fun x => max (e₁ x) (e₂ x), eq_zero' := fun x h => e₁.eq_zero_iff.1 (Ennreal.max_eq_zero_iff.1 h).1,
+        map_add_le' := fun x y =>
+          max_leₓ (le_transₓ (e₁.map_add_le _ _) <| add_le_add (le_max_leftₓ _ _) (le_max_leftₓ _ _))
+            (le_transₓ (e₂.map_add_le _ _) <| add_le_add (le_max_rightₓ _ _) (le_max_rightₓ _ _)),
+        map_smul_le' := fun c x =>
+          le_of_eqₓ <| by
+            simp only [map_smul, Ennreal.mul_max] },
+    le_sup_left := fun e₁ e₂ x => le_max_leftₓ _ _, le_sup_right := fun e₁ e₂ x => le_max_rightₓ _ _,
+    sup_le := fun e₁ e₂ e₃ h₁ h₂ x => max_leₓ (h₁ x) (h₂ x) }
 
-@[simp, norm_cast] lemma coe_max (e₁ e₂ : enorm 𝕜 V) : ⇑(e₁ ⊔ e₂) = λ x, max (e₁ x) (e₂ x) := rfl
+@[simp, norm_cast]
+theorem coe_max (e₁ e₂ : Enorm 𝕜 V) : ⇑(e₁⊔e₂) = fun x => max (e₁ x) (e₂ x) :=
+  rfl
 
 @[norm_cast]
-lemma max_map (e₁ e₂ : enorm 𝕜 V) (x : V) : (e₁ ⊔ e₂) x = max (e₁ x) (e₂ x) := rfl
+theorem max_map (e₁ e₂ : Enorm 𝕜 V) (x : V) : (e₁⊔e₂) x = max (e₁ x) (e₂ x) :=
+  rfl
 
 /-- Structure of an `emetric_space` defined by an extended norm. -/
-def emetric_space : emetric_space V :=
-{ edist := λ x y, e (x - y),
-  edist_self := λ x, by simp,
-  eq_of_edist_eq_zero := λ x y, by simp [sub_eq_zero],
-  edist_comm := e.map_sub_rev,
-  edist_triangle := λ x y z,
-    calc e (x - z) = e ((x - y) + (y - z)) : by rw [sub_add_sub_cancel]
-               ... ≤ e (x - y) + e (y - z) : e.map_add_le (x - y) (y - z) }
+def emetricSpace : EmetricSpace V where
+  edist := fun x y => e (x - y)
+  edist_self := fun x => by
+    simp
+  eq_of_edist_eq_zero := fun x y => by
+    simp [sub_eq_zero]
+  edist_comm := e.map_sub_rev
+  edist_triangle := fun x y z =>
+    calc
+      e (x - z) = e (x - y + (y - z)) := by
+        rw [sub_add_sub_cancel]
+      _ ≤ e (x - y) + e (y - z) := e.map_add_le (x - y) (y - z)
+      
 
 /-- The subspace of vectors with finite enorm. -/
-def finite_subspace : subspace 𝕜 V :=
-{ carrier   := {x | e x < ⊤},
-  zero_mem' := by simp,
-  add_mem'  := λ x y hx hy, lt_of_le_of_lt (e.map_add_le x y) (ennreal.add_lt_top.2 ⟨hx, hy⟩),
-  smul_mem' := λ c x (hx : _ < _),
-    calc e (c • x) = nnnorm c * e x : e.map_smul c x
-               ... < ⊤              : ennreal.mul_lt_top ennreal.coe_ne_top hx.ne }
+def finiteSubspace : Subspace 𝕜 V where
+  Carrier := { x | e x < ⊤ }
+  zero_mem' := by
+    simp
+  add_mem' := fun x y hx hy => lt_of_le_of_ltₓ (e.map_add_le x y) (Ennreal.add_lt_top.2 ⟨hx, hy⟩)
+  smul_mem' := fun hx : _ < _ =>
+    calc
+      e (c • x) = nnnorm c * e x := e.map_smul c x
+      _ < ⊤ := Ennreal.mul_lt_top Ennreal.coe_ne_top hx.Ne
+      
 
 /-- Metric space structure on `e.finite_subspace`. We use `emetric_space.to_metric_space_of_dist`
 to ensure that this definition agrees with `e.emetric_space`. -/
-instance : metric_space e.finite_subspace :=
-begin
-  letI := e.emetric_space,
-  refine emetric_space.to_metric_space_of_dist _ (λ x y, _) (λ x y, rfl),
-  change e (x - y) ≠ ⊤,
-  exact ne_top_of_le_ne_top (ennreal.add_lt_top.2 ⟨x.2, y.2⟩).ne (e.map_sub_le x y)
-end
+instance : MetricSpace e.finiteSubspace := by
+  let this' := e.emetric_space
+  refine' EmetricSpace.toMetricSpaceOfDist _ (fun x y => _) fun x y => rfl
+  change e (x - y) ≠ ⊤
+  exact ne_top_of_le_ne_top (Ennreal.add_lt_top.2 ⟨x.2, y.2⟩).Ne (e.map_sub_le x y)
 
-lemma finite_dist_eq (x y : e.finite_subspace) : dist x y = (e (x - y)).to_real := rfl
+theorem finite_dist_eq (x y : e.finiteSubspace) : dist x y = (e (x - y)).toReal :=
+  rfl
 
-lemma finite_edist_eq (x y : e.finite_subspace) : edist x y = e (x - y) := rfl
+theorem finite_edist_eq (x y : e.finiteSubspace) : edist x y = e (x - y) :=
+  rfl
 
 /-- Normed group instance on `e.finite_subspace`. -/
-instance : normed_group e.finite_subspace :=
-{ norm := λ x, (e x).to_real,
-  dist_eq := λ x y, rfl }
+instance : NormedGroup e.finiteSubspace where
+  norm := fun x => (e x).toReal
+  dist_eq := fun x y => rfl
 
-lemma finite_norm_eq (x : e.finite_subspace) : ∥x∥ = (e x).to_real := rfl
+theorem finite_norm_eq (x : e.finiteSubspace) : ∥x∥ = (e x).toReal :=
+  rfl
 
 /-- Normed space instance on `e.finite_subspace`. -/
-instance : normed_space 𝕜 e.finite_subspace :=
-{ norm_smul_le := λ c x, le_of_eq $ by simp [finite_norm_eq, ennreal.to_real_mul] }
+instance : NormedSpace 𝕜 e.finiteSubspace where
+  norm_smul_le := fun c x =>
+    le_of_eqₓ <| by
+      simp [finite_norm_eq, Ennreal.to_real_mul]
 
-end enorm
+end Enorm
+

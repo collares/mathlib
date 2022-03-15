@@ -3,8 +3,8 @@ Copyright (c) 2021 Johan Commelin. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johan Commelin
 -/
-import algebra.algebra.basic
-import topology.locally_constant.basic
+import Mathbin.Algebra.Algebra.Basic
+import Mathbin.Topology.LocallyConstant.Basic
 
 /-!
 # Algebraic structure on locally constant functions
@@ -14,170 +14,220 @@ on the type of locally constant functions.
 
 -/
 
-namespace locally_constant
 
-variables {X Y : Type*} [topological_space X]
+namespace LocallyConstant
 
-@[to_additive] instance [has_one Y] : has_one (locally_constant X Y) :=
-{ one := const X 1 }
+variable {X Y : Type _} [TopologicalSpace X]
 
-@[simp, to_additive] lemma coe_one [has_one Y] : ⇑(1 : locally_constant X Y) = (1 : X → Y) := rfl
+@[to_additive]
+instance [One Y] : One (LocallyConstant X Y) where
+  one := const X 1
 
-@[to_additive] lemma one_apply [has_one Y] (x : X) : (1 : locally_constant X Y) x = 1 := rfl
+@[simp, to_additive]
+theorem coe_one [One Y] : ⇑(1 : LocallyConstant X Y) = (1 : X → Y) :=
+  rfl
 
-@[to_additive] instance [has_inv Y] : has_inv (locally_constant X Y) :=
-{ inv := λ f, ⟨f⁻¹ , f.is_locally_constant.inv⟩ }
+@[to_additive]
+theorem one_apply [One Y] (x : X) : (1 : LocallyConstant X Y) x = 1 :=
+  rfl
 
-@[simp, to_additive] lemma coe_inv [has_inv Y] (f : locally_constant X Y) : ⇑(f⁻¹) = f⁻¹ := rfl
+@[to_additive]
+instance [Inv Y] : Inv (LocallyConstant X Y) where
+  inv := fun f => ⟨f⁻¹, f.IsLocallyConstant.inv⟩
 
-@[to_additive] lemma inv_apply [has_inv Y] (f : locally_constant X Y) (x : X) :
-  f⁻¹ x = (f x)⁻¹ := rfl
+@[simp, to_additive]
+theorem coe_inv [Inv Y] (f : LocallyConstant X Y) : ⇑f⁻¹ = f⁻¹ :=
+  rfl
 
-@[to_additive] instance [has_mul Y] : has_mul (locally_constant X Y) :=
-{ mul := λ f g, ⟨f * g, f.is_locally_constant.mul g.is_locally_constant⟩ }
+@[to_additive]
+theorem inv_apply [Inv Y] (f : LocallyConstant X Y) (x : X) : f⁻¹ x = (f x)⁻¹ :=
+  rfl
 
-@[simp, to_additive] lemma coe_mul [has_mul Y] (f g : locally_constant X Y) :
-  ⇑(f * g) = f * g :=
-rfl
+@[to_additive]
+instance [Mul Y] : Mul (LocallyConstant X Y) where
+  mul := fun f g => ⟨f * g, f.IsLocallyConstant.mul g.IsLocallyConstant⟩
 
-@[to_additive] lemma mul_apply [has_mul Y] (f g : locally_constant X Y) (x : X) :
-  (f * g) x = f x * g x := rfl
+@[simp, to_additive]
+theorem coe_mul [Mul Y] (f g : LocallyConstant X Y) : ⇑(f * g) = f * g :=
+  rfl
 
-@[to_additive] instance [mul_one_class Y] : mul_one_class (locally_constant X Y) :=
-{ one_mul := by { intros, ext, simp only [mul_apply, one_apply, one_mul] },
-  mul_one := by { intros, ext, simp only [mul_apply, one_apply, mul_one] },
-  .. locally_constant.has_one,
-  .. locally_constant.has_mul }
+@[to_additive]
+theorem mul_apply [Mul Y] (f g : LocallyConstant X Y) (x : X) : (f * g) x = f x * g x :=
+  rfl
+
+@[to_additive]
+instance [MulOneClassₓ Y] : MulOneClassₓ (LocallyConstant X Y) :=
+  { LocallyConstant.hasOne, LocallyConstant.hasMul with
+    one_mul := by
+      intros
+      ext
+      simp only [mul_apply, one_apply, one_mulₓ],
+    mul_one := by
+      intros
+      ext
+      simp only [mul_apply, one_apply, mul_oneₓ] }
 
 /-- `coe_fn` is a `monoid_hom`. -/
 @[to_additive "`coe_fn` is an `add_monoid_hom`.", simps]
-def coe_fn_monoid_hom [mul_one_class Y] : locally_constant X Y →* (X → Y) :=
-{ to_fun   := coe_fn,
-  map_one' := rfl,
-  map_mul' := λ _ _, rfl }
+def coeFnMonoidHom [MulOneClassₓ Y] : LocallyConstant X Y →* X → Y where
+  toFun := coeFn
+  map_one' := rfl
+  map_mul' := fun _ _ => rfl
 
 /-- The constant-function embedding, as a multiplicative monoid hom. -/
 @[to_additive "The constant-function embedding, as an additive monoid hom.", simps]
-def const_monoid_hom [mul_one_class Y] : Y →* locally_constant X Y :=
-{ to_fun   := const X,
-  map_one' := rfl,
-  map_mul' := λ _ _, rfl, }
+def constMonoidHom [MulOneClassₓ Y] : Y →* LocallyConstant X Y where
+  toFun := const X
+  map_one' := rfl
+  map_mul' := fun _ _ => rfl
 
-instance [mul_zero_class Y] : mul_zero_class (locally_constant X Y) :=
-{ zero_mul := by { intros, ext, simp only [mul_apply, zero_apply, zero_mul] },
-  mul_zero := by { intros, ext, simp only [mul_apply, zero_apply, mul_zero] },
-  .. locally_constant.has_zero,
-  .. locally_constant.has_mul }
+instance [MulZeroClassₓ Y] : MulZeroClassₓ (LocallyConstant X Y) :=
+  { LocallyConstant.hasZero, LocallyConstant.hasMul with
+    zero_mul := by
+      intros
+      ext
+      simp only [mul_apply, zero_apply, zero_mul],
+    mul_zero := by
+      intros
+      ext
+      simp only [mul_apply, zero_apply, mul_zero] }
 
-instance [mul_zero_one_class Y] : mul_zero_one_class (locally_constant X Y) :=
-{ .. locally_constant.mul_zero_class, .. locally_constant.mul_one_class }
+instance [MulZeroOneClassₓ Y] : MulZeroOneClassₓ (LocallyConstant X Y) :=
+  { LocallyConstant.mulZeroClass, LocallyConstant.mulOneClass with }
 
-@[to_additive] instance [has_div Y] : has_div (locally_constant X Y) :=
-{ div := λ f g, ⟨f / g, f.is_locally_constant.div g.is_locally_constant⟩ }
+@[to_additive]
+instance [Div Y] : Div (LocallyConstant X Y) where
+  div := fun f g => ⟨f / g, f.IsLocallyConstant.div g.IsLocallyConstant⟩
 
-@[to_additive] lemma coe_div [has_div Y] (f g : locally_constant X Y) :
-  ⇑(f / g) = f / g := rfl
+@[to_additive]
+theorem coe_div [Div Y] (f g : LocallyConstant X Y) : ⇑(f / g) = f / g :=
+  rfl
 
-@[to_additive] lemma div_apply [has_div Y] (f g : locally_constant X Y) (x : X) :
-  (f / g) x = f x / g x := rfl
+@[to_additive]
+theorem div_apply [Div Y] (f g : LocallyConstant X Y) (x : X) : (f / g) x = f x / g x :=
+  rfl
 
-@[to_additive] instance [semigroup Y] : semigroup (locally_constant X Y) :=
-{ mul_assoc := by { intros, ext, simp only [mul_apply, mul_assoc] },
-  .. locally_constant.has_mul }
+@[to_additive]
+instance [Semigroupₓ Y] : Semigroupₓ (LocallyConstant X Y) :=
+  { LocallyConstant.hasMul with
+    mul_assoc := by
+      intros
+      ext
+      simp only [mul_apply, mul_assoc] }
 
-instance [semigroup_with_zero Y] : semigroup_with_zero (locally_constant X Y) :=
-{ .. locally_constant.mul_zero_class,
-  .. locally_constant.semigroup }
+instance [SemigroupWithZeroₓ Y] : SemigroupWithZeroₓ (LocallyConstant X Y) :=
+  { LocallyConstant.mulZeroClass, LocallyConstant.semigroup with }
 
-@[to_additive] instance [comm_semigroup Y] : comm_semigroup (locally_constant X Y) :=
-{ mul_comm := by { intros, ext, simp only [mul_apply, mul_comm] },
-  .. locally_constant.semigroup }
+@[to_additive]
+instance [CommSemigroupₓ Y] : CommSemigroupₓ (LocallyConstant X Y) :=
+  { LocallyConstant.semigroup with
+    mul_comm := by
+      intros
+      ext
+      simp only [mul_apply, mul_comm] }
 
-@[to_additive] instance [monoid Y] : monoid (locally_constant X Y) :=
-{ mul := (*),
-  .. locally_constant.semigroup, .. locally_constant.mul_one_class }
+@[to_additive]
+instance [Monoidₓ Y] : Monoidₓ (LocallyConstant X Y) :=
+  { LocallyConstant.semigroup, LocallyConstant.mulOneClass with mul := (· * ·) }
 
-@[to_additive] instance [comm_monoid Y] : comm_monoid (locally_constant X Y) :=
-{ .. locally_constant.comm_semigroup, .. locally_constant.monoid }
+@[to_additive]
+instance [CommMonoidₓ Y] : CommMonoidₓ (LocallyConstant X Y) :=
+  { LocallyConstant.commSemigroup, LocallyConstant.monoid with }
 
-@[to_additive] instance [group Y] : group (locally_constant X Y) :=
-{ mul_left_inv := by { intros, ext, simp only [mul_apply, inv_apply, one_apply, mul_left_inv] },
-  div_eq_mul_inv := by { intros, ext, simp only [mul_apply, inv_apply, div_apply, div_eq_mul_inv] },
-  .. locally_constant.monoid, .. locally_constant.has_inv, .. locally_constant.has_div }
+@[to_additive]
+instance [Groupₓ Y] : Groupₓ (LocallyConstant X Y) :=
+  { LocallyConstant.monoid, LocallyConstant.hasInv, LocallyConstant.hasDiv with
+    mul_left_inv := by
+      intros
+      ext
+      simp only [mul_apply, inv_apply, one_apply, mul_left_invₓ],
+    div_eq_mul_inv := by
+      intros
+      ext
+      simp only [mul_apply, inv_apply, div_apply, div_eq_mul_inv] }
 
-@[to_additive] instance [comm_group Y] : comm_group (locally_constant X Y) :=
-{ .. locally_constant.comm_monoid, .. locally_constant.group }
+@[to_additive]
+instance [CommGroupₓ Y] : CommGroupₓ (LocallyConstant X Y) :=
+  { LocallyConstant.commMonoid, LocallyConstant.group with }
 
-instance [distrib Y] : distrib (locally_constant X Y) :=
-{ left_distrib := by { intros, ext, simp only [mul_apply, add_apply, mul_add] },
-  right_distrib := by { intros, ext, simp only [mul_apply, add_apply, add_mul] },
-  .. locally_constant.has_add, .. locally_constant.has_mul }
+instance [Distribₓ Y] : Distribₓ (LocallyConstant X Y) :=
+  { LocallyConstant.hasAdd, LocallyConstant.hasMul with
+    left_distrib := by
+      intros
+      ext
+      simp only [mul_apply, add_apply, mul_addₓ],
+    right_distrib := by
+      intros
+      ext
+      simp only [mul_apply, add_apply, add_mulₓ] }
 
-instance [non_unital_non_assoc_semiring Y] : non_unital_non_assoc_semiring (locally_constant X Y) :=
-{ .. locally_constant.add_comm_monoid, .. locally_constant.has_mul,
-  .. locally_constant.distrib, .. locally_constant.mul_zero_class }
+instance [NonUnitalNonAssocSemiringₓ Y] : NonUnitalNonAssocSemiringₓ (LocallyConstant X Y) :=
+  { LocallyConstant.addCommMonoid, LocallyConstant.hasMul, LocallyConstant.distrib, LocallyConstant.mulZeroClass with }
 
-instance [non_unital_semiring Y] : non_unital_semiring (locally_constant X Y) :=
-{ .. locally_constant.semigroup, .. locally_constant.non_unital_non_assoc_semiring }
+instance [NonUnitalSemiringₓ Y] : NonUnitalSemiringₓ (LocallyConstant X Y) :=
+  { LocallyConstant.semigroup, LocallyConstant.nonUnitalNonAssocSemiring with }
 
-instance [non_assoc_semiring Y] : non_assoc_semiring (locally_constant X Y) :=
-{ .. locally_constant.mul_one_class, .. locally_constant.non_unital_non_assoc_semiring }
+instance [NonAssocSemiringₓ Y] : NonAssocSemiringₓ (LocallyConstant X Y) :=
+  { LocallyConstant.mulOneClass, LocallyConstant.nonUnitalNonAssocSemiring with }
 
 /-- The constant-function embedding, as a ring hom.  -/
-@[simps] def const_ring_hom [non_assoc_semiring Y] : Y →+* locally_constant X Y :=
-{ to_fun    := const X,
-  .. const_monoid_hom,
-  .. const_add_monoid_hom, }
+@[simps]
+def constRingHom [NonAssocSemiringₓ Y] : Y →+* LocallyConstant X Y :=
+  { constMonoidHom, constAddMonoidHom with toFun := const X }
 
-instance [semiring Y] : semiring (locally_constant X Y) :=
-{ .. locally_constant.add_comm_monoid, .. locally_constant.monoid,
-  .. locally_constant.distrib, .. locally_constant.mul_zero_class }
+instance [Semiringₓ Y] : Semiringₓ (LocallyConstant X Y) :=
+  { LocallyConstant.addCommMonoid, LocallyConstant.monoid, LocallyConstant.distrib, LocallyConstant.mulZeroClass with }
 
-instance [comm_semiring Y] : comm_semiring (locally_constant X Y) :=
-{ .. locally_constant.semiring, .. locally_constant.comm_monoid }
+instance [CommSemiringₓ Y] : CommSemiringₓ (LocallyConstant X Y) :=
+  { LocallyConstant.semiring, LocallyConstant.commMonoid with }
 
-instance [ring Y] : ring (locally_constant X Y) :=
-{ .. locally_constant.semiring, .. locally_constant.add_comm_group }
+instance [Ringₓ Y] : Ringₓ (LocallyConstant X Y) :=
+  { LocallyConstant.semiring, LocallyConstant.addCommGroup with }
 
-instance [comm_ring Y] : comm_ring (locally_constant X Y) :=
-{ .. locally_constant.comm_semiring, .. locally_constant.ring }
+instance [CommRingₓ Y] : CommRingₓ (LocallyConstant X Y) :=
+  { LocallyConstant.commSemiring, LocallyConstant.ring with }
 
-variables {R : Type*}
+variable {R : Type _}
 
-instance [has_scalar R Y] : has_scalar R (locally_constant X Y) :=
-{ smul := λ r f,
-  { to_fun := r • f,
-    is_locally_constant := ((is_locally_constant f).comp ((•) r) : _), } }
+instance [HasScalar R Y] : HasScalar R (LocallyConstant X Y) where
+  smul := fun r f => { toFun := r • f, IsLocallyConstant := ((is_locally_constant f).comp ((· • ·) r) : _) }
 
-@[simp] lemma coe_smul [has_scalar R Y] (r : R) (f : locally_constant X Y) : ⇑(r • f) = r • f := rfl
+@[simp]
+theorem coe_smul [HasScalar R Y] (r : R) (f : LocallyConstant X Y) : ⇑(r • f) = r • f :=
+  rfl
 
-lemma smul_apply [has_scalar R Y] (r : R) (f : locally_constant X Y) (x : X) :
-  (r • f) x = r • (f x) :=
-rfl
+theorem smul_apply [HasScalar R Y] (r : R) (f : LocallyConstant X Y) (x : X) : (r • f) x = r • f x :=
+  rfl
 
-instance [monoid R] [mul_action R Y] : mul_action R (locally_constant X Y) :=
-function.injective.mul_action _ coe_injective (λ _ _, rfl)
+instance [Monoidₓ R] [MulAction R Y] : MulAction R (LocallyConstant X Y) :=
+  Function.Injective.mulAction _ coe_injective fun _ _ => rfl
 
-instance [monoid R] [add_monoid Y] [distrib_mul_action R Y] :
-  distrib_mul_action R (locally_constant X Y) :=
-function.injective.distrib_mul_action coe_fn_add_monoid_hom coe_injective (λ _ _, rfl)
+instance [Monoidₓ R] [AddMonoidₓ Y] [DistribMulAction R Y] : DistribMulAction R (LocallyConstant X Y) :=
+  Function.Injective.distribMulAction coeFnAddMonoidHom coe_injective fun _ _ => rfl
 
-instance [semiring R] [add_comm_monoid Y] [module R Y] : module R (locally_constant X Y) :=
-function.injective.module R coe_fn_add_monoid_hom coe_injective (λ _ _, rfl)
+instance [Semiringₓ R] [AddCommMonoidₓ Y] [Module R Y] : Module R (LocallyConstant X Y) :=
+  Function.Injective.module R coeFnAddMonoidHom coe_injective fun _ _ => rfl
 
-section algebra
+section Algebra
 
-variables [comm_semiring R] [semiring Y] [algebra R Y]
+variable [CommSemiringₓ R] [Semiringₓ Y] [Algebra R Y]
 
-instance : algebra R (locally_constant X Y) :=
-{ to_ring_hom := const_ring_hom.comp $ algebra_map R Y,
-  commutes'   := by { intros, ext, exact algebra.commutes' _ _, },
-  smul_def'   := by { intros, ext, exact algebra.smul_def' _ _, }, }
+instance : Algebra R (LocallyConstant X Y) where
+  toRingHom := constRingHom.comp <| algebraMap R Y
+  commutes' := by
+    intros
+    ext
+    exact Algebra.commutes' _ _
+  smul_def' := by
+    intros
+    ext
+    exact Algebra.smul_def' _ _
 
-@[simp] lemma coe_algebra_map (r : R) :
-  ⇑(algebra_map R (locally_constant X Y) r) = algebra_map R (X → Y) r :=
-rfl
+@[simp]
+theorem coe_algebra_map (r : R) : ⇑(algebraMap R (LocallyConstant X Y) r) = algebraMap R (X → Y) r :=
+  rfl
 
-end algebra
+end Algebra
 
-end locally_constant
+end LocallyConstant
+

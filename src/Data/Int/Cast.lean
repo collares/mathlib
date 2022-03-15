@@ -3,8 +3,8 @@ Copyright (c) 2017 Mario Carneiro. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Mario Carneiro
 -/
-import data.int.basic
-import data.nat.cast
+import Mathbin.Data.Int.Basic
+import Mathbin.Data.Nat.Cast
 
 /-!
 # Cast of integers
@@ -23,312 +23,366 @@ This file defines the *canonical* homomorphism from the integers into a type `α
 Setting up the coercions priorities is tricky. See Note [coercion into rings].
 -/
 
-open nat
 
-namespace int
+open Nat
 
-@[simp, push_cast] theorem nat_cast_eq_coe_nat : ∀ n,
-  @coe ℕ ℤ (@coe_to_lift _ _ nat.cast_coe) n =
-  @coe ℕ ℤ (@coe_to_lift _ _ (@coe_base _ _ int.has_coe)) n
-| 0     := rfl
-| (n+1) := congr_arg (+(1:ℤ)) (nat_cast_eq_coe_nat n)
+namespace Int
+
+@[simp, push_cast]
+theorem nat_cast_eq_coe_nat :
+    ∀ n, @coe ℕ ℤ (@coeToLift _ _ Nat.castCoe) n = @coe ℕ ℤ (@coeToLift _ _ (@coeBaseₓ _ _ Int.hasCoe)) n
+  | 0 => rfl
+  | n + 1 => congr_argₓ (· + (1 : ℤ)) (nat_cast_eq_coe_nat n)
 
 /-- Coercion `ℕ → ℤ` as a `ring_hom`. -/
-def of_nat_hom : ℕ →+* ℤ := ⟨coe, rfl, int.of_nat_mul, rfl, int.of_nat_add⟩
+def ofNatHom : ℕ →+* ℤ :=
+  ⟨coe, rfl, Int.of_nat_mul, rfl, Int.of_nat_add⟩
 
 section cast
-variables {α : Type*}
+
+variable {α : Type _}
 
 section
-variables [has_zero α] [has_one α] [has_add α] [has_neg α]
+
+variable [Zero α] [One α] [Add α] [Neg α]
 
 /-- Canonical homomorphism from the integers to any ring(-like) structure `α` -/
-protected def cast : ℤ → α
-| (n : ℕ) := n
-| -[1+ n] := -(n+1)
+protected def castₓ : ℤ → α
+  | (n : ℕ) => n
+  | -[1+ n] => -(n + 1)
 
 -- see Note [coercion into rings]
-@[priority 900] instance cast_coe : has_coe_t ℤ α := ⟨int.cast⟩
+instance (priority := 900) castCoe : CoeTₓ ℤ α :=
+  ⟨Int.castₓ⟩
 
-@[simp, norm_cast] theorem cast_zero : ((0 : ℤ) : α) = 0 := rfl
+@[simp, norm_cast]
+theorem cast_zeroₓ : ((0 : ℤ) : α) = 0 :=
+  rfl
 
-theorem cast_of_nat (n : ℕ) : (of_nat n : α) = n := rfl
-@[simp, norm_cast] theorem cast_coe_nat (n : ℕ) : ((n : ℤ) : α) = n := rfl
-theorem cast_coe_nat' (n : ℕ) :
-  (@coe ℕ ℤ (@coe_to_lift _ _ nat.cast_coe) n : α) = n :=
-by simp
+theorem cast_of_nat (n : ℕ) : (ofNat n : α) = n :=
+  rfl
 
-@[simp, norm_cast] theorem cast_neg_succ_of_nat (n : ℕ) : (-[1+ n] : α) = -(n + 1) := rfl
+@[simp, norm_cast]
+theorem cast_coe_nat (n : ℕ) : ((n : ℤ) : α) = n :=
+  rfl
+
+theorem cast_coe_nat' (n : ℕ) : (@coe ℕ ℤ (@coeToLift _ _ Nat.castCoe) n : α) = n := by
+  simp
+
+@[simp, norm_cast]
+theorem cast_neg_succ_of_nat (n : ℕ) : (-[1+ n] : α) = -(n + 1) :=
+  rfl
 
 end
 
-@[simp, norm_cast] theorem cast_one [add_monoid α] [has_one α] [has_neg α] :
-  ((1 : ℤ) : α) = 1 := nat.cast_one
+@[simp, norm_cast]
+theorem cast_oneₓ [AddMonoidₓ α] [One α] [Neg α] : ((1 : ℤ) : α) = 1 :=
+  Nat.cast_oneₓ
 
-@[simp] theorem cast_sub_nat_nat [add_group α] [has_one α] (m n) :
-  ((int.sub_nat_nat m n : ℤ) : α) = m - n :=
-begin
-  unfold sub_nat_nat, cases e : n - m,
-  { simp [sub_nat_nat, e, tsub_eq_zero_iff_le.mp e] },
-  { rw [sub_nat_nat, cast_neg_succ_of_nat, ← nat.cast_succ, ← e,
-        nat.cast_sub $ _root_.le_of_lt $ nat.lt_of_sub_eq_succ e, neg_sub] },
-end
+@[simp]
+theorem cast_sub_nat_nat [AddGroupₓ α] [One α] m n : ((Int.subNatNat m n : ℤ) : α) = m - n := by
+  unfold sub_nat_nat
+  cases e : n - m
+  · simp [sub_nat_nat, e, tsub_eq_zero_iff_le.mp e]
+    
+  · rw [sub_nat_nat, cast_neg_succ_of_nat, ← Nat.cast_succₓ, ← e,
+      Nat.cast_sub <| _root_.le_of_lt <| Nat.lt_of_sub_eq_succₓ e, neg_sub]
+    
 
-@[simp, norm_cast] theorem cast_neg_of_nat [add_group α] [has_one α] :
-  ∀ n, ((neg_of_nat n : ℤ) : α) = -n
-| 0     := neg_zero.symm
-| (n+1) := rfl
+@[simp, norm_cast]
+theorem cast_neg_of_nat [AddGroupₓ α] [One α] : ∀ n, ((negOfNat n : ℤ) : α) = -n
+  | 0 => neg_zero.symm
+  | n + 1 => rfl
 
-@[simp, norm_cast] theorem cast_add [add_group α] [has_one α] : ∀ m n, ((m + n : ℤ) : α) = m + n
-| (m : ℕ) (n : ℕ) := nat.cast_add _ _
-| (m : ℕ) -[1+ n] := by simpa only [sub_eq_add_neg] using cast_sub_nat_nat _ _
-| -[1+ m] (n : ℕ) := (cast_sub_nat_nat _ _).trans $ sub_eq_of_eq_add $
-  show (n:α) = -(m+1) + n + (m+1),
-  by rw [add_assoc, ← cast_succ, ← nat.cast_add, add_comm,
-         nat.cast_add, cast_succ, neg_add_cancel_left]
-| -[1+ m] -[1+ n] := show -((m + n + 1 + 1 : ℕ) : α) = -(m + 1) + -(n + 1),
-  begin
-    rw [← neg_add_rev, ← nat.cast_add_one, ← nat.cast_add_one, ← nat.cast_add],
-    apply congr_arg (λ x:ℕ, -(x:α)),
-    ac_refl
-  end
+@[simp, norm_cast]
+theorem cast_add [AddGroupₓ α] [One α] : ∀ m n, ((m + n : ℤ) : α) = m + n
+  | (m : ℕ), (n : ℕ) => Nat.cast_addₓ _ _
+  | (m : ℕ), -[1+ n] => by
+    simpa only [sub_eq_add_neg] using cast_sub_nat_nat _ _
+  | -[1+ m], (n : ℕ) =>
+    (cast_sub_nat_nat _ _).trans <|
+      sub_eq_of_eq_add <|
+        show (n : α) = -(m + 1) + n + (m + 1) by
+          rw [add_assocₓ, ← cast_succ, ← Nat.cast_addₓ, add_commₓ, Nat.cast_addₓ, cast_succ, neg_add_cancel_leftₓ]
+  | -[1+ m], -[1+ n] =>
+    show -((m + n + 1 + 1 : ℕ) : α) = -(m + 1) + -(n + 1) by
+      rw [← neg_add_rev, ← Nat.cast_add_one, ← Nat.cast_add_one, ← Nat.cast_addₓ]
+      apply congr_argₓ fun x : ℕ => -(x : α)
+      ac_rfl
 
-@[simp, norm_cast] theorem cast_neg [add_group α] [has_one α] : ∀ n, ((-n : ℤ) : α) = -n
-| (n : ℕ) := cast_neg_of_nat _
-| -[1+ n] := (neg_neg _).symm
+@[simp, norm_cast]
+theorem cast_neg [AddGroupₓ α] [One α] : ∀ n, ((-n : ℤ) : α) = -n
+  | (n : ℕ) => cast_neg_of_nat _
+  | -[1+ n] => (neg_negₓ _).symm
 
-@[simp, norm_cast] theorem cast_sub [add_group α] [has_one α] (m n) : ((m - n : ℤ) : α) = m - n :=
-by simp [sub_eq_add_neg]
+@[simp, norm_cast]
+theorem cast_sub [AddGroupₓ α] [One α] m n : ((m - n : ℤ) : α) = m - n := by
+  simp [sub_eq_add_neg]
 
-@[simp, norm_cast] theorem cast_mul [ring α] : ∀ m n, ((m * n : ℤ) : α) = m * n
-| (m : ℕ) (n : ℕ) := nat.cast_mul _ _
-| (m : ℕ) -[1+ n] := (cast_neg_of_nat _).trans $
-  show (-(m * (n + 1) : ℕ) : α) = m * -(n + 1),
-  by rw [nat.cast_mul, nat.cast_add_one, neg_mul_eq_mul_neg]
-| -[1+ m] (n : ℕ) := (cast_neg_of_nat _).trans $
-  show (-((m + 1) * n : ℕ) : α) = -(m + 1) * n,
-  by rw [nat.cast_mul, nat.cast_add_one, neg_mul_eq_neg_mul]
-| -[1+ m] -[1+ n] := show (((m + 1) * (n + 1) : ℕ) : α) = -(m + 1) * -(n + 1),
-  by rw [nat.cast_mul, nat.cast_add_one, nat.cast_add_one, neg_mul_neg]
+@[simp, norm_cast]
+theorem cast_mul [Ringₓ α] : ∀ m n, ((m * n : ℤ) : α) = m * n
+  | (m : ℕ), (n : ℕ) => Nat.cast_mulₓ _ _
+  | (m : ℕ), -[1+ n] =>
+    (cast_neg_of_nat _).trans <|
+      show (-(m * (n + 1) : ℕ) : α) = m * -(n + 1) by
+        rw [Nat.cast_mulₓ, Nat.cast_add_one, neg_mul_eq_mul_neg]
+  | -[1+ m], (n : ℕ) =>
+    (cast_neg_of_nat _).trans <|
+      show (-((m + 1) * n : ℕ) : α) = -(m + 1) * n by
+        rw [Nat.cast_mulₓ, Nat.cast_add_one, neg_mul_eq_neg_mulₓ]
+  | -[1+ m], -[1+ n] =>
+    show (((m + 1) * (n + 1) : ℕ) : α) = -(m + 1) * -(n + 1) by
+      rw [Nat.cast_mulₓ, Nat.cast_add_one, Nat.cast_add_one, neg_mul_neg]
 
 /-- `coe : ℤ → α` as an `add_monoid_hom`. -/
-def cast_add_hom (α : Type*) [add_group α] [has_one α] : ℤ →+ α := ⟨coe, cast_zero, cast_add⟩
+def castAddHom (α : Type _) [AddGroupₓ α] [One α] : ℤ →+ α :=
+  ⟨coe, cast_zeroₓ, cast_add⟩
 
-@[simp] lemma coe_cast_add_hom [add_group α] [has_one α] : ⇑(cast_add_hom α) = coe := rfl
+@[simp]
+theorem coe_cast_add_hom [AddGroupₓ α] [One α] : ⇑(castAddHom α) = coe :=
+  rfl
 
 /-- `coe : ℤ → α` as a `ring_hom`. -/
-def cast_ring_hom (α : Type*) [ring α] : ℤ →+* α := ⟨coe, cast_one, cast_mul, cast_zero, cast_add⟩
+def castRingHom (α : Type _) [Ringₓ α] : ℤ →+* α :=
+  ⟨coe, cast_oneₓ, cast_mul, cast_zeroₓ, cast_add⟩
 
-@[simp] lemma coe_cast_ring_hom [ring α] : ⇑(cast_ring_hom α) = coe := rfl
+@[simp]
+theorem coe_cast_ring_hom [Ringₓ α] : ⇑(castRingHom α) = coe :=
+  rfl
 
-lemma cast_commute [ring α] (m : ℤ) (x : α) : commute ↑m x :=
-int.cases_on m (λ n, n.cast_commute x) (λ n, ((n+1).cast_commute x).neg_left)
+theorem cast_commute [Ringₓ α] (m : ℤ) (x : α) : Commute (↑m) x :=
+  Int.casesOn m (fun n => n.cast_commute x) fun n => ((n + 1).cast_commute x).neg_left
 
-lemma cast_comm [ring α] (m : ℤ) (x : α) : (m : α) * x = x * m :=
-(cast_commute m x).eq
+theorem cast_comm [Ringₓ α] (m : ℤ) (x : α) : (m : α) * x = x * m :=
+  (cast_commute m x).Eq
 
-lemma commute_cast [ring α] (x : α) (m : ℤ) : commute x m :=
-(m.cast_commute x).symm
+theorem commute_cast [Ringₓ α] (x : α) (m : ℤ) : Commute x m :=
+  (m.cast_commute x).symm
 
 @[simp, norm_cast]
-theorem coe_nat_bit0 (n : ℕ) : (↑(bit0 n) : ℤ) = bit0 ↑n := by {unfold bit0, simp}
+theorem coe_nat_bit0 (n : ℕ) : (↑(bit0 n) : ℤ) = bit0 ↑n := by
+  unfold bit0
+  simp
 
 @[simp, norm_cast]
-theorem coe_nat_bit1 (n : ℕ) : (↑(bit1 n) : ℤ) = bit1 ↑n := by {unfold bit1, unfold bit0, simp}
+theorem coe_nat_bit1 (n : ℕ) : (↑(bit1 n) : ℤ) = bit1 ↑n := by
+  unfold bit1
+  unfold bit0
+  simp
 
-@[simp, norm_cast] theorem cast_bit0 [ring α] (n : ℤ) : ((bit0 n : ℤ) : α) = bit0 n := cast_add _ _
+@[simp, norm_cast]
+theorem cast_bit0 [Ringₓ α] (n : ℤ) : ((bit0 n : ℤ) : α) = bit0 n :=
+  cast_add _ _
 
-@[simp, norm_cast] theorem cast_bit1 [ring α] (n : ℤ) : ((bit1 n : ℤ) : α) = bit1 n :=
-by rw [bit1, cast_add, cast_one, cast_bit0]; refl
+@[simp, norm_cast]
+theorem cast_bit1 [Ringₓ α] (n : ℤ) : ((bit1 n : ℤ) : α) = bit1 n := by
+  rw [bit1, cast_add, cast_one, cast_bit0] <;> rfl
 
-lemma cast_two [ring α] : ((2 : ℤ) : α) = 2 := by simp
+theorem cast_two [Ringₓ α] : ((2 : ℤ) : α) = 2 := by
+  simp
 
-theorem cast_mono [ordered_ring α] : monotone (coe : ℤ → α) :=
-begin
-  intros m n h,
-  rw ← sub_nonneg at h,
-  lift n - m to ℕ using h with k,
-  rw [← sub_nonneg, ← cast_sub, ← h_1, cast_coe_nat],
+theorem cast_mono [OrderedRing α] : Monotone (coe : ℤ → α) := by
+  intro m n h
+  rw [← sub_nonneg] at h
+  lift n - m to ℕ using h with k
+  rw [← sub_nonneg, ← cast_sub, ← h_1, cast_coe_nat]
   exact k.cast_nonneg
-end
 
-@[simp] theorem cast_nonneg [ordered_ring α] [nontrivial α] : ∀ {n : ℤ}, (0 : α) ≤ n ↔ 0 ≤ n
-| (n : ℕ) := by simp
-| -[1+ n] := have -(n:α) < 1, from lt_of_le_of_lt (by simp) zero_lt_one,
-             by simpa [(neg_succ_lt_zero n).not_le, ← sub_eq_add_neg, le_neg] using this.not_le
+@[simp]
+theorem cast_nonneg [OrderedRing α] [Nontrivial α] : ∀ {n : ℤ}, (0 : α) ≤ n ↔ 0 ≤ n
+  | (n : ℕ) => by
+    simp
+  | -[1+ n] => by
+    have : -(n : α) < 1 :=
+      lt_of_le_of_ltₓ
+        (by
+          simp )
+        zero_lt_one
+    simpa [(neg_succ_lt_zero n).not_le, ← sub_eq_add_neg, le_neg] using this.not_le
 
-@[simp, norm_cast] theorem cast_le [ordered_ring α] [nontrivial α] {m n : ℤ} :
-  (m : α) ≤ n ↔ m ≤ n :=
-by rw [← sub_nonneg, ← cast_sub, cast_nonneg, sub_nonneg]
+@[simp, norm_cast]
+theorem cast_le [OrderedRing α] [Nontrivial α] {m n : ℤ} : (m : α) ≤ n ↔ m ≤ n := by
+  rw [← sub_nonneg, ← cast_sub, cast_nonneg, sub_nonneg]
 
-theorem cast_strict_mono [ordered_ring α] [nontrivial α] : strict_mono (coe : ℤ → α) :=
-strict_mono_of_le_iff_le $ λ m n, cast_le.symm
+theorem cast_strict_mono [OrderedRing α] [Nontrivial α] : StrictMono (coe : ℤ → α) :=
+  strict_mono_of_le_iff_le fun m n => cast_le.symm
 
-@[simp, norm_cast] theorem cast_lt [ordered_ring α] [nontrivial α] {m n : ℤ} :
-  (m : α) < n ↔ m < n :=
-cast_strict_mono.lt_iff_lt
+@[simp, norm_cast]
+theorem cast_lt [OrderedRing α] [Nontrivial α] {m n : ℤ} : (m : α) < n ↔ m < n :=
+  cast_strict_mono.lt_iff_lt
 
-@[simp] theorem cast_nonpos [ordered_ring α] [nontrivial α] {n : ℤ} : (n : α) ≤ 0 ↔ n ≤ 0 :=
-by rw [← cast_zero, cast_le]
+@[simp]
+theorem cast_nonpos [OrderedRing α] [Nontrivial α] {n : ℤ} : (n : α) ≤ 0 ↔ n ≤ 0 := by
+  rw [← cast_zero, cast_le]
 
-@[simp] theorem cast_pos [ordered_ring α] [nontrivial α] {n : ℤ} : (0 : α) < n ↔ 0 < n :=
-by rw [← cast_zero, cast_lt]
+@[simp]
+theorem cast_pos [OrderedRing α] [Nontrivial α] {n : ℤ} : (0 : α) < n ↔ 0 < n := by
+  rw [← cast_zero, cast_lt]
 
-@[simp] theorem cast_lt_zero [ordered_ring α] [nontrivial α] {n : ℤ} : (n : α) < 0 ↔ n < 0 :=
-by rw [← cast_zero, cast_lt]
+@[simp]
+theorem cast_lt_zero [OrderedRing α] [Nontrivial α] {n : ℤ} : (n : α) < 0 ↔ n < 0 := by
+  rw [← cast_zero, cast_lt]
 
-@[simp, norm_cast] theorem cast_min [linear_ordered_ring α] {a b : ℤ} :
-  (↑(min a b) : α) = min a b :=
-monotone.map_min cast_mono
+@[simp, norm_cast]
+theorem cast_min [LinearOrderedRing α] {a b : ℤ} : (↑(min a b) : α) = min a b :=
+  Monotone.map_min cast_mono
 
-@[simp, norm_cast] theorem cast_max [linear_ordered_ring α] {a b : ℤ} :
-  (↑(max a b) : α) = max a b :=
-monotone.map_max cast_mono
+@[simp, norm_cast]
+theorem cast_max [LinearOrderedRing α] {a b : ℤ} : (↑(max a b) : α) = max a b :=
+  Monotone.map_max cast_mono
 
-@[simp, norm_cast] theorem cast_abs [linear_ordered_ring α] {q : ℤ} :
-  ((|q| : ℤ) : α) = |q| :=
-by simp [abs_eq_max_neg]
+@[simp, norm_cast]
+theorem cast_abs [LinearOrderedRing α] {q : ℤ} : ((abs q : ℤ) : α) = abs q := by
+  simp [abs_eq_max_neg]
 
-lemma cast_nat_abs {R : Type*} [linear_ordered_ring R] : ∀ (n : ℤ), (n.nat_abs : R) = |n|
-| (n : ℕ) := by simp only [int.nat_abs_of_nat, int.cast_coe_nat, nat.abs_cast]
-| -[1+n]  := by simp only [int.nat_abs, int.cast_neg_succ_of_nat, abs_neg,
-                           ← nat.cast_succ, nat.abs_cast]
+theorem cast_nat_abs {R : Type _} [LinearOrderedRing R] : ∀ n : ℤ, (n.natAbs : R) = abs n
+  | (n : ℕ) => by
+    simp only [Int.nat_abs_of_nat, Int.cast_coe_nat, Nat.abs_cast]
+  | -[1+ n] => by
+    simp only [Int.natAbs, Int.cast_neg_succ_of_nat, abs_neg, ← Nat.cast_succₓ, Nat.abs_cast]
 
-lemma coe_int_dvd [comm_ring α] (m n : ℤ) (h : m ∣ n) :
-  (m : α) ∣ (n : α) :=
-ring_hom.map_dvd (int.cast_ring_hom α) h
+theorem coe_int_dvd [CommRingₓ α] (m n : ℤ) (h : m ∣ n) : (m : α) ∣ (n : α) :=
+  RingHom.map_dvd (Int.castRingHom α) h
 
 end cast
 
-end int
+end Int
 
-namespace prod
+namespace Prod
 
-variables {α : Type*} {β : Type*} [has_zero α] [has_one α] [has_add α] [has_neg α]
-  [has_zero β] [has_one β] [has_add β] [has_neg β]
+variable {α : Type _} {β : Type _} [Zero α] [One α] [Add α] [Neg α] [Zero β] [One β] [Add β] [Neg β]
 
-@[simp] lemma fst_int_cast (n : ℤ) : (n : α × β).fst = n :=
-by induction n; simp *
+@[simp]
+theorem fst_int_cast (n : ℤ) : (n : α × β).fst = n := by
+  induction n <;> simp [*]
 
-@[simp] lemma snd_int_cast (n : ℤ) : (n : α × β).snd = n :=
-by induction n; simp *
+@[simp]
+theorem snd_int_cast (n : ℤ) : (n : α × β).snd = n := by
+  induction n <;> simp [*]
 
-end prod
+end Prod
 
-open int
+open Int
 
-namespace add_monoid_hom
+namespace AddMonoidHom
 
-variables {A : Type*}
+variable {A : Type _}
 
 /-- Two additive monoid homomorphisms `f`, `g` from `ℤ` to an additive monoid are equal
 if `f 1 = g 1`. -/
-@[ext] theorem ext_int [add_monoid A] {f g : ℤ →+ A} (h1 : f 1 = g 1) : f = g :=
-have f.comp (int.of_nat_hom : ℕ →+ ℤ) = g.comp (int.of_nat_hom : ℕ →+ ℤ) := ext_nat' _ _ h1,
-have ∀ n : ℕ, f n = g n := ext_iff.1 this,
-ext $ λ n, int.cases_on n this $ λ n, eq_on_neg (this $ n + 1)
+@[ext]
+theorem ext_int [AddMonoidₓ A] {f g : ℤ →+ A} (h1 : f 1 = g 1) : f = g :=
+  have : f.comp (Int.ofNatHom : ℕ →+ ℤ) = g.comp (Int.ofNatHom : ℕ →+ ℤ) := ext_nat' _ _ h1
+  have : ∀ n : ℕ, f n = g n := ext_iff.1 this
+  ext fun n => (Int.casesOn n this) fun n => eq_on_neg (this <| n + 1)
 
-variables [add_group A] [has_one A]
+variable [AddGroupₓ A] [One A]
 
-theorem eq_int_cast_hom (f : ℤ →+ A) (h1 : f 1 = 1) : f = int.cast_add_hom A :=
-ext_int $ by simp [h1]
+theorem eq_int_cast_hom (f : ℤ →+ A) (h1 : f 1 = 1) : f = Int.castAddHom A :=
+  ext_int <| by
+    simp [h1]
 
 theorem eq_int_cast (f : ℤ →+ A) (h1 : f 1 = 1) : ∀ n : ℤ, f n = n :=
-ext_iff.1 (f.eq_int_cast_hom h1)
+  ext_iff.1 (f.eq_int_cast_hom h1)
 
-end add_monoid_hom
+end AddMonoidHom
 
-namespace monoid_hom
-variables {M : Type*} [monoid M]
-open multiplicative
+namespace MonoidHom
 
-@[ext] theorem ext_mint {f g : multiplicative ℤ →* M} (h1 : f (of_add 1) = g (of_add 1)) : f = g :=
-monoid_hom.ext $ add_monoid_hom.ext_iff.mp $
-  @add_monoid_hom.ext_int _ _ f.to_additive g.to_additive h1
+variable {M : Type _} [Monoidₓ M]
+
+open Multiplicative
+
+@[ext]
+theorem ext_mint {f g : Multiplicative ℤ →* M} (h1 : f (ofAdd 1) = g (ofAdd 1)) : f = g :=
+  MonoidHom.ext <| AddMonoidHom.ext_iff.mp <| @AddMonoidHom.ext_int _ _ f.toAdditive g.toAdditive h1
 
 /-- If two `monoid_hom`s agree on `-1` and the naturals then they are equal. -/
-@[ext] theorem ext_int {f g : ℤ →* M}
-  (h_neg_one : f (-1) = g (-1))
-  (h_nat : f.comp int.of_nat_hom.to_monoid_hom = g.comp int.of_nat_hom.to_monoid_hom) :
-  f = g :=
-begin
-  ext (x | x),
-  { exact (monoid_hom.congr_fun h_nat x : _), },
-  { rw [int.neg_succ_of_nat_eq, ← neg_one_mul, f.map_mul, g.map_mul],
-    congr' 1,
-    exact_mod_cast (monoid_hom.congr_fun h_nat (x + 1) : _), }
-end
+@[ext]
+theorem ext_int {f g : ℤ →* M} (h_neg_one : f (-1) = g (-1))
+    (h_nat : f.comp Int.ofNatHom.toMonoidHom = g.comp Int.ofNatHom.toMonoidHom) : f = g := by
+  ext (x | x)
+  · exact (MonoidHom.congr_fun h_nat x : _)
+    
+  · rw [Int.neg_succ_of_nat_eq, ← neg_one_mul, f.map_mul, g.map_mul]
+    congr 1
+    exact_mod_cast (MonoidHom.congr_fun h_nat (x + 1) : _)
+    
 
-end monoid_hom
+end MonoidHom
 
-namespace monoid_with_zero_hom
+namespace MonoidWithZeroHom
 
-variables {M : Type*} [monoid_with_zero M]
+variable {M : Type _} [MonoidWithZeroₓ M]
 
 /-- If two `monoid_with_zero_hom`s agree on `-1` and the naturals then they are equal. -/
-@[ext] lemma ext_int {f g : ℤ →*₀ M} (h_neg_one : f (-1) = g (-1))
-  (h_nat : f.comp int.of_nat_hom.to_monoid_with_zero_hom =
-           g.comp int.of_nat_hom.to_monoid_with_zero_hom) :
-  f = g :=
-to_monoid_hom_injective $ monoid_hom.ext_int h_neg_one $ monoid_hom.ext (congr_fun h_nat : _)
+@[ext]
+theorem ext_int {f g : ℤ →*₀ M} (h_neg_one : f (-1) = g (-1))
+    (h_nat : f.comp Int.ofNatHom.toMonoidWithZeroHom = g.comp Int.ofNatHom.toMonoidWithZeroHom) : f = g :=
+  to_monoid_hom_injective <| MonoidHom.ext_int h_neg_one <| MonoidHom.ext (congr_fun h_nat : _)
 
 /-- If two `monoid_with_zero_hom`s agree on `-1` and the _positive_ naturals then they are equal. -/
-lemma ext_int' {φ₁ φ₂ : ℤ →*₀ M} (h_neg_one : φ₁ (-1) = φ₂ (-1))
-  (h_pos : ∀ n : ℕ, 0 < n → φ₁ n = φ₂ n) : φ₁ = φ₂ :=
-ext_int h_neg_one $ ext_nat h_pos
+theorem ext_int' {φ₁ φ₂ : ℤ →*₀ M} (h_neg_one : φ₁ (-1) = φ₂ (-1)) (h_pos : ∀ n : ℕ, 0 < n → φ₁ n = φ₂ n) : φ₁ = φ₂ :=
+  ext_int h_neg_one <| ext_nat h_pos
 
-end monoid_with_zero_hom
+end MonoidWithZeroHom
 
-namespace ring_hom
+namespace RingHom
 
-variables {α : Type*} {β : Type*} [ring α] [ring β]
+variable {α : Type _} {β : Type _} [Ringₓ α] [Ringₓ β]
 
-@[simp] lemma eq_int_cast (f : ℤ →+* α) (n : ℤ) : f n  = n :=
-f.to_add_monoid_hom.eq_int_cast f.map_one n
+@[simp]
+theorem eq_int_cast (f : ℤ →+* α) (n : ℤ) : f n = n :=
+  f.toAddMonoidHom.eq_int_cast f.map_one n
 
-lemma eq_int_cast' (f : ℤ →+* α) : f = int.cast_ring_hom α :=
-ring_hom.ext f.eq_int_cast
+theorem eq_int_cast' (f : ℤ →+* α) : f = Int.castRingHom α :=
+  RingHom.ext f.eq_int_cast
 
-@[simp] lemma map_int_cast (f : α →+* β) (n : ℤ) : f n = n :=
-(f.comp (int.cast_ring_hom α)).eq_int_cast n
+@[simp]
+theorem map_int_cast (f : α →+* β) (n : ℤ) : f n = n :=
+  (f.comp (Int.castRingHom α)).eq_int_cast n
 
-lemma ext_int {R : Type*} [semiring R] (f g : ℤ →+* R) : f = g :=
-coe_add_monoid_hom_injective $ add_monoid_hom.ext_int $ f.map_one.trans g.map_one.symm
+theorem ext_int {R : Type _} [Semiringₓ R] (f g : ℤ →+* R) : f = g :=
+  coe_add_monoid_hom_injective <| AddMonoidHom.ext_int <| f.map_one.trans g.map_one.symm
 
-instance int.subsingleton_ring_hom {R : Type*} [semiring R] : subsingleton (ℤ →+* R) :=
-⟨ring_hom.ext_int⟩
+instance Int.subsingleton_ring_hom {R : Type _} [Semiringₓ R] : Subsingleton (ℤ →+* R) :=
+  ⟨RingHom.ext_int⟩
 
-end ring_hom
+end RingHom
 
-@[simp, norm_cast] theorem int.cast_id (n : ℤ) : ↑n = n :=
-((ring_hom.id ℤ).eq_int_cast n).symm
+@[simp, norm_cast]
+theorem Int.cast_idₓ (n : ℤ) : ↑n = n :=
+  ((RingHom.id ℤ).eq_int_cast n).symm
 
-namespace pi
+namespace Pi
 
-variables {α β : Type*}
+variable {α β : Type _}
 
-lemma int_apply [has_zero β] [has_one β] [has_add β] [has_neg β] :
-  ∀ (n : ℤ) (a : α), (n : α → β) a = n
-| (n:ℕ)  a := pi.nat_apply n a
-| -[1+n] a :=
-by rw [cast_neg_succ_of_nat, cast_neg_succ_of_nat, neg_apply, add_apply, one_apply, nat_apply]
+theorem int_apply [Zero β] [One β] [Add β] [Neg β] : ∀ n : ℤ a : α, (n : α → β) a = n
+  | (n : ℕ), a => Pi.nat_apply n a
+  | -[1+ n], a => by
+    rw [cast_neg_succ_of_nat, cast_neg_succ_of_nat, neg_apply, add_apply, one_apply, nat_apply]
 
-@[simp] lemma coe_int [has_zero β] [has_one β] [has_add β] [has_neg β] (n : ℤ) :
-  (n : α → β) = λ _, n :=
-by { ext, rw pi.int_apply }
+@[simp]
+theorem coe_int [Zero β] [One β] [Add β] [Neg β] (n : ℤ) : (n : α → β) = fun _ => n := by
+  ext
+  rw [Pi.int_apply]
 
-end pi
+end Pi
 
-namespace mul_opposite
+namespace MulOpposite
 
-variables {α : Type*} [has_zero α] [has_one α] [has_add α] [has_neg α]
+variable {α : Type _} [Zero α] [One α] [Add α] [Neg α]
 
-@[simp, norm_cast] lemma op_int_cast : ∀ z : ℤ, op (z : α) = z
-| (n:ℕ) := op_nat_cast n
-| -[1+n] := congr_arg (λ a : αᵐᵒᵖ, -(a + 1)) $ op_nat_cast n
+@[simp, norm_cast]
+theorem op_int_cast : ∀ z : ℤ, op (z : α) = z
+  | (n : ℕ) => op_nat_cast n
+  | -[1+ n] => (congr_argₓ fun a : αᵐᵒᵖ => -(a + 1)) <| op_nat_cast n
 
-@[simp, norm_cast] lemma unop_int_cast : ∀ n : ℤ, unop (n : αᵐᵒᵖ) = n
-| (n:ℕ) := unop_nat_cast n
-| -[1+n] := congr_arg (λ a : α, -(a + 1)) $ unop_nat_cast n
+@[simp, norm_cast]
+theorem unop_int_cast : ∀ n : ℤ, unop (n : αᵐᵒᵖ) = n
+  | (n : ℕ) => unop_nat_cast n
+  | -[1+ n] => (congr_argₓ fun a : α => -(a + 1)) <| unop_nat_cast n
 
-end mul_opposite
+end MulOpposite
+

@@ -3,7 +3,7 @@ Copyright (c) 2021 Eric Wieser. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Eric Wieser
 -/
-import algebra.module.pi
+import Mathbin.Algebra.Module.Pi
 
 /-!
 # Bundled hom instances for module and multiplicative actions
@@ -14,42 +14,61 @@ These are analogous to the instances in `algebra.module.pi`, but for bundled ins
 functions.
 -/
 
-variables {R S A B : Type*}
 
-namespace add_monoid_hom
+variable {R S A B : Type _}
+
+namespace AddMonoidHom
 
 section
-variables [monoid R] [monoid S] [add_monoid A] [add_comm_monoid B]
-variables [distrib_mul_action R B] [distrib_mul_action S B]
 
-instance : distrib_mul_action R (A →+ B) :=
-{ smul := λ r f,
-  { to_fun := r • f,
-    map_zero' := by simp,
-    map_add' := λ x y, by simp [smul_add] },
-  one_smul := λ f, by simp,
-  mul_smul := λ r s f, by simp [mul_smul],
-  smul_add := λ r f g, ext $ λ x, by simp [smul_add],
-  smul_zero := λ r, ext $ λ x, by simp [smul_zero] }
+variable [Monoidₓ R] [Monoidₓ S] [AddMonoidₓ A] [AddCommMonoidₓ B]
 
-@[simp] lemma coe_smul (r : R) (f : A →+ B) : ⇑(r • f) = r • f := rfl
-lemma smul_apply (r : R) (f : A →+ B) (x : A) : (r • f) x = r • f x := rfl
+variable [DistribMulAction R B] [DistribMulAction S B]
 
-instance [smul_comm_class R S B] : smul_comm_class R S (A →+ B) :=
-⟨λ a b f, ext $ λ x, smul_comm _ _ _⟩
+instance : DistribMulAction R (A →+ B) where
+  smul := fun r f =>
+    { toFun := r • f,
+      map_zero' := by
+        simp ,
+      map_add' := fun x y => by
+        simp [smul_add] }
+  one_smul := fun f => by
+    simp
+  mul_smul := fun r s f => by
+    simp [mul_smul]
+  smul_add := fun r f g =>
+    ext fun x => by
+      simp [smul_add]
+  smul_zero := fun r =>
+    ext fun x => by
+      simp [smul_zero]
 
-instance [has_scalar R S] [is_scalar_tower R S B] : is_scalar_tower R S (A →+ B) :=
-⟨λ a b f, ext $ λ x, smul_assoc _ _ _⟩
+@[simp]
+theorem coe_smul (r : R) (f : A →+ B) : ⇑(r • f) = r • f :=
+  rfl
 
-instance [distrib_mul_action Rᵐᵒᵖ B] [is_central_scalar R B] : is_central_scalar R (A →+ B) :=
-⟨λ a b, ext $ λ x, op_smul_eq_smul _ _⟩
+theorem smul_apply (r : R) (f : A →+ B) (x : A) : (r • f) x = r • f x :=
+  rfl
+
+instance [SmulCommClass R S B] : SmulCommClass R S (A →+ B) :=
+  ⟨fun a b f => ext fun x => smul_comm _ _ _⟩
+
+instance [HasScalar R S] [IsScalarTower R S B] : IsScalarTower R S (A →+ B) :=
+  ⟨fun a b f => ext fun x => smul_assoc _ _ _⟩
+
+instance [DistribMulAction Rᵐᵒᵖ B] [IsCentralScalar R B] : IsCentralScalar R (A →+ B) :=
+  ⟨fun a b => ext fun x => op_smul_eq_smul _ _⟩
 
 end
 
-instance [semiring R] [add_monoid A] [add_comm_monoid B] [module R B] :
-  module R (A →+ B) :=
-{ add_smul := λ r s x, ext $ λ y, by simp [add_smul],
-  zero_smul := λ x, ext $ λ y, by simp [zero_smul],
-  ..add_monoid_hom.distrib_mul_action }
+instance [Semiringₓ R] [AddMonoidₓ A] [AddCommMonoidₓ B] [Module R B] : Module R (A →+ B) :=
+  { AddMonoidHom.distribMulAction with
+    add_smul := fun r s x =>
+      ext fun y => by
+        simp [add_smul],
+    zero_smul := fun x =>
+      ext fun y => by
+        simp [zero_smul] }
 
-end add_monoid_hom
+end AddMonoidHom
+

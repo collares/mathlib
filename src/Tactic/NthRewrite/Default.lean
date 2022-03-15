@@ -3,8 +3,7 @@ Copyright (c) 2018 Keeley Hoek. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johan Commelin, Keeley Hoek, Scott Morrison
 -/
-
-import tactic.nth_rewrite.congr
+import Mathbin.Tactic.NthRewrite.Congr
 
 /-!
 # Advanced rewriting tactics
@@ -29,61 +28,61 @@ and this isn't always what we want.
 (In particular, `rewrite_search` is much less capable on the `category_theory` library.)
 -/
 
-open tactic lean.parser interactive interactive.types expr
 
-namespace tactic
+open Tactic Lean.Parser Interactive Interactive.Types Expr
+
+namespace Tactic
 
 /-- Returns the target of the goal when passed `none`,
 otherwise, return the type of `h` in `some h`. -/
-meta def target_or_hyp_type : option expr → tactic expr
-| none     := target
-| (some h) := infer_type h
+unsafe def target_or_hyp_type : Option expr → tactic expr
+  | none => target
+  | some h => infer_type h
 
 /-- Replace the target, or a hypothesis, depending on whether `none` or `some h` is given as the
 first argument. -/
-meta def replace_in_state : option expr → expr → expr → tactic unit
-| none     := tactic.replace_target
-| (some h) := λ e p, tactic.replace_hyp h e p >> skip
+unsafe def replace_in_state : Option expr → expr → expr → tactic Unit
+  | none => tactic.replace_target
+  | some h => fun e p => tactic.replace_hyp h e p >> skip
 
-open nth_rewrite nth_rewrite.congr nth_rewrite.tracked_rewrite
-open tactic.interactive
+open NthRewrite NthRewrite.Congr NthRewrite.TrackedRewrite
+
+open Tactic.Interactive
 
 /-- Preprocess a rewrite rule for use in `get_nth_rewrite`. -/
-private meta def unpack_rule (p : rw_rule) : tactic (expr × bool) :=
-do r ← to_expr p.rule tt ff,
-   return (r, p.symm)
+private unsafe def unpack_rule (p : rw_rule) : tactic (expr × Bool) := do
+  let r ← to_expr p.rule true false
+  return (r, p)
 
 /-- Get the `n`th rewrite of rewrite rules `q` in expression `e`,
 or fail if there are not enough such rewrites. -/
-meta def get_nth_rewrite (n : ℕ) (q : rw_rules_t) (e : expr) : tactic tracked_rewrite :=
-do rewrites ← q.rules.mmap $ λ r, unpack_rule r >>= all_rewrites e,
-   rewrites.join.nth n <|> fail "failed: not enough rewrites found"
+unsafe def get_nth_rewrite (n : ℕ) (q : rw_rules_t) (e : expr) : tactic tracked_rewrite := do
+  let rewrites ← q.rules.mmap fun r => unpack_rule r >>= all_rewrites e
+  rewrites n <|> fail "failed: not enough rewrites found"
 
 /-- Rewrite the `n`th occurrence of the rewrite rules `q` of (optionally after zooming into) a
 hypothesis or target `h` which is an application of a relation. -/
-meta def get_nth_rewrite_with_zoom
-  (n : ℕ) (q : rw_rules_t) (path : list expr_lens.dir) (h : option expr) : tactic tracked_rewrite :=
-do e ← target_or_hyp_type h,
-   (ln, new_e) ← expr_lens.entire.zoom path e,
-   rw ← get_nth_rewrite n q new_e,
-   return ⟨ln.fill rw.exp, rw.proof >>= ln.congr, rw.addr.map $ λ l, path ++ l⟩
+unsafe def get_nth_rewrite_with_zoom (n : ℕ) (q : rw_rules_t) (path : List ExprLens.Dir) (h : Option expr) :
+    tactic tracked_rewrite := do
+  let e ← target_or_hyp_type h
+  let (ln, new_e) ← expr_lens.entire.zoom path e
+  let rw ← get_nth_rewrite n q new_e
+  return ⟨ln rw, rw >>= ln, rw fun l => path ++ l⟩
 
 /-- Rewrite the `n`th occurrence of the rewrite rules `q` (optionally on a side)
 at all the locations `loc`. -/
-meta def nth_rewrite_core (path : list expr_lens.dir) (n : parse small_nat) (q : parse rw_rules)
-  (l : parse location) : tactic unit :=
-do let fn := λ h, get_nth_rewrite_with_zoom n q path h
-                    >>= λ rw, (rw.proof >>= replace_in_state h rw.exp),
-   match l with
-   | loc.wildcard := l.try_apply (fn ∘ some) (fn none)
-   | _            := l.apply     (fn ∘ some) (fn none)
-   end,
-   tactic.try (tactic.reflexivity reducible),
-   (returnopt q.end_pos >>= save_info <|> skip)
+unsafe def nth_rewrite_core (path : List ExprLens.Dir) (n : parse small_nat) (q : parse rw_rules) (l : parse location) :
+    tactic Unit := do
+  let fn := fun h => get_nth_rewrite_with_zoom n q path h >>= fun rw => rw.proof >>= replace_in_state h rw.exp
+  match l with
+    | loc.wildcard => l (fn ∘ some) (fn none)
+    | _ => l (fn ∘ some) (fn none)
+  tactic.try (tactic.reflexivity reducible)
+  returnopt q >>= save_info <|> skip
 
-namespace interactive
+namespace Interactive
 
-open expr_lens
+open ExprLens
 
 /-- `nth_rewrite n rules` performs only the `n`th possible rewrite using the `rules`.
 The tactics `nth_rewrite_lhs` and `nth_rewrite_rhs` are variants
@@ -103,26 +102,23 @@ the tactic `nth_rewrite 1 h` will change the goal to `a + x = y + b`.
 The core `rewrite` has a `occs` configuration setting intended to achieve a similar
 purpose, but this doesn't really work. (If a rule matches twice, but with different
 values of arguments, the second match will not be identified.) -/
-meta def nth_rewrite
-  (n : parse small_nat) (q : parse rw_rules) (l : parse location) : tactic unit :=
-nth_rewrite_core [] n q l
+unsafe def nth_rewrite (n : parse small_nat) (q : parse rw_rules) (l : parse location) : tactic Unit :=
+  nth_rewrite_core [] n q l
 
-meta def nth_rewrite_lhs (n : parse small_nat) (q : parse rw_rules) (l : parse location) :
-  tactic unit :=
-nth_rewrite_core [dir.F, dir.A] n q l
+unsafe def nth_rewrite_lhs (n : parse small_nat) (q : parse rw_rules) (l : parse location) : tactic Unit :=
+  nth_rewrite_core [Dir.F, Dir.A] n q l
 
-meta def nth_rewrite_rhs (n : parse small_nat) (q : parse rw_rules) (l : parse location) :
-  tactic unit :=
-nth_rewrite_core [dir.A] n q l
+unsafe def nth_rewrite_rhs (n : parse small_nat) (q : parse rw_rules) (l : parse location) : tactic Unit :=
+  nth_rewrite_core [Dir.A] n q l
 
 copy_doc_string nth_rewrite → nth_rewrite_lhs nth_rewrite_rhs
 
 add_tactic_doc
-{ name       := "nth_rewrite / nth_rewrite_lhs / nth_rewrite_rhs",
-  category   := doc_category.tactic,
-  inherit_description_from := ``nth_rewrite,
-  decl_names := [``nth_rewrite, ``nth_rewrite_lhs, ``nth_rewrite_rhs],
-  tags       := ["rewriting"] }
+  { Name := "nth_rewrite / nth_rewrite_lhs / nth_rewrite_rhs", category := DocCategory.tactic,
+    inheritDescriptionFrom := `` nth_rewrite, declNames := [`` nth_rewrite, `` nth_rewrite_lhs, `` nth_rewrite_rhs],
+    tags := ["rewriting"] }
 
-end interactive
-end tactic
+end Interactive
+
+end Tactic
+

@@ -3,9 +3,9 @@ Copyright (c) 2019 Sébastien Gouëzel. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sébastien Gouëzel
 -/
-import topology.uniform_space.cauchy
-import topology.uniform_space.separation
-import topology.dense_embedding
+import Mathbin.Topology.UniformSpace.Cauchy
+import Mathbin.Topology.UniformSpace.Separation
+import Mathbin.Topology.DenseEmbedding
 
 /-!
 # Theory of complete separated uniform spaces.
@@ -13,29 +13,32 @@ import topology.dense_embedding
 This file is for elementary lemmas that depend on both Cauchy filters and separation.
 -/
 
-open filter
-open_locale topological_space filter
 
-variables {α : Type*}
+open Filter
 
-/-In a separated space, a complete set is closed -/
-lemma is_complete.is_closed  [uniform_space α] [separated_space α] {s : set α} (h : is_complete s) :
-  is_closed s :=
-is_closed_iff_cluster_pt.2 $ λ a ha, begin
-  let f := 𝓝[s] a,
-  have : cauchy f := cauchy_nhds.mono' ha inf_le_left,
-  rcases h f this (inf_le_right) with ⟨y, ys, fy⟩,
-  rwa (tendsto_nhds_unique' ha inf_le_left fy : a = y)
-end
+open_locale TopologicalSpace Filter
 
-namespace dense_inducing
-open filter
-variables [topological_space α] {β : Type*} [topological_space β]
-variables {γ : Type*} [uniform_space γ] [complete_space γ] [separated_space γ]
+variable {α : Type _}
 
-lemma continuous_extend_of_cauchy {e : α → β} {f : α → γ}
-  (de : dense_inducing e) (h : ∀ b : β, cauchy (map f (comap e $ 𝓝 b))) :
-  continuous (de.extend f) :=
-de.continuous_extend $ λ b, complete_space.complete (h b)
+--In a separated space, a complete set is closed
+theorem IsComplete.is_closed [UniformSpace α] [SeparatedSpace α] {s : Set α} (h : IsComplete s) : IsClosed s :=
+  is_closed_iff_cluster_pt.2 fun a ha => by
+    let f := 𝓝[s] a
+    have : Cauchy f := cauchy_nhds.mono' ha inf_le_left
+    rcases h f this inf_le_right with ⟨y, ys, fy⟩
+    rwa [(tendsto_nhds_unique' ha inf_le_left fy : a = y)]
 
-end dense_inducing
+namespace DenseInducing
+
+open Filter
+
+variable [TopologicalSpace α] {β : Type _} [TopologicalSpace β]
+
+variable {γ : Type _} [UniformSpace γ] [CompleteSpace γ] [SeparatedSpace γ]
+
+theorem continuous_extend_of_cauchy {e : α → β} {f : α → γ} (de : DenseInducing e)
+    (h : ∀ b : β, Cauchy (map f (comap e <| 𝓝 b))) : Continuous (de.extend f) :=
+  de.continuous_extend fun b => CompleteSpace.complete (h b)
+
+end DenseInducing
+

@@ -3,9 +3,8 @@ Copyright (c) 2018 Mitchell Rowett. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Mitchell Rowett, Scott Morrison
 -/
-
-import algebra.quotient
-import group_theory.subgroup.basic
+import Mathbin.Algebra.Quotient
+import Mathbin.GroupTheory.Subgroup.Basic
 
 /-!
 # Cosets
@@ -39,452 +38,513 @@ This file develops the basic theory of left and right cosets.
 Add `to_additive` to `preimage_mk_equiv_subgroup_times_set`.
 -/
 
-open set function
 
-variable {α : Type*}
+open Set Function
+
+variable {α : Type _}
 
 /-- The left coset `a * s` for an element `a : α` and a subset `s : set α` -/
-@[to_additive left_add_coset "The left coset `a+s` for an element `a : α`
-and a subset `s : set α`"]
-def left_coset [has_mul α] (a : α) (s : set α) : set α := (λ x, a * x) '' s
+@[to_additive LeftAddCoset "The left coset `a+s` for an element `a : α`\nand a subset `s : set α`"]
+def LeftCoset [Mul α] (a : α) (s : Set α) : Set α :=
+  (fun x => a * x) '' s
 
 /-- The right coset `s * a` for an element `a : α` and a subset `s : set α` -/
-@[to_additive right_add_coset "The right coset `s+a` for an element `a : α`
-and a subset `s : set α`"]
-def right_coset [has_mul α] (s : set α) (a : α) : set α := (λ x, x * a) '' s
+@[to_additive RightAddCoset "The right coset `s+a` for an element `a : α`\nand a subset `s : set α`"]
+def RightCoset [Mul α] (s : Set α) (a : α) : Set α :=
+  (fun x => x * a) '' s
 
-localized "infix ` *l `:70 := left_coset" in coset
-localized "infix ` +l `:70 := left_add_coset" in coset
-localized "infix ` *r `:70 := right_coset" in coset
-localized "infix ` +r `:70 := right_add_coset" in coset
+-- mathport name: «expr *l »
+localized [Coset] infixl:70 " *l " => LeftCoset
 
-section coset_mul
-variable [has_mul α]
+-- mathport name: «expr +l »
+localized [Coset] infixl:70 " +l " => LeftAddCoset
+
+-- mathport name: «expr *r »
+localized [Coset] infixl:70 " *r " => RightCoset
+
+-- mathport name: «expr +r »
+localized [Coset] infixl:70 " +r " => RightAddCoset
+
+section CosetMul
+
+variable [Mul α]
 
 @[to_additive mem_left_add_coset]
-lemma mem_left_coset {s : set α} {x : α} (a : α) (hxS : x ∈ s) : a * x ∈ a *l s :=
-mem_image_of_mem (λ b : α, a * b) hxS
+theorem mem_left_coset {s : Set α} {x : α} (a : α) (hxS : x ∈ s) : a * x ∈ a *l s :=
+  mem_image_of_mem (fun b : α => a * b) hxS
 
 @[to_additive mem_right_add_coset]
-lemma mem_right_coset {s : set α} {x : α} (a : α) (hxS : x ∈ s) : x * a ∈ s *r a :=
-mem_image_of_mem (λ b : α, b * a) hxS
+theorem mem_right_coset {s : Set α} {x : α} (a : α) (hxS : x ∈ s) : x * a ∈ s *r a :=
+  mem_image_of_mem (fun b : α => b * a) hxS
 
 /-- Equality of two left cosets `a * s` and `b * s`. -/
-@[to_additive left_add_coset_equivalence "Equality of two left cosets `a + s` and `b + s`."]
-def left_coset_equivalence (s : set α) (a b : α) := a *l s = b *l s
+@[to_additive LeftAddCosetEquivalence "Equality of two left cosets `a + s` and `b + s`."]
+def LeftCosetEquivalence (s : Set α) (a b : α) :=
+  a *l s = b *l s
 
 @[to_additive left_add_coset_equivalence_rel]
-lemma left_coset_equivalence_rel (s : set α) : equivalence (left_coset_equivalence s) :=
-mk_equivalence (left_coset_equivalence s) (λ a, rfl) (λ a b, eq.symm) (λ a b c, eq.trans)
+theorem left_coset_equivalence_rel (s : Set α) : Equivalenceₓ (LeftCosetEquivalence s) :=
+  mk_equivalence (LeftCosetEquivalence s) (fun a => rfl) (fun a b => Eq.symm) fun a b c => Eq.trans
 
 /-- Equality of two right cosets `s * a` and `s * b`. -/
-@[to_additive right_add_coset_equivalence "Equality of two right cosets `s + a` and `s + b`."]
-def right_coset_equivalence (s : set α) (a b : α) := s *r a = s *r b
+@[to_additive RightAddCosetEquivalence "Equality of two right cosets `s + a` and `s + b`."]
+def RightCosetEquivalence (s : Set α) (a b : α) :=
+  s *r a = s *r b
 
 @[to_additive right_add_coset_equivalence_rel]
-lemma right_coset_equivalence_rel (s : set α) : equivalence (right_coset_equivalence s) :=
-mk_equivalence (right_coset_equivalence s) (λ a, rfl) (λ a b, eq.symm) (λ a b c, eq.trans)
+theorem right_coset_equivalence_rel (s : Set α) : Equivalenceₓ (RightCosetEquivalence s) :=
+  mk_equivalence (RightCosetEquivalence s) (fun a => rfl) (fun a b => Eq.symm) fun a b c => Eq.trans
 
-end coset_mul
+end CosetMul
 
-section coset_semigroup
-variable [semigroup α]
+section CosetSemigroup
 
-@[simp, to_additive left_add_coset_assoc] lemma left_coset_assoc (s : set α) (a b : α) :
-  a *l (b *l s) = (a * b) *l s :=
-by simp [left_coset, right_coset, (image_comp _ _ _).symm, function.comp, mul_assoc]
+variable [Semigroupₓ α]
 
-@[simp, to_additive right_add_coset_assoc] lemma right_coset_assoc (s : set α) (a b : α) :
-  s *r a *r b = s *r (a * b) :=
-by simp [left_coset, right_coset, (image_comp _ _ _).symm, function.comp, mul_assoc]
+@[simp, to_additive left_add_coset_assoc]
+theorem left_coset_assoc (s : Set α) (a b : α) : a *l (b *l s) = a * b *l s := by
+  simp [LeftCoset, RightCoset, (image_comp _ _ _).symm, Function.comp, mul_assoc]
+
+@[simp, to_additive right_add_coset_assoc]
+theorem right_coset_assoc (s : Set α) (a b : α) : s *r a *r b = s *r (a * b) := by
+  simp [LeftCoset, RightCoset, (image_comp _ _ _).symm, Function.comp, mul_assoc]
 
 @[to_additive left_add_coset_right_add_coset]
-lemma left_coset_right_coset (s : set α) (a b : α) : a *l s *r b = a *l (s *r b) :=
-by simp [left_coset, right_coset, (image_comp _ _ _).symm, function.comp, mul_assoc]
+theorem left_coset_right_coset (s : Set α) (a b : α) : a *l s *r b = a *l (s *r b) := by
+  simp [LeftCoset, RightCoset, (image_comp _ _ _).symm, Function.comp, mul_assoc]
 
-end coset_semigroup
+end CosetSemigroup
 
-section coset_monoid
-variables [monoid α] (s : set α)
+section CosetMonoid
 
-@[simp, to_additive zero_left_add_coset] lemma one_left_coset : 1 *l s = s :=
-set.ext $ by simp [left_coset]
+variable [Monoidₓ α] (s : Set α)
 
-@[simp, to_additive right_add_coset_zero] lemma right_coset_one : s *r 1 = s :=
-set.ext $ by simp [right_coset]
+@[simp, to_additive zero_left_add_coset]
+theorem one_left_coset : 1 *l s = s :=
+  Set.ext <| by
+    simp [LeftCoset]
 
-end coset_monoid
+@[simp, to_additive right_add_coset_zero]
+theorem right_coset_one : s *r 1 = s :=
+  Set.ext <| by
+    simp [RightCoset]
 
-section coset_submonoid
-open submonoid
-variables [monoid α] (s : submonoid α)
+end CosetMonoid
+
+section CosetSubmonoid
+
+open Submonoid
+
+variable [Monoidₓ α] (s : Submonoid α)
 
 @[to_additive mem_own_left_add_coset]
-lemma mem_own_left_coset (a : α) : a ∈ a *l s :=
-suffices a * 1 ∈ a *l s, by simpa,
-mem_left_coset a (one_mem s)
+theorem mem_own_left_coset (a : α) : a ∈ a *l s :=
+  suffices a * 1 ∈ a *l s by
+    simpa
+  mem_left_coset a (one_mem s)
 
 @[to_additive mem_own_right_add_coset]
-lemma mem_own_right_coset (a : α) : a ∈ (s : set α) *r a :=
-suffices 1 * a ∈ (s : set α) *r a, by simpa,
-mem_right_coset a (one_mem s)
+theorem mem_own_right_coset (a : α) : a ∈ (s : Set α) *r a :=
+  suffices 1 * a ∈ (s : Set α) *r a by
+    simpa
+  mem_right_coset a (one_mem s)
 
 @[to_additive mem_left_add_coset_left_add_coset]
-lemma mem_left_coset_left_coset {a : α} (ha : a *l s = s) : a ∈ s :=
-by rw [←set_like.mem_coe, ←ha]; exact mem_own_left_coset s a
+theorem mem_left_coset_left_coset {a : α} (ha : a *l s = s) : a ∈ s := by
+  rw [← SetLike.mem_coe, ← ha] <;> exact mem_own_left_coset s a
 
 @[to_additive mem_right_add_coset_right_add_coset]
-lemma mem_right_coset_right_coset {a : α} (ha : (s : set α) *r a = s) : a ∈ s :=
-by rw [←set_like.mem_coe, ←ha]; exact mem_own_right_coset s a
+theorem mem_right_coset_right_coset {a : α} (ha : (s : Set α) *r a = s) : a ∈ s := by
+  rw [← SetLike.mem_coe, ← ha] <;> exact mem_own_right_coset s a
 
-end coset_submonoid
+end CosetSubmonoid
 
-section coset_group
-variables [group α] {s : set α} {x : α}
+section CosetGroup
+
+variable [Groupₓ α] {s : Set α} {x : α}
 
 @[to_additive mem_left_add_coset_iff]
-lemma mem_left_coset_iff (a : α) : x ∈ a *l s ↔ a⁻¹ * x ∈ s :=
-iff.intro
-  (assume ⟨b, hb, eq⟩, by simp [eq.symm, hb])
-  (assume h, ⟨a⁻¹ * x, h, by simp⟩)
+theorem mem_left_coset_iff (a : α) : x ∈ a *l s ↔ a⁻¹ * x ∈ s :=
+  Iff.intro
+    (fun ⟨b, hb, Eq⟩ => by
+      simp [Eq.symm, hb])
+    fun h =>
+    ⟨a⁻¹ * x, h, by
+      simp ⟩
 
 @[to_additive mem_right_add_coset_iff]
-lemma mem_right_coset_iff (a : α) : x ∈ s *r a ↔ x * a⁻¹ ∈ s :=
-iff.intro
-  (assume ⟨b, hb, eq⟩, by simp [eq.symm, hb])
-  (assume h, ⟨x * a⁻¹, h, by simp⟩)
+theorem mem_right_coset_iff (a : α) : x ∈ s *r a ↔ x * a⁻¹ ∈ s :=
+  Iff.intro
+    (fun ⟨b, hb, Eq⟩ => by
+      simp [Eq.symm, hb])
+    fun h =>
+    ⟨x * a⁻¹, h, by
+      simp ⟩
 
-end coset_group
+end CosetGroup
 
-section coset_subgroup
-open subgroup
+section CosetSubgroup
 
-variables [group α] (s : subgroup α)
+open Subgroup
+
+variable [Groupₓ α] (s : Subgroup α)
 
 @[to_additive left_add_coset_mem_left_add_coset]
-lemma left_coset_mem_left_coset {a : α} (ha : a ∈ s) : a *l s = s :=
-set.ext $ by simp [mem_left_coset_iff, mul_mem_cancel_left s (s.inv_mem ha)]
+theorem left_coset_mem_left_coset {a : α} (ha : a ∈ s) : a *l s = s :=
+  Set.ext <| by
+    simp [mem_left_coset_iff, mul_mem_cancel_left s (s.inv_mem ha)]
 
 @[to_additive right_add_coset_mem_right_add_coset]
-lemma right_coset_mem_right_coset {a : α} (ha : a ∈ s) : (s : set α) *r a = s :=
-set.ext $ assume b, by simp [mem_right_coset_iff, mul_mem_cancel_right s (s.inv_mem ha)]
+theorem right_coset_mem_right_coset {a : α} (ha : a ∈ s) : (s : Set α) *r a = s :=
+  Set.ext fun b => by
+    simp [mem_right_coset_iff, mul_mem_cancel_right s (s.inv_mem ha)]
 
 @[to_additive eq_add_cosets_of_normal]
-theorem eq_cosets_of_normal (N : s.normal) (g : α) : g *l s = s *r g :=
-set.ext $ assume a, by simp [mem_left_coset_iff, mem_right_coset_iff]; rw [N.mem_comm_iff]
+theorem eq_cosets_of_normal (N : s.Normal) (g : α) : g *l s = s *r g :=
+  Set.ext fun a => by
+    simp [mem_left_coset_iff, mem_right_coset_iff] <;> rw [N.mem_comm_iff]
 
 @[to_additive normal_of_eq_add_cosets]
-theorem normal_of_eq_cosets (h : ∀ g : α, g *l s = s *r g) : s.normal :=
-⟨assume a ha g, show g * a * g⁻¹ ∈ (s : set α),
-  by rw [← mem_right_coset_iff, ← h]; exact mem_left_coset g ha⟩
+theorem normal_of_eq_cosets (h : ∀ g : α, g *l s = s *r g) : s.Normal :=
+  ⟨fun a ha g =>
+    show g * a * g⁻¹ ∈ (s : Set α) by
+      rw [← mem_right_coset_iff, ← h] <;> exact mem_left_coset g ha⟩
 
 @[to_additive normal_iff_eq_add_cosets]
-theorem normal_iff_eq_cosets : s.normal ↔ ∀ g : α, g *l s = s *r g :=
-⟨@eq_cosets_of_normal _ _ s, normal_of_eq_cosets s⟩
+theorem normal_iff_eq_cosets : s.Normal ↔ ∀ g : α, g *l s = s *r g :=
+  ⟨@eq_cosets_of_normal _ _ s, normal_of_eq_cosets s⟩
 
 @[to_additive left_add_coset_eq_iff]
-lemma left_coset_eq_iff {x y : α} : left_coset x s = left_coset y s ↔ x⁻¹ * y ∈ s :=
-begin
-  rw set.ext_iff,
-  simp_rw [mem_left_coset_iff, set_like.mem_coe],
-  split,
-  { intro h, apply (h y).mpr, rw mul_left_inv, exact s.one_mem },
-  { intros h z, rw ←mul_inv_cancel_right x⁻¹ y, rw mul_assoc, exact s.mul_mem_cancel_left h },
-end
+theorem left_coset_eq_iff {x y : α} : LeftCoset x s = LeftCoset y s ↔ x⁻¹ * y ∈ s := by
+  rw [Set.ext_iff]
+  simp_rw [mem_left_coset_iff, SetLike.mem_coe]
+  constructor
+  · intro h
+    apply (h y).mpr
+    rw [mul_left_invₓ]
+    exact s.one_mem
+    
+  · intro h z
+    rw [← mul_inv_cancel_rightₓ x⁻¹ y]
+    rw [mul_assoc]
+    exact s.mul_mem_cancel_left h
+    
 
 @[to_additive right_add_coset_eq_iff]
-lemma right_coset_eq_iff {x y : α} : right_coset ↑s x = right_coset s y ↔ y * x⁻¹ ∈ s :=
-begin
-  rw set.ext_iff,
-  simp_rw [mem_right_coset_iff, set_like.mem_coe],
-  split,
-  { intro h, apply (h y).mpr, rw mul_right_inv, exact s.one_mem },
-  { intros h z, rw ←inv_mul_cancel_left y x⁻¹, rw ←mul_assoc, exact s.mul_mem_cancel_right h },
-end
+theorem right_coset_eq_iff {x y : α} : RightCoset (↑s) x = RightCoset s y ↔ y * x⁻¹ ∈ s := by
+  rw [Set.ext_iff]
+  simp_rw [mem_right_coset_iff, SetLike.mem_coe]
+  constructor
+  · intro h
+    apply (h y).mpr
+    rw [mul_right_invₓ]
+    exact s.one_mem
+    
+  · intro h z
+    rw [← inv_mul_cancel_leftₓ y x⁻¹]
+    rw [← mul_assoc]
+    exact s.mul_mem_cancel_right h
+    
 
-end coset_subgroup
+end CosetSubgroup
 
-run_cmd to_additive.map_namespace `quotient_group `quotient_add_group
+run_cmd
+  to_additive.map_namespace `quotient_group `quotient_add_group
 
-namespace quotient_group
+namespace QuotientGroup
 
-variables [group α] (s : subgroup α)
+variable [Groupₓ α] (s : Subgroup α)
 
 /-- The equivalence relation corresponding to the partition of a group by left cosets
 of a subgroup.-/
-@[to_additive "The equivalence relation corresponding to the partition of a group by left cosets
-of a subgroup."]
-def left_rel : setoid α :=
-⟨λ x y, x⁻¹ * y ∈ s, by { simp_rw ←left_coset_eq_iff, exact left_coset_equivalence_rel s }⟩
+@[to_additive "The equivalence relation corresponding to the partition of a group by left cosets\nof a subgroup."]
+def leftRel : Setoidₓ α :=
+  ⟨fun x y => x⁻¹ * y ∈ s, by
+    simp_rw [← left_coset_eq_iff]
+    exact left_coset_equivalence_rel s⟩
 
-lemma left_rel_r_eq_left_coset_equivalence :
-  @setoid.r _ (quotient_group.left_rel s) = left_coset_equivalence s :=
-by { ext, exact (left_coset_eq_iff s).symm }
+theorem left_rel_r_eq_left_coset_equivalence : @Setoidₓ.R _ (QuotientGroup.leftRel s) = LeftCosetEquivalence s := by
+  ext
+  exact (left_coset_eq_iff s).symm
 
 @[to_additive]
-instance left_rel_decidable [decidable_pred (∈ s)] :
-  decidable_rel (left_rel s).r := λ x y, ‹decidable_pred (∈ s)› _
+instance leftRelDecidable [DecidablePred (· ∈ s)] : DecidableRel (leftRel s).R := fun x y => ‹DecidablePred (· ∈ s)› _
 
 /-- `α ⧸ s` is the quotient type representing the left cosets of `s`.
   If `s` is a normal subgroup, `α ⧸ s` is a group -/
-@[to_additive "`α ⧸ s` is the quotient type representing the left cosets of `s`.  If `s` is a
-normal subgroup, `α ⧸ s` is a group"]
-instance : has_quotient α (subgroup α) := ⟨λ s, quotient (left_rel s)⟩
+@[to_additive
+      "`α ⧸ s` is the quotient type representing the left cosets of `s`.  If `s` is a\nnormal subgroup, `α ⧸ s` is a group"]
+instance : HasQuotient α (Subgroup α) :=
+  ⟨fun s => Quotientₓ (leftRel s)⟩
 
 /-- The equivalence relation corresponding to the partition of a group by right cosets of a
 subgroup. -/
-@[to_additive "The equivalence relation corresponding to the partition of a group by right cosets of
-a subgroup."]
-def right_rel : setoid α :=
-⟨λ x y, y * x⁻¹ ∈ s, by { simp_rw ←right_coset_eq_iff, exact right_coset_equivalence_rel s }⟩
+@[to_additive "The equivalence relation corresponding to the partition of a group by right cosets of\na subgroup."]
+def rightRel : Setoidₓ α :=
+  ⟨fun x y => y * x⁻¹ ∈ s, by
+    simp_rw [← right_coset_eq_iff]
+    exact right_coset_equivalence_rel s⟩
 
-lemma right_rel_r_eq_right_coset_equivalence :
-  @setoid.r _ (quotient_group.right_rel s) = right_coset_equivalence s :=
-by { ext, exact (right_coset_eq_iff s).symm }
-
-@[to_additive]
-instance right_rel_decidable [decidable_pred (∈ s)] :
-  decidable_rel (right_rel s).r := λ x y, ‹decidable_pred (∈ s)› _
-
-end quotient_group
-
-namespace quotient_group
-
-variables [group α] {s : subgroup α}
+theorem right_rel_r_eq_right_coset_equivalence : @Setoidₓ.R _ (QuotientGroup.rightRel s) = RightCosetEquivalence s := by
+  ext
+  exact (right_coset_eq_iff s).symm
 
 @[to_additive]
-instance fintype [fintype α] (s : subgroup α) [decidable_rel (left_rel s).r] :
-  fintype (α ⧸ s) :=
-quotient.fintype (left_rel s)
+instance rightRelDecidable [DecidablePred (· ∈ s)] : DecidableRel (rightRel s).R := fun x y => ‹DecidablePred (· ∈ s)› _
+
+end QuotientGroup
+
+namespace QuotientGroup
+
+variable [Groupₓ α] {s : Subgroup α}
+
+@[to_additive]
+instance fintype [Fintype α] (s : Subgroup α) [DecidableRel (leftRel s).R] : Fintype (α ⧸ s) :=
+  Quotientₓ.fintype (leftRel s)
 
 /-- The canonical map from a group `α` to the quotient `α ⧸ s`. -/
 @[to_additive "The canonical map from an `add_group` `α` to the quotient `α ⧸ s`."]
-abbreviation mk (a : α) : α ⧸ s :=
-quotient.mk' a
+abbrev mk (a : α) : α ⧸ s :=
+  Quotientₓ.mk' a
 
 @[elab_as_eliminator, to_additive]
-lemma induction_on {C : α ⧸ s → Prop} (x : α ⧸ s)
-  (H : ∀ z, C (quotient_group.mk z)) : C x :=
-quotient.induction_on' x H
+theorem induction_on {C : α ⧸ s → Prop} (x : α ⧸ s) (H : ∀ z, C (QuotientGroup.mk z)) : C x :=
+  Quotientₓ.induction_on' x H
 
 @[to_additive]
-instance : has_coe_t α (α ⧸ s) := ⟨mk⟩ -- note [use has_coe_t]
+instance : CoeTₓ α (α ⧸ s) :=
+  ⟨mk⟩
 
+-- note [use has_coe_t]
 @[elab_as_eliminator, to_additive]
-lemma induction_on' {C : α ⧸ s → Prop} (x : α ⧸ s)
-  (H : ∀ z : α, C z) : C x :=
-quotient.induction_on' x H
+theorem induction_on' {C : α ⧸ s → Prop} (x : α ⧸ s) (H : ∀ z : α, C z) : C x :=
+  Quotientₓ.induction_on' x H
 
 @[simp, to_additive]
-lemma quotient_lift_on_coe {β} (f : α → β) (h) (x : α) :
-  quotient.lift_on' (x : α ⧸ s) f h = f x := rfl
+theorem quotient_lift_on_coe {β} (f : α → β) h (x : α) : Quotientₓ.liftOn' (x : α ⧸ s) f h = f x :=
+  rfl
 
 @[to_additive]
-lemma forall_coe {C : α ⧸ s → Prop} :
-  (∀ x : α ⧸ s, C x) ↔ ∀ x : α, C x :=
-⟨λ hx x, hx _, quot.ind⟩
+theorem forall_coe {C : α ⧸ s → Prop} : (∀ x : α ⧸ s, C x) ↔ ∀ x : α, C x :=
+  ⟨fun hx x => hx _, Quot.ind⟩
 
 @[to_additive]
-instance (s : subgroup α) : inhabited (α ⧸ s) :=
-⟨((1 : α) : α ⧸ s)⟩
+instance (s : Subgroup α) : Inhabited (α ⧸ s) :=
+  ⟨((1 : α) : α ⧸ s)⟩
 
-@[to_additive quotient_add_group.eq]
-protected lemma eq {a b : α} : (a : α ⧸ s) = b ↔ a⁻¹ * b ∈ s :=
-quotient.eq'
+@[to_additive QuotientAddGroup.eq]
+protected theorem eq {a b : α} : (a : α ⧸ s) = b ↔ a⁻¹ * b ∈ s :=
+  Quotientₓ.eq'
 
-@[to_additive quotient_add_group.eq']
-lemma eq' {a b : α} : (mk a : α ⧸ s) = mk b ↔ a⁻¹ * b ∈ s :=
-quotient_group.eq
+@[to_additive QuotientAddGroup.eq']
+theorem eq' {a b : α} : (mk a : α ⧸ s) = mk b ↔ a⁻¹ * b ∈ s :=
+  QuotientGroup.eq
 
-@[to_additive quotient_add_group.out_eq']
-lemma out_eq' (a : α ⧸ s) : mk a.out' = a :=
-quotient.out_eq' a
+@[to_additive QuotientAddGroup.out_eq']
+theorem out_eq' (a : α ⧸ s) : mk a.out' = a :=
+  Quotientₓ.out_eq' a
 
-variables (s)
+variable (s)
 
 /- It can be useful to write `obtain ⟨h, H⟩ := mk_out'_eq_mul ...`, and then `rw [H]` or
   `simp_rw [H]` or `simp only [H]`. In order for `simp_rw` and `simp only` to work, this lemma is
   stated in terms of an arbitrary `h : s`, rathern that the specific `h = g⁻¹ * (mk g).out'`. -/
-@[to_additive quotient_add_group.mk_out'_eq_mul]
-lemma mk_out'_eq_mul (g : α) : ∃ h : s, (mk g : α ⧸ s).out' = g * h :=
-⟨⟨g⁻¹ * (mk g).out', eq'.mp (mk g).out_eq'.symm⟩, by rw [s.coe_mk, mul_inv_cancel_left]⟩
+@[to_additive QuotientAddGroup.mk_out'_eq_mul]
+theorem mk_out'_eq_mul (g : α) : ∃ h : s, (mk g : α ⧸ s).out' = g * h :=
+  ⟨⟨g⁻¹ * (mk g).out', eq'.mp (mk g).out_eq'.symm⟩, by
+    rw [s.coe_mk, mul_inv_cancel_left]⟩
 
-variables {s}
+variable {s}
 
-@[to_additive quotient_add_group.mk_mul_of_mem]
-lemma mk_mul_of_mem (g₁ g₂ : α) (hg₂ : g₂ ∈ s) : (mk (g₁ * g₂) : α ⧸ s) = mk g₁ :=
-by rwa [eq', mul_inv_rev, inv_mul_cancel_right, s.inv_mem_iff]
-
-@[to_additive]
-lemma eq_class_eq_left_coset (s : subgroup α) (g : α) :
-  {x : α | (x : α ⧸ s) = g} = left_coset g s :=
-set.ext $ λ z,
-  by rw [mem_left_coset_iff, set.mem_set_of_eq, eq_comm, quotient_group.eq, set_like.mem_coe]
+@[to_additive QuotientAddGroup.mk_mul_of_mem]
+theorem mk_mul_of_mem (g₁ g₂ : α) (hg₂ : g₂ ∈ s) : (mk (g₁ * g₂) : α ⧸ s) = mk g₁ := by
+  rwa [eq', mul_inv_rev, inv_mul_cancel_right, s.inv_mem_iff]
 
 @[to_additive]
-lemma preimage_image_coe (N : subgroup α) (s : set α) :
-  coe ⁻¹' ((coe : α → α ⧸ N) '' s) = ⋃ x : N, (λ y : α, y * x) ⁻¹' s :=
-begin
-  ext x,
-  simp only [quotient_group.eq, set_like.exists, exists_prop, set.mem_preimage, set.mem_Union,
-    set.mem_image, subgroup.coe_mk, ← eq_inv_mul_iff_mul_eq],
-  exact ⟨λ ⟨y, hs, hN⟩, ⟨_, N.inv_mem hN, by simpa using hs⟩,
-         λ ⟨z, hz, hxz⟩, ⟨x*z, hxz, by simpa using hz⟩⟩,
-end
+theorem eq_class_eq_left_coset (s : Subgroup α) (g : α) : { x : α | (x : α ⧸ s) = g } = LeftCoset g s :=
+  Set.ext fun z => by
+    rw [mem_left_coset_iff, Set.mem_set_of_eq, eq_comm, QuotientGroup.eq, SetLike.mem_coe]
 
-end quotient_group
+@[to_additive]
+theorem preimage_image_coe (N : Subgroup α) (s : Set α) :
+    coe ⁻¹' ((coe : α → α ⧸ N) '' s) = ⋃ x : N, (fun y : α => y * x) ⁻¹' s := by
+  ext x
+  simp only [QuotientGroup.eq, SetLike.exists, exists_prop, Set.mem_preimage, Set.mem_Union, Set.mem_image,
+    Subgroup.coe_mk, ← eq_inv_mul_iff_mul_eq]
+  exact
+    ⟨fun ⟨y, hs, hN⟩ =>
+      ⟨_, N.inv_mem hN, by
+        simpa using hs⟩,
+      fun ⟨z, hz, hxz⟩ =>
+      ⟨x * z, hxz, by
+        simpa using hz⟩⟩
 
-namespace subgroup
-open quotient_group
-variables [group α] {s : subgroup α}
+end QuotientGroup
+
+namespace Subgroup
+
+open QuotientGroup
+
+variable [Groupₓ α] {s : Subgroup α}
 
 /-- The natural bijection between a left coset `g * s` and `s`. -/
 @[to_additive "The natural bijection between the cosets `g + s` and `s`."]
-def left_coset_equiv_subgroup (g : α) : left_coset g s ≃ s :=
-⟨λ x, ⟨g⁻¹ * x.1, (mem_left_coset_iff _).1 x.2⟩,
- λ x, ⟨g * x.1, x.1, x.2, rfl⟩,
- λ ⟨x, hx⟩, subtype.eq $ by simp,
- λ ⟨g, hg⟩, subtype.eq $ by simp⟩
+def leftCosetEquivSubgroup (g : α) : LeftCoset g s ≃ s :=
+  ⟨fun x => ⟨g⁻¹ * x.1, (mem_left_coset_iff _).1 x.2⟩, fun x => ⟨g * x.1, x.1, x.2, rfl⟩, fun ⟨x, hx⟩ =>
+    Subtype.eq <| by
+      simp ,
+    fun ⟨g, hg⟩ =>
+    Subtype.eq <| by
+      simp ⟩
 
 /-- The natural bijection between a right coset `s * g` and `s`. -/
 @[to_additive "The natural bijection between the cosets `s + g` and `s`."]
-def right_coset_equiv_subgroup (g : α) : right_coset ↑s g ≃ s :=
-⟨λ x, ⟨x.1 * g⁻¹, (mem_right_coset_iff _).1 x.2⟩,
- λ x, ⟨x.1 * g, x.1, x.2, rfl⟩,
- λ ⟨x, hx⟩, subtype.eq $ by simp,
- λ ⟨g, hg⟩, subtype.eq $ by simp⟩
+def rightCosetEquivSubgroup (g : α) : RightCoset (↑s) g ≃ s :=
+  ⟨fun x => ⟨x.1 * g⁻¹, (mem_right_coset_iff _).1 x.2⟩, fun x => ⟨x.1 * g, x.1, x.2, rfl⟩, fun ⟨x, hx⟩ =>
+    Subtype.eq <| by
+      simp ,
+    fun ⟨g, hg⟩ =>
+    Subtype.eq <| by
+      simp ⟩
 
 /-- A (non-canonical) bijection between a group `α` and the product `(α/s) × s` -/
 @[to_additive "A (non-canonical) bijection between an add_group `α` and the product `(α/s) × s`"]
-noncomputable def group_equiv_quotient_times_subgroup :
-  α ≃ (α ⧸ s) × s :=
-calc α ≃ Σ L : α ⧸ s, {x : α // (x : α ⧸ s) = L} :
-  (equiv.sigma_preimage_equiv quotient_group.mk).symm
-    ... ≃ Σ L : α ⧸ s, left_coset (quotient.out' L) s :
-  equiv.sigma_congr_right (λ L,
-    begin
-      rw ← eq_class_eq_left_coset,
-      show _root_.subtype (λ x : α, quotient.mk' x = L) ≃
-        _root_.subtype (λ x : α, quotient.mk' x = quotient.mk' _),
-      simp [-quotient.eq'],
-    end)
-    ... ≃ Σ L : α ⧸ s, s :
-  equiv.sigma_congr_right (λ L, left_coset_equiv_subgroup _)
-    ... ≃ (α ⧸ s) × s :
-  equiv.sigma_equiv_prod _ _
+noncomputable def groupEquivQuotientTimesSubgroup : α ≃ (α ⧸ s) × s :=
+  calc
+    α ≃ ΣL : α ⧸ s, { x : α // (x : α ⧸ s) = L } := (Equivₓ.sigmaPreimageEquiv QuotientGroup.mk).symm
+    _ ≃ ΣL : α ⧸ s, LeftCoset (Quotientₓ.out' L) s :=
+      Equivₓ.sigmaCongrRight fun L => by
+        rw [← eq_class_eq_left_coset]
+        show
+          (_root_.subtype fun x : α => Quotientₓ.mk' x = L) ≃
+            _root_.subtype fun x : α => Quotientₓ.mk' x = Quotientₓ.mk' _
+        simp [-Quotientₓ.eq']
+    _ ≃ ΣL : α ⧸ s, s := Equivₓ.sigmaCongrRight fun L => leftCosetEquivSubgroup _
+    _ ≃ (α ⧸ s) × s := Equivₓ.sigmaEquivProd _ _
+    
 
-variables {t : subgroup α}
+variable {t : Subgroup α}
 
 /-- If `H ≤ K`, then `G/H ≃ G/K × K/H` constructively, using the provided right inverse
 of the quotient map `G → G/K`. The classical version is `quotient_equiv_prod_of_le`. -/
-@[to_additive "If `H ≤ K`, then `G/H ≃ G/K × K/H` constructively, using the provided right inverse
-of the quotient map `G → G/K`. The classical version is `quotient_equiv_prod_of_le`.", simps]
-def quotient_equiv_prod_of_le' (h_le : s ≤ t)
-  (f : α ⧸ t → α) (hf : function.right_inverse f quotient_group.mk) :
-  α ⧸ s ≃ (α ⧸ t) × (t ⧸ s.subgroup_of t) :=
-{ to_fun := λ a, ⟨a.map' id (λ b c h, h_le h),
-    a.map' (λ g : α, ⟨(f (quotient.mk' g))⁻¹ * g, quotient.exact' (hf g)⟩) (λ b c h, by
-    { change ((f b)⁻¹ * b)⁻¹ * ((f c)⁻¹ * c) ∈ s,
-      have key : f b = f c := congr_arg f (quotient.sound' (h_le h)),
-      rwa [key, mul_inv_rev, inv_inv, mul_assoc, mul_inv_cancel_left] })⟩,
-  inv_fun := λ a, a.2.map' (λ b, f a.1 * b) (λ b c h, by
-  { change (f a.1 * b)⁻¹ * (f a.1 * c) ∈ s,
-    rwa [mul_inv_rev, mul_assoc, inv_mul_cancel_left] }),
+@[to_additive
+      "If `H ≤ K`, then `G/H ≃ G/K × K/H` constructively, using the provided right inverse\nof the quotient map `G → G/K`. The classical version is `quotient_equiv_prod_of_le`.",
+  simps]
+def quotientEquivProdOfLe' (h_le : s ≤ t) (f : α ⧸ t → α) (hf : Function.RightInverse f QuotientGroup.mk) :
+    α ⧸ s ≃ (α ⧸ t) × t ⧸ s.subgroupOf t where
+  toFun := fun a =>
+    ⟨a.map' id fun b c h => h_le h,
+      a.map' (fun g : α => ⟨(f (Quotientₓ.mk' g))⁻¹ * g, Quotientₓ.exact' (hf g)⟩) fun b c h => by
+        change ((f b)⁻¹ * b)⁻¹ * ((f c)⁻¹ * c) ∈ s
+        have key : f b = f c := congr_argₓ f (Quotientₓ.sound' (h_le h))
+        rwa [key, mul_inv_rev, inv_invₓ, mul_assoc, mul_inv_cancel_left]⟩
+  invFun := fun a =>
+    a.2.map' (fun b => f a.1 * b) fun b c h => by
+      change (f a.1 * b)⁻¹ * (f a.1 * c) ∈ s
+      rwa [mul_inv_rev, mul_assoc, inv_mul_cancel_leftₓ]
   left_inv := by
-  { refine quotient.ind' (λ a, _),
-    simp_rw [quotient.map'_mk', id.def, t.coe_mk, mul_inv_cancel_left] },
+    refine' Quotientₓ.ind' fun a => _
+    simp_rw [Quotientₓ.map'_mk', id.def, t.coe_mk, mul_inv_cancel_left]
   right_inv := by
-  { refine prod.rec _,
-    refine quotient.ind' (λ a, _),
-    refine quotient.ind' (λ b, _),
-    have key : quotient.mk' (f (quotient.mk' a) * b) = quotient.mk' a :=
-      (quotient_group.mk_mul_of_mem (f a) ↑b b.2).trans (hf a),
-    simp_rw [quotient.map'_mk', id.def, key, inv_mul_cancel_left, subtype.coe_eta] } }
+    refine' Prod.rec _
+    refine' Quotientₓ.ind' fun a => _
+    refine' Quotientₓ.ind' fun b => _
+    have key : Quotientₓ.mk' (f (Quotientₓ.mk' a) * b) = Quotientₓ.mk' a :=
+      (QuotientGroup.mk_mul_of_mem (f a) (↑b) b.2).trans (hf a)
+    simp_rw [Quotientₓ.map'_mk', id.def, key, inv_mul_cancel_leftₓ, Subtype.coe_eta]
 
 /-- If `H ≤ K`, then `G/H ≃ G/K × K/H` nonconstructively.
 The constructive version is `quotient_equiv_prod_of_le'`. -/
-@[to_additive "If `H ≤ K`, then `G/H ≃ G/K × K/H` nonconstructively.
-The constructive version is `quotient_equiv_prod_of_le'`.", simps]
-noncomputable def quotient_equiv_prod_of_le (h_le : s ≤ t) :
-  α ⧸ s ≃ (α ⧸ t) × (t ⧸ s.subgroup_of t) :=
-quotient_equiv_prod_of_le' h_le quotient.out' quotient.out_eq'
+@[to_additive
+      "If `H ≤ K`, then `G/H ≃ G/K × K/H` nonconstructively.\nThe constructive version is `quotient_equiv_prod_of_le'`.",
+  simps]
+noncomputable def quotientEquivProdOfLe (h_le : s ≤ t) : α ⧸ s ≃ (α ⧸ t) × t ⧸ s.subgroupOf t :=
+  quotientEquivProdOfLe' h_le Quotientₓ.out' Quotientₓ.out_eq'
 
 /-- If `K ≤ L`, then there is an embedding `K ⧸ (H.subgroup_of K) ↪ L ⧸ (H.subgroup_of L)`. -/
-def quotient_subgroup_of_embedding_of_le (H : subgroup α) {K L : subgroup α} (h : K ≤ L) :
-  K ⧸ (H.subgroup_of K) ↪ L ⧸ (H.subgroup_of L) :=
-{ to_fun := quotient.map' (set.inclusion h) (λ a b, id),
-  inj' := by refine quotient.ind₂' (λ a b, _); exact quotient.eq'.mpr ∘ quotient.eq'.mp }
+def quotientSubgroupOfEmbeddingOfLe (H : Subgroup α) {K L : Subgroup α} (h : K ≤ L) :
+    K ⧸ H.subgroupOf K ↪ L ⧸ H.subgroupOf L where
+  toFun := Quotientₓ.map' (Set.inclusion h) fun a b => id
+  inj' := by
+    refine' Quotientₓ.ind₂' fun a b => _ <;> exact quotient.eq'.mpr ∘ quotient.eq'.mp
 
-@[to_additive] lemma card_eq_card_quotient_mul_card_subgroup
-  [fintype α] (s : subgroup α) [fintype s] [decidable_pred (λ a, a ∈ s)] :
-  fintype.card α = fintype.card (α ⧸ s) * fintype.card s :=
-by rw ← fintype.card_prod;
-  exact fintype.card_congr (subgroup.group_equiv_quotient_times_subgroup)
+@[to_additive]
+theorem card_eq_card_quotient_mul_card_subgroup [Fintype α] (s : Subgroup α) [Fintype s]
+    [DecidablePred fun a => a ∈ s] : Fintype.card α = Fintype.card (α ⧸ s) * Fintype.card s := by
+  rw [← Fintype.card_prod] <;> exact Fintype.card_congr Subgroup.groupEquivQuotientTimesSubgroup
 
 /-- **Lagrange's Theorem**: The order of a subgroup divides the order of its ambient group. -/
-@[to_additive] lemma card_subgroup_dvd_card [fintype α] (s : subgroup α) [fintype s] :
-  fintype.card s ∣ fintype.card α :=
-by classical; simp [card_eq_card_quotient_mul_card_subgroup s, @dvd_mul_left ℕ]
+@[to_additive]
+theorem card_subgroup_dvd_card [Fintype α] (s : Subgroup α) [Fintype s] : Fintype.card s ∣ Fintype.card α := by
+  classical <;> simp [card_eq_card_quotient_mul_card_subgroup s, @dvd_mul_left ℕ]
 
-@[to_additive] lemma card_quotient_dvd_card [fintype α] (s : subgroup α)
-  [decidable_pred (λ a, a ∈ s)] [fintype s] : fintype.card (α ⧸ s) ∣ fintype.card α :=
-by simp [card_eq_card_quotient_mul_card_subgroup s, @dvd_mul_right ℕ]
+@[to_additive]
+theorem card_quotient_dvd_card [Fintype α] (s : Subgroup α) [DecidablePred fun a => a ∈ s] [Fintype s] :
+    Fintype.card (α ⧸ s) ∣ Fintype.card α := by
+  simp [card_eq_card_quotient_mul_card_subgroup s, @dvd_mul_right ℕ]
 
-open fintype
+open Fintype
 
-variables {H : Type*} [group H]
+variable {H : Type _} [Groupₓ H]
 
-@[to_additive] lemma card_dvd_of_injective [fintype α] [fintype H] (f : α →* H)
-  (hf : function.injective f) : card α ∣ card H :=
-by classical;
-calc card α = card (f.range : subgroup H) : card_congr (equiv.of_injective f hf)
-...∣ card H : card_subgroup_dvd_card _
+@[to_additive]
+theorem card_dvd_of_injective [Fintype α] [Fintype H] (f : α →* H) (hf : Function.Injective f) : card α ∣ card H := by
+  classical <;>
+    calc card α = card (f.range : Subgroup H) := card_congr (Equivₓ.ofInjective f hf)_ ∣ card H :=
+        card_subgroup_dvd_card _
 
-@[to_additive] lemma card_dvd_of_le {H K : subgroup α} [fintype H] [fintype K] (hHK : H ≤ K) :
-  card H ∣ card K :=
-card_dvd_of_injective (inclusion hHK) (inclusion_injective hHK)
+@[to_additive]
+theorem card_dvd_of_le {H K : Subgroup α} [Fintype H] [Fintype K] (hHK : H ≤ K) : card H ∣ card K :=
+  card_dvd_of_injective (inclusion hHK) (inclusion_injective hHK)
 
-@[to_additive] lemma card_comap_dvd_of_injective (K : subgroup H) [fintype K]
-  (f : α →* H) [fintype (K.comap f)] (hf : function.injective f) :
-  fintype.card (K.comap f) ∣ fintype.card K :=
-by haveI : fintype ((K.comap f).map f) :=
-  fintype.of_equiv _ (equiv_map_of_injective _ _ hf).to_equiv;
-calc fintype.card (K.comap f) = fintype.card ((K.comap f).map f) :
-       fintype.card_congr (equiv_map_of_injective _ _ hf).to_equiv
-... ∣ fintype.card K : card_dvd_of_le (map_comap_le _ _)
+@[to_additive]
+theorem card_comap_dvd_of_injective (K : Subgroup H) [Fintype K] (f : α →* H) [Fintype (K.comap f)]
+    (hf : Function.Injective f) : Fintype.card (K.comap f) ∣ Fintype.card K := by
+  have : Fintype ((K.comap f).map f) := Fintype.ofEquiv _ (equiv_map_of_injective _ _ hf).toEquiv <;>
+    calc Fintype.card (K.comap f) = Fintype.card ((K.comap f).map f) :=
+        Fintype.card_congr (equiv_map_of_injective _ _ hf).toEquiv _ ∣ Fintype.card K :=
+        card_dvd_of_le (map_comap_le _ _)
 
-end subgroup
+end Subgroup
 
-namespace quotient_group
+namespace QuotientGroup
 
-variables [group α]
-
--- FIXME -- why is there no `to_additive`?
+variable [Groupₓ α]
 
 /-- If `s` is a subgroup of the group `α`, and `t` is a subset of `α/s`, then
 there is a (typically non-canonical) bijection between the preimage of `t` in
 `α` and the product `s × t`. -/
-noncomputable def preimage_mk_equiv_subgroup_times_set
-  (s : subgroup α) (t : set (α ⧸ s)) : quotient_group.mk ⁻¹' t ≃ s × t :=
-have h : ∀ {x : α ⧸ s} {a : α}, x ∈ t → a ∈ s →
-  (quotient.mk' (quotient.out' x * a) : α ⧸ s) = quotient.mk' (quotient.out' x) :=
-    λ x a hx ha, quotient.sound' (show (quotient.out' x * a)⁻¹ * quotient.out' x ∈ s,
-      from (s.inv_mem_iff).1 $
-        by rwa [mul_inv_rev, inv_inv, ← mul_assoc, inv_mul_self, one_mul]),
-{ to_fun := λ ⟨a, ha⟩, ⟨⟨(quotient.out' (quotient.mk' a))⁻¹ * a,
-    @quotient.exact' _ (left_rel s) _ _ $ (quotient.out_eq' _)⟩,
-      ⟨quotient.mk' a, ha⟩⟩,
-  inv_fun := λ ⟨⟨a, ha⟩, ⟨x, hx⟩⟩, ⟨quotient.out' x * a, show quotient.mk' _ ∈ t,
-    by simp [h hx ha, hx]⟩,
-  left_inv := λ ⟨a, ha⟩, subtype.eq $ show _ * _ = a, by simp,
-  right_inv := λ ⟨⟨a, ha⟩, ⟨x, hx⟩⟩, show (_, _) = _, by simp [h hx ha] }
+-- FIXME -- why is there no `to_additive`?
+noncomputable def preimageMkEquivSubgroupTimesSet (s : Subgroup α) (t : Set (α ⧸ s)) : QuotientGroup.mk ⁻¹' t ≃ s × t :=
+  have h :
+    ∀ {x : α ⧸ s} {a : α},
+      x ∈ t → a ∈ s → (Quotientₓ.mk' (Quotientₓ.out' x * a) : α ⧸ s) = Quotientₓ.mk' (Quotientₓ.out' x) :=
+    fun x a hx ha =>
+    Quotientₓ.sound'
+      (show (Quotientₓ.out' x * a)⁻¹ * Quotientₓ.out' x ∈ s from
+        s.inv_mem_iff.1 <| by
+          rwa [mul_inv_rev, inv_invₓ, ← mul_assoc, inv_mul_selfₓ, one_mulₓ])
+  { toFun := fun ⟨a, ha⟩ =>
+      ⟨⟨(Quotientₓ.out' (Quotientₓ.mk' a))⁻¹ * a, @Quotientₓ.exact' _ (leftRel s) _ _ <| Quotientₓ.out_eq' _⟩,
+        ⟨Quotientₓ.mk' a, ha⟩⟩,
+    invFun := fun ⟨⟨a, ha⟩, ⟨x, hx⟩⟩ =>
+      ⟨Quotientₓ.out' x * a,
+        show Quotientₓ.mk' _ ∈ t by
+          simp [h hx ha, hx]⟩,
+    left_inv := fun ⟨a, ha⟩ =>
+      Subtype.eq <|
+        show _ * _ = a by
+          simp ,
+    right_inv := fun ⟨⟨a, ha⟩, ⟨x, hx⟩⟩ =>
+      show (_, _) = _ by
+        simp [h hx ha] }
 
-end quotient_group
+end QuotientGroup
 
-/--
-We use the class `has_coe_t` instead of `has_coe` if the first argument is a variable,
+library_note "use has_coe_t"/-- We use the class `has_coe_t` instead of `has_coe` if the first argument is a variable,
 or if the second argument is a variable not occurring in the first.
 Using `has_coe` would cause looping of type-class inference. See
 <https://leanprover.zulipchat.com/#narrow/stream/113488-general/topic/remove.20all.20instances.20with.20variable.20domain>
 -/
-library_note "use has_coe_t"
+
+

@@ -3,9 +3,9 @@ Copyright (c) 2021 Adam Topaz. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bhavik Mehta, Adam Topaz
 -/
-import category_theory.limits.shapes.terminal
-import category_theory.punit
-import category_theory.structured_arrow
+import Mathbin.CategoryTheory.Limits.Shapes.Terminal
+import Mathbin.CategoryTheory.Punit
+import Mathbin.CategoryTheory.StructuredArrow
 
 /-!
 
@@ -28,265 +28,261 @@ A lot of boilerplate could be generalized by defining and working with pseudofun
 
 -/
 
-noncomputable theory
 
-namespace category_theory
+noncomputable section
 
-open limits
+namespace CategoryTheory
 
-universes v v₁ v₂ v₃ u₁ u₂ u₃
+open Limits
 
-variables {S : Type u₁} {L : Type u₂} {D : Type u₃}
-variables [category.{v₁} S] [category.{v₂} L] [category.{v₃} D]
-variables (ι : S ⥤ L)
+universe v v₁ v₂ v₃ u₁ u₂ u₃
+
+variable {S : Type u₁} {L : Type u₂} {D : Type u₃}
+
+variable [Category.{v₁} S] [Category.{v₂} L] [Category.{v₃} D]
+
+variable (ι : S ⥤ L)
 
 namespace Ran
 
-local attribute [simp] structured_arrow.proj
+attribute [local simp] structured_arrow.proj
 
 /-- The diagram indexed by `Ran.index ι x` used to define `Ran`. -/
-abbreviation diagram (F : S ⥤ D) (x : L) : structured_arrow x ι ⥤ D :=
-  structured_arrow.proj x ι ⋙ F
+abbrev diagram (F : S ⥤ D) (x : L) : StructuredArrow x ι ⥤ D :=
+  StructuredArrow.proj x ι ⋙ F
 
 variable {ι}
 
 /-- A cone over `Ran.diagram ι F x` used to define `Ran`. -/
 @[simp]
-def cone {F : S ⥤ D} {G : L ⥤ D} (x : L) (f : ι ⋙ G ⟶ F) :
-  cone (diagram ι F x) :=
-{ X := G.obj x,
+def cone {F : S ⥤ D} {G : L ⥤ D} (x : L) (f : ι ⋙ G ⟶ F) : Cone (diagram ι F x) where
+  x := G.obj x
   π :=
-  { app := λ i, G.map i.hom ≫ f.app i.right,
-    naturality' := begin
-      rintro ⟨⟨il⟩, ir, i⟩ ⟨⟨jl⟩, jr, j⟩ ⟨⟨⟨fl⟩⟩, fr, ff⟩,
-      dsimp at *,
-      simp only [category.id_comp, category.assoc] at *,
-      rw [ff],
-      have := f.naturality,
-      tidy,
-    end } }
+    { app := fun i => G.map i.Hom ≫ f.app i.right,
+      naturality' := by
+        rintro ⟨⟨il⟩, ir, i⟩ ⟨⟨jl⟩, jr, j⟩ ⟨⟨⟨fl⟩⟩, fr, ff⟩
+        dsimp  at *
+        simp only [category.id_comp, category.assoc] at *
+        rw [ff]
+        have := f.naturality
+        tidy }
 
 variable (ι)
 
 /-- An auxiliary definition used to define `Ran`. -/
 @[simps]
-def loc (F : S ⥤ D) [∀ x, has_limit (diagram ι F x)] : L ⥤ D :=
-{ obj := λ x, limit (diagram ι F x),
-  map := λ x y f, limit.pre (diagram _ _ _) (structured_arrow.map f : structured_arrow _ ι ⥤ _),
-  map_id' := begin
-    intro l,
-    ext j,
-    simp only [category.id_comp, limit.pre_π],
-    congr' 1,
-    simp,
-  end,
-  map_comp' := begin
-    intros x y z f g,
-    ext j,
-    erw [limit.pre_pre, limit.pre_π, limit.pre_π],
-    congr' 1,
-    tidy,
-  end }
+def loc (F : S ⥤ D) [∀ x, HasLimit (diagram ι F x)] : L ⥤ D where
+  obj := fun x => limit (diagram ι F x)
+  map := fun x y f => limit.pre (diagram _ _ _) (StructuredArrow.map f : StructuredArrow _ ι ⥤ _)
+  map_id' := by
+    intro l
+    ext j
+    simp only [category.id_comp, limit.pre_π]
+    congr 1
+    simp
+  map_comp' := by
+    intro x y z f g
+    ext j
+    erw [limit.pre_pre, limit.pre_π, limit.pre_π]
+    congr 1
+    tidy
 
 /-- An auxiliary definition used to define `Ran` and `Ran.adjunction`. -/
 @[simps]
-def equiv (F : S ⥤ D) [∀ x, has_limit (diagram ι F x)] (G : L ⥤ D) :
-  (G ⟶ loc ι F) ≃ (((whiskering_left _ _ _).obj ι).obj G ⟶ F) :=
-{ to_fun := λ f,
-  { app := λ x, f.app _ ≫ limit.π (diagram ι F (ι.obj x)) (structured_arrow.mk (𝟙 _)),
-  naturality' := begin
-    intros x y ff,
-    dsimp only [whiskering_left],
-    simp only [functor.comp_map, nat_trans.naturality_assoc, loc_map, category.assoc],
-    congr' 1,
-    erw limit.pre_π,
-    change _ = _ ≫ (diagram ι F (ι.obj x)).map (structured_arrow.hom_mk _ _),
-    rw limit.w,
-    tidy,
-  end },
-  inv_fun := λ f,
-  { app := λ x, limit.lift (diagram ι F x) (cone _ f),
-    naturality' := begin
-      intros x y ff,
-      ext j,
-      erw [limit.lift_pre, limit.lift_π, category.assoc, limit.lift_π (cone _ f) j],
-      tidy,
-    end },
-  left_inv := begin
-    intro x,
-    ext k j,
-    dsimp only [cone],
-    rw limit.lift_π,
-    simp only [nat_trans.naturality_assoc, loc_map],
-    erw limit.pre_π,
-    congr,
-    cases j,
-    tidy,
-  end,
-  right_inv := by tidy }
+def equiv (F : S ⥤ D) [∀ x, HasLimit (diagram ι F x)] (G : L ⥤ D) :
+    (G ⟶ loc ι F) ≃ (((whiskeringLeft _ _ _).obj ι).obj G ⟶ F) where
+  toFun := fun f =>
+    { app := fun x => f.app _ ≫ limit.π (diagram ι F (ι.obj x)) (StructuredArrow.mk (𝟙 _)),
+      naturality' := by
+        intro x y ff
+        dsimp only [whiskering_left]
+        simp only [functor.comp_map, nat_trans.naturality_assoc, loc_map, category.assoc]
+        congr 1
+        erw [limit.pre_π]
+        change _ = _ ≫ (diagram ι F (ι.obj x)).map (structured_arrow.hom_mk _ _)
+        rw [limit.w]
+        tidy }
+  invFun := fun f =>
+    { app := fun x => limit.lift (diagram ι F x) (cone _ f),
+      naturality' := by
+        intro x y ff
+        ext j
+        erw [limit.lift_pre, limit.lift_π, category.assoc, limit.lift_π (cone _ f) j]
+        tidy }
+  left_inv := by
+    intro x
+    ext k j
+    dsimp only [cone]
+    rw [limit.lift_π]
+    simp only [nat_trans.naturality_assoc, loc_map]
+    erw [limit.pre_π]
+    congr
+    cases j
+    tidy
+  right_inv := by
+    tidy
 
 end Ran
 
 /-- The right Kan extension of a functor. -/
 @[simps]
-def Ran [∀ X, has_limits_of_shape (structured_arrow X ι) D] : (S ⥤ D) ⥤ L ⥤ D :=
-adjunction.right_adjoint_of_equiv (λ F G, (Ran.equiv ι G F).symm) (by tidy)
+def ran [∀ X, HasLimitsOfShape (StructuredArrow X ι) D] : (S ⥤ D) ⥤ L ⥤ D :=
+  Adjunction.rightAdjointOfEquiv (fun F G => (Ran.equiv ι G F).symm)
+    (by
+      tidy)
 
 namespace Ran
 
 variable (D)
 
 /-- The adjunction associated to `Ran`. -/
-def adjunction [∀ X, has_limits_of_shape (structured_arrow X ι) D] :
-  (whiskering_left _ _ D).obj ι ⊣ Ran ι :=
-adjunction.adjunction_of_equiv_right _ _
+def adjunction [∀ X, HasLimitsOfShape (StructuredArrow X ι) D] : (whiskeringLeft _ _ D).obj ι ⊣ ran ι :=
+  Adjunction.adjunctionOfEquivRight _ _
 
-lemma reflective [full ι] [faithful ι] [∀ X, has_limits_of_shape (structured_arrow X ι) D] :
-  is_iso (adjunction D ι).counit :=
-begin
-  apply nat_iso.is_iso_of_is_iso_app _,
-  intros F,
-  apply nat_iso.is_iso_of_is_iso_app _,
-  intros X,
-  dsimp [adjunction],
-  simp only [category.id_comp],
-  exact is_iso.of_iso ((limit.is_limit _).cone_point_unique_up_to_iso
-    (limit_of_diagram_initial structured_arrow.mk_id_initial _)),
-end
+theorem reflective [Full ι] [Faithful ι] [∀ X, HasLimitsOfShape (StructuredArrow X ι) D] :
+    IsIso (adjunction D ι).counit := by
+  apply nat_iso.is_iso_of_is_iso_app _
+  intro F
+  apply nat_iso.is_iso_of_is_iso_app _
+  intro X
+  dsimp [adjunction]
+  simp only [category.id_comp]
+  exact
+    is_iso.of_iso
+      ((limit.is_limit _).conePointUniqueUpToIso (limit_of_diagram_initial structured_arrow.mk_id_initial _))
 
 end Ran
 
 namespace Lan
 
-local attribute [simp] costructured_arrow.proj
+attribute [local simp] costructured_arrow.proj
 
 /-- The diagram indexed by `Ran.index ι x` used to define `Ran`. -/
-abbreviation diagram (F : S ⥤ D) (x : L) : costructured_arrow ι x ⥤ D :=
-  costructured_arrow.proj ι x ⋙ F
+abbrev diagram (F : S ⥤ D) (x : L) : CostructuredArrow ι x ⥤ D :=
+  CostructuredArrow.proj ι x ⋙ F
+
 variable {ι}
 
 /-- A cocone over `Lan.diagram ι F x` used to define `Lan`. -/
 @[simp]
-def cocone {F : S ⥤ D} {G : L ⥤ D} (x : L) (f : F ⟶ ι ⋙ G) :
-  cocone (diagram ι F x) :=
-{ X := G.obj x,
+def cocone {F : S ⥤ D} {G : L ⥤ D} (x : L) (f : F ⟶ ι ⋙ G) : Cocone (diagram ι F x) where
+  x := G.obj x
   ι :=
-  { app := λ i, f.app i.left ≫ G.map i.hom,
-    naturality' := begin
-      rintro ⟨ir, ⟨il⟩, i⟩ ⟨jl, ⟨jr⟩, j⟩ ⟨fl, ⟨⟨fl⟩⟩, ff⟩,
-      dsimp at *,
-      simp only [functor.comp_map, category.comp_id, nat_trans.naturality_assoc],
-      rw [← G.map_comp, ff],
-      tidy,
-    end } }
+    { app := fun i => f.app i.left ≫ G.map i.Hom,
+      naturality' := by
+        rintro ⟨ir, ⟨il⟩, i⟩ ⟨jl, ⟨jr⟩, j⟩ ⟨fl, ⟨⟨fl⟩⟩, ff⟩
+        dsimp  at *
+        simp only [functor.comp_map, category.comp_id, nat_trans.naturality_assoc]
+        rw [← G.map_comp, ff]
+        tidy }
 
 variable (ι)
 
 /-- An auxiliary definition used to define `Lan`. -/
 @[simps]
-def loc (F : S ⥤ D) [I : ∀ x, has_colimit (diagram ι F x)] : L ⥤ D :=
-{ obj := λ x, colimit (diagram ι F x),
-  map := λ x y f,
-    colimit.pre (diagram _ _ _) (costructured_arrow.map f : costructured_arrow ι _ ⥤ _),
-  map_id' := begin
-    intro l,
-    ext j,
-    erw [colimit.ι_pre, category.comp_id],
-    congr' 1,
-    simp,
-  end,
-  map_comp' := begin
-    intros x y z f g,
-    ext j,
-    let ff : costructured_arrow ι _ ⥤ _ := costructured_arrow.map f,
-    let gg : costructured_arrow ι _ ⥤ _ := costructured_arrow.map g,
-    let dd := diagram ι F z,
+def loc (F : S ⥤ D) [I : ∀ x, HasColimit (diagram ι F x)] : L ⥤ D where
+  obj := fun x => colimit (diagram ι F x)
+  map := fun x y f => colimit.pre (diagram _ _ _) (CostructuredArrow.map f : CostructuredArrow ι _ ⥤ _)
+  map_id' := by
+    intro l
+    ext j
+    erw [colimit.ι_pre, category.comp_id]
+    congr 1
+    simp
+  map_comp' := by
+    intro x y z f g
+    ext j
+    let ff : costructured_arrow ι _ ⥤ _ := costructured_arrow.map f
+    let gg : costructured_arrow ι _ ⥤ _ := costructured_arrow.map g
+    let dd := diagram ι F z
     -- I don't know why lean can't deduce the following three instances...
-    haveI : has_colimit (ff ⋙ gg ⋙ dd) := I _,
-    haveI : has_colimit ((ff ⋙ gg) ⋙ dd) := I _,
-    haveI : has_colimit (gg ⋙ dd) :=  I _,
-    change _ = colimit.ι ((ff ⋙ gg) ⋙ dd) j ≫ _ ≫ _,
-    erw [colimit.pre_pre dd gg ff, colimit.ι_pre, colimit.ι_pre],
-    congr' 1,
-    simp,
-  end }
+    have : has_colimit (ff ⋙ gg ⋙ dd) := I _
+    have : has_colimit ((ff ⋙ gg) ⋙ dd) := I _
+    have : has_colimit (gg ⋙ dd) := I _
+    change _ = colimit.ι ((ff ⋙ gg) ⋙ dd) j ≫ _ ≫ _
+    erw [colimit.pre_pre dd gg ff, colimit.ι_pre, colimit.ι_pre]
+    congr 1
+    simp
 
 /-- An auxiliary definition used to define `Lan` and `Lan.adjunction`. -/
 @[simps]
-def equiv (F : S ⥤ D) [I : ∀ x, has_colimit (diagram ι F x)] (G : L ⥤ D) :
-  (loc ι F ⟶ G) ≃ (F ⟶ ((whiskering_left _ _ _).obj ι).obj G) :=
-{ to_fun := λ f,
-  { app := λ x,
-      by apply colimit.ι (diagram ι F (ι.obj x)) (costructured_arrow.mk (𝟙 _)) ≫ f.app _, -- sigh
-  naturality' := begin
-    intros x y ff,
-    dsimp only [whiskering_left],
-    simp only [functor.comp_map, category.assoc],
-    rw [← f.naturality (ι.map ff), ← category.assoc, ← category.assoc],
-    let fff : costructured_arrow ι _ ⥤ _ := costructured_arrow.map (ι.map ff),
-    -- same issue :-(
-    haveI : has_colimit (fff ⋙ diagram ι F (ι.obj y)) := I _,
-    erw colimit.ι_pre (diagram ι F (ι.obj y)) fff (costructured_arrow.mk (𝟙 _)),
-    let xx : costructured_arrow ι (ι.obj y) := costructured_arrow.mk (ι.map ff),
-    let yy : costructured_arrow ι (ι.obj y) := costructured_arrow.mk (𝟙 _),
-    let fff : xx ⟶ yy := costructured_arrow.hom_mk ff
-      (by {simp only [costructured_arrow.mk_hom_eq_self], erw category.comp_id}),
-    erw colimit.w (diagram ι F (ι.obj y)) fff,
-    congr,
-    simp,
-  end },
-  inv_fun := λ f,
-  { app := λ x, colimit.desc (diagram ι F x) (cocone _ f),
-    naturality' := begin
-      intros x y ff,
-      ext j,
-      erw [colimit.pre_desc, ← category.assoc, colimit.ι_desc, colimit.ι_desc],
-      tidy,
-    end },
-  left_inv := begin
-    intro x,
-    ext k j,
-    rw colimit.ι_desc,
-    dsimp only [cocone],
-    rw [category.assoc, ← x.naturality j.hom, ← category.assoc],
-    congr' 1,
-    change colimit.ι _ _ ≫ colimit.pre (diagram ι F k) (costructured_arrow.map _) = _,
-    rw colimit.ι_pre,
-    congr,
-    cases j,
-    tidy,
-  end,
-  right_inv := by tidy }
+def equiv (F : S ⥤ D) [I : ∀ x, HasColimit (diagram ι F x)] (G : L ⥤ D) :
+    (loc ι F ⟶ G) ≃ (F ⟶ ((whiskeringLeft _ _ _).obj ι).obj G) where
+  toFun := fun f =>
+    { app := fun x => by
+        apply colimit.ι (diagram ι F (ι.obj x)) (costructured_arrow.mk (𝟙 _)) ≫ f.app _,-- sigh
+      naturality' := by
+        intro x y ff
+        dsimp only [whiskering_left]
+        simp only [functor.comp_map, category.assoc]
+        rw [← f.naturality (ι.map ff), ← category.assoc, ← category.assoc]
+        let fff : costructured_arrow ι _ ⥤ _ := costructured_arrow.map (ι.map ff)
+        -- same issue :-(
+        have : has_colimit (fff ⋙ diagram ι F (ι.obj y)) := I _
+        erw [colimit.ι_pre (diagram ι F (ι.obj y)) fff (costructured_arrow.mk (𝟙 _))]
+        let xx : costructured_arrow ι (ι.obj y) := costructured_arrow.mk (ι.map ff)
+        let yy : costructured_arrow ι (ι.obj y) := costructured_arrow.mk (𝟙 _)
+        let fff : xx ⟶ yy :=
+          costructured_arrow.hom_mk ff
+            (by
+              simp only [costructured_arrow.mk_hom_eq_self]
+              erw [category.comp_id])
+        erw [colimit.w (diagram ι F (ι.obj y)) fff]
+        congr
+        simp }
+  invFun := fun f =>
+    { app := fun x => colimit.desc (diagram ι F x) (cocone _ f),
+      naturality' := by
+        intro x y ff
+        ext j
+        erw [colimit.pre_desc, ← category.assoc, colimit.ι_desc, colimit.ι_desc]
+        tidy }
+  left_inv := by
+    intro x
+    ext k j
+    rw [colimit.ι_desc]
+    dsimp only [cocone]
+    rw [category.assoc, ← x.naturality j.hom, ← category.assoc]
+    congr 1
+    change colimit.ι _ _ ≫ colimit.pre (diagram ι F k) (costructured_arrow.map _) = _
+    rw [colimit.ι_pre]
+    congr
+    cases j
+    tidy
+  right_inv := by
+    tidy
 
 end Lan
 
 /-- The left Kan extension of a functor. -/
 @[simps]
-def Lan [∀ X, has_colimits_of_shape (costructured_arrow ι X) D] : (S ⥤ D) ⥤ L ⥤ D :=
-adjunction.left_adjoint_of_equiv (λ F G, Lan.equiv ι F G) (by tidy)
+def lan [∀ X, HasColimitsOfShape (CostructuredArrow ι X) D] : (S ⥤ D) ⥤ L ⥤ D :=
+  Adjunction.leftAdjointOfEquiv (fun F G => Lan.equiv ι F G)
+    (by
+      tidy)
 
 namespace Lan
 
 variable (D)
 
 /-- The adjunction associated to `Lan`. -/
-def adjunction [∀ X, has_colimits_of_shape (costructured_arrow ι X) D] :
-  Lan ι ⊣ (whiskering_left _ _ D).obj ι :=
-adjunction.adjunction_of_equiv_left _ _
+def adjunction [∀ X, HasColimitsOfShape (CostructuredArrow ι X) D] : lan ι ⊣ (whiskeringLeft _ _ D).obj ι :=
+  Adjunction.adjunctionOfEquivLeft _ _
 
-lemma coreflective [full ι] [faithful ι] [∀ X, has_colimits_of_shape (costructured_arrow ι X) D] :
-  is_iso (adjunction D ι).unit :=
-begin
-  apply nat_iso.is_iso_of_is_iso_app _,
-  intros F,
-  apply nat_iso.is_iso_of_is_iso_app _,
-  intros X,
-  dsimp [adjunction],
-  simp only [category.comp_id],
-  exact is_iso.of_iso ((colimit.is_colimit _).cocone_point_unique_up_to_iso
-    (colimit_of_diagram_terminal costructured_arrow.mk_id_terminal _)).symm,
-end
+theorem coreflective [Full ι] [Faithful ι] [∀ X, HasColimitsOfShape (CostructuredArrow ι X) D] :
+    IsIso (adjunction D ι).Unit := by
+  apply nat_iso.is_iso_of_is_iso_app _
+  intro F
+  apply nat_iso.is_iso_of_is_iso_app _
+  intro X
+  dsimp [adjunction]
+  simp only [category.comp_id]
+  exact
+    is_iso.of_iso
+      ((colimit.is_colimit _).coconePointUniqueUpToIso
+          (colimit_of_diagram_terminal costructured_arrow.mk_id_terminal _)).symm
 
 end Lan
 
-end category_theory
+end CategoryTheory
+

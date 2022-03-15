@@ -3,9 +3,9 @@ Copyright (c) 2020 Floris van Doorn. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Floris van Doorn
 -/
-import data.equiv.encodable.basic
-import data.finset.basic
-import data.set.pairwise
+import Mathbin.Data.Equiv.Encodable.Basic
+import Mathbin.Data.Finset.Basic
+import Mathbin.Data.Set.Pairwise
 
 /-!
 # Lattice operations on encodable types
@@ -19,46 +19,51 @@ This is a separate file, to avoid unnecessary imports in basic files.
 Previously some of these results were in the `measure_theory` folder.
 -/
 
-open set
 
-namespace encodable
+open Set
 
-variables {α : Type*} {β : Type*} [encodable β]
+namespace Encodable
 
-lemma supr_decode₂ [complete_lattice α] (f : β → α) :
-  (⨆ (i : ℕ) (b ∈ decode₂ β i), f b) = (⨆ b, f b) :=
-by { rw [supr_comm], simp [mem_decode₂] }
+variable {α : Type _} {β : Type _} [Encodable β]
 
-lemma Union_decode₂ (f : β → set α) : (⋃ (i : ℕ) (b ∈ decode₂ β i), f b) = (⋃ b, f b) :=
-supr_decode₂ f
+theorem supr_decode₂ [CompleteLattice α] (f : β → α) : (⨆ (i : ℕ) (b ∈ decode₂ β i), f b) = ⨆ b, f b := by
+  rw [supr_comm]
+  simp [mem_decode₂]
 
-@[elab_as_eliminator] lemma Union_decode₂_cases
-  {f : β → set α} {C : set α → Prop}
-  (H0 : C ∅) (H1 : ∀ b, C (f b)) {n} :
-  C (⋃ b ∈ decode₂ β n, f b) :=
-match decode₂ β n with
-| none := by { simp, apply H0 }
-| (some b) := by { convert H1 b, simp [ext_iff] }
-end
+theorem Union_decode₂ (f : β → Set α) : (⋃ (i : ℕ) (b ∈ decode₂ β i), f b) = ⋃ b, f b :=
+  supr_decode₂ f
 
-theorem Union_decode₂_disjoint_on {f : β → set α} (hd : pairwise (disjoint on f)) :
-  pairwise (disjoint on λ i, ⋃ b ∈ decode₂ β i, f b) :=
-begin
-  rintro i j ij x,
-  suffices : ∀ a, encode a = i → x ∈ f a → ∀ b, encode b = j → x ∉ f b, by simpa [decode₂_eq_some],
-  rintro a rfl ha b rfl hb,
-  exact hd a b (mt (congr_arg encode) ij) ⟨ha, hb⟩
-end
+@[elab_as_eliminator]
+theorem Union_decode₂_cases {f : β → Set α} {C : Set α → Prop} (H0 : C ∅) (H1 : ∀ b, C (f b)) {n} :
+    C (⋃ b ∈ decode₂ β n, f b) :=
+  match decode₂ β n with
+  | none => by
+    simp
+    apply H0
+  | some b => by
+    convert H1 b
+    simp [ext_iff]
 
-end encodable
+theorem Union_decode₂_disjoint_on {f : β → Set α} (hd : Pairwise (Disjoint on f)) :
+    Pairwise (Disjoint on fun i => ⋃ b ∈ decode₂ β i, f b) := by
+  rintro i j ij x
+  suffices ∀ a, encode a = i → x ∈ f a → ∀ b, encode b = j → x ∉ f b by
+    simpa [decode₂_eq_some]
+  rintro a rfl ha b rfl hb
+  exact hd a b (mt (congr_argₓ encode) ij) ⟨ha, hb⟩
 
-namespace finset
+end Encodable
 
-lemma nonempty_encodable {α} (t : finset α) : nonempty $ encodable {i // i ∈ t} :=
-begin
-  classical, induction t using finset.induction with x t hx ih,
-  { refine ⟨⟨λ _, 0, λ _, none, λ ⟨x,y⟩, y.rec _⟩⟩ },
-  { cases ih with ih, exactI ⟨encodable.of_equiv _ (finset.subtype_insert_equiv_option hx)⟩ }
-end
+namespace Finset
 
-end finset
+theorem nonempty_encodable {α} (t : Finset α) : Nonempty <| Encodable { i // i ∈ t } := by
+  classical
+  induction' t using Finset.induction with x t hx ih
+  · refine' ⟨⟨fun _ => 0, fun _ => none, fun ⟨x, y⟩ => y.rec _⟩⟩
+    
+  · cases' ih with ih
+    exact ⟨Encodable.ofEquiv _ (Finset.subtypeInsertEquivOption hx)⟩
+    
+
+end Finset
+

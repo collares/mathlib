@@ -3,9 +3,8 @@ Copyright (c) 2020 Kenny Lau. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau
 -/
-
-import ring_theory.integrally_closed
-import ring_theory.valuation.integers
+import Mathbin.RingTheory.IntegrallyClosed
+import Mathbin.RingTheory.Valuation.Integers
 
 /-!
 # Integral elements over the ring of integers of a valution
@@ -13,51 +12,65 @@ import ring_theory.valuation.integers
 The ring of integers is integrally closed inside the original ring.
 -/
 
-universes u v w
 
-open_locale big_operators
+universe u v w
 
-namespace valuation
+open_locale BigOperators
 
-namespace integers
+namespace Valuation
 
-section comm_ring
+namespace Integers
 
-variables {R : Type u} {Γ₀ : Type v} [comm_ring R] [linear_ordered_comm_group_with_zero Γ₀]
-variables {v : valuation R Γ₀} {O : Type w} [comm_ring O] [algebra O R] (hv : integers v O)
+section CommRingₓ
+
+variable {R : Type u} {Γ₀ : Type v} [CommRingₓ R] [LinearOrderedCommGroupWithZero Γ₀]
+
+variable {v : Valuation R Γ₀} {O : Type w} [CommRingₓ O] [Algebra O R] (hv : Integers v O)
+
 include hv
 
-open polynomial
+open Polynomial
 
-lemma mem_of_integral {x : R} (hx : is_integral O x) : x ∈ v.integer :=
-let ⟨p, hpm, hpx⟩ := hx in le_of_not_lt $ λ (hvx : 1 < v x), begin
-  rw [hpm.as_sum, eval₂_add, eval₂_pow, eval₂_X, eval₂_finset_sum, add_eq_zero_iff_eq_neg] at hpx,
-  replace hpx := congr_arg v hpx, refine ne_of_gt _ hpx,
-  rw [v.map_neg, v.map_pow],
-  refine v.map_sum_lt' (zero_lt_one₀.trans_le (one_le_pow_of_one_le' hvx.le _)) (λ i hi, _),
-  rw [eval₂_mul, eval₂_pow, eval₂_C, eval₂_X, v.map_mul, v.map_pow, ← one_mul (v x ^ p.nat_degree)],
-  cases (hv.2 $ p.coeff i).lt_or_eq with hvpi hvpi,
-  { exact mul_lt_mul₀ hvpi (pow_lt_pow₀ hvx $ finset.mem_range.1 hi) },
-  { erw hvpi, rw [one_mul, one_mul], exact pow_lt_pow₀ hvx (finset.mem_range.1 hi) }
-end
+theorem mem_of_integral {x : R} (hx : IsIntegral O x) : x ∈ v.integer :=
+  let ⟨p, hpm, hpx⟩ := hx
+  le_of_not_ltₓ fun hvx : 1 < v x => by
+    rw [hpm.as_sum, eval₂_add, eval₂_pow, eval₂_X, eval₂_finset_sum, add_eq_zero_iff_eq_neg] at hpx
+    replace hpx := congr_argₓ v hpx
+    refine' ne_of_gtₓ _ hpx
+    rw [v.map_neg, v.map_pow]
+    refine' v.map_sum_lt' (zero_lt_one₀.trans_le (one_le_pow_of_one_le' hvx.le _)) fun i hi => _
+    rw [eval₂_mul, eval₂_pow, eval₂_C, eval₂_X, v.map_mul, v.map_pow, ← one_mulₓ (v x ^ p.nat_degree)]
+    cases' (hv.2 <| p.coeff i).lt_or_eq with hvpi hvpi
+    · exact mul_lt_mul₀ hvpi (pow_lt_pow₀ hvx <| Finset.mem_range.1 hi)
+      
+    · erw [hvpi]
+      rw [one_mulₓ, one_mulₓ]
+      exact pow_lt_pow₀ hvx (Finset.mem_range.1 hi)
+      
 
-protected lemma integral_closure : integral_closure O R = ⊥ :=
-bot_unique $ λ r hr, let ⟨x, hx⟩ := hv.3 (hv.mem_of_integral hr) in algebra.mem_bot.2 ⟨x, hx⟩
+protected theorem integral_closure : integralClosure O R = ⊥ :=
+  bot_unique fun r hr =>
+    let ⟨x, hx⟩ := hv.3 (hv.mem_of_integral hr)
+    Algebra.mem_bot.2 ⟨x, hx⟩
 
-end comm_ring
+end CommRingₓ
 
-section fraction_field
+section FractionField
 
-variables {K : Type u} {Γ₀ : Type v} [field K] [linear_ordered_comm_group_with_zero Γ₀]
-variables {v : valuation K Γ₀} {O : Type w} [comm_ring O] [is_domain O]
-variables [algebra O K] [is_fraction_ring O K]
-variables (hv : integers v O)
+variable {K : Type u} {Γ₀ : Type v} [Field K] [LinearOrderedCommGroupWithZero Γ₀]
 
-lemma integrally_closed : is_integrally_closed O :=
-(is_integrally_closed.integral_closure_eq_bot_iff K).mp (valuation.integers.integral_closure hv)
+variable {v : Valuation K Γ₀} {O : Type w} [CommRingₓ O] [IsDomain O]
 
-end fraction_field
+variable [Algebra O K] [IsFractionRing O K]
 
-end integers
+variable (hv : Integers v O)
 
-end valuation
+theorem integrally_closed : IsIntegrallyClosed O :=
+  (IsIntegrallyClosed.integral_closure_eq_bot_iff K).mp (Valuation.Integers.integral_closure hv)
+
+end FractionField
+
+end Integers
+
+end Valuation
+

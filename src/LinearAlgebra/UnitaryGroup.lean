@@ -3,9 +3,9 @@ Copyright (c) 2021 Shing Tak Lam. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Shing Tak Lam
 -/
-import linear_algebra.matrix.to_lin
-import linear_algebra.matrix.nonsingular_inverse
-import algebra.star.unitary
+import Mathbin.LinearAlgebra.Matrix.ToLin
+import Mathbin.LinearAlgebra.Matrix.NonsingularInverse
+import Mathbin.Algebra.Star.Unitary
 
 /-!
 # The Unitary Group
@@ -34,124 +34,155 @@ matrix group, group, unitary group, orthogonal group
 
 -/
 
-universes u v
 
-namespace matrix
-open linear_map
-open_locale matrix
+universe u v
+
+namespace Matrix
+
+open LinearMap
+
+open_locale Matrix
 
 section
 
-variables (n : Type u) [decidable_eq n] [fintype n]
-variables (α : Type v) [comm_ring α] [star_ring α]
+variable (n : Type u) [DecidableEq n] [Fintype n]
 
-/--
-`unitary_group n` is the group of `n` by `n` matrices where the star-transpose is the inverse.
+variable (α : Type v) [CommRingₓ α] [StarRing α]
+
+/-- `unitary_group n` is the group of `n` by `n` matrices where the star-transpose is the inverse.
 -/
-abbreviation unitary_group := unitary (matrix n n α)
+abbrev unitaryGroup :=
+  unitary (Matrix n n α)
 
 end
 
-variables {n : Type u} [decidable_eq n] [fintype n]
-variables {α : Type v} [comm_ring α] [star_ring α]
+variable {n : Type u} [DecidableEq n] [Fintype n]
 
-namespace unitary_group
+variable {α : Type v} [CommRingₓ α] [StarRing α]
 
-instance coe_matrix : has_coe (unitary_group n α) (matrix n n α) := ⟨subtype.val⟩
+namespace UnitaryGroup
 
-instance coe_fun : has_coe_to_fun (unitary_group n α) (λ _, n → n → α) :=
-{ coe := λ A, A.val }
+instance coeMatrix : Coe (unitaryGroup n α) (Matrix n n α) :=
+  ⟨Subtype.val⟩
 
-/--
-`to_lin' A` is matrix multiplication of vectors by `A`, as a linear map.
+instance coeFun : CoeFun (unitaryGroup n α) fun _ => n → n → α where
+  coe := fun A => A.val
+
+/-- `to_lin' A` is matrix multiplication of vectors by `A`, as a linear map.
 
 After the group structure on `unitary_group n` is defined,
 we show in `to_linear_equiv` that this gives a linear equivalence.
 -/
-def to_lin' (A : unitary_group n α) := matrix.to_lin' A
+def toLin' (A : unitaryGroup n α) :=
+  Matrix.toLin' A
 
-lemma ext_iff (A B : unitary_group n α) : A = B ↔ ∀ i j, A i j = B i j :=
-subtype.ext_iff_val.trans ⟨(λ h i j, congr_fun (congr_fun h i) j), matrix.ext⟩
+theorem ext_iff (A B : unitaryGroup n α) : A = B ↔ ∀ i j, A i j = B i j :=
+  Subtype.ext_iff_val.trans ⟨fun h i j => congr_funₓ (congr_funₓ h i) j, Matrix.ext⟩
 
-@[ext] lemma ext (A B : unitary_group n α) : (∀ i j, A i j = B i j) → A = B :=
-(unitary_group.ext_iff A B).mpr
+@[ext]
+theorem ext (A B : unitaryGroup n α) : (∀ i j, A i j = B i j) → A = B :=
+  (unitaryGroup.ext_iff A B).mpr
 
 @[simp]
-lemma star_mul_self (A : unitary_group n α) : star A ⬝ A = 1 := A.2.1
+theorem star_mul_self (A : unitaryGroup n α) : star A ⬝ A = 1 :=
+  A.2.1
 
-section coe_lemmas
+section CoeLemmas
 
-variables (A B : unitary_group n α)
+variable (A B : unitaryGroup n α)
 
-@[simp] lemma inv_val : ↑(A⁻¹) = (star A : matrix n n α) := rfl
+@[simp]
+theorem inv_val : ↑A⁻¹ = (star A : Matrix n n α) :=
+  rfl
 
-@[simp] lemma inv_apply : ⇑(A⁻¹) = (star A : matrix n n α) := rfl
+@[simp]
+theorem inv_apply : ⇑A⁻¹ = (star A : Matrix n n α) :=
+  rfl
 
-@[simp] lemma mul_val : ↑(A * B) = A ⬝ B := rfl
+@[simp]
+theorem mul_val : ↑(A * B) = A ⬝ B :=
+  rfl
 
-@[simp] lemma mul_apply : ⇑(A * B) = (A ⬝ B) := rfl
+@[simp]
+theorem mul_apply : ⇑(A * B) = A ⬝ B :=
+  rfl
 
-@[simp] lemma one_val : ↑(1 : unitary_group n α) = (1 : matrix n n α) := rfl
+@[simp]
+theorem one_val : ↑(1 : unitaryGroup n α) = (1 : Matrix n n α) :=
+  rfl
 
-@[simp] lemma one_apply : ⇑(1 : unitary_group n α) = (1 : matrix n n α) := rfl
+@[simp]
+theorem one_apply : ⇑(1 : unitaryGroup n α) = (1 : Matrix n n α) :=
+  rfl
 
-@[simp] lemma to_lin'_mul :
-  to_lin' (A * B) = (to_lin' A).comp (to_lin' B) :=
-matrix.to_lin'_mul A B
+@[simp]
+theorem to_lin'_mul : toLin' (A * B) = (toLin' A).comp (toLin' B) :=
+  Matrix.to_lin'_mul A B
 
-@[simp] lemma to_lin'_one :
-  to_lin' (1 : unitary_group n α) = linear_map.id :=
-matrix.to_lin'_one
+@[simp]
+theorem to_lin'_one : toLin' (1 : unitaryGroup n α) = LinearMap.id :=
+  Matrix.to_lin'_one
 
-end coe_lemmas
+end CoeLemmas
 
 /-- `to_linear_equiv A` is matrix multiplication of vectors by `A`, as a linear equivalence. -/
-def to_linear_equiv (A : unitary_group n α) : (n → α) ≃ₗ[α] (n → α) :=
-{ inv_fun := to_lin' A⁻¹,
-  left_inv := λ x, calc
-    (to_lin' A⁻¹).comp (to_lin' A) x
-        = (to_lin' (A⁻¹ * A)) x : by rw [←to_lin'_mul]
-    ... = x : by rw [mul_left_inv, to_lin'_one, id_apply],
-  right_inv := λ x, calc
-    (to_lin' A).comp (to_lin' A⁻¹) x
-        = to_lin' (A * A⁻¹) x : by rw [←to_lin'_mul]
-    ... = x : by rw [mul_right_inv, to_lin'_one, id_apply],
-  ..matrix.to_lin' A }
+def toLinearEquiv (A : unitaryGroup n α) : (n → α) ≃ₗ[α] n → α :=
+  { Matrix.toLin' A with invFun := toLin' A⁻¹,
+    left_inv := fun x =>
+      calc
+        (toLin' A⁻¹).comp (toLin' A) x = (toLin' (A⁻¹ * A)) x := by
+          rw [← to_lin'_mul]
+        _ = x := by
+          rw [mul_left_invₓ, to_lin'_one, id_apply]
+        ,
+    right_inv := fun x =>
+      calc
+        (toLin' A).comp (toLin' A⁻¹) x = toLin' (A * A⁻¹) x := by
+          rw [← to_lin'_mul]
+        _ = x := by
+          rw [mul_right_invₓ, to_lin'_one, id_apply]
+         }
 
 /-- `to_GL` is the map from the unitary group to the general linear group -/
-def to_GL (A : unitary_group n α) : general_linear_group α (n → α) :=
-general_linear_group.of_linear_equiv (to_linear_equiv A)
+def toGL (A : unitaryGroup n α) : GeneralLinearGroup α (n → α) :=
+  GeneralLinearGroup.ofLinearEquiv (toLinearEquiv A)
 
-lemma coe_to_GL (A : unitary_group n α) :
-  ↑(to_GL A) = to_lin' A :=
-rfl
-
-@[simp]
-lemma to_GL_one : to_GL (1 : unitary_group n α) = 1 :=
-by { ext1 v i, rw [coe_to_GL, to_lin'_one], refl }
+theorem coe_to_GL (A : unitaryGroup n α) : ↑(toGL A) = toLin' A :=
+  rfl
 
 @[simp]
-lemma to_GL_mul (A B : unitary_group n α) :
-  to_GL (A * B) = to_GL A * to_GL B :=
-by { ext1 v i, rw [coe_to_GL, to_lin'_mul], refl }
+theorem to_GL_one : toGL (1 : unitaryGroup n α) = 1 := by
+  ext1 v i
+  rw [coe_to_GL, to_lin'_one]
+  rfl
+
+@[simp]
+theorem to_GL_mul (A B : unitaryGroup n α) : toGL (A * B) = toGL A * toGL B := by
+  ext1 v i
+  rw [coe_to_GL, to_lin'_mul]
+  rfl
 
 /-- `unitary_group.embedding_GL` is the embedding from `unitary_group n α`
 to `general_linear_group n α`. -/
-def embedding_GL : unitary_group n α →* general_linear_group α (n → α) :=
-⟨λ A, to_GL A, by simp, by simp⟩
+def embeddingGL : unitaryGroup n α →* GeneralLinearGroup α (n → α) :=
+  ⟨fun A => toGL A, by
+    simp , by
+    simp ⟩
 
-end unitary_group
+end UnitaryGroup
 
-section orthogonal_group
+section OrthogonalGroup
 
-variables (β : Type v) [comm_ring β]
+variable (β : Type v) [CommRingₓ β]
 
-local attribute [instance] star_ring_of_comm
-/--
-`orthogonal_group n` is the group of `n` by `n` matrices where the transpose is the inverse.
+attribute [local instance] starRingOfComm
+
+/-- `orthogonal_group n` is the group of `n` by `n` matrices where the transpose is the inverse.
 -/
-abbreviation orthogonal_group := unitary_group n β
+abbrev orthogonalGroup :=
+  unitaryGroup n β
 
-end orthogonal_group
+end OrthogonalGroup
 
-end matrix
+end Matrix
+

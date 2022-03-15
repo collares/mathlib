@@ -3,8 +3,8 @@ Copyright (c) 2020 Dany Fabian. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Dany Fabian
 -/
+import Mathbin.Tactic.SplitIfs
 
-import tactic.split_ifs
 /-!
   # Unfold cases tactic
 
@@ -84,23 +84,28 @@ import tactic.split_ifs
 
   Now, however, both goals can be discharged using `refl`.
 -/
-namespace tactic
-open expr
-namespace unfold_cases
-/--
-  Given an equation `f x = y`, this tactic tries to infer an expression that can be
+
+
+namespace Tactic
+
+open Expr
+
+namespace UnfoldCases
+
+/-- Given an equation `f x = y`, this tactic tries to infer an expression that can be
   used to do distinction by cases on to make progress.
 
   Pre-condition: assumes that the outer-most application cannot be beta-reduced
   (e.g. `whnf` or `dsimp`).
 -/
-meta def find_splitting_expr : expr → tactic expr
-| `(@ite _ %%cond %%dec_inst _ _ = _) := pure `(@decidable.em %%cond %%dec_inst)
-| `(%%(app x y) = _) := pure y
-| e := fail!"expected an expression of the form: f x = y. Got:\n{e}"
+unsafe def find_splitting_expr : expr → tactic expr
+  | quote.1 (@ite _ (%%ₓcond) (%%ₓdec_inst) _ _ = _) => pure (quote.1 (@Decidable.em (%%ₓcond) (%%ₓdec_inst)))
+  | quote.1 ((%%ₓapp x y) = _) => pure y
+  | e =>
+    throwError "expected an expression of the form: f x = y. Got:
+      {← e}"
 
-/--
-  Tries to finish the current goal using the `inner` tactic. If the tactic
+/-- Tries to finish the current goal using the `inner` tactic. If the tactic
   fails, it tries to find an expression on which to do a distinction by
   cases and calls itself recursively.
 
@@ -109,34 +114,40 @@ meta def find_splitting_expr : expr → tactic expr
 
   Notice, that if the `inner` tactic succeeds, the recursive unfolding is stopped.
 -/
-meta def unfold_cases_core (inner : interactive.itactic) : tactic unit :=
-inner <|>
-(do split_ifs [], all_goals unfold_cases_core, skip) <|>
-do
-  tgt ← target,
-  e ← find_splitting_expr tgt,
-  focus1 $ do
-    cases e,
-    all_goals $ (dsimp_target >> unfold_cases_core) <|> skip,
-    skip
+unsafe def unfold_cases_core (inner : interactive.itactic) : tactic Unit :=
+  inner <|>
+    (do
+        split_ifs []
+        all_goals unfold_cases_core
+        skip) <|>
+      do
+      let tgt ← target
+      let e ← find_splitting_expr tgt
+      focus1 <| do
+          cases e
+          all_goals <| dsimp_target >> unfold_cases_core <|> skip
+          skip
 
-/--
-  Given a target of the form `⊢ f x₁ ... xₙ = y`, unfolds `f` using a delta reduction.
+/-- Given a target of the form `⊢ f x₁ ... xₙ = y`, unfolds `f` using a delta reduction.
 -/
-meta def unfold_tgt : expr → tactic unit
-| `(%%l@(app _ _) = %%r) :=
-  match l.get_app_fn with
-  | const n ls := delta_target [n]
-  | e := fail!"couldn't unfold:\n{e}"
-  end
-| e := fail!"expected an expression of the form: f x = y. Got:\n{e}"
-end unfold_cases
+unsafe def unfold_tgt : expr → tactic Unit
+  | quote.1 ((%%ₓl@(app _ _)) = %%ₓr) =>
+    match l.get_app_fn with
+    | const n ls => delta_target [n]
+    | e =>
+      throwError "couldn't unfold:
+        {← e}"
+  | e =>
+    throwError "expected an expression of the form: f x = y. Got:
+      {← e}"
 
-namespace interactive
-open unfold_cases
+end UnfoldCases
 
-/--
-  This tactic unfolds the definition of a function or `match` expression.
+namespace Interactive
+
+open UnfoldCases
+
+/-- This tactic unfolds the definition of a function or `match` expression.
   Then it recursively introduces a distinction by cases. The decision what expression
   to do the distinction on is driven by the pattern matching expression.
 
@@ -178,18 +189,19 @@ open unfold_cases
 
   Further examples can be found in `test/unfold_cases.lean`.
 -/
-meta def unfold_cases (inner : itactic) : tactic unit := focus1 $ do
-  tactic.intros,
-  tgt ← target,
-  unfold_tgt tgt,
-  try dsimp_target,
-  unfold_cases_core inner
+unsafe def unfold_cases (inner : itactic) : tactic Unit :=
+  focus1 <| do
+    tactic.intros
+    let tgt ← target
+    unfold_tgt tgt
+    try dsimp_target
+    unfold_cases_core inner
 
 add_tactic_doc
-{ name       := "unfold_cases",
-  category   := doc_category.tactic,
-  decl_names := [`tactic.interactive.unfold_cases],
-  tags       := ["induction", "case bashing"] }
+  { Name := "unfold_cases", category := DocCategory.tactic, declNames := [`tactic.interactive.unfold_cases],
+    tags := ["induction", "case bashing"] }
 
-end interactive
-end tactic
+end Interactive
+
+end Tactic
+

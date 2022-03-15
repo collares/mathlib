@@ -3,7 +3,7 @@ Copyright (c) 2022 Rishikesh Vaishnav. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Rishikesh Vaishnav
 -/
-import probability.independence
+import Mathbin.Probability.Independence
 
 /-!
 # Conditional Probability
@@ -51,91 +51,88 @@ the conditioning set has non-zero measure should be named using the abbreviation
 conditional, conditioned, bayes
 -/
 
-noncomputable theory
 
-open measure_theory measurable_space
+noncomputable section
 
-variables {α : Type*} {m : measurable_space α} (μ : measure α) {s t : set α}
+open MeasureTheory MeasurableSpace
 
-namespace probability_theory
+variable {α : Type _} {m : MeasurableSpace α} (μ : Measureₓ α) {s t : Set α}
 
-section definitions
+namespace ProbabilityTheory
+
+section Definitions
 
 /-- The conditional probability measure of measure `μ` on set `s` is `μ` restricted to `s` 
 and scaled by the inverse of `μ s` (to make it a probability measure):
 `(μ s)⁻¹ • μ.restrict s`. -/
-def cond (s : set α) : measure α :=
+def cond (s : Set α) : Measureₓ α :=
   (μ s)⁻¹ • μ.restrict s
 
-end definitions
+end Definitions
 
-local notation  μ `[` s `|` t `]` := cond μ t s
-local notation  μ `[|`:60 t`]` := cond μ t
+-- mathport name: «expr [ | ]»
+local notation μ "[" s "|" t "]" => cond μ t s
+
+-- mathport name: «expr [| ]»
+local notation:60 μ "[|" t "]" => cond μ t
 
 /-- The conditional probability measure of any finite measure on any set of positive measure
 is a probability measure. -/
-lemma cond_is_probability_measure [is_finite_measure μ] (hcs : μ s ≠ 0) :
-  is_probability_measure $ μ[|s] :=
-⟨by { rw [cond, measure.smul_apply, measure.restrict_apply measurable_set.univ,
-  set.univ_inter], exact ennreal.inv_mul_cancel hcs (measure_ne_top _ s) }⟩
+theorem cond_is_probability_measure [IsFiniteMeasure μ] (hcs : μ s ≠ 0) : is_probability_measure <| μ[|s] :=
+  ⟨by
+    rw [cond, measure.smul_apply, measure.restrict_apply MeasurableSet.univ, Set.univ_inter]
+    exact Ennreal.inv_mul_cancel hcs (measure_ne_top _ s)⟩
 
-section bayes
+section Bayes
 
-@[simp] lemma cond_univ [is_probability_measure μ] :
-  μ[|set.univ] = μ :=
-by simp [cond, measure_univ, measure.restrict_univ]
+@[simp]
+theorem cond_univ [IsProbabilityMeasure μ] : μ[|Set.Univ] = μ := by
+  simp [cond, measure_univ, measure.restrict_univ]
 
 /-- The axiomatic definition of conditional probability derived from a measure-theoretic one. -/
-@[simp] lemma cond_apply (hms : measurable_set s) (t : set α) :
-  μ[t|s] = (μ s)⁻¹ * μ (s ∩ t) :=
-by { rw [cond, measure.smul_apply, measure.restrict_apply' hms, set.inter_comm], refl }
+@[simp]
+theorem cond_apply (hms : MeasurableSet s) (t : Set α) : μ[t|s] = (μ s)⁻¹ * μ (s ∩ t) := by
+  rw [cond, measure.smul_apply, measure.restrict_apply' hms, Set.inter_comm]
+  rfl
 
-lemma inter_pos_of_cond_ne_zero (hms : measurable_set s) (hcst : μ[t|s] ≠ 0) :
-  0 < μ (s ∩ t) :=
-begin
-  refine pos_iff_ne_zero.mpr (right_ne_zero_of_mul _),
-  { exact (μ s)⁻¹ },
-  convert hcst,
-  simp [hms, set.inter_comm]
-end
+theorem inter_pos_of_cond_ne_zero (hms : MeasurableSet s) (hcst : μ[t|s] ≠ 0) : 0 < μ (s ∩ t) := by
+  refine' pos_iff_ne_zero.mpr (right_ne_zero_of_mul _)
+  · exact (μ s)⁻¹
+    
+  convert hcst
+  simp [hms, Set.inter_comm]
 
-variable [is_finite_measure μ]
+variable [IsFiniteMeasure μ]
 
-lemma cond_pos_of_inter_ne_zero (hms : measurable_set s) (hci : μ (s ∩ t) ≠ 0) :
-  0 < μ[|s] t :=
-begin
-  rw cond_apply _ hms,
-  refine ennreal.mul_pos _ hci,
-  exact ennreal.inv_ne_zero.mpr (measure_ne_top _ _),
-end
+theorem cond_pos_of_inter_ne_zero (hms : MeasurableSet s) (hci : μ (s ∩ t) ≠ 0) : 0 < (μ[|s]) t := by
+  rw [cond_apply _ hms]
+  refine' Ennreal.mul_pos _ hci
+  exact ennreal.inv_ne_zero.mpr (measure_ne_top _ _)
 
 /-- Conditioning first on `s` and then on `t` results in the same measure as conditioning
 on `s ∩ t`. -/
-@[simp] lemma cond_cond_eq_cond_inter
-  (hms : measurable_set s) (hmt : measurable_set t) (hci : μ (s ∩ t) ≠ 0) :
-  μ[|s][|t] = μ[|s ∩ t] :=
-begin
-  have := hms.inter hmt,
-  have := measure_ne_top μ s,
-  have hcs : μ s ≠ 0 := (μ.to_outer_measure.pos_of_subset_ne_zero
-    (set.inter_subset_left _ _) hci).ne',
-  ext1,
-  haveI := cond_is_probability_measure μ hcs,
-  simp only [*, cond_apply, ←mul_assoc, ←set.inter_assoc],
-  congr,
-  simp [*, ennreal.mul_inv, mul_comm, ←mul_assoc, ennreal.inv_mul_cancel]
-end
+@[simp]
+theorem cond_cond_eq_cond_inter (hms : MeasurableSet s) (hmt : MeasurableSet t) (hci : μ (s ∩ t) ≠ 0) :
+    μ[|s][|t] = μ[|s ∩ t] := by
+  have := hms.inter hmt
+  have := measure_ne_top μ s
+  have hcs : μ s ≠ 0 := (μ.to_outer_measure.pos_of_subset_ne_zero (Set.inter_subset_left _ _) hci).ne'
+  ext1
+  have := cond_is_probability_measure μ hcs
+  simp only [*, cond_apply, ← mul_assoc, ← Set.inter_assoc]
+  congr
+  simp [*, Ennreal.mul_inv, mul_comm, ← mul_assoc, Ennreal.inv_mul_cancel]
 
-@[simp] lemma cond_mul_eq_inter (hms : measurable_set s) (hcs : μ s ≠ 0) (t : set α) :
-  μ[t|s] * μ s = μ (s ∩ t) :=
-by rw [cond_apply μ hms t, mul_comm, ←mul_assoc,
-  ennreal.mul_inv_cancel hcs (measure_ne_top _ s), one_mul]
+@[simp]
+theorem cond_mul_eq_inter (hms : MeasurableSet s) (hcs : μ s ≠ 0) (t : Set α) : μ[t|s] * μ s = μ (s ∩ t) := by
+  rw [cond_apply μ hms t, mul_comm, ← mul_assoc, Ennreal.mul_inv_cancel hcs (measure_ne_top _ s), one_mulₓ]
 
 /-- **Bayes' Theorem** -/
-theorem cond_eq_inv_mul_cond_mul (hms : measurable_set s) (hmt : measurable_set t) (ht : μ t ≠ 0) :
-  μ[t|s] = (μ s)⁻¹ * μ[s|t] * (μ t) :=
-by rw [mul_assoc, cond_mul_eq_inter μ hmt ht s, set.inter_comm, cond_apply _ hms]
+theorem cond_eq_inv_mul_cond_mul (hms : MeasurableSet s) (hmt : MeasurableSet t) (ht : μ t ≠ 0) :
+    μ[t|s] = (μ s)⁻¹ * μ[s|t] * μ t := by
+  rw [mul_assoc, cond_mul_eq_inter μ hmt ht s, Set.inter_comm, cond_apply _ hms]
 
-end bayes
+end Bayes
 
-end probability_theory
+end ProbabilityTheory
+

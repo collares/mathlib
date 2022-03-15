@@ -3,8 +3,8 @@ Copyright (c) 2019 Johan Commelin. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johan Commelin
 -/
-import data.multiset.nodup
-import data.list.nat_antidiagonal
+import Mathbin.Data.Multiset.Nodup
+import Mathbin.Data.List.NatAntidiagonal
 
 /-!
 # Antidiagonals in ℕ × ℕ as multisets
@@ -19,48 +19,55 @@ This refines file `data.list.nat_antidiagonal` and is further refined by file
 `data.finset.nat_antidiagonal`.
 -/
 
-namespace multiset
-namespace nat
+
+namespace Multiset
+
+namespace Nat
 
 /-- The antidiagonal of a natural number `n` is
     the multiset of pairs `(i, j)` such that `i + j = n`. -/
-def antidiagonal (n : ℕ) : multiset (ℕ × ℕ) :=
-list.nat.antidiagonal n
+def antidiagonal (n : ℕ) : Multiset (ℕ × ℕ) :=
+  List.Nat.antidiagonal n
 
 /-- A pair (i, j) is contained in the antidiagonal of `n` if and only if `i + j = n`. -/
-@[simp] lemma mem_antidiagonal {n : ℕ} {x : ℕ × ℕ} :
-  x ∈ antidiagonal n ↔ x.1 + x.2 = n :=
-by rw [antidiagonal, mem_coe, list.nat.mem_antidiagonal]
+@[simp]
+theorem mem_antidiagonal {n : ℕ} {x : ℕ × ℕ} : x ∈ antidiagonal n ↔ x.1 + x.2 = n := by
+  rw [antidiagonal, mem_coe, List.Nat.mem_antidiagonal]
 
 /-- The cardinality of the antidiagonal of `n` is `n+1`. -/
-@[simp] lemma card_antidiagonal (n : ℕ) : (antidiagonal n).card = n+1 :=
-by rw [antidiagonal, coe_card, list.nat.length_antidiagonal]
+@[simp]
+theorem card_antidiagonal (n : ℕ) : (antidiagonal n).card = n + 1 := by
+  rw [antidiagonal, coe_card, List.Nat.length_antidiagonal]
 
 /-- The antidiagonal of `0` is the list `[(0, 0)]` -/
-@[simp] lemma antidiagonal_zero : antidiagonal 0 = {(0, 0)} :=
-rfl
+@[simp]
+theorem antidiagonal_zero : antidiagonal 0 = {(0, 0)} :=
+  rfl
 
 /-- The antidiagonal of `n` does not contain duplicate entries. -/
-@[simp] lemma nodup_antidiagonal (n : ℕ) : nodup (antidiagonal n) :=
-coe_nodup.2 $ list.nat.nodup_antidiagonal n
+@[simp]
+theorem nodup_antidiagonal (n : ℕ) : Nodup (antidiagonal n) :=
+  coe_nodup.2 <| List.Nat.nodup_antidiagonal n
 
-@[simp] lemma antidiagonal_succ {n : ℕ} :
-  antidiagonal (n + 1) = (0, n + 1) ::ₘ ((antidiagonal n).map (prod.map nat.succ id)) :=
-by simp only [antidiagonal, list.nat.antidiagonal_succ, coe_map, cons_coe]
+@[simp]
+theorem antidiagonal_succ {n : ℕ} : antidiagonal (n + 1) = (0, n + 1) ::ₘ (antidiagonal n).map (Prod.map Nat.succ id) :=
+  by
+  simp only [antidiagonal, List.Nat.antidiagonal_succ, coe_map, cons_coe]
 
-lemma antidiagonal_succ' {n : ℕ} :
-  antidiagonal (n + 1) = (n + 1, 0) ::ₘ ((antidiagonal n).map (prod.map id nat.succ)) :=
-by rw [antidiagonal, list.nat.antidiagonal_succ', ← coe_add, add_comm, antidiagonal, coe_map,
-  coe_add, list.singleton_append, cons_coe]
+theorem antidiagonal_succ' {n : ℕ} :
+    antidiagonal (n + 1) = (n + 1, 0) ::ₘ (antidiagonal n).map (Prod.map id Nat.succ) := by
+  rw [antidiagonal, List.Nat.antidiagonal_succ', ← coe_add, add_commₓ, antidiagonal, coe_map, coe_add,
+    List.singleton_append, cons_coe]
 
-lemma antidiagonal_succ_succ' {n : ℕ} :
-  antidiagonal (n + 2) =
-  (0, n + 2) ::ₘ (n + 2, 0) ::ₘ ((antidiagonal n).map (prod.map nat.succ nat.succ)) :=
-by { rw [antidiagonal_succ, antidiagonal_succ', map_cons, map_map, prod_map], refl }
+theorem antidiagonal_succ_succ' {n : ℕ} :
+    antidiagonal (n + 2) = (0, n + 2) ::ₘ (n + 2, 0) ::ₘ (antidiagonal n).map (Prod.map Nat.succ Nat.succ) := by
+  rw [antidiagonal_succ, antidiagonal_succ', map_cons, map_map, prod_mapₓ]
+  rfl
 
-lemma map_swap_antidiagonal {n : ℕ} :
-  (antidiagonal n).map prod.swap = antidiagonal n :=
-by rw [antidiagonal, coe_map, list.nat.map_swap_antidiagonal, coe_reverse]
+theorem map_swap_antidiagonal {n : ℕ} : (antidiagonal n).map Prod.swap = antidiagonal n := by
+  rw [antidiagonal, coe_map, List.Nat.map_swap_antidiagonal, coe_reverse]
 
-end nat
-end multiset
+end Nat
+
+end Multiset
+

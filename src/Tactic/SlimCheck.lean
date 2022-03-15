@@ -3,9 +3,8 @@ Copyright (c) 2020 Simon Hudon. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Simon Hudon
 -/
-
-import testing.slim_check.testable
-import data.list.sort
+import Mathbin.Testing.SlimCheck.Testable
+import Mathbin.Data.List.Sort
 
 /-!
 ## Finding counterexamples automatically using `slim_check`
@@ -98,48 +97,62 @@ For more information on writing your own `sampleable` and `testable`
 instances, see `testing.slim_check.testable`.
 -/
 
-namespace tactic.interactive
-open tactic slim_check
 
-declare_trace slim_check.instance
-declare_trace slim_check.decoration
-declare_trace slim_check.discarded
-declare_trace slim_check.success
-declare_trace slim_check.shrink.steps
-declare_trace slim_check.shrink.candidates .
-open expr
+namespace Tactic.Interactive
+
+open Tactic SlimCheck
+
+initialize
+  registerTraceClass.1 `slim_check.instance
+
+initialize
+  registerTraceClass.1 `slim_check.decoration
+
+initialize
+  registerTraceClass.1 `slim_check.discarded
+
+initialize
+  registerTraceClass.1 `slim_check.success
+
+initialize
+  registerTraceClass.1 `slim_check.shrink.steps
+
+initialize
+  registerTraceClass.1 `slim_check.shrink.candidates
+
+open Expr
 
 /-- Tree structure representing a `testable` instance. -/
-meta inductive instance_tree
-| node : name → expr → list instance_tree → instance_tree
+unsafe inductive instance_tree
+  | node : Name → expr → List instance_tree → instance_tree
 
 /-- Gather information about a `testable` instance. Given
 an expression of type `testable ?p`, gather the
 name of the `testable` instances that it is built from
 and the proposition that they test. -/
-meta def summarize_instance : expr → tactic instance_tree
-| (lam n bi d b) := do
-   v ← mk_local' n bi d,
-   summarize_instance $ b.instantiate_var v
-| e@(app f x) := do
-   `(testable %%p) ← infer_type e,
-   xs ← e.get_app_args.mmap_filter (try_core ∘ summarize_instance),
-   pure $ instance_tree.node e.get_app_fn.const_name p xs
-| e := do
-  failed
+unsafe def summarize_instance : expr → tactic instance_tree
+  | lam n bi d b => do
+    let v ← mk_local' n bi d
+    summarize_instance <| b v
+  | e@(app f x) => do
+    let quote.1 (Testable (%%ₓp)) ← infer_type e
+    let xs ← e.get_app_args.mmapFilter (try_core ∘ summarize_instance)
+    pure <| instance_tree.node e p xs
+  | e => do
+    failed
 
 /-- format a `instance_tree` -/
-meta def instance_tree.to_format : instance_tree → tactic format
-| (instance_tree.node n p xs) := do
-  xs ← format.join <$> (xs.mmap $ λ t, flip format.indent 2 <$> instance_tree.to_format t),
-  ys ← pformat!"testable ({p})",
-  pformat!"+ {n} :{format.indent ys 2}\n{xs}"
+unsafe def instance_tree.to_format : instance_tree → tactic format
+  | instance_tree.node n p xs => do
+    let xs ← format.join <$> xs.mmap fun t => flip format.indent 2 <$> instance_tree.to_format t
+    let ys ← f!"testable ({← p})"
+    f!"+ {(← n)} :{(← format.indent ys 2)}
+        {← xs}"
 
-meta instance instance_tree.has_to_tactic_format : has_to_tactic_format instance_tree :=
-⟨ instance_tree.to_format ⟩
+unsafe instance instance_tree.has_to_tactic_format : has_to_tactic_format instance_tree :=
+  ⟨instance_tree.to_format⟩
 
-/--
-`slim_check` considers a proof goal and tries to generate examples
+/-- `slim_check` considers a proof goal and tries to generate examples
 that would contradict the statement.
 
 Let's consider the following proof goal.
@@ -191,42 +204,45 @@ Options:
   the proposition
 * `set_option trace.slim_check.success true`: print the tested samples that satisfy a property
 -/
-meta def slim_check (cfg : slim_check_cfg := {}) : tactic unit := do
-{ tgt ← retrieve $ tactic.revert_all >> target,
-  let tgt' := tactic.add_decorations tgt,
-  let cfg := { cfg with
-               trace_discarded         := cfg.trace_discarded
-                || is_trace_enabled_for `slim_check.discarded,
-               trace_shrink            := cfg.trace_shrink
-                || is_trace_enabled_for `slim_check.shrink.steps,
-               trace_shrink_candidates := cfg.trace_shrink_candidates
-                || is_trace_enabled_for `slim_check.shrink.candidates,
-               trace_success           := cfg.trace_success
-                || is_trace_enabled_for `slim_check.success },
-  inst ← mk_app ``testable [tgt'] >>= mk_instance <|>
-    fail!("Failed to create a `testable` instance for `{tgt}`.
-What to do:
-1. make sure that the types you are using have `slim_check.sampleable` instances
-   (you can use `#sample my_type` if you are unsure);
-2. make sure that the relations and predicates that your proposition use are decidable;
-3. make sure that instances of `slim_check.testable` exist that, when combined,
-   apply to your decorated proposition:
-```
-{tgt'}
-```
+unsafe def slim_check (cfg : SlimCheckCfg := {  }) : tactic Unit := do
+  let tgt ← retrieve <| tactic.revert_all >> target
+  let tgt' := tactic.add_decorations tgt
+  let cfg :=
+    { cfg with traceDiscarded := cfg.traceDiscarded || is_trace_enabled_for `slim_check.discarded,
+      traceShrink := cfg.traceShrink || is_trace_enabled_for `slim_check.shrink.steps,
+      traceShrinkCandidates := cfg.traceShrinkCandidates || is_trace_enabled_for `slim_check.shrink.candidates,
+      traceSuccess := cfg.traceSuccess || is_trace_enabled_for `slim_check.success }
+  let inst ←
+    mk_app `` testable [tgt'] >>= mk_instance <|>
+        throwError "Failed to create a `testable` instance for `{(← tgt)}`.
+          What to do:
+          1. make sure that the types you are using have `slim_check.sampleable` instances
+             (you can use `#sample my_type` if you are unsure);
+          2. make sure that the relations and predicates that your proposition use are decidable;
+          3. make sure that instances of `slim_check.testable` exist that, when combined,
+             apply to your decorated proposition:
+          ```
+          {(← tgt')}
+          ```
+          
+          Use `set_option trace.class_instances true` to understand what instances are missing.
+          
+          Try this:
+          set_option trace.class_instances true
+          #check (by apply_instance : slim_check.testable ({← tgt'}))"
+  let e ← mk_mapp `` testable.check [tgt, quote.1 cfg, tgt', inst]
+  when_tracing `slim_check.decoration
+      (← do
+        dbg_trace "[testable decoration]
+            {← tgt'}")
+  when_tracing `slim_check.instance <| do
+      let inst ← summarize_instance inst >>= pp
+      ← do
+          dbg_trace "
+            [testable instance]{← format.indent inst 2}"
+  let code ← eval_expr (Io PUnit) e
+  unsafe_run_io code
+  tactic.admit
 
-Use `set_option trace.class_instances true` to understand what instances are missing.
+end Tactic.Interactive
 
-Try this:
-set_option trace.class_instances true
-#check (by apply_instance : slim_check.testable ({tgt'}))"),
-  e ← mk_mapp ``testable.check [tgt, `(cfg), tgt', inst],
-  when_tracing `slim_check.decoration trace!"[testable decoration]\n  {tgt'}",
-  when_tracing `slim_check.instance   $ do
-  { inst ← summarize_instance inst >>= pp,
-    trace!"\n[testable instance]{format.indent inst 2}" },
-  code ← eval_expr (io punit) e,
-  unsafe_run_io code,
-  tactic.admit }
-
-end tactic.interactive

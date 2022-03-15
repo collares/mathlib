@@ -3,8 +3,8 @@ Copyright (c) 2021 Anne Baanen. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Anne Baanen
 -/
-import ring_theory.integral_closure
-import ring_theory.localization.integral
+import Mathbin.RingTheory.IntegralClosure
+import Mathbin.RingTheory.Localization.Integral
 
 /-!
 # Integrally closed rings
@@ -22,107 +22,112 @@ integral over `R`. A special case of integrally closed domains are the Dedekind 
   is integrally closed iff it is the integral closure of `R` in `K`
 -/
 
-open_locale non_zero_divisors
+
+open_locale nonZeroDivisors
 
 /-- `R` is integrally closed if all integral elements of `Frac(R)` are also elements of `R`.
 
 This definition uses `fraction_ring R` to denote `Frac(R)`. See `is_integrally_closed_iff`
 if you want to choose another field of fractions for `R`.
 -/
-class is_integrally_closed (R : Type*) [comm_ring R] [is_domain R] : Prop :=
-(algebra_map_eq_of_integral :
-  ∀ {x : fraction_ring R}, is_integral R x → ∃ y, algebra_map R (fraction_ring R) y = x)
+class IsIntegrallyClosed (R : Type _) [CommRingₓ R] [IsDomain R] : Prop where
+  algebra_map_eq_of_integral : ∀ {x : FractionRing R}, IsIntegral R x → ∃ y, algebraMap R (FractionRing R) y = x
 
-section iff
+section Iff
 
-variables {R : Type*} [comm_ring R] [is_domain R]
-variables (K : Type*) [field K] [algebra R K] [is_fraction_ring R K]
+variable {R : Type _} [CommRingₓ R] [IsDomain R]
+
+variable (K : Type _) [Field K] [Algebra R K] [IsFractionRing R K]
 
 /-- `R` is integrally closed iff all integral elements of its fraction field `K`
 are also elements of `R`. -/
-theorem is_integrally_closed_iff :
-  is_integrally_closed R ↔ ∀ {x : K}, is_integral R x → ∃ y, algebra_map R K y = x :=
-begin
-  let e : K ≃ₐ[R] fraction_ring R := is_localization.alg_equiv R⁰_ _,
-  split,
-  { rintros ⟨cl⟩,
-    refine λ x hx, _,
-    obtain ⟨y, hy⟩ := cl ((is_integral_alg_equiv e).mpr hx),
-    exact ⟨y, e.algebra_map_eq_apply.mp hy⟩ },
-  { rintros cl,
-    refine ⟨λ x hx, _⟩,
-    obtain ⟨y, hy⟩ := cl ((is_integral_alg_equiv e.symm).mpr hx),
-    exact ⟨y, e.symm.algebra_map_eq_apply.mp hy⟩ },
-end
+theorem is_integrally_closed_iff : IsIntegrallyClosed R ↔ ∀ {x : K}, IsIntegral R x → ∃ y, algebraMap R K y = x := by
+  let e : K ≃ₐ[R] FractionRing R := IsLocalization.algEquiv R⁰ _ _
+  constructor
+  · rintro ⟨cl⟩
+    refine' fun x hx => _
+    obtain ⟨y, hy⟩ := cl ((is_integral_alg_equiv e).mpr hx)
+    exact ⟨y, e.algebra_map_eq_apply.mp hy⟩
+    
+  · rintro cl
+    refine' ⟨fun x hx => _⟩
+    obtain ⟨y, hy⟩ := cl ((is_integral_alg_equiv e.symm).mpr hx)
+    exact ⟨y, e.symm.algebra_map_eq_apply.mp hy⟩
+    
 
 /-- `R` is integrally closed iff it is the integral closure of itself in its field of fractions. -/
-theorem is_integrally_closed_iff_is_integral_closure :
-  is_integrally_closed R ↔ is_integral_closure R R K :=
-(is_integrally_closed_iff K).trans $
-begin
-  let e : K ≃ₐ[R] fraction_ring R := is_localization.alg_equiv R⁰_ _,
-  split,
-  { intros cl,
-    refine ⟨is_fraction_ring.injective _ _, λ x, ⟨cl, _⟩⟩,
-    rintros ⟨y, y_eq⟩,
-    rw ← y_eq,
-    exact is_integral_algebra_map },
-  { rintros ⟨-, cl⟩ x hx,
-    exact cl.mp hx }
-end
+theorem is_integrally_closed_iff_is_integral_closure : IsIntegrallyClosed R ↔ IsIntegralClosure R R K :=
+  (is_integrally_closed_iff K).trans <| by
+    let e : K ≃ₐ[R] FractionRing R := IsLocalization.algEquiv R⁰ _ _
+    constructor
+    · intro cl
+      refine' ⟨IsFractionRing.injective _ _, fun x => ⟨cl, _⟩⟩
+      rintro ⟨y, y_eq⟩
+      rw [← y_eq]
+      exact is_integral_algebra_map
+      
+    · rintro ⟨-, cl⟩ x hx
+      exact cl.mp hx
+      
 
-end iff
+end Iff
 
-namespace is_integrally_closed
+namespace IsIntegrallyClosed
 
-variables {R : Type*} [comm_ring R] [is_domain R] [iic : is_integrally_closed R]
-variables {K : Type*} [field K] [algebra R K] [is_fraction_ring R K]
+variable {R : Type _} [CommRingₓ R] [IsDomain R] [iic : IsIntegrallyClosed R]
 
-instance : is_integral_closure R R K :=
-(is_integrally_closed_iff_is_integral_closure K).mp iic
+variable {K : Type _} [Field K] [Algebra R K] [IsFractionRing R K]
+
+instance : IsIntegralClosure R R K :=
+  (is_integrally_closed_iff_is_integral_closure K).mp iic
 
 include iic
 
-lemma is_integral_iff {x : K} : is_integral R x ↔ ∃ y, algebra_map R K y = x :=
-is_integral_closure.is_integral_iff
+theorem is_integral_iff {x : K} : IsIntegral R x ↔ ∃ y, algebraMap R K y = x :=
+  IsIntegralClosure.is_integral_iff
 
 omit iic
-variables {R} (K)
-lemma integral_closure_eq_bot_iff :
-  integral_closure R K = ⊥ ↔ is_integrally_closed R :=
-begin
-  refine eq_bot_iff.trans _,
-  split,
-  { rw is_integrally_closed_iff K,
-    intros h x hx,
-    exact set.mem_range.mp (algebra.mem_bot.mp (h hx)),
-    assumption },
-  { intros h x hx,
-    rw [algebra.mem_bot, set.mem_range],
-    exactI is_integral_iff.mp hx },
-end
+
+variable {R} (K)
+
+theorem integral_closure_eq_bot_iff : integralClosure R K = ⊥ ↔ IsIntegrallyClosed R := by
+  refine' eq_bot_iff.trans _
+  constructor
+  · rw [is_integrally_closed_iff K]
+    intro h x hx
+    exact set.mem_range.mp (algebra.mem_bot.mp (h hx))
+    assumption
+    
+  · intro h x hx
+    rw [Algebra.mem_bot, Set.mem_range]
+    exact is_integral_iff.mp hx
+    
 
 include iic
-variables (R K)
-@[simp] lemma integral_closure_eq_bot : integral_closure R K = ⊥ :=
-(integral_closure_eq_bot_iff K).mpr ‹_›
 
-end is_integrally_closed
+variable (R K)
 
-namespace integral_closure
+@[simp]
+theorem integral_closure_eq_bot : integralClosure R K = ⊥ :=
+  (integral_closure_eq_bot_iff K).mpr ‹_›
 
-open is_integrally_closed
+end IsIntegrallyClosed
 
-variables {R : Type*} [comm_ring R] [is_domain R] [iic : is_integrally_closed R]
-variables (K : Type*) [field K] [algebra R K] [is_fraction_ring R K]
-variables {L : Type*} [field L] [algebra K L] [algebra R L] [is_scalar_tower R K L]
+namespace integralClosure
+
+open IsIntegrallyClosed
+
+variable {R : Type _} [CommRingₓ R] [IsDomain R] [iic : IsIntegrallyClosed R]
+
+variable (K : Type _) [Field K] [Algebra R K] [IsFractionRing R K]
+
+variable {L : Type _} [Field L] [Algebra K L] [Algebra R L] [IsScalarTower R K L]
 
 -- Can't be an instance because you need to supply `K`.
-lemma is_integrally_closed_of_finite_extension [finite_dimensional K L] :
-  is_integrally_closed (integral_closure R L) :=
-begin
-  letI : is_fraction_ring (integral_closure R L) L := is_fraction_ring_of_finite_extension K L,
+theorem is_integrally_closed_of_finite_extension [FiniteDimensional K L] : IsIntegrallyClosed (integralClosure R L) :=
+  by
+  let this' : IsFractionRing (integralClosure R L) L := is_fraction_ring_of_finite_extension K L
   exact (integral_closure_eq_bot_iff L).mp integral_closure_idem
-end
 
-end integral_closure
+end integralClosure
+

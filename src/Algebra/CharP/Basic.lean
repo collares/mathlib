@@ -3,482 +3,508 @@ Copyright (c) 2018 Kenny Lau. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau, Joey van Langen, Casper Putz
 -/
+import Mathbin.Data.Int.Modeq
+import Mathbin.Algebra.IterateHom
+import Mathbin.Data.Nat.Choose.Sum
+import Mathbin.GroupTheory.OrderOfElement
+import Mathbin.Data.Nat.Choose.Dvd
+import Mathbin.RingTheory.Nilpotent
 
-import data.int.modeq
-import algebra.iterate_hom
-import data.nat.choose.sum
-import group_theory.order_of_element
-import data.nat.choose.dvd
-import ring_theory.nilpotent
 /-!
 # Characteristic of semirings
 -/
 
-universes u v
 
-variables (R : Type u)
+universe u v
+
+variable (R : Type u)
 
 /-- The generator of the kernel of the unique homomorphism ℕ → R for a semiring R -/
-class char_p [add_monoid R] [has_one R] (p : ℕ) : Prop :=
-(cast_eq_zero_iff [] : ∀ x:ℕ, (x:R) = 0 ↔ p ∣ x)
+class CharP [AddMonoidₓ R] [One R] (p : ℕ) : Prop where
+  cast_eq_zero_iff {} : ∀ x : ℕ, (x : R) = 0 ↔ p ∣ x
 
-theorem char_p.cast_eq_zero [add_monoid R] [has_one R] (p : ℕ) [char_p R p] :
-  (p:R) = 0 :=
-(char_p.cast_eq_zero_iff R p p).2 (dvd_refl p)
-
-@[simp] lemma char_p.cast_card_eq_zero [add_group R] [has_one R] [fintype R] :
-  (fintype.card R : R) = 0 :=
-by rw [← nsmul_one, card_nsmul_eq_zero]
-
-lemma char_p.int_cast_eq_zero_iff [add_group R] [has_one R] (p : ℕ) [char_p R p]
-  (a : ℤ) :
-  (a : R) = 0 ↔ (p:ℤ) ∣ a :=
-begin
-  rcases lt_trichotomy a 0 with h|rfl|h,
-  { rw [← neg_eq_zero, ← int.cast_neg, ← dvd_neg],
-    lift -a to ℕ using neg_nonneg.mpr (le_of_lt h) with b,
-    rw [int.cast_coe_nat, char_p.cast_eq_zero_iff R p, int.coe_nat_dvd] },
-  { simp only [int.cast_zero, eq_self_iff_true, dvd_zero] },
-  { lift a to ℕ using (le_of_lt h) with b,
-    rw [int.cast_coe_nat, char_p.cast_eq_zero_iff R p, int.coe_nat_dvd] }
-end
-
-lemma char_p.int_coe_eq_int_coe_iff [add_group R] [has_one R] (p : ℕ) [char_p R p] (a b : ℤ) :
-  (a : R) = (b : R) ↔ a ≡ b [ZMOD p] :=
-by rw [eq_comm, ←sub_eq_zero, ←int.cast_sub,
-       char_p.int_cast_eq_zero_iff R p, int.modeq_iff_dvd]
-
-theorem char_p.eq [add_monoid R] [has_one R] {p q : ℕ} (c1 : char_p R p) (c2 : char_p R q) :
-  p = q :=
-nat.dvd_antisymm
-  ((char_p.cast_eq_zero_iff R p q).1 (char_p.cast_eq_zero _ _))
-  ((char_p.cast_eq_zero_iff R q p).1 (char_p.cast_eq_zero _ _))
-
-instance char_p.of_char_zero [add_monoid R] [has_one R] [char_zero R] : char_p R 0 :=
-⟨λ x, by rw [zero_dvd_iff, ← nat.cast_zero, nat.cast_inj]⟩
-
-theorem char_p.exists [non_assoc_semiring R] : ∃ p, char_p R p :=
-by letI := classical.dec_eq R; exact
-classical.by_cases
-  (assume H : ∀ p:ℕ, (p:R) = 0 → p = 0, ⟨0,
-    ⟨λ x, by rw [zero_dvd_iff]; exact ⟨H x, by rintro rfl; refl⟩⟩⟩)
-  (λ H, ⟨nat.find (not_forall.1 H), ⟨λ x,
-    ⟨λ H1, nat.dvd_of_mod_eq_zero (by_contradiction $ λ H2,
-      nat.find_min (not_forall.1 H)
-        (nat.mod_lt x $ nat.pos_of_ne_zero $ not_of_not_imp $
-          nat.find_spec (not_forall.1 H))
-        (not_imp_of_and_not ⟨by rwa [← nat.mod_add_div x (nat.find (not_forall.1 H)),
-          nat.cast_add, nat.cast_mul, of_not_not (not_not_of_not_imp $ nat.find_spec
-            (not_forall.1 H)),
-          zero_mul, add_zero] at H1, H2⟩)),
-    λ H1, by rw [← nat.mul_div_cancel' H1, nat.cast_mul,
-      of_not_not (not_not_of_not_imp $ nat.find_spec (not_forall.1 H)), zero_mul]⟩⟩⟩)
-
-theorem char_p.exists_unique [non_assoc_semiring R] : ∃! p, char_p R p :=
-let ⟨c, H⟩ := char_p.exists R in ⟨c, H, λ y H2, char_p.eq R H2 H⟩
-
-theorem char_p.congr {R : Type u} [add_monoid R] [has_one R] {p : ℕ} (q : ℕ) [hq : char_p R q]
-  (h : q = p) :
-  char_p R p :=
-h ▸ hq
-
-/-- Noncomputable function that outputs the unique characteristic of a semiring. -/
-noncomputable def ring_char [non_assoc_semiring R] : ℕ :=
-classical.some (char_p.exists_unique R)
-
-namespace ring_char
-variables [non_assoc_semiring R]
-
-theorem spec : ∀ x:ℕ, (x:R) = 0 ↔ ring_char R ∣ x :=
-by letI := (classical.some_spec (char_p.exists_unique R)).1;
-unfold ring_char; exact char_p.cast_eq_zero_iff R (ring_char R)
-
-theorem eq (p : ℕ) [C : char_p R p] : ring_char R = p :=
-((classical.some_spec (char_p.exists_unique R)).2 p C).symm
-
-instance char_p : char_p R (ring_char R) :=
-⟨spec R⟩
-
-variables {R}
-
-theorem of_eq {p : ℕ} (h : ring_char R = p) : char_p R p :=
-char_p.congr (ring_char R) h
-
-theorem eq_iff {p : ℕ} : ring_char R = p ↔ char_p R p :=
-⟨of_eq, @eq R _ p⟩
-
-theorem dvd {x : ℕ} (hx : (x : R) = 0) : ring_char R ∣ x :=
-(spec R x).1 hx
+theorem CharP.cast_eq_zero [AddMonoidₓ R] [One R] (p : ℕ) [CharP R p] : (p : R) = 0 :=
+  (CharP.cast_eq_zero_iff R p p).2 (dvd_refl p)
 
 @[simp]
-lemma eq_zero [char_zero R] : ring_char R = 0 := eq R 0
+theorem CharP.cast_card_eq_zero [AddGroupₓ R] [One R] [Fintype R] : (Fintype.card R : R) = 0 := by
+  rw [← nsmul_one, card_nsmul_eq_zero]
 
-end ring_char
+theorem CharP.int_cast_eq_zero_iff [AddGroupₓ R] [One R] (p : ℕ) [CharP R p] (a : ℤ) : (a : R) = 0 ↔ (p : ℤ) ∣ a := by
+  rcases lt_trichotomyₓ a 0 with (h | rfl | h)
+  · rw [← neg_eq_zero, ← Int.cast_neg, ← dvd_neg]
+    lift -a to ℕ using neg_nonneg.mpr (le_of_ltₓ h) with b
+    rw [Int.cast_coe_nat, CharP.cast_eq_zero_iff R p, Int.coe_nat_dvd]
+    
+  · simp only [Int.cast_zeroₓ, eq_self_iff_true, dvd_zero]
+    
+  · lift a to ℕ using le_of_ltₓ h with b
+    rw [Int.cast_coe_nat, CharP.cast_eq_zero_iff R p, Int.coe_nat_dvd]
+    
 
-theorem add_pow_char_of_commute [semiring R] {p : ℕ} [fact p.prime]
-  [char_p R p] (x y : R) (h : commute x y) :
-  (x + y)^p = x^p + y^p :=
-begin
-  rw [commute.add_pow h, finset.sum_range_succ_comm, tsub_self, pow_zero, nat.choose_self],
-  rw [nat.cast_one, mul_one, mul_one], congr' 1,
-  convert finset.sum_eq_single 0 _ _,
-  { simp only [mul_one, one_mul, nat.choose_zero_right, tsub_zero, nat.cast_one, pow_zero] },
-  { intros b h1 h2,
-    suffices : (p.choose b : R) = 0, { rw this, simp },
-    rw char_p.cast_eq_zero_iff R p,
-    refine nat.prime.dvd_choose_self (pos_iff_ne_zero.mpr h2) _ (fact.out _),
-    rwa ← finset.mem_range },
-  { intro h1,
-    contrapose! h1,
-    rw finset.mem_range,
-    exact nat.prime.pos (fact.out _) }
-end
+theorem CharP.int_coe_eq_int_coe_iff [AddGroupₓ R] [One R] (p : ℕ) [CharP R p] (a b : ℤ) :
+    (a : R) = (b : R) ↔ a ≡ b [ZMOD p] := by
+  rw [eq_comm, ← sub_eq_zero, ← Int.cast_sub, CharP.int_cast_eq_zero_iff R p, Int.modeq_iff_dvd]
 
-theorem add_pow_char_pow_of_commute [semiring R] {p : ℕ} [fact p.prime]
-  [char_p R p] {n : ℕ} (x y : R) (h : commute x y) :
-  (x + y) ^ (p ^ n) = x ^ (p ^ n) + y ^ (p ^ n) :=
-begin
-  induction n, { simp, },
-  rw [pow_succ', pow_mul, pow_mul, pow_mul, n_ih],
-  apply add_pow_char_of_commute, apply commute.pow_pow h,
-end
+theorem CharP.eq [AddMonoidₓ R] [One R] {p q : ℕ} (c1 : CharP R p) (c2 : CharP R q) : p = q :=
+  Nat.dvd_antisymm ((CharP.cast_eq_zero_iff R p q).1 (CharP.cast_eq_zero _ _))
+    ((CharP.cast_eq_zero_iff R q p).1 (CharP.cast_eq_zero _ _))
 
-theorem sub_pow_char_of_commute [ring R] {p : ℕ} [fact p.prime]
-  [char_p R p] (x y : R) (h : commute x y) :
-  (x - y)^p = x^p - y^p :=
-begin
-  rw [eq_sub_iff_add_eq, ← add_pow_char_of_commute _ _ _ (commute.sub_left h rfl)],
-  simp, repeat {apply_instance},
-end
+instance CharP.of_char_zero [AddMonoidₓ R] [One R] [CharZero R] : CharP R 0 :=
+  ⟨fun x => by
+    rw [zero_dvd_iff, ← Nat.cast_zeroₓ, Nat.cast_inj]⟩
 
-theorem sub_pow_char_pow_of_commute [ring R] {p : ℕ} [fact p.prime]
-  [char_p R p] {n : ℕ} (x y : R) (h : commute x y) :
-  (x - y) ^ (p ^ n) = x ^ (p ^ n) - y ^ (p ^ n) :=
-begin
-  induction n, { simp, },
-  rw [pow_succ', pow_mul, pow_mul, pow_mul, n_ih],
-  apply sub_pow_char_of_commute, apply commute.pow_pow h,
-end
+theorem CharP.exists [NonAssocSemiringₓ R] : ∃ p, CharP R p := by
+  let this' := Classical.decEq R <;>
+    exact
+      Classical.by_cases
+        (fun H : ∀ p : ℕ, (p : R) = 0 → p = 0 =>
+          ⟨0,
+            ⟨fun x => by
+              rw [zero_dvd_iff] <;>
+                exact
+                  ⟨H x, by
+                    rintro rfl <;> rfl⟩⟩⟩)
+        fun H =>
+        ⟨Nat.findₓ (not_forall.1 H),
+          ⟨fun x =>
+            ⟨fun H1 =>
+              Nat.dvd_of_mod_eq_zeroₓ
+                (by_contradiction fun H2 =>
+                  Nat.find_minₓ (not_forall.1 H)
+                    (Nat.mod_ltₓ x <| Nat.pos_of_ne_zeroₓ <| not_of_not_imp <| Nat.find_specₓ (not_forall.1 H))
+                    (not_imp_of_and_not
+                      ⟨by
+                        rwa [← Nat.mod_add_divₓ x (Nat.findₓ (not_forall.1 H)), Nat.cast_addₓ, Nat.cast_mulₓ,
+                          of_not_not (not_not_of_not_imp <| Nat.find_specₓ (not_forall.1 H)), zero_mul, add_zeroₓ] at
+                          H1,
+                        H2⟩)),
+              fun H1 => by
+              rw [← Nat.mul_div_cancel'ₓ H1, Nat.cast_mulₓ,
+                of_not_not (not_not_of_not_imp <| Nat.find_specₓ (not_forall.1 H)), zero_mul]⟩⟩⟩
 
-theorem add_pow_char [comm_semiring R] {p : ℕ} [fact p.prime]
-  [char_p R p] (x y : R) : (x + y)^p = x^p + y^p :=
-add_pow_char_of_commute _ _ _ (commute.all _ _)
+theorem CharP.exists_unique [NonAssocSemiringₓ R] : ∃! p, CharP R p :=
+  let ⟨c, H⟩ := CharP.exists R
+  ⟨c, H, fun y H2 => CharP.eq R H2 H⟩
 
-theorem add_pow_char_pow [comm_semiring R] {p : ℕ} [fact p.prime]
-  [char_p R p] {n : ℕ} (x y : R) :
-  (x + y) ^ (p ^ n) = x ^ (p ^ n) + y ^ (p ^ n) :=
-add_pow_char_pow_of_commute _ _ _ (commute.all _ _)
+theorem CharP.congr {R : Type u} [AddMonoidₓ R] [One R] {p : ℕ} (q : ℕ) [hq : CharP R q] (h : q = p) : CharP R p :=
+  h ▸ hq
 
-theorem sub_pow_char [comm_ring R] {p : ℕ} [fact p.prime]
-  [char_p R p] (x y : R) : (x - y)^p = x^p - y^p :=
-sub_pow_char_of_commute _ _ _ (commute.all _ _)
+/-- Noncomputable function that outputs the unique characteristic of a semiring. -/
+noncomputable def ringChar [NonAssocSemiringₓ R] : ℕ :=
+  Classical.some (CharP.exists_unique R)
 
-theorem sub_pow_char_pow [comm_ring R] {p : ℕ} [fact p.prime]
-  [char_p R p] {n : ℕ} (x y : R) :
-  (x - y) ^ (p ^ n) = x ^ (p ^ n) - y ^ (p ^ n) :=
-sub_pow_char_pow_of_commute _ _ _ (commute.all _ _)
+namespace ringChar
 
-lemma eq_iff_modeq_int [ring R] (p : ℕ) [char_p R p] (a b : ℤ) :
-  (a : R) = b ↔ a ≡ b [ZMOD p] :=
-by rw [eq_comm, ←sub_eq_zero, ←int.cast_sub,
-       char_p.int_cast_eq_zero_iff R p, int.modeq_iff_dvd]
+variable [NonAssocSemiringₓ R]
 
-lemma char_p.neg_one_ne_one [ring R] (p : ℕ) [char_p R p] [fact (2 < p)] :
-  (-1 : R) ≠ (1 : R) :=
-begin
-  suffices : (2 : R) ≠ 0,
-  { symmetry, rw [ne.def, ← sub_eq_zero, sub_neg_eq_add], exact this },
-  assume h,
-  rw [show (2 : R) = (2 : ℕ), by norm_cast] at h,
-  have := (char_p.cast_eq_zero_iff R p 2).mp h,
-  have := nat.le_of_dvd dec_trivial this,
-  rw fact_iff at *, linarith,
-end
+theorem spec : ∀ x : ℕ, (x : R) = 0 ↔ ringChar R ∣ x := by
+  let this' := (Classical.some_spec (CharP.exists_unique R)).1 <;>
+    unfold ringChar <;> exact CharP.cast_eq_zero_iff R (ringChar R)
 
-lemma char_p.neg_one_pow_char [comm_ring R] (p : ℕ) [char_p R p] [fact p.prime] :
-  (-1 : R) ^ p = -1 :=
-begin
-  rw eq_neg_iff_add_eq_zero,
-  nth_rewrite 1 ← one_pow p,
-  rw [← add_pow_char, add_left_neg, zero_pow (fact.out (nat.prime p)).pos],
-end
+theorem eq (p : ℕ) [C : CharP R p] : ringChar R = p :=
+  ((Classical.some_spec (CharP.exists_unique R)).2 p C).symm
 
-lemma char_p.neg_one_pow_char_pow [comm_ring R] (p n : ℕ) [char_p R p] [fact p.prime] :
-  (-1 : R) ^ p ^ n = -1 :=
-begin
-  rw eq_neg_iff_add_eq_zero,
-  nth_rewrite 1 ← one_pow (p ^ n),
-  rw [← add_pow_char_pow, add_left_neg, zero_pow (pow_pos (fact.out (nat.prime p)).pos _)],
-end
-
-lemma ring_hom.char_p_iff_char_p {K L : Type*} [division_ring K] [semiring L] [nontrivial L]
-  (f : K →+* L) (p : ℕ) :
-  char_p K p ↔ char_p L p :=
-begin
-  split;
-  { introI _c, constructor, intro n,
-    rw [← @char_p.cast_eq_zero_iff _ _ _ p _c n, ← f.injective.eq_iff, map_nat_cast f, f.map_zero] }
-end
-
-section frobenius
-
-section comm_semiring
-
-variables [comm_semiring R] {S : Type v} [comm_semiring S] (f : R →* S) (g : R →+* S)
-  (p : ℕ) [fact p.prime] [char_p R p] [char_p S p] (x y : R)
-
-/-- The frobenius map that sends x to x^p -/
-def frobenius : R →+* R :=
-{ to_fun := λ x, x^p,
-  map_one' := one_pow p,
-  map_mul' := λ x y, mul_pow x y p,
-  map_zero' := zero_pow (fact.out (nat.prime p)).pos,
-  map_add' := add_pow_char R }
+instance char_p : CharP R (ringChar R) :=
+  ⟨spec R⟩
 
 variable {R}
 
-theorem frobenius_def : frobenius R p x = x ^ p := rfl
+theorem of_eq {p : ℕ} (h : ringChar R = p) : CharP R p :=
+  CharP.congr (ringChar R) h
 
-theorem iterate_frobenius (n : ℕ) : (frobenius R p)^[n] x = x ^ p ^ n :=
-begin
-  induction n, {simp},
-  rw [function.iterate_succ', pow_succ', pow_mul, function.comp_apply, frobenius_def, n_ih]
-end
+theorem eq_iff {p : ℕ} : ringChar R = p ↔ CharP R p :=
+  ⟨of_eq, @eq R _ p⟩
+
+theorem dvd {x : ℕ} (hx : (x : R) = 0) : ringChar R ∣ x :=
+  (spec R x).1 hx
+
+@[simp]
+theorem eq_zero [CharZero R] : ringChar R = 0 :=
+  eq R 0
+
+end ringChar
+
+theorem add_pow_char_of_commute [Semiringₓ R] {p : ℕ} [Fact p.Prime] [CharP R p] (x y : R) (h : Commute x y) :
+    (x + y) ^ p = x ^ p + y ^ p := by
+  rw [Commute.add_pow h, Finset.sum_range_succ_comm, tsub_self, pow_zeroₓ, Nat.choose_self]
+  rw [Nat.cast_oneₓ, mul_oneₓ, mul_oneₓ]
+  congr 1
+  convert Finset.sum_eq_single 0 _ _
+  · simp only [mul_oneₓ, one_mulₓ, Nat.choose_zero_right, tsub_zero, Nat.cast_oneₓ, pow_zeroₓ]
+    
+  · intro b h1 h2
+    suffices (p.choose b : R) = 0 by
+      rw [this]
+      simp
+    rw [CharP.cast_eq_zero_iff R p]
+    refine' Nat.Prime.dvd_choose_self (pos_iff_ne_zero.mpr h2) _ (Fact.out _)
+    rwa [← Finset.mem_range]
+    
+  · intro h1
+    contrapose! h1
+    rw [Finset.mem_range]
+    exact Nat.Prime.pos (Fact.out _)
+    
+
+theorem add_pow_char_pow_of_commute [Semiringₓ R] {p : ℕ} [Fact p.Prime] [CharP R p] {n : ℕ} (x y : R)
+    (h : Commute x y) : (x + y) ^ p ^ n = x ^ p ^ n + y ^ p ^ n := by
+  induction n
+  · simp
+    
+  rw [pow_succ'ₓ, pow_mulₓ, pow_mulₓ, pow_mulₓ, n_ih]
+  apply add_pow_char_of_commute
+  apply Commute.pow_pow h
+
+theorem sub_pow_char_of_commute [Ringₓ R] {p : ℕ} [Fact p.Prime] [CharP R p] (x y : R) (h : Commute x y) :
+    (x - y) ^ p = x ^ p - y ^ p := by
+  rw [eq_sub_iff_add_eq, ← add_pow_char_of_commute _ _ _ (Commute.sub_left h rfl)]
+  simp
+  repeat'
+    infer_instance
+
+theorem sub_pow_char_pow_of_commute [Ringₓ R] {p : ℕ} [Fact p.Prime] [CharP R p] {n : ℕ} (x y : R) (h : Commute x y) :
+    (x - y) ^ p ^ n = x ^ p ^ n - y ^ p ^ n := by
+  induction n
+  · simp
+    
+  rw [pow_succ'ₓ, pow_mulₓ, pow_mulₓ, pow_mulₓ, n_ih]
+  apply sub_pow_char_of_commute
+  apply Commute.pow_pow h
+
+theorem add_pow_char [CommSemiringₓ R] {p : ℕ} [Fact p.Prime] [CharP R p] (x y : R) : (x + y) ^ p = x ^ p + y ^ p :=
+  add_pow_char_of_commute _ _ _ (Commute.all _ _)
+
+theorem add_pow_char_pow [CommSemiringₓ R] {p : ℕ} [Fact p.Prime] [CharP R p] {n : ℕ} (x y : R) :
+    (x + y) ^ p ^ n = x ^ p ^ n + y ^ p ^ n :=
+  add_pow_char_pow_of_commute _ _ _ (Commute.all _ _)
+
+theorem sub_pow_char [CommRingₓ R] {p : ℕ} [Fact p.Prime] [CharP R p] (x y : R) : (x - y) ^ p = x ^ p - y ^ p :=
+  sub_pow_char_of_commute _ _ _ (Commute.all _ _)
+
+theorem sub_pow_char_pow [CommRingₓ R] {p : ℕ} [Fact p.Prime] [CharP R p] {n : ℕ} (x y : R) :
+    (x - y) ^ p ^ n = x ^ p ^ n - y ^ p ^ n :=
+  sub_pow_char_pow_of_commute _ _ _ (Commute.all _ _)
+
+theorem eq_iff_modeq_int [Ringₓ R] (p : ℕ) [CharP R p] (a b : ℤ) : (a : R) = b ↔ a ≡ b [ZMOD p] := by
+  rw [eq_comm, ← sub_eq_zero, ← Int.cast_sub, CharP.int_cast_eq_zero_iff R p, Int.modeq_iff_dvd]
+
+theorem CharP.neg_one_ne_one [Ringₓ R] (p : ℕ) [CharP R p] [Fact (2 < p)] : (-1 : R) ≠ (1 : R) := by
+  suffices (2 : R) ≠ 0 by
+    symm
+    rw [Ne.def, ← sub_eq_zero, sub_neg_eq_add]
+    exact this
+  intro h
+  rw
+    [show (2 : R) = (2 : ℕ) by
+      norm_cast] at
+    h
+  have := (CharP.cast_eq_zero_iff R p 2).mp h
+  have :=
+    Nat.le_of_dvdₓ
+      (by
+        decide)
+      this
+  rw [fact_iff] at *
+  linarith
+
+theorem CharP.neg_one_pow_char [CommRingₓ R] (p : ℕ) [CharP R p] [Fact p.Prime] : (-1 : R) ^ p = -1 := by
+  rw [eq_neg_iff_add_eq_zero]
+  nth_rw 1[← one_pow p]
+  rw [← add_pow_char, add_left_negₓ, zero_pow (Fact.out (Nat.Prime p)).Pos]
+
+theorem CharP.neg_one_pow_char_pow [CommRingₓ R] (p n : ℕ) [CharP R p] [Fact p.Prime] : (-1 : R) ^ p ^ n = -1 := by
+  rw [eq_neg_iff_add_eq_zero]
+  nth_rw 1[← one_pow (p ^ n)]
+  rw [← add_pow_char_pow, add_left_negₓ, zero_pow (pow_pos (Fact.out (Nat.Prime p)).Pos _)]
+
+theorem RingHom.char_p_iff_char_p {K L : Type _} [DivisionRing K] [Semiringₓ L] [Nontrivial L] (f : K →+* L) (p : ℕ) :
+    CharP K p ↔ CharP L p := by
+  constructor <;>
+    · intro _c
+      constructor
+      intro n
+      rw [← @CharP.cast_eq_zero_iff _ _ _ p _c n, ← f.injective.eq_iff, map_nat_cast f, f.map_zero]
+      
+
+section frobenius
+
+section CommSemiringₓ
+
+variable [CommSemiringₓ R] {S : Type v} [CommSemiringₓ S] (f : R →* S) (g : R →+* S) (p : ℕ) [Fact p.Prime] [CharP R p]
+  [CharP S p] (x y : R)
+
+/-- The frobenius map that sends x to x^p -/
+def frobenius : R →+* R where
+  toFun := fun x => x ^ p
+  map_one' := one_pow p
+  map_mul' := fun x y => mul_powₓ x y p
+  map_zero' := zero_pow (Fact.out (Nat.Prime p)).Pos
+  map_add' := add_pow_char R
+
+variable {R}
+
+theorem frobenius_def : frobenius R p x = x ^ p :=
+  rfl
+
+theorem iterate_frobenius (n : ℕ) : (frobenius R p^[n]) x = x ^ p ^ n := by
+  induction n
+  · simp
+    
+  rw [Function.iterate_succ', pow_succ'ₓ, pow_mulₓ, Function.comp_applyₓ, frobenius_def, n_ih]
 
 theorem frobenius_mul : frobenius R p (x * y) = frobenius R p x * frobenius R p y :=
-(frobenius R p).map_mul x y
+  (frobenius R p).map_mul x y
 
-theorem frobenius_one : frobenius R p 1 = 1 := one_pow _
+theorem frobenius_one : frobenius R p 1 = 1 :=
+  one_pow _
 
-theorem monoid_hom.map_frobenius : f (frobenius R p x) = frobenius S p (f x) :=
-f.map_pow x p
+theorem MonoidHom.map_frobenius : f (frobenius R p x) = frobenius S p (f x) :=
+  f.map_pow x p
 
-theorem ring_hom.map_frobenius : g (frobenius R p x) = frobenius S p (g x) :=
-g.map_pow x p
+theorem RingHom.map_frobenius : g (frobenius R p x) = frobenius S p (g x) :=
+  g.map_pow x p
 
-theorem monoid_hom.map_iterate_frobenius (n : ℕ) :
-  f (frobenius R p^[n] x) = (frobenius S p^[n] (f x)) :=
-function.semiconj.iterate_right (f.map_frobenius p) n x
+theorem MonoidHom.map_iterate_frobenius (n : ℕ) : f ((frobenius R p^[n]) x) = (frobenius S p^[n]) (f x) :=
+  Function.Semiconj.iterate_right (f.map_frobenius p) n x
 
-theorem ring_hom.map_iterate_frobenius (n : ℕ) :
-  g (frobenius R p^[n] x) = (frobenius S p^[n] (g x)) :=
-g.to_monoid_hom.map_iterate_frobenius p x n
+theorem RingHom.map_iterate_frobenius (n : ℕ) : g ((frobenius R p^[n]) x) = (frobenius S p^[n]) (g x) :=
+  g.toMonoidHom.map_iterate_frobenius p x n
 
-theorem monoid_hom.iterate_map_frobenius (f : R →* R) (p : ℕ) [fact p.prime] [char_p R p] (n : ℕ) :
-  f^[n] (frobenius R p x) = frobenius R p (f^[n] x) :=
-f.iterate_map_pow _ _ _
+theorem MonoidHom.iterate_map_frobenius (f : R →* R) (p : ℕ) [Fact p.Prime] [CharP R p] (n : ℕ) :
+    (f^[n]) (frobenius R p x) = frobenius R p ((f^[n]) x) :=
+  f.iterate_map_pow _ _ _
 
-theorem ring_hom.iterate_map_frobenius (f : R →+* R) (p : ℕ) [fact p.prime] [char_p R p] (n : ℕ) :
-  f^[n] (frobenius R p x) = frobenius R p (f^[n] x) :=
-f.iterate_map_pow _ _ _
+theorem RingHom.iterate_map_frobenius (f : R →+* R) (p : ℕ) [Fact p.Prime] [CharP R p] (n : ℕ) :
+    (f^[n]) (frobenius R p x) = frobenius R p ((f^[n]) x) :=
+  f.iterate_map_pow _ _ _
 
 variable (R)
 
-theorem frobenius_zero : frobenius R p 0 = 0 := (frobenius R p).map_zero
+theorem frobenius_zero : frobenius R p 0 = 0 :=
+  (frobenius R p).map_zero
 
 theorem frobenius_add : frobenius R p (x + y) = frobenius R p x + frobenius R p y :=
-(frobenius R p).map_add x y
+  (frobenius R p).map_add x y
 
-theorem frobenius_nat_cast (n : ℕ) : frobenius R p n = n := map_nat_cast (frobenius R p) n
+theorem frobenius_nat_cast (n : ℕ) : frobenius R p n = n :=
+  map_nat_cast (frobenius R p) n
 
-open_locale big_operators
-variables {R}
+open_locale BigOperators
 
-lemma list_sum_pow_char (l : list R) : l.sum ^ p = (l.map (^ p)).sum :=
-(frobenius R p).map_list_sum _
+variable {R}
 
-lemma multiset_sum_pow_char (s : multiset R) : s.sum ^ p = (s.map (^ p)).sum :=
-(frobenius R p).map_multiset_sum _
+theorem list_sum_pow_char (l : List R) : l.Sum ^ p = (l.map (· ^ p)).Sum :=
+  (frobenius R p).map_list_sum _
 
-lemma sum_pow_char {ι : Type*} (s : finset ι) (f : ι → R) :
-  (∑ i in s, f i) ^ p = ∑ i in s, f i ^ p :=
-(frobenius R p).map_sum _ _
+theorem multiset_sum_pow_char (s : Multiset R) : s.Sum ^ p = (s.map (· ^ p)).Sum :=
+  (frobenius R p).map_multiset_sum _
 
-end comm_semiring
+theorem sum_pow_char {ι : Type _} (s : Finset ι) (f : ι → R) : (∑ i in s, f i) ^ p = ∑ i in s, f i ^ p :=
+  (frobenius R p).map_sum _ _
 
-section comm_ring
+end CommSemiringₓ
 
-variables [comm_ring R] {S : Type v} [comm_ring S] (f : R →* S) (g : R →+* S)
-  (p : ℕ) [fact p.prime] [char_p R p]  [char_p S p] (x y : R)
+section CommRingₓ
 
-theorem frobenius_neg : frobenius R p (-x) = -frobenius R p x := (frobenius R p).map_neg x
+variable [CommRingₓ R] {S : Type v} [CommRingₓ S] (f : R →* S) (g : R →+* S) (p : ℕ) [Fact p.Prime] [CharP R p]
+  [CharP S p] (x y : R)
+
+theorem frobenius_neg : frobenius R p (-x) = -frobenius R p x :=
+  (frobenius R p).map_neg x
 
 theorem frobenius_sub : frobenius R p (x - y) = frobenius R p x - frobenius R p y :=
-(frobenius R p).map_sub x y
+  (frobenius R p).map_sub x y
 
-end comm_ring
+end CommRingₓ
 
 end frobenius
 
-theorem frobenius_inj [comm_ring R] [is_reduced R]
-  (p : ℕ) [fact p.prime] [char_p R p] :
-  function.injective (frobenius R p) :=
-λ x h H, by { rw ← sub_eq_zero at H ⊢, rw ← frobenius_sub at H, exact is_reduced.eq_zero _ ⟨_,H⟩ }
+theorem frobenius_inj [CommRingₓ R] [IsReduced R] (p : ℕ) [Fact p.Prime] [CharP R p] :
+    Function.Injective (frobenius R p) := fun x h H => by
+  rw [← sub_eq_zero] at H⊢
+  rw [← frobenius_sub] at H
+  exact IsReduced.eq_zero _ ⟨_, H⟩
 
-namespace char_p
-
-section
-variables [ring R]
-
-lemma char_p_to_char_zero [char_p R 0] : char_zero R :=
-char_zero_of_inj_zero $
-  λ n h0, eq_zero_of_zero_dvd ((cast_eq_zero_iff R 0 n).mp h0)
-
-lemma cast_eq_mod (p : ℕ) [char_p R p] (k : ℕ) : (k : R) = (k % p : ℕ) :=
-calc (k : R) = ↑(k % p + p * (k / p)) : by rw [nat.mod_add_div]
-         ... = ↑(k % p)               : by simp[cast_eq_zero]
-
-theorem char_ne_zero_of_fintype (p : ℕ) [hc : char_p R p] [fintype R] : p ≠ 0 :=
-assume h : p = 0,
-have char_zero R := @char_p_to_char_zero R _ (h ▸ hc),
-absurd (@nat.cast_injective R _ _ this) (not_injective_infinite_fintype coe)
-
-end
-
-section semiring
-open nat
-
-variables [non_assoc_semiring R]
-
-theorem char_ne_one [nontrivial R] (p : ℕ) [hc : char_p R p] : p ≠ 1 :=
-assume hp : p = 1,
-have ( 1 : R) = 0, by simpa using (cast_eq_zero_iff R p 1).mpr (hp ▸ dvd_refl p),
-absurd this one_ne_zero
-
-section no_zero_divisors
-
-variable [no_zero_divisors R]
-
-theorem char_is_prime_of_two_le (p : ℕ) [hc : char_p R p] (hp : 2 ≤ p) : nat.prime p :=
-suffices ∀d ∣ p, d = 1 ∨ d = p, from nat.prime_def_lt''.mpr ⟨hp, this⟩,
-assume (d : ℕ) (hdvd : ∃ e, p = d * e),
-let ⟨e, hmul⟩ := hdvd in
-have (p : R) = 0, from (cast_eq_zero_iff R p p).mpr (dvd_refl p),
-have (d : R) * e = 0, from (@cast_mul R _ d e) ▸ (hmul ▸ this),
-or.elim (eq_zero_or_eq_zero_of_mul_eq_zero this)
-  (assume hd : (d : R) = 0,
-  have p ∣ d, from (cast_eq_zero_iff R p d).mp hd,
-  show d = 1 ∨ d = p, from or.inr (dvd_antisymm ⟨e, hmul⟩ this))
-  (assume he : (e : R) = 0,
-  have p ∣ e, from (cast_eq_zero_iff R p e).mp he,
-  have e ∣ p, from dvd_of_mul_left_eq d (eq.symm hmul),
-  have e = p, from dvd_antisymm ‹e ∣ p› ‹p ∣ e›,
-  have h₀ : p > 0, from gt_of_ge_of_gt hp (nat.zero_lt_succ 1),
-  have d * p = 1 * p, by rw ‹e = p› at hmul; rw [one_mul]; exact eq.symm hmul,
-  show d = 1 ∨ d = p, from or.inl (eq_of_mul_eq_mul_right h₀ this))
-
-section nontrivial
-
-variables [nontrivial R]
-
-theorem char_is_prime_or_zero (p : ℕ) [hc : char_p R p] : nat.prime p ∨ p = 0 :=
-match p, hc with
-| 0,     _  := or.inr rfl
-| 1,     hc := absurd (eq.refl (1 : ℕ)) (@char_ne_one R _ _ (1 : ℕ) hc)
-| (m+2), hc := or.inl (@char_is_prime_of_two_le R _ _ (m+2) hc (nat.le_add_left 2 m))
-end
-
-lemma char_is_prime_of_pos (p : ℕ) [h : fact (0 < p)] [char_p R p] : fact p.prime :=
-⟨(char_p.char_is_prime_or_zero R _).resolve_right (pos_iff_ne_zero.1 h.1)⟩
-
-end nontrivial
-
-end no_zero_divisors
-
-end semiring
-
-section ring
-
-variables (R) [ring R] [no_zero_divisors R] [nontrivial R] [fintype R]
-
-theorem char_is_prime (p : ℕ) [char_p R p] :
-  p.prime :=
-or.resolve_right (char_is_prime_or_zero R p) (char_ne_zero_of_fintype R p)
-
-end ring
-
-section char_one
-
-variables {R} [non_assoc_semiring R]
-
-@[priority 100]  -- see Note [lower instance priority]
-instance [char_p R 1] : subsingleton R :=
-subsingleton.intro $
-suffices ∀ (r : R), r = 0,
-  from assume a b, show a = b, by rw [this a, this b],
-assume r,
-calc r = 1 * r       : by rw one_mul
-   ... = (1 : ℕ) * r : by rw nat.cast_one
-   ... = 0 * r       : by rw char_p.cast_eq_zero
-   ... = 0           : by rw zero_mul
-
-lemma false_of_nontrivial_of_char_one [nontrivial R] [char_p R 1] : false :=
-false_of_nontrivial_of_subsingleton R
-
-lemma ring_char_ne_one [nontrivial R] : ring_char R ≠ 1 :=
-by { intros h, apply @zero_ne_one R, symmetry, rw [←nat.cast_one, ring_char.spec, h], }
-
-lemma nontrivial_of_char_ne_one {v : ℕ} (hv : v ≠ 1) [hr : char_p R v] :
-  nontrivial R :=
-⟨⟨(1 : ℕ), 0, λ h, hv $ by rwa [char_p.cast_eq_zero_iff _ v, nat.dvd_one] at h; assumption ⟩⟩
-
-lemma ring_char_of_prime_eq_zero [nontrivial R] {p : ℕ}
-  (hprime : nat.prime p) (hp0 : (p : R) = 0) : ring_char R = p :=
-or.resolve_left ((nat.dvd_prime hprime).1 (ring_char.dvd hp0)) ring_char_ne_one
-
-end char_one
-
-end char_p
+namespace CharP
 
 section
 
-variables (R) [comm_ring R] [fintype R] (n : ℕ)
+variable [Ringₓ R]
 
-lemma char_p_of_ne_zero (hn : fintype.card R = n) (hR : ∀ i < n, (i : R) = 0 → i = 0) :
-  char_p R n :=
-{ cast_eq_zero_iff :=
-  begin
-    have H : (n : R) = 0, by { rw [← hn, char_p.cast_card_eq_zero] },
-    intro k,
-    split,
-    { intro h,
-      rw [← nat.mod_add_div k n, nat.cast_add, nat.cast_mul, H, zero_mul, add_zero] at h,
-      rw nat.dvd_iff_mod_eq_zero,
-      apply hR _ (nat.mod_lt _ _) h,
-      rw [← hn, fintype.card_pos_iff],
-      exact ⟨0⟩, },
-    { rintro ⟨k, rfl⟩, rw [nat.cast_mul, H, zero_mul] }
-  end }
+theorem char_p_to_char_zero [CharP R 0] : CharZero R :=
+  char_zero_of_inj_zero fun n h0 => eq_zero_of_zero_dvd ((cast_eq_zero_iff R 0 n).mp h0)
 
-lemma char_p_of_prime_pow_injective (p : ℕ) [hp : fact p.prime] (n : ℕ)
-  (hn : fintype.card R = p ^ n) (hR : ∀ i ≤ n, (p ^ i : R) = 0 → i = n) :
-  char_p R (p ^ n) :=
-begin
-  obtain ⟨c, hc⟩ := char_p.exists R, resetI,
-  have hcpn : c ∣ p ^ n,
-  { rw [← char_p.cast_eq_zero_iff R c, ← hn, char_p.cast_card_eq_zero], },
-  obtain ⟨i, hi, hc⟩ : ∃ i ≤ n, c = p ^ i, by rwa nat.dvd_prime_pow hp.1 at hcpn,
-  obtain rfl : i = n,
-  { apply hR i hi, rw [← nat.cast_pow, ← hc, char_p.cast_eq_zero] },
-  rwa ← hc
-end
+theorem cast_eq_mod (p : ℕ) [CharP R p] (k : ℕ) : (k : R) = (k % p : ℕ) :=
+  calc
+    (k : R) = ↑(k % p + p * (k / p)) := by
+      rw [Nat.mod_add_divₓ]
+    _ = ↑(k % p) := by
+      simp [cast_eq_zero]
+    
+
+theorem char_ne_zero_of_fintype (p : ℕ) [hc : CharP R p] [Fintype R] : p ≠ 0 := fun h : p = 0 =>
+  have : CharZero R := @char_p_to_char_zero R _ (h ▸ hc)
+  absurd (@Nat.cast_injective R _ _ this) (not_injective_infinite_fintype coe)
 
 end
 
-section prod
+section Semiringₓ
 
-variables (S : Type v) [semiring R] [semiring S] (p q : ℕ) [char_p R p]
+open Nat
+
+variable [NonAssocSemiringₓ R]
+
+theorem char_ne_one [Nontrivial R] (p : ℕ) [hc : CharP R p] : p ≠ 1 := fun hp : p = 1 =>
+  have : (1 : R) = 0 := by
+    simpa using (cast_eq_zero_iff R p 1).mpr (hp ▸ dvd_refl p)
+  absurd this one_ne_zero
+
+section NoZeroDivisors
+
+variable [NoZeroDivisors R]
+
+-- ././Mathport/Syntax/Translate/Basic.lean:598:2: warning: expanding binder collection (d «expr ∣ » p)
+theorem char_is_prime_of_two_le (p : ℕ) [hc : CharP R p] (hp : 2 ≤ p) : Nat.Prime p :=
+  suffices ∀ d _ : d ∣ p, d = 1 ∨ d = p from Nat.prime_def_lt''.mpr ⟨hp, this⟩
+  fun hdvd : ∃ e, p = d * e =>
+  let ⟨e, hmul⟩ := hdvd
+  have : (p : R) = 0 := (cast_eq_zero_iff R p p).mpr (dvd_refl p)
+  have : (d : R) * e = 0 := @cast_mulₓ R _ d e ▸ hmul ▸ this
+  Or.elim (eq_zero_or_eq_zero_of_mul_eq_zero this)
+    (fun hd : (d : R) = 0 =>
+      have : p ∣ d := (cast_eq_zero_iff R p d).mp hd
+      show d = 1 ∨ d = p from Or.inr (dvd_antisymm ⟨e, hmul⟩ this))
+    fun he : (e : R) = 0 =>
+    have : p ∣ e := (cast_eq_zero_iff R p e).mp he
+    have : e ∣ p := dvd_of_mul_left_eq d (Eq.symm hmul)
+    have : e = p := dvd_antisymm ‹e ∣ p› ‹p ∣ e›
+    have h₀ : p > 0 := gt_of_ge_of_gtₓ hp (Nat.zero_lt_succₓ 1)
+    have : d * p = 1 * p := by
+      rw [‹e = p›] at hmul <;> rw [one_mulₓ] <;> exact Eq.symm hmul
+    show d = 1 ∨ d = p from Or.inl (eq_of_mul_eq_mul_rightₓ h₀ this)
+
+section Nontrivial
+
+variable [Nontrivial R]
+
+theorem char_is_prime_or_zero (p : ℕ) [hc : CharP R p] : Nat.Prime p ∨ p = 0 :=
+  match p, hc with
+  | 0, _ => Or.inr rfl
+  | 1, hc => absurd (Eq.refl (1 : ℕ)) (@char_ne_one R _ _ (1 : ℕ) hc)
+  | m + 2, hc => Or.inl (@char_is_prime_of_two_le R _ _ (m + 2) hc (Nat.le_add_leftₓ 2 m))
+
+theorem char_is_prime_of_pos (p : ℕ) [h : Fact (0 < p)] [CharP R p] : Fact p.Prime :=
+  ⟨(CharP.char_is_prime_or_zero R _).resolve_right (pos_iff_ne_zero.1 h.1)⟩
+
+end Nontrivial
+
+end NoZeroDivisors
+
+end Semiringₓ
+
+section Ringₓ
+
+variable (R) [Ringₓ R] [NoZeroDivisors R] [Nontrivial R] [Fintype R]
+
+theorem char_is_prime (p : ℕ) [CharP R p] : p.Prime :=
+  Or.resolve_right (char_is_prime_or_zero R p) (char_ne_zero_of_fintype R p)
+
+end Ringₓ
+
+section CharOne
+
+variable {R} [NonAssocSemiringₓ R]
+
+-- see Note [lower instance priority]
+instance (priority := 100) [CharP R 1] : Subsingleton R :=
+  Subsingleton.intro <|
+    suffices ∀ r : R, r = 0 from fun a b =>
+      show a = b by
+        rw [this a, this b]
+    fun r =>
+    calc
+      r = 1 * r := by
+        rw [one_mulₓ]
+      _ = (1 : ℕ) * r := by
+        rw [Nat.cast_oneₓ]
+      _ = 0 * r := by
+        rw [CharP.cast_eq_zero]
+      _ = 0 := by
+        rw [zero_mul]
+      
+
+theorem false_of_nontrivial_of_char_one [Nontrivial R] [CharP R 1] : False :=
+  false_of_nontrivial_of_subsingleton R
+
+theorem ring_char_ne_one [Nontrivial R] : ringChar R ≠ 1 := by
+  intro h
+  apply @zero_ne_one R
+  symm
+  rw [← Nat.cast_oneₓ, ringChar.spec, h]
+
+theorem nontrivial_of_char_ne_one {v : ℕ} (hv : v ≠ 1) [hr : CharP R v] : Nontrivial R :=
+  ⟨⟨(1 : ℕ), 0, fun h =>
+      hv <| by
+        rwa [CharP.cast_eq_zero_iff _ v, Nat.dvd_one] at h <;> assumption⟩⟩
+
+theorem ring_char_of_prime_eq_zero [Nontrivial R] {p : ℕ} (hprime : Nat.Prime p) (hp0 : (p : R) = 0) : ringChar R = p :=
+  Or.resolve_left ((Nat.dvd_prime hprime).1 (ringChar.dvd hp0)) ring_char_ne_one
+
+end CharOne
+
+end CharP
+
+section
+
+variable (R) [CommRingₓ R] [Fintype R] (n : ℕ)
+
+theorem char_p_of_ne_zero (hn : Fintype.card R = n) (hR : ∀, ∀ i < n, ∀, (i : R) = 0 → i = 0) : CharP R n :=
+  { cast_eq_zero_iff := by
+      have H : (n : R) = 0 := by
+        rw [← hn, CharP.cast_card_eq_zero]
+      intro k
+      constructor
+      · intro h
+        rw [← Nat.mod_add_divₓ k n, Nat.cast_addₓ, Nat.cast_mulₓ, H, zero_mul, add_zeroₓ] at h
+        rw [Nat.dvd_iff_mod_eq_zeroₓ]
+        apply hR _ (Nat.mod_ltₓ _ _) h
+        rw [← hn, Fintype.card_pos_iff]
+        exact ⟨0⟩
+        
+      · rintro ⟨k, rfl⟩
+        rw [Nat.cast_mulₓ, H, zero_mul]
+         }
+
+theorem char_p_of_prime_pow_injective (p : ℕ) [hp : Fact p.Prime] (n : ℕ) (hn : Fintype.card R = p ^ n)
+    (hR : ∀, ∀ i ≤ n, ∀, (p ^ i : R) = 0 → i = n) : CharP R (p ^ n) := by
+  obtain ⟨c, hc⟩ := CharP.exists R
+  skip
+  have hcpn : c ∣ p ^ n := by
+    rw [← CharP.cast_eq_zero_iff R c, ← hn, CharP.cast_card_eq_zero]
+  obtain ⟨i, hi, hc⟩ : ∃ i ≤ n, c = p ^ i := by
+    rwa [Nat.dvd_prime_pow hp.1] at hcpn
+  obtain rfl : i = n := by
+    apply hR i hi
+    rw [← Nat.cast_powₓ, ← hc, CharP.cast_eq_zero]
+  rwa [← hc]
+
+end
+
+section Prod
+
+variable (S : Type v) [Semiringₓ R] [Semiringₓ S] (p q : ℕ) [CharP R p]
 
 /-- The characteristic of the product of rings is the least common multiple of the
 characteristics of the two rings. -/
-instance [char_p S q] : char_p (R × S) (nat.lcm p q) :=
-{ cast_eq_zero_iff :=
-    by simp [prod.ext_iff, char_p.cast_eq_zero_iff R p,
-      char_p.cast_eq_zero_iff S q, nat.lcm_dvd_iff] }
+instance [CharP S q] : CharP (R × S) (Nat.lcmₓ p q) where
+  cast_eq_zero_iff := by
+    simp [Prod.ext_iff, CharP.cast_eq_zero_iff R p, CharP.cast_eq_zero_iff S q, Nat.lcm_dvd_iff]
 
 /-- The characteristic of the product of two rings of the same characteristic
   is the same as the characteristic of the rings -/
-instance prod.char_p [char_p S p] : char_p (R × S) p :=
-by convert nat.lcm.char_p R S p p; simp
+instance Prod.char_p [CharP S p] : CharP (R × S) p := by
+  convert Nat.lcmₓ.char_p R S p p <;> simp
 
-end prod
+end Prod
+

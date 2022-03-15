@@ -3,7 +3,7 @@ Copyright (c) 2022 Yaël Dillies. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yaël Dillies
 -/
-import order.category.Frame
+import Mathbin.Order.Category.Frame
 
 /-!
 # The category of locales
@@ -11,31 +11,45 @@ import order.category.Frame
 This file defines `Locale`, the category of locales. This is the opposite of the category of frames.
 -/
 
-universes u
 
-open category_theory opposite order topological_space
+universe u
+
+open CategoryTheory Opposite Order TopologicalSpace
 
 /-- The category of locales. -/
-@[derive large_category] def Locale := Frameᵒᵖ
+def Locale :=
+  Frameᵒᵖderiving LargeCategory
 
 namespace Locale
 
-instance : has_coe_to_sort Locale Type* := ⟨λ X, X.unop⟩
-instance (X : Locale) : frame X := X.unop.str
+instance : CoeSort Locale (Type _) :=
+  ⟨fun X => X.unop⟩
+
+instance (X : Locale) : Frame X :=
+  X.unop.str
 
 /-- Construct a bundled `Locale` from a `frame`. -/
-def of (α : Type*) [frame α] : Locale := op $ Frame.of α
+def of (α : Type _) [Frame α] : Locale :=
+  op <| Frame.of α
 
-@[simp] lemma coe_of (α : Type*) [frame α] : ↥(of α) = α := rfl
+@[simp]
+theorem coe_of (α : Type _) [Frame α] : ↥(of α) = α :=
+  rfl
 
-instance : inhabited Locale := ⟨of punit⟩
+instance : Inhabited Locale :=
+  ⟨of PUnit⟩
 
 end Locale
 
 /-- The forgetful functor from `Top` to `Locale` which forgets that the space has "enough points".
 -/
-@[simps] def Top_to_Locale : Top ⥤ Locale := Top_op_to_Frame.right_op
+@[simps]
+def topToLocale : Top ⥤ Locale :=
+  topOpToFrame.rightOp
 
 -- Note, `CompHaus` is too strong. We only need `t0_space`.
-instance CompHaus_to_Locale.faithful : faithful (CompHaus_to_Top ⋙ Top_to_Locale.{u}) :=
-⟨λ X Y f g h, by { dsimp at h, exact opens.comap_injective (quiver.hom.op_inj h) }⟩
+instance CompHausToLocale.faithful : Faithful (compHausToTop ⋙ topToLocale.{u}) :=
+  ⟨fun X Y f g h => by
+    dsimp  at h
+    exact opens.comap_injective (Quiver.Hom.op_inj h)⟩
+

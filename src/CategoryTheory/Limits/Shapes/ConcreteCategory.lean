@@ -3,9 +3,9 @@ Copyright (c) 2017 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import category_theory.limits.shapes.kernels
-import category_theory.concrete_category.basic
-import category_theory.concrete_category.elementwise
+import Mathbin.CategoryTheory.Limits.Shapes.Kernels
+import Mathbin.CategoryTheory.ConcreteCategory.Basic
+import Mathbin.CategoryTheory.ConcreteCategory.Elementwise
 
 /-!
 # Facts about limits of functors into concrete categories
@@ -15,6 +15,8 @@ it just contains lemmas that are useful
 while comparing categorical limits with existing constructions in concrete categories.
 -/
 
-universes u
 
-open category_theory
+universe u
+
+open CategoryTheory
+

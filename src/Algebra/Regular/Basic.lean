@@ -3,9 +3,9 @@ Copyright (c) 2021 Damiano Testa. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Damiano Testa
 -/
-import algebra.order.monoid_lemmas
-import algebra.group_with_zero.basic
-import logic.embedding
+import Mathbin.Algebra.Order.MonoidLemmas
+import Mathbin.Algebra.GroupWithZero.Basic
+import Mathbin.Logic.Embedding
 
 /-!
 # Regular elements
@@ -23,288 +23,279 @@ by adding one further `0`.
 
 The final goal is to develop part of the API to prove, eventually, results about non-zero-divisors.
 -/
-variables {R : Type*} {a b : R}
 
-section has_mul
 
-variable [has_mul R]
+variable {R : Type _} {a b : R}
+
+section Mul
+
+variable [Mul R]
 
 /-- A left-regular element is an element `c` such that multiplication on the left by `c`
 is injective on the left. -/
-def is_left_regular (c : R) := function.injective ((*) c)
+def IsLeftRegular (c : R) :=
+  Function.Injective ((· * ·) c)
 
 /-- A right-regular element is an element `c` such that multiplication on the right by `c`
 is injective on the right. -/
-def is_right_regular (c : R) := function.injective (* c)
+def IsRightRegular (c : R) :=
+  Function.Injective (· * c)
 
 /-- A regular element is an element `c` such that multiplication by `c` both on the left and
 on the right is injective. -/
-structure is_regular (c : R) : Prop :=
-(left : is_left_regular c)
-(right : is_right_regular c)
+structure IsRegular (c : R) : Prop where
+  left : IsLeftRegular c
+  right : IsRightRegular c
 
-protected lemma mul_le_cancellable.is_left_regular [partial_order R] {a : R}
-  (ha : mul_le_cancellable a) : is_left_regular a :=
-ha.injective
+protected theorem MulLeCancellable.is_left_regular [PartialOrderₓ R] {a : R} (ha : MulLeCancellable a) :
+    IsLeftRegular a :=
+  ha.Injective
 
-end has_mul
+end Mul
 
-section semigroup
+section Semigroupₓ
 
-variable [semigroup R]
+variable [Semigroupₓ R]
 
 /-- In a semigroup, the product of left-regular elements is left-regular. -/
-lemma is_left_regular.mul (lra : is_left_regular a) (lrb : is_left_regular b) :
-  is_left_regular (a * b) :=
-show function.injective ((*) (a * b)), from (comp_mul_left a b) ▸ lra.comp lrb
+theorem IsLeftRegular.mul (lra : IsLeftRegular a) (lrb : IsLeftRegular b) : IsLeftRegular (a * b) :=
+  show Function.Injective ((· * ·) (a * b)) from comp_mul_left a b ▸ lra.comp lrb
 
 /-- In a semigroup, the product of right-regular elements is right-regular. -/
-lemma is_right_regular.mul (rra : is_right_regular a) (rrb : is_right_regular b) :
-  is_right_regular (a * b) :=
-show function.injective (* (a * b)), from (comp_mul_right b a) ▸ rrb.comp rra
+theorem IsRightRegular.mul (rra : IsRightRegular a) (rrb : IsRightRegular b) : IsRightRegular (a * b) :=
+  show Function.Injective (· * (a * b)) from comp_mul_right b a ▸ rrb.comp rra
 
-/--  If an element `b` becomes left-regular after multiplying it on the left by a left-regular
+/-- If an element `b` becomes left-regular after multiplying it on the left by a left-regular
 element, then `b` is left-regular. -/
-lemma is_left_regular.of_mul (ab : is_left_regular (a * b)) :
-  is_left_regular b :=
-function.injective.of_comp (by rwa comp_mul_left a b)
+theorem IsLeftRegular.of_mul (ab : IsLeftRegular (a * b)) : IsLeftRegular b :=
+  Function.Injective.of_comp
+    (by
+      rwa [comp_mul_left a b])
 
-/--  An element is left-regular if and only if multiplying it on the left by a left-regular element
+/-- An element is left-regular if and only if multiplying it on the left by a left-regular element
 is left-regular. -/
-@[simp] lemma mul_is_left_regular_iff (b : R) (ha : is_left_regular a) :
-  is_left_regular (a * b) ↔ is_left_regular b :=
-⟨λ ab, is_left_regular.of_mul ab, λ ab, is_left_regular.mul ha ab⟩
+@[simp]
+theorem mul_is_left_regular_iff (b : R) (ha : IsLeftRegular a) : IsLeftRegular (a * b) ↔ IsLeftRegular b :=
+  ⟨fun ab => IsLeftRegular.of_mul ab, fun ab => IsLeftRegular.mul ha ab⟩
 
-/--  If an element `b` becomes right-regular after multiplying it on the right by a right-regular
+/-- If an element `b` becomes right-regular after multiplying it on the right by a right-regular
 element, then `b` is right-regular. -/
-lemma is_right_regular.of_mul (ab : is_right_regular (b * a)) :
-  is_right_regular b :=
-begin
-  refine λ x y xy, ab (_ : x * (b * a) = y * (b * a)),
-  rw [← mul_assoc, ← mul_assoc],
-  exact congr_fun (congr_arg has_mul.mul xy) a,
-end
+theorem IsRightRegular.of_mul (ab : IsRightRegular (b * a)) : IsRightRegular b := by
+  refine' fun x y xy => ab (_ : x * (b * a) = y * (b * a))
+  rw [← mul_assoc, ← mul_assoc]
+  exact congr_funₓ (congr_argₓ Mul.mul xy) a
 
-/--  An element is right-regular if and only if multiplying it on the right with a right-regular
+/-- An element is right-regular if and only if multiplying it on the right with a right-regular
 element is right-regular. -/
-@[simp] lemma mul_is_right_regular_iff (b : R) (ha : is_right_regular a) :
-  is_right_regular (b * a) ↔ is_right_regular b :=
-⟨λ ab, is_right_regular.of_mul ab, λ ab, is_right_regular.mul ab ha⟩
+@[simp]
+theorem mul_is_right_regular_iff (b : R) (ha : IsRightRegular a) : IsRightRegular (b * a) ↔ IsRightRegular b :=
+  ⟨fun ab => IsRightRegular.of_mul ab, fun ab => IsRightRegular.mul ab ha⟩
 
-/--  Two elements `a` and `b` are regular if and only if both products `a * b` and `b * a`
+/-- Two elements `a` and `b` are regular if and only if both products `a * b` and `b * a`
 are regular. -/
-lemma is_regular_mul_and_mul_iff :
-  is_regular (a * b) ∧ is_regular (b * a) ↔ is_regular a ∧ is_regular b :=
-begin
-  refine ⟨_, _⟩,
-  { rintros ⟨ab, ba⟩,
-    exact ⟨⟨is_left_regular.of_mul ba.left, is_right_regular.of_mul ab.right⟩,
-      ⟨is_left_regular.of_mul ab.left, is_right_regular.of_mul ba.right⟩⟩ },
-  { rintros ⟨ha, hb⟩,
-    exact ⟨⟨(mul_is_left_regular_iff _ ha.left).mpr hb.left,
-        (mul_is_right_regular_iff _ hb.right).mpr ha.right⟩,
-      ⟨(mul_is_left_regular_iff _ hb.left).mpr ha.left,
-        (mul_is_right_regular_iff _ ha.right).mpr hb.right⟩⟩ }
-end
+theorem is_regular_mul_and_mul_iff : IsRegular (a * b) ∧ IsRegular (b * a) ↔ IsRegular a ∧ IsRegular b := by
+  refine' ⟨_, _⟩
+  · rintro ⟨ab, ba⟩
+    exact
+      ⟨⟨IsLeftRegular.of_mul ba.left, IsRightRegular.of_mul ab.right⟩,
+        ⟨IsLeftRegular.of_mul ab.left, IsRightRegular.of_mul ba.right⟩⟩
+    
+  · rintro ⟨ha, hb⟩
+    exact
+      ⟨⟨(mul_is_left_regular_iff _ ha.left).mpr hb.left, (mul_is_right_regular_iff _ hb.right).mpr ha.right⟩,
+        ⟨(mul_is_left_regular_iff _ hb.left).mpr ha.left, (mul_is_right_regular_iff _ ha.right).mpr hb.right⟩⟩
+    
 
-/--  The "most used" implication of `mul_and_mul_iff`, with split hypotheses, instead of `∧`. -/
-lemma is_regular.and_of_mul_of_mul (ab : is_regular (a * b)) (ba : is_regular (b * a)) :
-  is_regular a ∧ is_regular b :=
-is_regular_mul_and_mul_iff.mp ⟨ab, ba⟩
+/-- The "most used" implication of `mul_and_mul_iff`, with split hypotheses, instead of `∧`. -/
+theorem IsRegular.and_of_mul_of_mul (ab : IsRegular (a * b)) (ba : IsRegular (b * a)) : IsRegular a ∧ IsRegular b :=
+  is_regular_mul_and_mul_iff.mp ⟨ab, ba⟩
 
-end semigroup
+end Semigroupₓ
 
-section mul_zero_class
+section MulZeroClassₓ
 
-variables [mul_zero_class R]
+variable [MulZeroClassₓ R]
 
-/--  The element `0` is left-regular if and only if `R` is trivial. -/
-lemma is_left_regular.subsingleton (h : is_left_regular (0 : R)) : subsingleton R :=
-⟨λ a b, h $ eq.trans (zero_mul a) (zero_mul b).symm⟩
+/-- The element `0` is left-regular if and only if `R` is trivial. -/
+theorem IsLeftRegular.subsingleton (h : IsLeftRegular (0 : R)) : Subsingleton R :=
+  ⟨fun a b => h <| Eq.trans (zero_mul a) (zero_mul b).symm⟩
 
-/--  The element `0` is right-regular if and only if `R` is trivial. -/
-lemma is_right_regular.subsingleton (h : is_right_regular (0 : R)) : subsingleton R :=
-⟨λ a b, h $ eq.trans (mul_zero a) (mul_zero b).symm⟩
+/-- The element `0` is right-regular if and only if `R` is trivial. -/
+theorem IsRightRegular.subsingleton (h : IsRightRegular (0 : R)) : Subsingleton R :=
+  ⟨fun a b => h <| Eq.trans (mul_zero a) (mul_zero b).symm⟩
 
-/--  The element `0` is regular if and only if `R` is trivial. -/
-lemma is_regular.subsingleton (h : is_regular (0 : R)) : subsingleton R :=
-h.left.subsingleton
+/-- The element `0` is regular if and only if `R` is trivial. -/
+theorem IsRegular.subsingleton (h : IsRegular (0 : R)) : Subsingleton R :=
+  h.left.Subsingleton
 
-/--  The element `0` is left-regular if and only if `R` is trivial. -/
-lemma is_left_regular_zero_iff_subsingleton : is_left_regular (0 : R) ↔ subsingleton R :=
-begin
-  refine ⟨λ h, h.subsingleton, _⟩,
-  intros H a b h,
-  exact @subsingleton.elim _ H a b
-end
+/-- The element `0` is left-regular if and only if `R` is trivial. -/
+theorem is_left_regular_zero_iff_subsingleton : IsLeftRegular (0 : R) ↔ Subsingleton R := by
+  refine' ⟨fun h => h.Subsingleton, _⟩
+  intro H a b h
+  exact @Subsingleton.elimₓ _ H a b
 
-/--  In a non-trivial `mul_zero_class`, the `0` element is not left-regular. -/
-lemma not_is_left_regular_zero_iff : ¬ is_left_regular (0 : R) ↔ nontrivial R :=
-begin
-  rw [nontrivial_iff, not_iff_comm, is_left_regular_zero_iff_subsingleton, subsingleton_iff],
-  push_neg,
-  exact iff.rfl
-end
+/-- In a non-trivial `mul_zero_class`, the `0` element is not left-regular. -/
+theorem not_is_left_regular_zero_iff : ¬IsLeftRegular (0 : R) ↔ Nontrivial R := by
+  rw [nontrivial_iff, not_iff_comm, is_left_regular_zero_iff_subsingleton, subsingleton_iff]
+  push_neg
+  exact Iff.rfl
 
-/--  The element `0` is right-regular if and only if `R` is trivial. -/
-lemma is_right_regular_zero_iff_subsingleton : is_right_regular (0 : R) ↔ subsingleton R :=
-begin
-  refine ⟨λ h, h.subsingleton, _⟩,
-  intros H a b h,
-  exact @subsingleton.elim _ H a b
-end
+/-- The element `0` is right-regular if and only if `R` is trivial. -/
+theorem is_right_regular_zero_iff_subsingleton : IsRightRegular (0 : R) ↔ Subsingleton R := by
+  refine' ⟨fun h => h.Subsingleton, _⟩
+  intro H a b h
+  exact @Subsingleton.elimₓ _ H a b
 
-/--  In a non-trivial `mul_zero_class`, the `0` element is not right-regular. -/
-lemma not_is_right_regular_zero_iff : ¬ is_right_regular (0 : R) ↔ nontrivial R :=
-begin
-  rw [nontrivial_iff, not_iff_comm, is_right_regular_zero_iff_subsingleton, subsingleton_iff],
-  push_neg,
-  exact iff.rfl
-end
+/-- In a non-trivial `mul_zero_class`, the `0` element is not right-regular. -/
+theorem not_is_right_regular_zero_iff : ¬IsRightRegular (0 : R) ↔ Nontrivial R := by
+  rw [nontrivial_iff, not_iff_comm, is_right_regular_zero_iff_subsingleton, subsingleton_iff]
+  push_neg
+  exact Iff.rfl
 
-/--  The element `0` is regular if and only if `R` is trivial. -/
-lemma is_regular_iff_subsingleton : is_regular (0 : R) ↔ subsingleton R :=
-⟨λ h, h.left.subsingleton,
- λ h, ⟨is_left_regular_zero_iff_subsingleton.mpr h, is_right_regular_zero_iff_subsingleton.mpr h⟩⟩
+/-- The element `0` is regular if and only if `R` is trivial. -/
+theorem is_regular_iff_subsingleton : IsRegular (0 : R) ↔ Subsingleton R :=
+  ⟨fun h => h.left.Subsingleton, fun h =>
+    ⟨is_left_regular_zero_iff_subsingleton.mpr h, is_right_regular_zero_iff_subsingleton.mpr h⟩⟩
 
 /-- A left-regular element of a `nontrivial` `mul_zero_class` is non-zero. -/
-lemma is_left_regular.ne_zero [nontrivial R] (la : is_left_regular a) : a ≠ 0 :=
-begin
-  rintro rfl,
-  rcases exists_pair_ne R with ⟨x, y, xy⟩,
-  refine xy (la _),
+theorem IsLeftRegular.ne_zero [Nontrivial R] (la : IsLeftRegular a) : a ≠ 0 := by
+  rintro rfl
+  rcases exists_pair_ne R with ⟨x, y, xy⟩
+  refine' xy (la _)
   rw [zero_mul, zero_mul]
-end
 
 /-- A right-regular element of a `nontrivial` `mul_zero_class` is non-zero. -/
-lemma is_right_regular.ne_zero [nontrivial R] (ra : is_right_regular a) : a ≠ 0 :=
-begin
-  rintro rfl,
-  rcases exists_pair_ne R with ⟨x, y, xy⟩,
-  refine xy (ra (_ : x * 0 = y * 0)),
+theorem IsRightRegular.ne_zero [Nontrivial R] (ra : IsRightRegular a) : a ≠ 0 := by
+  rintro rfl
+  rcases exists_pair_ne R with ⟨x, y, xy⟩
+  refine' xy (ra (_ : x * 0 = y * 0))
   rw [mul_zero, mul_zero]
-end
 
 /-- A regular element of a `nontrivial` `mul_zero_class` is non-zero. -/
-lemma is_regular.ne_zero [nontrivial R] (la : is_regular a) : a ≠ 0 :=
-la.left.ne_zero
+theorem IsRegular.ne_zero [Nontrivial R] (la : IsRegular a) : a ≠ 0 :=
+  la.left.ne_zero
 
-/--  In a non-trivial ring, the element `0` is not left-regular -- with typeclasses. -/
-lemma not_is_left_regular_zero [nR : nontrivial R] : ¬ is_left_regular (0 : R) :=
-not_is_left_regular_zero_iff.mpr nR
+/-- In a non-trivial ring, the element `0` is not left-regular -- with typeclasses. -/
+theorem not_is_left_regular_zero [nR : Nontrivial R] : ¬IsLeftRegular (0 : R) :=
+  not_is_left_regular_zero_iff.mpr nR
 
-/--  In a non-trivial ring, the element `0` is not right-regular -- with typeclasses. -/
-lemma not_is_right_regular_zero [nR : nontrivial R] : ¬ is_right_regular (0 : R) :=
-not_is_right_regular_zero_iff.mpr nR
+/-- In a non-trivial ring, the element `0` is not right-regular -- with typeclasses. -/
+theorem not_is_right_regular_zero [nR : Nontrivial R] : ¬IsRightRegular (0 : R) :=
+  not_is_right_regular_zero_iff.mpr nR
 
-/--  In a non-trivial ring, the element `0` is not regular -- with typeclasses. -/
-lemma not_is_regular_zero [nontrivial R] : ¬ is_regular (0 : R) :=
-λ h, is_regular.ne_zero h rfl
+/-- In a non-trivial ring, the element `0` is not regular -- with typeclasses. -/
+theorem not_is_regular_zero [Nontrivial R] : ¬IsRegular (0 : R) := fun h => IsRegular.ne_zero h rfl
 
-end mul_zero_class
+end MulZeroClassₓ
 
-section comm_semigroup
+section CommSemigroupₓ
 
-variable [comm_semigroup R]
+variable [CommSemigroupₓ R]
 
-/--  A product is regular if and only if the factors are. -/
-lemma is_regular_mul_iff : is_regular (a * b) ↔ is_regular a ∧ is_regular b :=
-begin
-  refine iff.trans _ is_regular_mul_and_mul_iff,
-  refine ⟨λ ab, ⟨ab, by rwa mul_comm⟩, λ rab, rab.1⟩
-end
+/-- A product is regular if and only if the factors are. -/
+theorem is_regular_mul_iff : IsRegular (a * b) ↔ IsRegular a ∧ IsRegular b := by
+  refine' Iff.trans _ is_regular_mul_and_mul_iff
+  refine'
+    ⟨fun ab =>
+      ⟨ab, by
+        rwa [mul_comm]⟩,
+      fun rab => rab.1⟩
 
-end comm_semigroup
+end CommSemigroupₓ
 
-section monoid
+section Monoidₓ
 
-variables [monoid R]
+variable [Monoidₓ R]
 
-/--  In a monoid, `1` is regular. -/
-lemma is_regular_one : is_regular (1 : R) :=
-⟨λ a b ab, (one_mul a).symm.trans (eq.trans ab (one_mul b)),
-  λ a b ab, (mul_one a).symm.trans (eq.trans ab (mul_one b))⟩
+/-- In a monoid, `1` is regular. -/
+theorem is_regular_one : IsRegular (1 : R) :=
+  ⟨fun a b ab => (one_mulₓ a).symm.trans (Eq.trans ab (one_mulₓ b)), fun a b ab =>
+    (mul_oneₓ a).symm.trans (Eq.trans ab (mul_oneₓ b))⟩
 
 /-- An element admitting a left inverse is left-regular. -/
-lemma is_left_regular_of_mul_eq_one (h : b * a = 1) : is_left_regular a :=
-@is_left_regular.of_mul R _ a _ (by { rw h, exact is_regular_one.left })
+theorem is_left_regular_of_mul_eq_one (h : b * a = 1) : IsLeftRegular a :=
+  @IsLeftRegular.of_mul R _ a _
+    (by
+      rw [h]
+      exact is_regular_one.left)
 
 /-- An element admitting a right inverse is right-regular. -/
-lemma is_right_regular_of_mul_eq_one (h : a * b = 1) : is_right_regular a :=
-@is_right_regular.of_mul R _ a _ (by { rw h, exact is_regular_one.right })
+theorem is_right_regular_of_mul_eq_one (h : a * b = 1) : IsRightRegular a :=
+  @IsRightRegular.of_mul R _ a _
+    (by
+      rw [h]
+      exact is_regular_one.right)
 
 /-- If `R` is a monoid, an element in `Rˣ` is regular. -/
-lemma units.is_regular (a : Rˣ) : is_regular (a : R) :=
-⟨is_left_regular_of_mul_eq_one a.inv_mul, is_right_regular_of_mul_eq_one a.mul_inv⟩
+theorem Units.is_regular (a : Rˣ) : IsRegular (a : R) :=
+  ⟨is_left_regular_of_mul_eq_one a.inv_mul, is_right_regular_of_mul_eq_one a.mul_inv⟩
 
 /-- A unit in a monoid is regular. -/
-lemma is_unit.is_regular (ua : is_unit a) : is_regular a :=
-begin
-  rcases ua with ⟨a, rfl⟩,
-  exact units.is_regular a,
-end
+theorem IsUnit.is_regular (ua : IsUnit a) : IsRegular a := by
+  rcases ua with ⟨a, rfl⟩
+  exact Units.is_regular a
 
-end monoid
+end Monoidₓ
 
-section left_or_right_cancel_semigroup
+section LeftOrRightCancelSemigroup
 
-/--
-The embedding of a left cancellative semigroup into itself
+/-- The embedding of a left cancellative semigroup into itself
 by left multiplication by a fixed element.
  -/
 @[to_additive
-  "The embedding of a left cancellative additive semigroup into itself
-   by left translation by a fixed element.", simps]
-def mul_left_embedding {G : Type*} [left_cancel_semigroup G] (g : G) : G ↪ G :=
-{ to_fun := λ h, g * h, inj' := mul_right_injective g }
+      "The embedding of a left cancellative additive semigroup into itself\n   by left translation by a fixed element.",
+  simps]
+def mulLeftEmbedding {G : Type _} [LeftCancelSemigroup G] (g : G) : G ↪ G where
+  toFun := fun h => g * h
+  inj' := mul_right_injective g
 
-/--
-The embedding of a right cancellative semigroup into itself
+/-- The embedding of a right cancellative semigroup into itself
 by right multiplication by a fixed element.
  -/
 @[to_additive
-  "The embedding of a right cancellative additive semigroup into itself
-   by right translation by a fixed element.", simps]
-def mul_right_embedding {G : Type*} [right_cancel_semigroup G] (g : G) : G ↪ G :=
-{ to_fun := λ h, h * g, inj' := mul_left_injective g }
+      "The embedding of a right cancellative additive semigroup into itself\n   by right translation by a fixed element.",
+  simps]
+def mulRightEmbedding {G : Type _} [RightCancelSemigroup G] (g : G) : G ↪ G where
+  toFun := fun h => h * g
+  inj' := mul_left_injective g
 
 @[to_additive]
-lemma mul_left_embedding_eq_mul_right_embedding {G : Type*} [cancel_comm_monoid G] (g : G) :
-  mul_left_embedding g = mul_right_embedding g :=
-by { ext, exact mul_comm _ _ }
+theorem mul_left_embedding_eq_mul_right_embedding {G : Type _} [CancelCommMonoid G] (g : G) :
+    mulLeftEmbedding g = mulRightEmbedding g := by
+  ext
+  exact mul_comm _ _
 
-/--  Elements of a left cancel semigroup are left regular. -/
-lemma is_left_regular_of_left_cancel_semigroup [left_cancel_semigroup R] (g : R) :
-  is_left_regular g :=
-mul_right_injective g
+/-- Elements of a left cancel semigroup are left regular. -/
+theorem is_left_regular_of_left_cancel_semigroup [LeftCancelSemigroup R] (g : R) : IsLeftRegular g :=
+  mul_right_injective g
 
-/--  Elements of a right cancel semigroup are right regular. -/
-lemma is_right_regular_of_right_cancel_semigroup [right_cancel_semigroup R] (g : R) :
-  is_right_regular g :=
-mul_left_injective g
+/-- Elements of a right cancel semigroup are right regular. -/
+theorem is_right_regular_of_right_cancel_semigroup [RightCancelSemigroup R] (g : R) : IsRightRegular g :=
+  mul_left_injective g
 
-end left_or_right_cancel_semigroup
+end LeftOrRightCancelSemigroup
 
-section cancel_monoid
+section CancelMonoid
 
-variables [cancel_monoid R]
+variable [CancelMonoid R]
 
-/--  Elements of a cancel monoid are regular.  Cancel semigroups do not appear to exist. -/
-lemma is_regular_of_cancel_monoid (g : R) : is_regular g :=
-⟨mul_right_injective g, mul_left_injective g⟩
+/-- Elements of a cancel monoid are regular.  Cancel semigroups do not appear to exist. -/
+theorem is_regular_of_cancel_monoid (g : R) : IsRegular g :=
+  ⟨mul_right_injective g, mul_left_injective g⟩
 
-end cancel_monoid
+end CancelMonoid
 
-section cancel_monoid_with_zero
+section CancelMonoidWithZero
 
-variables  [cancel_monoid_with_zero R]
+variable [CancelMonoidWithZero R]
 
-/--  Non-zero elements of an integral domain are regular. -/
-lemma is_regular_of_ne_zero (a0 : a ≠ 0) : is_regular a :=
-⟨λ b c, (mul_right_inj' a0).mp, λ b c, (mul_left_inj' a0).mp⟩
+/-- Non-zero elements of an integral domain are regular. -/
+theorem is_regular_of_ne_zero (a0 : a ≠ 0) : IsRegular a :=
+  ⟨fun b c => (mul_right_inj' a0).mp, fun b c => (mul_left_inj' a0).mp⟩
 
 /-- In a non-trivial integral domain, an element is regular iff it is non-zero. -/
-lemma is_regular_iff_ne_zero [nontrivial R] : is_regular a ↔ a ≠ 0 :=
-⟨is_regular.ne_zero, is_regular_of_ne_zero⟩
+theorem is_regular_iff_ne_zero [Nontrivial R] : IsRegular a ↔ a ≠ 0 :=
+  ⟨IsRegular.ne_zero, is_regular_of_ne_zero⟩
 
-end cancel_monoid_with_zero
+end CancelMonoidWithZero
+

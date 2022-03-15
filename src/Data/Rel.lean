@@ -3,7 +3,7 @@ Copyright (c) 2018 Jeremy Avigad. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jeremy Avigad
 -/
-import order.galois_connection
+import Mathbin.Order.GaloisConnection
 
 /-!
 # Relations
@@ -28,190 +28,217 @@ Relations are also known as set-valued functions, or partial multifunctions.
 * `function.graph`: Graph of a function as a relation.
 -/
 
-variables {α β γ : Type*}
+
+variable {α β γ : Type _}
 
 /-- A relation on `α` and `β`, aka a set-valued function, aka a partial multifunction --/
-@[derive complete_lattice, derive inhabited]
-def rel (α β : Type*) := α → β → Prop
+def Rel (α β : Type _) :=
+  α → β → Prop deriving CompleteLattice, Inhabited
 
-namespace rel
+namespace Rel
 
-variables {δ : Type*} (r : rel α β)
+variable {δ : Type _} (r : Rel α β)
 
 /-- The inverse relation : `r.inv x y ↔ r y x`. Note that this is *not* a groupoid inverse. -/
-def inv : rel β α := flip r
+def Inv : Rel β α :=
+  flip r
 
-lemma inv_def (x : α) (y : β) : r.inv y x ↔ r x y := iff.rfl
+theorem inv_def (x : α) (y : β) : r.inv y x ↔ r x y :=
+  Iff.rfl
 
-lemma inv_inv : inv (inv r) = r := by { ext x y, reflexivity }
+theorem inv_inv : Inv (Inv r) = r := by
+  ext x y
+  rfl
 
 /-- Domain of a relation -/
-def dom := {x | ∃ y, r x y}
+def Dom :=
+  { x | ∃ y, r x y }
 
-lemma dom_mono {r s : rel α β} (h : r ≤ s) : dom r ⊆ dom s :=
-λ a ⟨b, hx⟩, ⟨b, h a b hx⟩
+theorem dom_mono {r s : Rel α β} (h : r ≤ s) : Dom r ⊆ Dom s := fun a ⟨b, hx⟩ => ⟨b, h a b hx⟩
 
 /-- Codomain aka range of a relation -/
-def codom := {y | ∃ x, r x y}
+def Codom :=
+  { y | ∃ x, r x y }
 
-lemma codom_inv : r.inv.codom = r.dom := by { ext x y, reflexivity }
+theorem codom_inv : r.inv.Codom = r.Dom := by
+  ext x y
+  rfl
 
-lemma dom_inv : r.inv.dom = r.codom := by { ext x y, reflexivity}
+theorem dom_inv : r.inv.Dom = r.Codom := by
+  ext x y
+  rfl
 
 /-- Composition of relation; note that it follows the `category_theory/` order of arguments. -/
-def comp (r : rel α β) (s : rel β γ) : rel α γ :=
-λ x z, ∃ y, r x y ∧ s y z
+def Comp (r : Rel α β) (s : Rel β γ) : Rel α γ := fun x z => ∃ y, r x y ∧ s y z
 
-local infixr ` ∘ ` := rel.comp
+-- mathport name: «expr ∘ »
+local infixr:0 " ∘ " => Rel.Comp
 
-lemma comp_assoc (r : rel α β) (s : rel β γ) (t : rel γ δ) :
-  (r ∘ s) ∘ t = r ∘ s ∘ t :=
-begin
-  unfold comp, ext x w, split,
-  { rintros ⟨z, ⟨y, rxy, syz⟩, tzw⟩, exact ⟨y, rxy, z, syz, tzw⟩ },
-  rintros ⟨y, rxy, z, syz, tzw⟩, exact ⟨z, ⟨y, rxy, syz⟩, tzw⟩
-end
-
-@[simp]
-lemma comp_right_id (r : rel α β) : r ∘ @eq β = r :=
-by { unfold comp, ext y, simp }
+theorem comp_assoc (r : Rel α β) (s : Rel β γ) (t : Rel γ δ) : ((r ∘ s) ∘ t) = (r ∘ s ∘ t) := by
+  unfold comp
+  ext x w
+  constructor
+  · rintro ⟨z, ⟨y, rxy, syz⟩, tzw⟩
+    exact ⟨y, rxy, z, syz, tzw⟩
+    
+  rintro ⟨y, rxy, z, syz, tzw⟩
+  exact ⟨z, ⟨y, rxy, syz⟩, tzw⟩
 
 @[simp]
-lemma comp_left_id (r : rel α β) : @eq α ∘ r = r :=
-by { unfold comp, ext x, simp }
+theorem comp_right_id (r : Rel α β) : (r ∘ @Eq β) = r := by
+  unfold comp
+  ext y
+  simp
 
-lemma inv_id : inv (@eq α) = @eq α :=
-by { ext x y, split; apply eq.symm }
+@[simp]
+theorem comp_left_id (r : Rel α β) : (@Eq α ∘ r) = r := by
+  unfold comp
+  ext x
+  simp
 
-lemma inv_comp (r : rel α β) (s : rel β γ) : inv (r ∘ s) = inv s ∘ inv r :=
-by { ext x z, simp [comp, inv, flip, and.comm] }
+theorem inv_id : Inv (@Eq α) = @Eq α := by
+  ext x y
+  constructor <;> apply Eq.symm
+
+theorem inv_comp (r : Rel α β) (s : Rel β γ) : Inv (r ∘ s) = (Inv s ∘ Inv r) := by
+  ext x z
+  simp [comp, inv, flip, And.comm]
 
 /-- Image of a set under a relation -/
-def image (s : set α) : set β := {y | ∃ x ∈ s, r x y}
+def Image (s : Set α) : Set β :=
+  { y | ∃ x ∈ s, r x y }
 
-lemma mem_image (y : β) (s : set α) : y ∈ image r s ↔ ∃ x ∈ s, r x y :=
-iff.rfl
+theorem mem_image (y : β) (s : Set α) : y ∈ Image r s ↔ ∃ x ∈ s, r x y :=
+  Iff.rfl
 
-lemma image_subset : ((⊆) ⇒ (⊆)) r.image r.image :=
-λ s t h y ⟨x, xs, rxy⟩, ⟨x, h xs, rxy⟩
+theorem image_subset : ((· ⊆ ·)⇒(· ⊆ ·)) r.Image r.Image := fun s t h y ⟨x, xs, rxy⟩ => ⟨x, h xs, rxy⟩
 
-lemma image_mono : monotone r.image := r.image_subset
+theorem image_mono : Monotone r.Image :=
+  r.image_subset
 
-lemma image_inter (s t : set α) : r.image (s ∩ t) ⊆ r.image s ∩ r.image t :=
-r.image_mono.map_inf_le s t
+theorem image_inter (s t : Set α) : r.Image (s ∩ t) ⊆ r.Image s ∩ r.Image t :=
+  r.image_mono.map_inf_le s t
 
-lemma image_union (s t : set α) : r.image (s ∪ t) = r.image s ∪ r.image t :=
-le_antisymm
-  (λ y ⟨x, xst, rxy⟩, xst.elim (λ xs, or.inl ⟨x, ⟨xs, rxy⟩⟩) (λ xt, or.inr ⟨x, ⟨xt, rxy⟩⟩))
-  (r.image_mono.le_map_sup s t)
+theorem image_union (s t : Set α) : r.Image (s ∪ t) = r.Image s ∪ r.Image t :=
+  le_antisymmₓ (fun y ⟨x, xst, rxy⟩ => xst.elim (fun xs => Or.inl ⟨x, ⟨xs, rxy⟩⟩) fun xt => Or.inr ⟨x, ⟨xt, rxy⟩⟩)
+    (r.image_mono.le_map_sup s t)
 
 @[simp]
-lemma image_id (s : set α) : image (@eq α) s = s :=
-by { ext x, simp [mem_image] }
+theorem image_id (s : Set α) : Image (@Eq α) s = s := by
+  ext x
+  simp [mem_image]
 
-lemma image_comp (s : rel β γ) (t : set α) : image (r ∘ s) t = image s (image r t) :=
-begin
-  ext z, simp only [mem_image, comp], split,
-  { rintros ⟨x, xt, y, rxy, syz⟩, exact ⟨y, ⟨x, xt, rxy⟩, syz⟩ },
-  rintros ⟨y, ⟨x, xt, rxy⟩, syz⟩, exact ⟨x, xt, y, rxy, syz⟩
-end
+theorem image_comp (s : Rel β γ) (t : Set α) : Image (r ∘ s) t = Image s (Image r t) := by
+  ext z
+  simp only [mem_image, comp]
+  constructor
+  · rintro ⟨x, xt, y, rxy, syz⟩
+    exact ⟨y, ⟨x, xt, rxy⟩, syz⟩
+    
+  rintro ⟨y, ⟨x, xt, rxy⟩, syz⟩
+  exact ⟨x, xt, y, rxy, syz⟩
 
-lemma image_univ : r.image set.univ = r.codom := by { ext y, simp [mem_image, codom] }
+theorem image_univ : r.Image Set.Univ = r.Codom := by
+  ext y
+  simp [mem_image, codom]
 
 /-- Preimage of a set under a relation `r`. Same as the image of `s` under `r.inv` -/
-def preimage (s : set β) : set α := r.inv.image s
+def Preimage (s : Set β) : Set α :=
+  r.inv.Image s
 
-lemma mem_preimage (x : α) (s : set β) : x ∈ r.preimage s ↔ ∃ y ∈ s, r x y :=
-iff.rfl
+theorem mem_preimage (x : α) (s : Set β) : x ∈ r.Preimage s ↔ ∃ y ∈ s, r x y :=
+  Iff.rfl
 
-lemma preimage_def (s : set β) : preimage r s = {x | ∃ y ∈ s, r x y} :=
-set.ext $ λ x, mem_preimage _ _ _
+theorem preimage_def (s : Set β) : Preimage r s = { x | ∃ y ∈ s, r x y } :=
+  Set.ext fun x => mem_preimage _ _ _
 
-lemma preimage_mono {s t : set β} (h : s ⊆ t) : r.preimage s ⊆ r.preimage t :=
-image_mono _ h
+theorem preimage_mono {s t : Set β} (h : s ⊆ t) : r.Preimage s ⊆ r.Preimage t :=
+  image_mono _ h
 
-lemma preimage_inter (s t : set β) : r.preimage (s ∩ t) ⊆ r.preimage s ∩ r.preimage t :=
-image_inter _ s t
+theorem preimage_inter (s t : Set β) : r.Preimage (s ∩ t) ⊆ r.Preimage s ∩ r.Preimage t :=
+  image_inter _ s t
 
-lemma preimage_union (s t : set β) : r.preimage (s ∪ t) = r.preimage s ∪ r.preimage t :=
-image_union _ s t
+theorem preimage_union (s t : Set β) : r.Preimage (s ∪ t) = r.Preimage s ∪ r.Preimage t :=
+  image_union _ s t
 
-lemma preimage_id (s : set α) : preimage (@eq α) s = s :=
-by simp only [preimage, inv_id, image_id]
+theorem preimage_id (s : Set α) : Preimage (@Eq α) s = s := by
+  simp only [preimage, inv_id, image_id]
 
-lemma preimage_comp (s : rel β γ) (t : set γ) :
-  preimage (r ∘ s) t = preimage r (preimage s t) :=
-by simp only [preimage, inv_comp, image_comp]
+theorem preimage_comp (s : Rel β γ) (t : Set γ) : Preimage (r ∘ s) t = Preimage r (Preimage s t) := by
+  simp only [preimage, inv_comp, image_comp]
 
-lemma preimage_univ : r.preimage set.univ = r.dom :=
-by { rw [preimage, image_univ, codom_inv] }
+theorem preimage_univ : r.Preimage Set.Univ = r.Dom := by
+  rw [preimage, image_univ, codom_inv]
 
 /-- Core of a set `s : set β` w.r.t `r : rel α β` is the set of `x : α` that are related *only*
 to elements of `s`. Other generalization of `function.preimage`. -/
-def core (s : set β) := {x | ∀ y, r x y → y ∈ s}
+def Core (s : Set β) :=
+  { x | ∀ y, r x y → y ∈ s }
 
-lemma mem_core (x : α) (s : set β) : x ∈ r.core s ↔ ∀ y, r x y → y ∈ s :=
-iff.rfl
+theorem mem_core (x : α) (s : Set β) : x ∈ r.Core s ↔ ∀ y, r x y → y ∈ s :=
+  Iff.rfl
 
-lemma core_subset : ((⊆) ⇒ (⊆)) r.core r.core :=
-λ s t h x h' y rxy, h (h' y rxy)
+theorem core_subset : ((· ⊆ ·)⇒(· ⊆ ·)) r.Core r.Core := fun s t h x h' y rxy => h (h' y rxy)
 
-lemma core_mono : monotone r.core := r.core_subset
+theorem core_mono : Monotone r.Core :=
+  r.core_subset
 
-lemma core_inter (s t : set β) : r.core (s ∩ t) = r.core s ∩ r.core t :=
-set.ext (by simp [mem_core, imp_and_distrib, forall_and_distrib])
+theorem core_inter (s t : Set β) : r.Core (s ∩ t) = r.Core s ∩ r.Core t :=
+  Set.ext
+    (by
+      simp [mem_core, imp_and_distrib, forall_and_distrib])
 
-lemma core_union (s t : set β) : r.core s ∪ r.core t ⊆ r.core (s ∪ t) :=
-r.core_mono.le_map_sup s t
+theorem core_union (s t : Set β) : r.Core s ∪ r.Core t ⊆ r.Core (s ∪ t) :=
+  r.core_mono.le_map_sup s t
 
-@[simp] lemma core_univ : r.core set.univ = set.univ := set.ext (by simp [mem_core])
+@[simp]
+theorem core_univ : r.Core Set.Univ = Set.Univ :=
+  Set.ext
+    (by
+      simp [mem_core])
 
-lemma core_id (s : set α) : core (@eq α) s = s :=
-by simp [core]
+theorem core_id (s : Set α) : Core (@Eq α) s = s := by
+  simp [core]
 
-lemma core_comp (s : rel β γ) (t : set γ) :
-  core (r ∘ s) t = core r (core s t) :=
-begin
-  ext x, simp [core, comp], split,
-  { exact λ h y rxy z, h z y rxy },
-  { exact λ h z y rzy, h y rzy z }
-end
+theorem core_comp (s : Rel β γ) (t : Set γ) : Core (r ∘ s) t = Core r (Core s t) := by
+  ext x
+  simp [core, comp]
+  constructor
+  · exact fun h y rxy z => h z y rxy
+    
+  · exact fun h z y rzy => h y rzy z
+    
 
 /-- Restrict the domain of a relation to a subtype. -/
-def restrict_domain (s : set α) : rel {x // x ∈ s} β :=
-λ x y, r x.val y
+def RestrictDomain (s : Set α) : Rel { x // x ∈ s } β := fun x y => r x.val y
 
-theorem image_subset_iff (s : set α) (t : set β) : image r s ⊆ t ↔ s ⊆ core r t :=
-iff.intro
-  (λ h x xs y rxy, h ⟨x, xs, rxy⟩)
-  (λ h y ⟨x, xs, rxy⟩, h xs y rxy)
+theorem image_subset_iff (s : Set α) (t : Set β) : Image r s ⊆ t ↔ s ⊆ Core r t :=
+  Iff.intro (fun h x xs y rxy => h ⟨x, xs, rxy⟩) fun h y ⟨x, xs, rxy⟩ => h xs y rxy
 
-theorem image_core_gc : galois_connection r.image r.core :=
-image_subset_iff _
+theorem image_core_gc : GaloisConnection r.Image r.Core :=
+  image_subset_iff _
 
-end rel
+end Rel
 
-namespace function
+namespace Function
 
 /-- The graph of a function as a relation. -/
-def graph (f : α → β) : rel α β := λ x y, f x = y
+def Graph (f : α → β) : Rel α β := fun x y => f x = y
 
-end function
+end Function
 
-namespace set
+namespace Set
 
 -- TODO: if image were defined with bounded quantification in corelib, the next two would
 -- be definitional
+theorem image_eq (f : α → β) (s : Set α) : f '' s = (Function.Graph f).Image s := by
+  simp [Set.Image, Function.Graph, Rel.Image]
 
-lemma image_eq (f : α → β) (s : set α) : f '' s = (function.graph f).image s :=
-by simp [set.image, function.graph, rel.image]
+theorem preimage_eq (f : α → β) (s : Set β) : f ⁻¹' s = (Function.Graph f).Preimage s := by
+  simp [Set.Preimage, Function.Graph, Rel.Preimage, Rel.Inv, flip, Rel.Image]
 
-lemma preimage_eq (f : α → β) (s : set β) :
-  f ⁻¹' s = (function.graph f).preimage s :=
-by simp [set.preimage, function.graph, rel.preimage, rel.inv, flip, rel.image]
+theorem preimage_eq_core (f : α → β) (s : Set β) : f ⁻¹' s = (Function.Graph f).Core s := by
+  simp [Set.Preimage, Function.Graph, Rel.Core]
 
-lemma preimage_eq_core (f : α → β) (s : set β) :
-  f ⁻¹' s = (function.graph f).core s :=
- by simp [set.preimage, function.graph, rel.core]
+end Set
 
-end set

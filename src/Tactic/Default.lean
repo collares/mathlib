@@ -17,23 +17,28 @@ As (non-exhaustive) examples, these includes things like:
 * data.equiv.encodable.basic
 * order.complete_lattice
 -/
-import tactic.basic -- ensure basic tactics are available
-import tactic.abel
-import tactic.ring_exp
-import tactic.noncomm_ring
-import tactic.linarith
-import tactic.omega
-import tactic.tfae
-import tactic.apply_fun
-import tactic.interval_cases
-import tactic.reassoc_axiom -- most likely useful only for category_theory
-import tactic.slice
-import tactic.subtype_instance
-import tactic.derive_fintype
-import tactic.group
-import tactic.cancel_denoms
-import tactic.zify
-import tactic.transport
-import tactic.unfold_cases
-import tactic.field_simp
-import tactic.linear_combination
+import Mathbin.Tactic.Basic
+import Mathbin.Tactic.Abel
+import Mathbin.Tactic.RingExp
+import Mathbin.Tactic.NoncommRing
+import Mathbin.Tactic.Linarith.Default
+import Mathbin.Tactic.Omega.Default
+import Mathbin.Tactic.Tfae
+import Mathbin.Tactic.ApplyFun
+import Mathbin.Tactic.IntervalCases
+import Mathbin.Tactic.ReassocAxiom
+import Mathbin.Tactic.Slice
+import Mathbin.Tactic.SubtypeInstance
+import Mathbin.Tactic.DeriveFintype
+import Mathbin.Tactic.Group
+import Mathbin.Tactic.CancelDenoms
+import Mathbin.Tactic.Zify
+import Mathbin.Tactic.Transport
+import Mathbin.Tactic.UnfoldCases
+import Mathbin.Tactic.FieldSimp
+import Mathbin.Tactic.LinearCombination
+
+-- ensure basic tactics are available
+-- ensure basic tactics are available
+-- most likely useful only for category_theory
+-- most likely useful only for category_theory

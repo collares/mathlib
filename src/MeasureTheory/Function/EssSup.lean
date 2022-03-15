@@ -3,8 +3,8 @@ Copyright (c) 2021 Rémy Degenne. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Rémy Degenne
 -/
-import measure_theory.constructions.borel_space
-import order.filter.ennreal
+import Mathbin.MeasureTheory.Constructions.BorelSpace
+import Mathbin.Order.Filter.Ennreal
 
 /-!
 # Essential supremum and infimum
@@ -26,237 +26,279 @@ sense). We do not define that quantity here, which is simply the supremum of a m
 * `ess_inf f μ := μ.ae.liminf f`
 -/
 
-open measure_theory filter topological_space
-open_locale ennreal measure_theory
 
-variables {α β : Type*} {m : measurable_space α} {μ ν : measure α}
+open MeasureTheory Filter TopologicalSpace
 
-section conditionally_complete_lattice
-variable [conditionally_complete_lattice β]
+open_locale Ennreal MeasureTheory
+
+variable {α β : Type _} {m : MeasurableSpace α} {μ ν : Measureₓ α}
+
+section ConditionallyCompleteLattice
+
+variable [ConditionallyCompleteLattice β]
 
 /-- Essential supremum of `f` with respect to measure `μ`: the smallest `c : β` such that
 `f x ≤ c` a.e. -/
-def ess_sup {m : measurable_space α} (f : α → β) (μ : measure α) := μ.ae.limsup f
+def essSup {m : MeasurableSpace α} (f : α → β) (μ : Measureₓ α) :=
+  μ.ae.limsup f
 
 /-- Essential infimum of `f` with respect to measure `μ`: the greatest `c : β` such that
 `c ≤ f x` a.e. -/
-def ess_inf {m : measurable_space α} (f : α → β) (μ : measure α) := μ.ae.liminf f
+def essInf {m : MeasurableSpace α} (f : α → β) (μ : Measureₓ α) :=
+  μ.ae.liminf f
 
-lemma ess_sup_congr_ae {f g : α → β} (hfg : f =ᵐ[μ] g) : ess_sup f μ = ess_sup g μ :=
-limsup_congr hfg
+theorem ess_sup_congr_ae {f g : α → β} (hfg : f =ᵐ[μ] g) : essSup f μ = essSup g μ :=
+  limsup_congr hfg
 
-lemma ess_inf_congr_ae {f g : α → β} (hfg : f =ᵐ[μ] g) :  ess_inf f μ = ess_inf g μ :=
-@ess_sup_congr_ae α (order_dual β) _ _ _ _ _ hfg
+theorem ess_inf_congr_ae {f g : α → β} (hfg : f =ᵐ[μ] g) : essInf f μ = essInf g μ :=
+  @ess_sup_congr_ae α (OrderDual β) _ _ _ _ _ hfg
 
-end conditionally_complete_lattice
+end ConditionallyCompleteLattice
 
-section conditionally_complete_linear_order
-variable [conditionally_complete_linear_order β]
+section ConditionallyCompleteLinearOrder
 
-lemma ess_sup_eq_Inf {m : measurable_space α} (μ : measure α) (f : α → β) :
-  ess_sup f μ = Inf {a | μ {x | a < f x} = 0} :=
-begin
-  dsimp [ess_sup, limsup, Limsup],
-  congr,
-  ext a,
-  simp [eventually_map, ae_iff],
-end
+variable [ConditionallyCompleteLinearOrder β]
 
-end conditionally_complete_linear_order
+theorem ess_sup_eq_Inf {m : MeasurableSpace α} (μ : Measureₓ α) (f : α → β) :
+    essSup f μ = inf { a | μ { x | a < f x } = 0 } := by
+  dsimp [essSup, limsup, Limsup]
+  congr
+  ext a
+  simp [eventually_map, ae_iff]
 
-section complete_lattice
-variable [complete_lattice β]
+end ConditionallyCompleteLinearOrder
 
-@[simp] lemma ess_sup_measure_zero {m : measurable_space α} {f : α → β} :
-  ess_sup f (0 : measure α) = ⊥ :=
-le_bot_iff.mp (Inf_le (by simp [set.mem_set_of_eq, eventually_le, ae_iff]))
+section CompleteLattice
 
-@[simp] lemma ess_inf_measure_zero {m : measurable_space α} {f : α → β} :
-  ess_inf f (0 : measure α) = ⊤ :=
-@ess_sup_measure_zero α (order_dual β) _ _ _
+variable [CompleteLattice β]
 
-lemma ess_sup_mono_ae {f g : α → β} (hfg : f ≤ᵐ[μ] g) : ess_sup f μ ≤ ess_sup g μ :=
-limsup_le_limsup hfg
+@[simp]
+theorem ess_sup_measure_zero {m : MeasurableSpace α} {f : α → β} : essSup f (0 : Measureₓ α) = ⊥ :=
+  le_bot_iff.mp
+    (Inf_le
+      (by
+        simp [Set.mem_set_of_eq, eventually_le, ae_iff]))
 
-lemma ess_inf_mono_ae {f g : α → β} (hfg : f ≤ᵐ[μ] g) : ess_inf f μ ≤ ess_inf g μ :=
-liminf_le_liminf hfg
+@[simp]
+theorem ess_inf_measure_zero {m : MeasurableSpace α} {f : α → β} : essInf f (0 : Measureₓ α) = ⊤ :=
+  @ess_sup_measure_zero α (OrderDual β) _ _ _
 
-lemma ess_sup_const (c : β) (hμ : μ ≠ 0) : ess_sup (λ x : α, c) μ = c :=
-begin
-  haveI hμ_ne_bot : μ.ae.ne_bot, { rwa [ne_bot_iff, ne.def, ae_eq_bot] },
-  exact limsup_const c,
-end
+theorem ess_sup_mono_ae {f g : α → β} (hfg : f ≤ᵐ[μ] g) : essSup f μ ≤ essSup g μ :=
+  limsup_le_limsup hfg
 
-lemma ess_sup_le_of_ae_le {f : α → β} (c : β) (hf : f ≤ᵐ[μ] (λ _, c)) : ess_sup f μ ≤ c :=
-begin
-  refine (ess_sup_mono_ae hf).trans _,
-  by_cases hμ : μ = 0,
-  { simp [hμ], },
-  { rwa ess_sup_const, },
-end
+theorem ess_inf_mono_ae {f g : α → β} (hfg : f ≤ᵐ[μ] g) : essInf f μ ≤ essInf g μ :=
+  liminf_le_liminf hfg
 
-lemma ess_inf_const (c : β) (hμ : μ ≠ 0) : ess_inf (λ x : α, c) μ = c :=
-@ess_sup_const α (order_dual β) _ _ _ _ hμ
+theorem ess_sup_const (c : β) (hμ : μ ≠ 0) : essSup (fun x : α => c) μ = c :=
+  have hμ_ne_bot : μ.ae.ne_bot := by
+    rwa [ne_bot_iff, Ne.def, ae_eq_bot]
+  limsup_const c
 
-lemma le_ess_inf_of_ae_le {f : α → β} (c : β) (hf : (λ _, c) ≤ᵐ[μ] f) : c ≤ ess_inf f μ :=
-@ess_sup_le_of_ae_le α (order_dual β) _ _ _ _ c hf
+theorem ess_sup_le_of_ae_le {f : α → β} (c : β) (hf : f ≤ᵐ[μ] fun _ => c) : essSup f μ ≤ c := by
+  refine' (ess_sup_mono_ae hf).trans _
+  by_cases' hμ : μ = 0
+  · simp [hμ]
+    
+  · rwa [ess_sup_const]
+    
 
-lemma ess_sup_const_bot : ess_sup (λ x : α, (⊥ : β)) μ = (⊥ : β) :=
-limsup_const_bot
+theorem ess_inf_const (c : β) (hμ : μ ≠ 0) : essInf (fun x : α => c) μ = c :=
+  @ess_sup_const α (OrderDual β) _ _ _ _ hμ
 
-lemma ess_inf_const_top : ess_inf (λ x : α, (⊤ : β)) μ = (⊤ : β) :=
-liminf_const_top
+theorem le_ess_inf_of_ae_le {f : α → β} (c : β) (hf : (fun _ => c) ≤ᵐ[μ] f) : c ≤ essInf f μ :=
+  @ess_sup_le_of_ae_le α (OrderDual β) _ _ _ _ c hf
 
-lemma order_iso.ess_sup_apply {m : measurable_space α} {γ} [complete_lattice γ]
-  (f : α → β) (μ : measure α) (g : β ≃o γ) :
-  g (ess_sup f μ) = ess_sup (λ x, g (f x)) μ :=
-begin
-  refine order_iso.limsup_apply g _ _ _ _,
-  all_goals { is_bounded_default, },
-end
+theorem ess_sup_const_bot : essSup (fun x : α => (⊥ : β)) μ = (⊥ : β) :=
+  limsup_const_bot
 
-lemma order_iso.ess_inf_apply {m : measurable_space α} {γ} [complete_lattice γ]
-  (f : α → β) (μ : measure α) (g : β ≃o γ) :
-  g (ess_inf f μ) = ess_inf (λ x, g (f x)) μ :=
-@order_iso.ess_sup_apply α (order_dual β) _ _  (order_dual γ) _ _ _ g.dual
+theorem ess_inf_const_top : essInf (fun x : α => (⊤ : β)) μ = (⊤ : β) :=
+  liminf_const_top
 
-lemma ess_sup_mono_measure {f : α → β} (hμν : ν ≪ μ) : ess_sup f ν ≤ ess_sup f μ :=
-begin
-  refine limsup_le_limsup_of_le (measure.ae_le_iff_absolutely_continuous.mpr hμν) _ _,
-  all_goals { is_bounded_default, },
-end
+theorem OrderIso.ess_sup_apply {m : MeasurableSpace α} {γ} [CompleteLattice γ] (f : α → β) (μ : Measureₓ α)
+    (g : β ≃o γ) : g (essSup f μ) = essSup (fun x => g (f x)) μ := by
+  refine' OrderIso.limsup_apply g _ _ _ _
+  all_goals
+    run_tac
+      is_bounded_default
 
-lemma ess_sup_mono_measure' {α : Type*} {β : Type*} {m : measurable_space α}
-  {μ ν : measure_theory.measure α} [complete_lattice β] {f : α → β} (hμν : ν ≤ μ) :
-  ess_sup f ν ≤ ess_sup f μ := ess_sup_mono_measure (measure.absolutely_continuous_of_le hμν)
+theorem OrderIso.ess_inf_apply {m : MeasurableSpace α} {γ} [CompleteLattice γ] (f : α → β) (μ : Measureₓ α)
+    (g : β ≃o γ) : g (essInf f μ) = essInf (fun x => g (f x)) μ :=
+  @OrderIso.ess_sup_apply α (OrderDual β) _ _ (OrderDual γ) _ _ _ g.dual
 
-lemma ess_inf_antitone_measure {f : α → β} (hμν : μ ≪ ν) : ess_inf f ν ≤ ess_inf f μ :=
-begin
-  refine liminf_le_liminf_of_le (measure.ae_le_iff_absolutely_continuous.mpr hμν) _ _,
-  all_goals { is_bounded_default, },
-end
+theorem ess_sup_mono_measure {f : α → β} (hμν : ν ≪ μ) : essSup f ν ≤ essSup f μ := by
+  refine' limsup_le_limsup_of_le (measure.ae_le_iff_absolutely_continuous.mpr hμν) _ _
+  all_goals
+    run_tac
+      is_bounded_default
 
-lemma ess_sup_smul_measure {f : α → β} {c : ℝ≥0∞} (hc : c ≠ 0) :
-  ess_sup f (c • μ) = ess_sup f μ :=
-begin
-  simp_rw ess_sup,
-  suffices h_smul : (c • μ).ae = μ.ae, by rw h_smul,
-  ext1,
-  simp_rw mem_ae_iff,
-  simp [hc],
-end
+theorem ess_sup_mono_measure' {α : Type _} {β : Type _} {m : MeasurableSpace α} {μ ν : MeasureTheory.Measure α}
+    [CompleteLattice β] {f : α → β} (hμν : ν ≤ μ) : essSup f ν ≤ essSup f μ :=
+  ess_sup_mono_measure (Measure.absolutely_continuous_of_le hμν)
 
-section topological_space
+theorem ess_inf_antitone_measure {f : α → β} (hμν : μ ≪ ν) : essInf f ν ≤ essInf f μ := by
+  refine' liminf_le_liminf_of_le (measure.ae_le_iff_absolutely_continuous.mpr hμν) _ _
+  all_goals
+    run_tac
+      is_bounded_default
 
-variables {γ : Type*} {mγ : measurable_space γ} {f : α → γ} {g : γ → β}
+theorem ess_sup_smul_measure {f : α → β} {c : ℝ≥0∞} (hc : c ≠ 0) : essSup f (c • μ) = essSup f μ := by
+  simp_rw [essSup]
+  suffices h_smul : (c • μ).ae = μ.ae
+  · rw [h_smul]
+    
+  ext1
+  simp_rw [mem_ae_iff]
+  simp [hc]
+
+section TopologicalSpace
+
+variable {γ : Type _} {mγ : MeasurableSpace γ} {f : α → γ} {g : γ → β}
 
 include mγ
 
-lemma ess_sup_comp_le_ess_sup_map_measure (hf : measurable f) :
-  ess_sup (g ∘ f) μ ≤ ess_sup g (measure.map f μ) :=
-begin
-  refine Limsup_le_Limsup_of_le (λ t, _) (by is_bounded_default) (by is_bounded_default),
-  simp_rw filter.mem_map,
-  have : (g ∘ f) ⁻¹' t = f ⁻¹' (g ⁻¹' t), by { ext1 x, simp_rw set.mem_preimage, },
-  rw this,
-  exact λ h, mem_ae_of_mem_ae_map hf h,
-end
+theorem ess_sup_comp_le_ess_sup_map_measure (hf : Measurable f) : essSup (g ∘ f) μ ≤ essSup g (Measure.map f μ) := by
+  refine'
+    Limsup_le_Limsup_of_le (fun t => _)
+      (by
+        run_tac
+          is_bounded_default)
+      (by
+        run_tac
+          is_bounded_default)
+  simp_rw [Filter.mem_map]
+  have : g ∘ f ⁻¹' t = f ⁻¹' (g ⁻¹' t) := by
+    ext1 x
+    simp_rw [Set.mem_preimage]
+  rw [this]
+  exact fun h => mem_ae_of_mem_ae_map hf h
 
-lemma _root_.measurable_embedding.ess_sup_map_measure (hf : measurable_embedding f) :
-  ess_sup g (measure.map f μ) = ess_sup (g ∘ f) μ :=
-begin
-  refine le_antisymm _ (ess_sup_comp_le_ess_sup_map_measure hf.measurable),
-  refine Limsup_le_Limsup (by is_bounded_default) (by is_bounded_default) (λ c h_le, _),
-  rw eventually_map at h_le ⊢,
-  exact hf.ae_map_iff.mpr h_le,
-end
+theorem _root_.measurable_embedding.ess_sup_map_measure (hf : MeasurableEmbedding f) :
+    essSup g (Measure.map f μ) = essSup (g ∘ f) μ := by
+  refine' le_antisymmₓ _ (ess_sup_comp_le_ess_sup_map_measure hf.measurable)
+  refine'
+    Limsup_le_Limsup
+      (by
+        run_tac
+          is_bounded_default)
+      (by
+        run_tac
+          is_bounded_default)
+      fun c h_le => _
+  rw [eventually_map] at h_le⊢
+  exact hf.ae_map_iff.mpr h_le
 
-variables [measurable_space β] [topological_space β] [second_countable_topology β]
-  [order_closed_topology β] [opens_measurable_space β]
+variable [MeasurableSpace β] [TopologicalSpace β] [SecondCountableTopology β] [OrderClosedTopology β]
+  [OpensMeasurableSpace β]
 
-lemma ess_sup_map_measure_of_measurable (hg : measurable g) (hf : measurable f) :
-  ess_sup g (measure.map f μ) = ess_sup (g ∘ f) μ :=
-begin
-  refine le_antisymm _ (ess_sup_comp_le_ess_sup_map_measure hf),
-  refine Limsup_le_Limsup (by is_bounded_default) (by is_bounded_default) (λ c h_le, _),
-  rw eventually_map at h_le ⊢,
-  rw ae_map_iff hf (measurable_set_le hg measurable_const),
-  exact h_le,
-end
+theorem ess_sup_map_measure_of_measurable (hg : Measurable g) (hf : Measurable f) :
+    essSup g (Measure.map f μ) = essSup (g ∘ f) μ := by
+  refine' le_antisymmₓ _ (ess_sup_comp_le_ess_sup_map_measure hf)
+  refine'
+    Limsup_le_Limsup
+      (by
+        run_tac
+          is_bounded_default)
+      (by
+        run_tac
+          is_bounded_default)
+      fun c h_le => _
+  rw [eventually_map] at h_le⊢
+  rw [ae_map_iff hf (measurable_set_le hg measurable_const)]
+  exact h_le
 
-lemma ess_sup_map_measure (hg : ae_measurable g (measure.map f μ)) (hf : measurable f) :
-  ess_sup g (measure.map f μ) = ess_sup (g ∘ f) μ :=
-begin
-  rw [ess_sup_congr_ae hg.ae_eq_mk, ess_sup_map_measure_of_measurable hg.measurable_mk hf],
-  refine ess_sup_congr_ae _,
-  have h_eq := ae_of_ae_map hf hg.ae_eq_mk,
-  rw ← eventually_eq at h_eq,
-  exact h_eq.symm,
-end
+theorem ess_sup_map_measure (hg : AeMeasurable g (Measure.map f μ)) (hf : Measurable f) :
+    essSup g (Measure.map f μ) = essSup (g ∘ f) μ := by
+  rw [ess_sup_congr_ae hg.ae_eq_mk, ess_sup_map_measure_of_measurable hg.measurable_mk hf]
+  refine' ess_sup_congr_ae _
+  have h_eq := ae_of_ae_map hf hg.ae_eq_mk
+  rw [← eventually_eq] at h_eq
+  exact h_eq.symm
 
 omit mγ
 
-end topological_space
+end TopologicalSpace
 
-end complete_lattice
+end CompleteLattice
 
-section complete_linear_order
-variable [complete_linear_order β]
+section CompleteLinearOrder
 
-lemma ae_lt_of_ess_sup_lt {f : α → β} {x : β} (hf : ess_sup f μ < x) : ∀ᵐ y ∂μ, f y < x :=
-filter.eventually_lt_of_limsup_lt hf
+variable [CompleteLinearOrder β]
 
-lemma ae_lt_of_lt_ess_inf {f : α → β} {x : β} (hf : x < ess_inf f μ) : ∀ᵐ y ∂μ, x < f y :=
-@ae_lt_of_ess_sup_lt α (order_dual β) _ _ _ _ _ hf
+theorem ae_lt_of_ess_sup_lt {f : α → β} {x : β} (hf : essSup f μ < x) : ∀ᵐ y ∂μ, f y < x :=
+  Filter.eventually_lt_of_limsup_lt hf
 
-lemma ess_sup_indicator_eq_ess_sup_restrict [has_zero β] {s : set α}
-  {f : α → β} (hf : 0 ≤ᵐ[μ.restrict s] f) (hs : measurable_set s) (hs_not_null : μ s ≠ 0) :
-  ess_sup (s.indicator f) μ = ess_sup f (μ.restrict s) :=
-begin
-  refine le_antisymm _ (Limsup_le_Limsup_of_le (map_restrict_ae_le_map_indicator_ae hs)
-    (by is_bounded_default) (by is_bounded_default)),
-  refine Limsup_le_Limsup (by is_bounded_default) (by is_bounded_default) (λ c h_restrict_le, _),
-  rw eventually_map at h_restrict_le ⊢,
-  rw ae_restrict_iff' hs at h_restrict_le,
-  have hc : 0 ≤ c,
-  { suffices : ∃ x, 0 ≤ f x ∧ f x ≤ c, by { obtain ⟨x, hx⟩ := this, exact hx.1.trans hx.2, },
-    refine frequently.exists _,
-    { exact μ.ae, },
-    rw [eventually_le, ae_restrict_iff' hs] at hf,
-    have hs' : ∃ᵐ x ∂μ, x ∈ s,
-    { contrapose! hs_not_null,
-      rw [not_frequently, ae_iff] at hs_not_null,
-      suffices : {a : α | ¬a ∉ s} = s, by rwa ← this,
-      simp, },
-    refine hs'.mp (hf.mp (h_restrict_le.mono (λ x hxs_imp_c hxf_nonneg hxs, _))),
-    rw pi.zero_apply at hxf_nonneg,
-    exact ⟨hxf_nonneg hxs, hxs_imp_c hxs⟩, },
-  refine h_restrict_le.mono (λ x hxc, _),
-  by_cases hxs : x ∈ s,
-  { simpa [hxs] using hxc hxs, },
-  { simpa [hxs] using hc, },
-end
+theorem ae_lt_of_lt_ess_inf {f : α → β} {x : β} (hf : x < essInf f μ) : ∀ᵐ y ∂μ, x < f y :=
+  @ae_lt_of_ess_sup_lt α (OrderDual β) _ _ _ _ _ hf
 
-end complete_linear_order
+theorem ess_sup_indicator_eq_ess_sup_restrict [Zero β] {s : Set α} {f : α → β} (hf : 0 ≤ᵐ[μ.restrict s] f)
+    (hs : MeasurableSet s) (hs_not_null : μ s ≠ 0) : essSup (s.indicator f) μ = essSup f (μ.restrict s) := by
+  refine'
+    le_antisymmₓ _
+      (Limsup_le_Limsup_of_le (map_restrict_ae_le_map_indicator_ae hs)
+        (by
+          run_tac
+            is_bounded_default)
+        (by
+          run_tac
+            is_bounded_default))
+  refine'
+    Limsup_le_Limsup
+      (by
+        run_tac
+          is_bounded_default)
+      (by
+        run_tac
+          is_bounded_default)
+      fun c h_restrict_le => _
+  rw [eventually_map] at h_restrict_le⊢
+  rw [ae_restrict_iff' hs] at h_restrict_le
+  have hc : 0 ≤ c := by
+    suffices ∃ x, 0 ≤ f x ∧ f x ≤ c by
+      obtain ⟨x, hx⟩ := this
+      exact hx.1.trans hx.2
+    refine' frequently.exists _
+    · exact μ.ae
+      
+    rw [eventually_le, ae_restrict_iff' hs] at hf
+    have hs' : ∃ᵐ x ∂μ, x ∈ s := by
+      contrapose! hs_not_null
+      rw [not_frequently, ae_iff] at hs_not_null
+      suffices { a : α | ¬a ∉ s } = s by
+        rwa [← this]
+      simp
+    refine' hs'.mp (hf.mp (h_restrict_le.mono fun x hxs_imp_c hxf_nonneg hxs => _))
+    rw [Pi.zero_apply] at hxf_nonneg
+    exact ⟨hxf_nonneg hxs, hxs_imp_c hxs⟩
+  refine' h_restrict_le.mono fun x hxc => _
+  by_cases' hxs : x ∈ s
+  · simpa [hxs] using hxc hxs
+    
+  · simpa [hxs] using hc
+    
 
-namespace ennreal
+end CompleteLinearOrder
 
-variables {f : α → ℝ≥0∞}
+namespace Ennreal
 
-lemma ae_le_ess_sup (f : α → ℝ≥0∞) : ∀ᵐ y ∂μ, f y ≤ ess_sup f μ :=
-eventually_le_limsup f
+variable {f : α → ℝ≥0∞}
 
-@[simp] lemma ess_sup_eq_zero_iff : ess_sup f μ = 0 ↔ f =ᵐ[μ] 0 :=
-limsup_eq_zero_iff
+theorem ae_le_ess_sup (f : α → ℝ≥0∞) : ∀ᵐ y ∂μ, f y ≤ essSup f μ :=
+  eventually_le_limsup f
 
-lemma ess_sup_const_mul {a : ℝ≥0∞} : ess_sup (λ (x : α), a * (f x)) μ = a * ess_sup f μ :=
-limsup_const_mul
+@[simp]
+theorem ess_sup_eq_zero_iff : essSup f μ = 0 ↔ f =ᵐ[μ] 0 :=
+  limsup_eq_zero_iff
 
-lemma ess_sup_add_le (f g : α → ℝ≥0∞) : ess_sup (f + g) μ ≤ ess_sup f μ + ess_sup g μ :=
-limsup_add_le f g
+theorem ess_sup_const_mul {a : ℝ≥0∞} : essSup (fun x : α => a * f x) μ = a * essSup f μ :=
+  limsup_const_mul
 
-lemma ess_sup_liminf_le {ι} [encodable ι] [linear_order ι] (f : ι → α → ℝ≥0∞) :
-  ess_sup (λ x, at_top.liminf (λ n, f n x)) μ ≤ at_top.liminf (λ n, ess_sup (λ x, f n x) μ) :=
-by { simp_rw ess_sup, exact ennreal.limsup_liminf_le_liminf_limsup (λ a b, f b a), }
+theorem ess_sup_add_le (f g : α → ℝ≥0∞) : essSup (f + g) μ ≤ essSup f μ + essSup g μ :=
+  limsup_add_le f g
 
-end ennreal
+theorem ess_sup_liminf_le {ι} [Encodable ι] [LinearOrderₓ ι] (f : ι → α → ℝ≥0∞) :
+    essSup (fun x => atTop.liminf fun n => f n x) μ ≤ atTop.liminf fun n => essSup (fun x => f n x) μ := by
+  simp_rw [essSup]
+  exact Ennreal.limsup_liminf_le_liminf_limsup fun a b => f b a
+
+end Ennreal
+

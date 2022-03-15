@@ -3,7 +3,7 @@ Copyright (c) 2021 Bryan Gin-ge Chen. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bryan Gin-ge Chen, Yury Kudryashov
 -/
-import algebra.group.hom
+import Mathbin.Algebra.Group.Hom
 
 /-!
 # Extensionality lemmas for monoid and group structures
@@ -21,114 +21,104 @@ same type, then apply lemmas like `monoid_hom.map_div`, `monoid_hom.map_pow` etc
 monoid, group, extensionality
 -/
 
+
 universe u
 
 @[ext, to_additive]
-lemma monoid.ext {M : Type u} ⦃m₁ m₂ : monoid M⦄ (h_mul : m₁.mul = m₂.mul) : m₁ = m₂ :=
-begin
-  have h₁ : (@monoid.to_mul_one_class _ m₁).one = (@monoid.to_mul_one_class _ m₂).one,
-    from congr_arg (@mul_one_class.one M) (mul_one_class.ext h_mul),
-  set f : @monoid_hom M M (@monoid.to_mul_one_class _ m₁) (@monoid.to_mul_one_class _ m₂) :=
-    { to_fun := id, map_one' := h₁, map_mul' := λ x y, congr_fun (congr_fun h_mul x) y },
-  have hpow : m₁.npow = m₂.npow, by { ext n x, exact @monoid_hom.map_pow M M m₁ m₂ f x n },
-  unfreezingI { cases m₁, cases m₂ },
-  congr; assumption
-end
+theorem Monoidₓ.ext {M : Type u} ⦃m₁ m₂ : Monoidₓ M⦄ (h_mul : m₁.mul = m₂.mul) : m₁ = m₂ := by
+  have h₁ : (@Monoidₓ.toMulOneClass _ m₁).one = (@Monoidₓ.toMulOneClass _ m₂).one :=
+    congr_argₓ (@MulOneClassₓ.one M) (MulOneClassₓ.ext h_mul)
+  set f : @MonoidHom M M (@Monoidₓ.toMulOneClass _ m₁) (@Monoidₓ.toMulOneClass _ m₂) :=
+    { toFun := id, map_one' := h₁, map_mul' := fun x y => congr_funₓ (congr_funₓ h_mul x) y }
+  have hpow : m₁.npow = m₂.npow := by
+    ext n x
+    exact @MonoidHom.map_pow M M m₁ m₂ f x n
+  cases m₁
+  cases m₂
+  congr <;> assumption
 
 @[to_additive]
-lemma comm_monoid.to_monoid_injective {M : Type u} :
-  function.injective (@comm_monoid.to_monoid M) :=
-begin
-  rintros ⟨⟩ ⟨⟩ h,
-  congr'; injection h,
-end
+theorem CommMonoidₓ.to_monoid_injective {M : Type u} : Function.Injective (@CommMonoidₓ.toMonoid M) := by
+  rintro ⟨⟩ ⟨⟩ h
+  congr <;> injection h
 
 @[ext, to_additive]
-lemma comm_monoid.ext {M : Type*} ⦃m₁ m₂ : comm_monoid M⦄ (h_mul : m₁.mul = m₂.mul) : m₁ = m₂ :=
-comm_monoid.to_monoid_injective $ monoid.ext h_mul
+theorem CommMonoidₓ.ext {M : Type _} ⦃m₁ m₂ : CommMonoidₓ M⦄ (h_mul : m₁.mul = m₂.mul) : m₁ = m₂ :=
+  CommMonoidₓ.to_monoid_injective <| Monoidₓ.ext h_mul
 
 @[to_additive]
-lemma left_cancel_monoid.to_monoid_injective {M : Type u} :
-  function.injective (@left_cancel_monoid.to_monoid M) :=
-begin
-  rintros ⟨⟩ ⟨⟩ h,
-  congr'; injection h,
-end
+theorem LeftCancelMonoid.to_monoid_injective {M : Type u} : Function.Injective (@LeftCancelMonoid.toMonoid M) := by
+  rintro ⟨⟩ ⟨⟩ h
+  congr <;> injection h
 
 @[ext, to_additive]
-lemma left_cancel_monoid.ext {M : Type u} ⦃m₁ m₂ : left_cancel_monoid M⦄
-  (h_mul : m₁.mul = m₂.mul) : m₁ = m₂ :=
-left_cancel_monoid.to_monoid_injective $ monoid.ext h_mul
+theorem LeftCancelMonoid.ext {M : Type u} ⦃m₁ m₂ : LeftCancelMonoid M⦄ (h_mul : m₁.mul = m₂.mul) : m₁ = m₂ :=
+  LeftCancelMonoid.to_monoid_injective <| Monoidₓ.ext h_mul
 
 @[to_additive]
-lemma right_cancel_monoid.to_monoid_injective {M : Type u} :
-  function.injective (@right_cancel_monoid.to_monoid M) :=
-begin
-  rintros ⟨⟩ ⟨⟩ h,
-  congr'; injection h,
-end
+theorem RightCancelMonoid.to_monoid_injective {M : Type u} : Function.Injective (@RightCancelMonoid.toMonoid M) := by
+  rintro ⟨⟩ ⟨⟩ h
+  congr <;> injection h
 
 @[ext, to_additive]
-lemma right_cancel_monoid.ext {M : Type u} ⦃m₁ m₂ : right_cancel_monoid M⦄
-  (h_mul : m₁.mul = m₂.mul) : m₁ = m₂ :=
-right_cancel_monoid.to_monoid_injective $ monoid.ext h_mul
+theorem RightCancelMonoid.ext {M : Type u} ⦃m₁ m₂ : RightCancelMonoid M⦄ (h_mul : m₁.mul = m₂.mul) : m₁ = m₂ :=
+  RightCancelMonoid.to_monoid_injective <| Monoidₓ.ext h_mul
 
 @[to_additive]
-lemma cancel_monoid.to_left_cancel_monoid_injective {M : Type u} :
-  function.injective (@cancel_monoid.to_left_cancel_monoid M) :=
-begin
-  rintros ⟨⟩ ⟨⟩ h,
-  congr'; injection h,
-end
+theorem CancelMonoid.to_left_cancel_monoid_injective {M : Type u} :
+    Function.Injective (@CancelMonoid.toLeftCancelMonoid M) := by
+  rintro ⟨⟩ ⟨⟩ h
+  congr <;> injection h
 
 @[ext, to_additive]
-lemma cancel_monoid.ext {M : Type*} ⦃m₁ m₂ : cancel_monoid M⦄
-  (h_mul : m₁.mul = m₂.mul) : m₁ = m₂ :=
-cancel_monoid.to_left_cancel_monoid_injective $ left_cancel_monoid.ext h_mul
+theorem CancelMonoid.ext {M : Type _} ⦃m₁ m₂ : CancelMonoid M⦄ (h_mul : m₁.mul = m₂.mul) : m₁ = m₂ :=
+  CancelMonoid.to_left_cancel_monoid_injective <| LeftCancelMonoid.ext h_mul
 
 @[to_additive]
-lemma cancel_comm_monoid.to_comm_monoid_injective {M : Type u} :
-  function.injective (@cancel_comm_monoid.to_comm_monoid M) :=
-begin
-  rintros ⟨⟩ ⟨⟩ h,
-  congr'; injection h,
-end
+theorem CancelCommMonoid.to_comm_monoid_injective {M : Type u} :
+    Function.Injective (@CancelCommMonoid.toCommMonoid M) := by
+  rintro ⟨⟩ ⟨⟩ h
+  congr <;> injection h
 
 @[ext, to_additive]
-lemma cancel_comm_monoid.ext {M : Type*} ⦃m₁ m₂ : cancel_comm_monoid M⦄
-  (h_mul : m₁.mul = m₂.mul) : m₁ = m₂ :=
-cancel_comm_monoid.to_comm_monoid_injective $ comm_monoid.ext h_mul
+theorem CancelCommMonoid.ext {M : Type _} ⦃m₁ m₂ : CancelCommMonoid M⦄ (h_mul : m₁.mul = m₂.mul) : m₁ = m₂ :=
+  CancelCommMonoid.to_comm_monoid_injective <| CommMonoidₓ.ext h_mul
 
 @[ext, to_additive]
-lemma div_inv_monoid.ext {M : Type*} ⦃m₁ m₂ : div_inv_monoid M⦄ (h_mul : m₁.mul = m₂.mul)
-  (h_inv : m₁.inv = m₂.inv) : m₁ = m₂ :=
-begin
-  have h₁ : (@div_inv_monoid.to_monoid _ m₁).one = (@div_inv_monoid.to_monoid _ m₂).one,
-    from congr_arg (@monoid.one M) (monoid.ext h_mul),
-  set f : @monoid_hom M M (by letI := m₁; apply_instance) (by letI := m₂; apply_instance) :=
-    { to_fun := id, map_one' := h₁, map_mul' := λ x y, congr_fun (congr_fun h_mul x) y },
-  have hpow : (@div_inv_monoid.to_monoid _ m₁).npow = (@div_inv_monoid.to_monoid _ m₂).npow :=
-    congr_arg (@monoid.npow M) (monoid.ext h_mul),
-  have hzpow : m₁.zpow = m₂.zpow,
-  { ext m x,
-    exact @monoid_hom.map_zpow' M M m₁ m₂ f (congr_fun h_inv) x m },
-  have hdiv : m₁.div = m₂.div,
-  { ext a b,
-    exact @monoid_hom.map_div' M M m₁ m₂ f (congr_fun h_inv) a b },
-  unfreezingI { cases m₁, cases m₂ },
-  congr, exacts [h_mul, h₁, hpow, h_inv, hdiv, hzpow]
-end
+theorem DivInvMonoidₓ.ext {M : Type _} ⦃m₁ m₂ : DivInvMonoidₓ M⦄ (h_mul : m₁.mul = m₂.mul) (h_inv : m₁.inv = m₂.inv) :
+    m₁ = m₂ := by
+  have h₁ : (@DivInvMonoidₓ.toMonoid _ m₁).one = (@DivInvMonoidₓ.toMonoid _ m₂).one :=
+    congr_argₓ (@Monoidₓ.one M) (Monoidₓ.ext h_mul)
+  set f :
+    @MonoidHom M M
+      (by
+        let this' := m₁ <;> infer_instance)
+      (by
+        let this' := m₂ <;> infer_instance) :=
+    { toFun := id, map_one' := h₁, map_mul' := fun x y => congr_funₓ (congr_funₓ h_mul x) y }
+  have hpow : (@DivInvMonoidₓ.toMonoid _ m₁).npow = (@DivInvMonoidₓ.toMonoid _ m₂).npow :=
+    congr_argₓ (@Monoidₓ.npow M) (Monoidₓ.ext h_mul)
+  have hzpow : m₁.zpow = m₂.zpow := by
+    ext m x
+    exact @MonoidHom.map_zpow' M M m₁ m₂ f (congr_funₓ h_inv) x m
+  have hdiv : m₁.div = m₂.div := by
+    ext a b
+    exact @MonoidHom.map_div' M M m₁ m₂ f (congr_funₓ h_inv) a b
+  cases m₁
+  cases m₂
+  congr
+  exacts[h_mul, h₁, hpow, h_inv, hdiv, hzpow]
 
 @[ext, to_additive]
-lemma group.ext {G : Type*} ⦃g₁ g₂ : group G⦄ (h_mul : g₁.mul = g₂.mul) : g₁ = g₂ :=
-begin
-  set f := @monoid_hom.mk' G G (by letI := g₁; apply_instance) g₂ id
-    (λ a b, congr_fun (congr_fun h_mul a) b),
-  exact group.to_div_inv_monoid_injective (div_inv_monoid.ext h_mul
-    (funext $ @monoid_hom.map_inv G G g₁ g₂ f))
-end
+theorem Groupₓ.ext {G : Type _} ⦃g₁ g₂ : Groupₓ G⦄ (h_mul : g₁.mul = g₂.mul) : g₁ = g₂ := by
+  set f :=
+    @MonoidHom.mk' G G
+      (by
+        let this' := g₁ <;> infer_instance)
+      g₂ id fun a b => congr_funₓ (congr_funₓ h_mul a) b
+  exact Groupₓ.to_div_inv_monoid_injective (DivInvMonoidₓ.ext h_mul (funext <| @MonoidHom.map_inv G G g₁ g₂ f))
 
 @[ext, to_additive]
-lemma comm_group.ext {G : Type*} ⦃g₁ g₂ : comm_group G⦄
-  (h_mul : g₁.mul = g₂.mul) : g₁ = g₂ :=
-comm_group.to_group_injective $ group.ext h_mul
+theorem CommGroupₓ.ext {G : Type _} ⦃g₁ g₂ : CommGroupₓ G⦄ (h_mul : g₁.mul = g₂.mul) : g₁ = g₂ :=
+  CommGroupₓ.to_group_injective <| Groupₓ.ext h_mul
+

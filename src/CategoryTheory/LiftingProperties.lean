@@ -3,8 +3,8 @@ Copyright (c) 2021 Jakob Scholbach. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jakob Scholbach
 -/
-import category_theory.limits.shapes.terminal
-import category_theory.arrow
+import Mathbin.CategoryTheory.Limits.Shapes.Terminal
+import Mathbin.CategoryTheory.Arrow
 
 /-!
 # Lifting properties
@@ -27,39 +27,42 @@ property with respect to arrows in a given diagram.
 lifting property
 -/
 
-open category_theory.limits
 
-namespace category_theory
+open CategoryTheory.Limits
 
-universes v u v₁
-variables {C : Type u} [category.{v} C]
-variables {D : Type v₁}
+namespace CategoryTheory
 
-variables {X Y Z : C}
+universe v u v₁
+
+variable {C : Type u} [Category.{v} C]
+
+variable {D : Type v₁}
+
+variable {X Y Z : C}
 
 /-- The lifting property of a morphism `i` with respect to a morphism `p`.
 This can be interpreted as the right lifting property of `i` with respect to `p`,
 or the left lifting property of `p` with respect to `i`. -/
-class has_lifting_property (i p : arrow C) : Prop :=
-(sq_has_lift : ∀ (sq : i ⟶ p), arrow.has_lift sq)
+class HasLiftingProperty (i p : Arrow C) : Prop where
+  sq_has_lift : ∀ sq : i ⟶ p, Arrow.HasLift sq
 
-@[priority 100] -- see Note [lower instance priority]
-instance has_lifting_property' {i p : arrow C} [has_lifting_property i p] (sq : i ⟶ p) :
-  arrow.has_lift sq :=
-has_lifting_property.sq_has_lift sq
+-- see Note [lower instance priority]
+instance (priority := 100) has_lifting_property' {i p : Arrow C} [HasLiftingProperty i p] (sq : i ⟶ p) :
+    Arrow.HasLift sq :=
+  HasLiftingProperty.sq_has_lift sq
 
 /-- Any isomorphism has the right lifting property with respect to any map.
 A    → X
 ↓i    ↓p≅
 B    → Y
 -/
-lemma iso_has_right_lifting_property (i : arrow C) (p : X ≅ Y) :
-  has_lifting_property i (arrow.mk p.hom) :=
-⟨λ sq, ⟨⟨{ lift := sq.right ≫ p.inv, }⟩⟩⟩ -- the lift is obtained by p⁻¹ ∘ (B → Y)
+theorem iso_has_right_lifting_property (i : Arrow C) (p : X ≅ Y) : HasLiftingProperty i (Arrow.mk p.Hom) :=
+  ⟨fun sq => ⟨⟨{ lift := sq.right ≫ p.inv }⟩⟩⟩
 
 /-- Any identity has the right lifting property with respect to any map. -/
-lemma id_has_right_lifting_property (i : arrow C) : has_lifting_property i (arrow.mk (𝟙 X)) :=
-iso_has_right_lifting_property i (iso.refl _)
+-- the lift is obtained by p⁻¹ ∘ (B → Y)
+theorem id_has_right_lifting_property (i : Arrow C) : HasLiftingProperty i (Arrow.mk (𝟙 X)) :=
+  iso_has_right_lifting_property i (Iso.refl _)
 
 /-- An equivalent characterization for right lifting with respect to a map `i` whose source is
 initial.
@@ -67,60 +70,58 @@ initial.
 ↓   ↓
 B → Y has a lifting iff there is a map B → X making the right part commute.
 -/
-lemma right_lifting_property_initial_iff (i p : arrow C) (h : is_initial i.left) :
-  has_lifting_property i p ↔ ∀ {e : i.right ⟶ p.right}, ∃ l : i.right ⟶ p.left, l ≫ p.hom = e :=
-begin
-  fsplit,
-  { introsI hlift e,
-    have comm : (is_initial.to h p.left) ≫ p.hom = i.hom ≫ e :=
-      is_initial.hom_ext h _ _,
-    use arrow.lift (arrow.hom_mk comm),
-    simp },
-  { refine λ hlift, ⟨λ sq, _⟩,
-    obtain ⟨l, hl⟩ : ∃ (l : i.right ⟶ p.left), l ≫ p.hom = sq.right := hlift,
-    exact arrow.has_lift.mk ⟨l, is_initial.hom_ext h _ _⟩, }
-end
+theorem right_lifting_property_initial_iff (i p : Arrow C) (h : IsInitial i.left) :
+    HasLiftingProperty i p ↔ ∀ {e : i.right ⟶ p.right}, ∃ l : i.right ⟶ p.left, l ≫ p.Hom = e := by
+  fconstructor
+  · intros hlift e
+    have comm : is_initial.to h p.left ≫ p.hom = i.hom ≫ e := is_initial.hom_ext h _ _
+    use arrow.lift (arrow.hom_mk comm)
+    simp
+    
+  · refine' fun hlift => ⟨fun sq => _⟩
+    obtain ⟨l, hl⟩ : ∃ l : i.right ⟶ p.left, l ≫ p.hom = sq.right := hlift
+    exact arrow.has_lift.mk ⟨l, is_initial.hom_ext h _ _⟩
+    
 
 /-- The condition of having the rlp with respect to a morphism `i` is stable under composition. -/
-lemma has_right_lifting_property_comp {i : arrow C} {f : X ⟶ Y} {g : Y ⟶ Z}
-  (hf : has_lifting_property i (arrow.mk f))
-  (hg : has_lifting_property i (arrow.mk g)) :
-  has_lifting_property i (arrow.mk (f ≫ g)) :=
-{ sq_has_lift := λ sq1,
-    -- construct a square i ⟶ f
-    let sq2 : i ⟶ (arrow.mk f) := ⟨sq1.left, arrow.lift (arrow.square_to_snd sq1)⟩ in
-    -- show that the lift of this square is a lift of i with respect to g ∘ f
-    ⟨⟨⟨(arrow.lift sq2 : _ ⟶ _), by simp⟩⟩⟩ }
+theorem has_right_lifting_property_comp {i : Arrow C} {f : X ⟶ Y} {g : Y ⟶ Z} (hf : HasLiftingProperty i (Arrow.mk f))
+    (hg : HasLiftingProperty i (Arrow.mk g)) : HasLiftingProperty i (Arrow.mk (f ≫ g)) :=
+  { sq_has_lift := fun sq1 =>
+      -- construct a square i ⟶ f
+      let sq2 : i ⟶ Arrow.mk f := ⟨sq1.left, Arrow.lift (Arrow.squareToSnd sq1)⟩
+      -- show that the lift of this square is a lift of i with respect to g ∘ f
+      ⟨⟨⟨(Arrow.lift sq2 : _ ⟶ _), by
+            simp ⟩⟩⟩ }
 
 /-- The objects of the subcategory `right_lifting_subcategory` are the ones in the
 underlying category. -/
-def right_lifting_subcat (R : Type u) := R
+def RightLiftingSubcat (R : Type u) :=
+  R
 
-instance right_lifting_subcat.inhabited  (R : Type u) [inhabited R] :
-  inhabited (right_lifting_subcat R) :=
-{ default := (default : R) }
+instance RightLiftingSubcat.inhabited (R : Type u) [Inhabited R] : Inhabited (RightLiftingSubcat R) where
+  default := (default : R)
 
 /-- The objects of the subcategory `right_lifting_subcategory` are the ones in the
 underlying category. -/
-def right_lifting_subcat.X {R : Type u} (x : right_lifting_subcat R) : R := x
+def RightLiftingSubcat.x {R : Type u} (x : RightLiftingSubcat R) : R :=
+  x
 
-lemma id_has_right_lifting_property' {F : D → arrow C} (X : C) :
-  ∀ i : D, has_lifting_property (F i) (arrow.mk (𝟙 X)) :=
-λ i, id_has_right_lifting_property (F i)
+theorem id_has_right_lifting_property' {F : D → Arrow C} (X : C) : ∀ i : D, HasLiftingProperty (F i) (Arrow.mk (𝟙 X)) :=
+  fun i => id_has_right_lifting_property (F i)
 
-lemma has_right_lifting_property_comp'
-  {F : D → arrow C} {f : X ⟶ Y} (hf : ∀ i : D, has_lifting_property (F i) (arrow.mk f))
-  {g : Y ⟶ Z} (hg : ∀ i : D, has_lifting_property (F i) (arrow.mk g)) :
-  ∀ i : D,  has_lifting_property (F i) (arrow.mk (f ≫ g)) :=
-λ i, has_right_lifting_property_comp (hf i) (hg i)
+theorem has_right_lifting_property_comp' {F : D → Arrow C} {f : X ⟶ Y}
+    (hf : ∀ i : D, HasLiftingProperty (F i) (Arrow.mk f)) {g : Y ⟶ Z}
+    (hg : ∀ i : D, HasLiftingProperty (F i) (Arrow.mk g)) : ∀ i : D, HasLiftingProperty (F i) (Arrow.mk (f ≫ g)) :=
+  fun i => has_right_lifting_property_comp (hf i) (hg i)
 
 /-- Given a set of arrows in C, indexed by `F : D → arrow C`,
 we construct the (non-full) subcategory of `C`
 spanned by those morphisms that have the right lifting property relative to all maps
 of the form `F i`, where `i` is any element in `D`. -/
-def right_lifting_subcategory (F : D → arrow C) : category (right_lifting_subcat C) :=
-{ hom := λ X Y, { p : X ⟶ Y // ∀ {i : D}, has_lifting_property (F i) (arrow.mk p) },
-  id := λ X, ⟨𝟙 X, id_has_right_lifting_property' X⟩,
-  comp := λ X Y Z f g, ⟨f.val ≫ g.val, has_right_lifting_property_comp' f.property g.property⟩ }
+def rightLiftingSubcategory (F : D → Arrow C) : Category (RightLiftingSubcat C) where
+  Hom := fun X Y => { p : X ⟶ Y // ∀ {i : D}, HasLiftingProperty (F i) (Arrow.mk p) }
+  id := fun X => ⟨𝟙 X, id_has_right_lifting_property' X⟩
+  comp := fun X Y Z f g => ⟨f.val ≫ g.val, has_right_lifting_property_comp' f.property g.property⟩
 
-end category_theory
+end CategoryTheory
+

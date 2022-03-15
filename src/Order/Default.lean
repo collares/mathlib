@@ -1,2 +1,3 @@
-import order.boolean_algebra
-import order.complete_lattice
+import Mathbin.Order.BooleanAlgebra
+import Mathbin.Order.CompleteLattice
+

@@ -3,12 +3,11 @@ Copyright (c) 2021 Frédéric Dupuis. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Frédéric Dupuis
 -/
-
-import analysis.normed.group.hom
-import analysis.normed_space.basic
-import analysis.normed_space.linear_isometry
-import algebra.star.self_adjoint
-import algebra.star.unitary
+import Mathbin.Analysis.Normed.Group.Hom
+import Mathbin.Analysis.NormedSpace.Basic
+import Mathbin.Analysis.NormedSpace.LinearIsometry
+import Mathbin.Algebra.Star.SelfAdjoint
+import Mathbin.Algebra.Star.Unitary
 
 /-!
 # Normed star rings and algebras
@@ -30,213 +29,243 @@ To get a C⋆-algebra `E` over field `𝕜`, use
 
 -/
 
-open_locale topological_space
 
-local postfix `⋆`:std.prec.max_plus := star
+open_locale TopologicalSpace
+
+-- mathport name: «expr ⋆»
+local postfix:max "⋆" => star
 
 /-- A normed star group is a normed group with a compatible `star` which is isometric. -/
-class normed_star_group (E : Type*) [normed_group E] [star_add_monoid E] : Prop :=
-(norm_star : ∀ {x : E}, ∥x⋆∥ = ∥x∥)
+class NormedStarGroup (E : Type _) [NormedGroup E] [StarAddMonoid E] : Prop where
+  norm_star : ∀ {x : E}, ∥x⋆∥ = ∥x∥
 
-export normed_star_group (norm_star)
+export NormedStarGroup (norm_star)
+
 attribute [simp] norm_star
 
-variables {𝕜 E α : Type*}
+variable {𝕜 E α : Type _}
 
-section normed_star_group
-variables [normed_group E] [star_add_monoid E] [normed_star_group E]
+section NormedStarGroup
+
+variable [NormedGroup E] [StarAddMonoid E] [NormedStarGroup E]
 
 /-- The `star` map in a normed star group is a normed group homomorphism. -/
-def star_normed_group_hom : normed_group_hom E E :=
-{ bound' := ⟨1, λ v, le_trans (norm_star.le) (one_mul _).symm.le⟩,
-  .. star_add_equiv }
+def starNormedGroupHom : NormedGroupHom E E :=
+  { starAddEquiv with bound' := ⟨1, fun v => le_transₓ norm_star.le (one_mulₓ _).symm.le⟩ }
 
 /-- The `star` map in a normed star group is an isometry -/
-lemma star_isometry : isometry (star : E → E) :=
-star_add_equiv.to_add_monoid_hom.isometry_of_norm (λ _, norm_star)
+theorem star_isometry : Isometry (star : E → E) :=
+  starAddEquiv.toAddMonoidHom.isometry_of_norm fun _ => norm_star
 
-lemma continuous_star : continuous (star : E → E) := star_isometry.continuous
+theorem continuous_star : Continuous (star : E → E) :=
+  star_isometry.Continuous
 
-lemma continuous_on_star {s : set E} : continuous_on star s := continuous_star.continuous_on
+theorem continuous_on_star {s : Set E} : ContinuousOn star s :=
+  continuous_star.ContinuousOn
 
-lemma continuous_at_star {x : E} : continuous_at star x := continuous_star.continuous_at
+theorem continuous_at_star {x : E} : ContinuousAt star x :=
+  continuous_star.ContinuousAt
 
-lemma continuous_within_at_star {s : set E} {x : E} : continuous_within_at star s x :=
-continuous_star.continuous_within_at
+theorem continuous_within_at_star {s : Set E} {x : E} : ContinuousWithinAt star s x :=
+  continuous_star.ContinuousWithinAt
 
-lemma tendsto_star (x : E) : filter.tendsto star (𝓝 x) (𝓝 x⋆) := continuous_star.tendsto x
+theorem tendsto_star (x : E) : Filter.Tendsto star (𝓝 x) (𝓝 x⋆) :=
+  continuous_star.Tendsto x
 
-lemma filter.tendsto.star {f : α → E} {l : filter α} {y : E} (h : filter.tendsto f l (𝓝 y)) :
-  filter.tendsto (λ x, (f x)⋆) l (𝓝 y⋆) :=
-(continuous_star.tendsto y).comp h
+theorem Filter.Tendsto.star {f : α → E} {l : Filter α} {y : E} (h : Filter.Tendsto f l (𝓝 y)) :
+    Filter.Tendsto (fun x => (f x)⋆) l (𝓝 y⋆) :=
+  (continuous_star.Tendsto y).comp h
 
-variables [topological_space α]
+variable [TopologicalSpace α]
 
-lemma continuous.star {f : α → E} (hf : continuous f) : continuous (λ y, star (f y)) :=
-continuous_star.comp hf
+theorem Continuous.star {f : α → E} (hf : Continuous f) : Continuous fun y => star (f y) :=
+  continuous_star.comp hf
 
-lemma continuous_at.star {f : α → E} {x : α} (hf : continuous_at f x) :
-  continuous_at (λ x, (f x)⋆) x :=
-continuous_at_star.comp hf
+theorem ContinuousAt.star {f : α → E} {x : α} (hf : ContinuousAt f x) : ContinuousAt (fun x => (f x)⋆) x :=
+  continuous_at_star.comp hf
 
-lemma continuous_on.star {f : α → E} {s : set α} (hf : continuous_on f s) :
-  continuous_on (λ x, (f x)⋆) s :=
-continuous_star.comp_continuous_on hf
+theorem ContinuousOn.star {f : α → E} {s : Set α} (hf : ContinuousOn f s) : ContinuousOn (fun x => (f x)⋆) s :=
+  continuous_star.comp_continuous_on hf
 
-lemma continuous_within_at.star {f : α → E} {s : set α} {x : α}
-  (hf : continuous_within_at f s x) : continuous_within_at (λ x, (f x)⋆) s x := hf.star
+theorem ContinuousWithinAt.star {f : α → E} {s : Set α} {x : α} (hf : ContinuousWithinAt f s x) :
+    ContinuousWithinAt (fun x => (f x)⋆) s x :=
+  hf.star
 
-end normed_star_group
+end NormedStarGroup
 
-instance ring_hom_isometric.star_ring_end [normed_comm_ring E] [star_ring E]
-  [normed_star_group E] : ring_hom_isometric (star_ring_end E) :=
-⟨λ _, norm_star⟩
+instance RingHomIsometric.star_ring_end [NormedCommRing E] [StarRing E] [NormedStarGroup E] :
+    RingHomIsometric (starRingEnd E) :=
+  ⟨fun _ => norm_star⟩
 
 /-- A C*-ring is a normed star ring that satifies the stronger condition `∥x⋆ * x∥ = ∥x∥^2`
 for every `x`. -/
-class cstar_ring (E : Type*) [non_unital_normed_ring E] [star_ring E] : Prop :=
-(norm_star_mul_self : ∀ {x : E}, ∥x⋆ * x∥ = ∥x∥ * ∥x∥)
+class CstarRing (E : Type _) [NonUnitalNormedRing E] [StarRing E] : Prop where
+  norm_star_mul_self : ∀ {x : E}, ∥x⋆ * x∥ = ∥x∥ * ∥x∥
 
-instance : cstar_ring ℝ :=
-{ norm_star_mul_self := λ x, by simp only [star, id.def, norm_mul] }
+instance : CstarRing ℝ where
+  norm_star_mul_self := fun x => by
+    simp only [star, id.def, norm_mul]
 
-namespace cstar_ring
-section non_unital
+namespace CstarRing
 
-variables [non_unital_normed_ring E] [star_ring E] [cstar_ring E]
+section NonUnital
+
+variable [NonUnitalNormedRing E] [StarRing E] [CstarRing E]
 
 /-- In a C*-ring, star preserves the norm. -/
-@[priority 100] -- see Note [lower instance priority]
-instance to_normed_star_group : normed_star_group E :=
-⟨begin
-  intro x,
-  by_cases htriv : x = 0,
-  { simp only [htriv, star_zero] },
-  { have hnt : 0 < ∥x∥ := norm_pos_iff.mpr htriv,
-    have hnt_star : 0 < ∥x⋆∥ :=
-      norm_pos_iff.mpr ((add_equiv.map_ne_zero_iff star_add_equiv).mpr htriv),
-    have h₁ := calc
-      ∥x∥ * ∥x∥ = ∥x⋆ * x∥        : norm_star_mul_self.symm
-            ... ≤ ∥x⋆∥ * ∥x∥      : norm_mul_le _ _,
-    have h₂ := calc
-      ∥x⋆∥ * ∥x⋆∥ = ∥x * x⋆∥      : by rw [←norm_star_mul_self, star_star]
-             ... ≤ ∥x∥ * ∥x⋆∥     : norm_mul_le _ _,
-    exact le_antisymm (le_of_mul_le_mul_right h₂ hnt_star) (le_of_mul_le_mul_right h₁ hnt) },
-end⟩
+-- see Note [lower instance priority]
+instance (priority := 100) to_normed_star_group : NormedStarGroup E :=
+  ⟨by
+    intro x
+    by_cases' htriv : x = 0
+    · simp only [htriv, star_zero]
+      
+    · have hnt : 0 < ∥x∥ := norm_pos_iff.mpr htriv
+      have hnt_star : 0 < ∥x⋆∥ := norm_pos_iff.mpr ((AddEquiv.map_ne_zero_iff starAddEquiv).mpr htriv)
+      have h₁ :=
+        calc
+          ∥x∥ * ∥x∥ = ∥x⋆ * x∥ := norm_star_mul_self.symm
+          _ ≤ ∥x⋆∥ * ∥x∥ := norm_mul_le _ _
+          
+      have h₂ :=
+        calc
+          ∥x⋆∥ * ∥x⋆∥ = ∥x * x⋆∥ := by
+            rw [← norm_star_mul_self, star_star]
+          _ ≤ ∥x∥ * ∥x⋆∥ := norm_mul_le _ _
+          
+      exact le_antisymmₓ (le_of_mul_le_mul_right h₂ hnt_star) (le_of_mul_le_mul_right h₁ hnt)
+      ⟩
 
-lemma norm_self_mul_star {x : E} : ∥x * x⋆∥ = ∥x∥ * ∥x∥ :=
-by { nth_rewrite 0 [←star_star x], simp only [norm_star_mul_self, norm_star] }
+theorem norm_self_mul_star {x : E} : ∥x * x⋆∥ = ∥x∥ * ∥x∥ := by
+  nth_rw 0[← star_star x]
+  simp only [norm_star_mul_self, norm_star]
 
-lemma norm_star_mul_self' {x : E} : ∥x⋆ * x∥ = ∥x⋆∥ * ∥x∥ :=
-by rw [norm_star_mul_self, norm_star]
+theorem norm_star_mul_self' {x : E} : ∥x⋆ * x∥ = ∥x⋆∥ * ∥x∥ := by
+  rw [norm_star_mul_self, norm_star]
 
-lemma nnnorm_star_mul_self {x : E} : ∥x⋆ * x∥₊ = ∥x∥₊ * ∥x∥₊ :=
-subtype.ext norm_star_mul_self
+theorem nnnorm_star_mul_self {x : E} : ∥x⋆ * x∥₊ = ∥x∥₊ * ∥x∥₊ :=
+  Subtype.ext norm_star_mul_self
 
-end non_unital
+end NonUnital
 
-section unital
-variables [normed_ring E] [star_ring E] [cstar_ring E]
+section Unital
 
-@[simp] lemma norm_one [nontrivial E] : ∥(1 : E)∥ = 1 :=
-begin
-  have : 0 < ∥(1 : E)∥ := norm_pos_iff.mpr one_ne_zero,
-  rw [←mul_left_inj' this.ne', ←norm_star_mul_self, mul_one, star_one, one_mul],
-end
+variable [NormedRing E] [StarRing E] [CstarRing E]
 
-@[priority 100] -- see Note [lower instance priority]
-instance [nontrivial E] : norm_one_class E := ⟨norm_one⟩
+@[simp]
+theorem norm_one [Nontrivial E] : ∥(1 : E)∥ = 1 := by
+  have : 0 < ∥(1 : E)∥ := norm_pos_iff.mpr one_ne_zero
+  rw [← mul_left_inj' this.ne', ← norm_star_mul_self, mul_oneₓ, star_one, one_mulₓ]
 
-lemma norm_coe_unitary [nontrivial E] (U : unitary E) : ∥(U : E)∥ = 1 :=
-begin
-  rw [←sq_eq_sq (norm_nonneg _) zero_le_one, one_pow 2, sq, ←cstar_ring.norm_star_mul_self,
-    unitary.coe_star_mul_self, cstar_ring.norm_one],
-end
+-- see Note [lower instance priority]
+instance (priority := 100) [Nontrivial E] : NormOneClass E :=
+  ⟨norm_one⟩
 
-@[simp] lemma norm_of_mem_unitary [nontrivial E] {U : E} (hU : U ∈ unitary E) : ∥U∥ = 1 :=
-norm_coe_unitary ⟨U, hU⟩
+theorem norm_coe_unitary [Nontrivial E] (U : unitary E) : ∥(U : E)∥ = 1 := by
+  rw [← sq_eq_sq (norm_nonneg _) zero_le_one, one_pow 2, sq, ← CstarRing.norm_star_mul_self, unitary.coe_star_mul_self,
+    CstarRing.norm_one]
 
-@[simp] lemma norm_coe_unitary_mul (U : unitary E) (A : E) : ∥(U : E) * A∥ = ∥A∥ :=
-begin
-  nontriviality E,
-  refine le_antisymm _ _,
-  { calc _  ≤ ∥(U : E)∥ * ∥A∥     : norm_mul_le _ _
-        ... = ∥A∥                 : by rw [norm_coe_unitary, one_mul] },
-  { calc _ = ∥(U : E)⋆ * U * A∥         : by rw [unitary.coe_star_mul_self U, one_mul]
-       ... ≤ ∥(U : E)⋆∥ * ∥(U : E) * A∥ : by { rw [mul_assoc], exact norm_mul_le _ _ }
-       ... = ∥(U : E) * A∥              : by rw [norm_star, norm_coe_unitary, one_mul] },
-end
+@[simp]
+theorem norm_of_mem_unitary [Nontrivial E] {U : E} (hU : U ∈ unitary E) : ∥U∥ = 1 :=
+  norm_coe_unitary ⟨U, hU⟩
 
-@[simp] lemma norm_unitary_smul (U : unitary E) (A : E) : ∥U • A∥ = ∥A∥ :=
-norm_coe_unitary_mul U A
+@[simp]
+theorem norm_coe_unitary_mul (U : unitary E) (A : E) : ∥(U : E) * A∥ = ∥A∥ := by
+  nontriviality E
+  refine' le_antisymmₓ _ _
+  · calc _ ≤ ∥(U : E)∥ * ∥A∥ := norm_mul_le _ _ _ = ∥A∥ := by
+        rw [norm_coe_unitary, one_mulₓ]
+    
+  · calc _ = ∥(U : E)⋆ * U * A∥ := by
+        rw [unitary.coe_star_mul_self U, one_mulₓ]_ ≤ ∥(U : E)⋆∥ * ∥(U : E) * A∥ := by
+        rw [mul_assoc]
+        exact norm_mul_le _ _ _ = ∥(U : E) * A∥ := by
+        rw [norm_star, norm_coe_unitary, one_mulₓ]
+    
 
-lemma norm_mem_unitary_mul {U : E} (A : E) (hU : U ∈ unitary E) : ∥U * A∥ = ∥A∥ :=
-norm_coe_unitary_mul ⟨U, hU⟩ A
+@[simp]
+theorem norm_unitary_smul (U : unitary E) (A : E) : ∥U • A∥ = ∥A∥ :=
+  norm_coe_unitary_mul U A
 
-@[simp] lemma norm_mul_coe_unitary (A : E) (U : unitary E) : ∥A * U∥ = ∥A∥ :=
-calc _ = ∥((U : E)⋆ * A⋆)⋆∥ : by simp only [star_star, star_mul]
-  ...  = ∥(U : E)⋆ * A⋆∥    : by rw [norm_star]
-  ...  = ∥A⋆∥               : norm_mem_unitary_mul (star A) (unitary.star_mem U.prop)
-  ...  = ∥A∥                : norm_star
+theorem norm_mem_unitary_mul {U : E} (A : E) (hU : U ∈ unitary E) : ∥U * A∥ = ∥A∥ :=
+  norm_coe_unitary_mul ⟨U, hU⟩ A
 
-lemma norm_mul_mem_unitary (A : E) {U : E} (hU : U ∈ unitary E) : ∥A * U∥ = ∥A∥ :=
-norm_mul_coe_unitary A ⟨U, hU⟩
+@[simp]
+theorem norm_mul_coe_unitary (A : E) (U : unitary E) : ∥A * U∥ = ∥A∥ :=
+  calc
+    _ = ∥((U : E)⋆ * A⋆)⋆∥ := by
+      simp only [star_star, star_mul]
+    _ = ∥(U : E)⋆ * A⋆∥ := by
+      rw [norm_star]
+    _ = ∥A⋆∥ := norm_mem_unitary_mul (star A) (unitary.star_mem U.Prop)
+    _ = ∥A∥ := norm_star
+    
 
-end unital
-end cstar_ring
+theorem norm_mul_mem_unitary (A : E) {U : E} (hU : U ∈ unitary E) : ∥A * U∥ = ∥A∥ :=
+  norm_mul_coe_unitary A ⟨U, hU⟩
 
-lemma nnnorm_pow_two_pow_of_self_adjoint [normed_ring E] [star_ring E] [cstar_ring E]
-  {x : E} (hx : x ∈ self_adjoint E) (n : ℕ) : ∥x ^ 2 ^ n∥₊ = ∥x∥₊ ^ (2 ^ n) :=
-begin
-  induction n with k hk,
-  { simp only [pow_zero, pow_one] },
-  { rw [pow_succ, pow_mul', sq],
-    nth_rewrite 0 ←(self_adjoint.mem_iff.mp hx),
-    rw [←star_pow, cstar_ring.nnnorm_star_mul_self, ←sq, hk, pow_mul'] },
-end
+end Unital
 
-lemma self_adjoint.nnnorm_pow_two_pow [normed_ring E] [star_ring E] [cstar_ring E]
-  (x : self_adjoint E) (n : ℕ) : ∥x ^ 2 ^ n∥₊ = ∥x∥₊ ^ (2 ^ n) :=
-nnnorm_pow_two_pow_of_self_adjoint x.property _
+end CstarRing
+
+theorem nnnorm_pow_two_pow_of_self_adjoint [NormedRing E] [StarRing E] [CstarRing E] {x : E} (hx : x ∈ selfAdjoint E)
+    (n : ℕ) : ∥x ^ 2 ^ n∥₊ = ∥x∥₊ ^ 2 ^ n := by
+  induction' n with k hk
+  · simp only [pow_zeroₓ, pow_oneₓ]
+    
+  · rw [pow_succₓ, pow_mul', sq]
+    nth_rw 0[← self_adjoint.mem_iff.mp hx]
+    rw [← star_pow, CstarRing.nnnorm_star_mul_self, ← sq, hk, pow_mul']
+    
+
+theorem selfAdjoint.nnnorm_pow_two_pow [NormedRing E] [StarRing E] [CstarRing E] (x : selfAdjoint E) (n : ℕ) :
+    ∥x ^ 2 ^ n∥₊ = ∥x∥₊ ^ 2 ^ n :=
+  nnnorm_pow_two_pow_of_self_adjoint x.property _
 
 section starₗᵢ
 
-variables [comm_semiring 𝕜] [star_ring 𝕜] [normed_ring E] [star_ring E] [normed_star_group E]
-variables [module 𝕜 E] [star_module 𝕜 E]
+variable [CommSemiringₓ 𝕜] [StarRing 𝕜] [NormedRing E] [StarRing E] [NormedStarGroup E]
 
-variables (𝕜)
+variable [Module 𝕜 E] [StarModule 𝕜 E]
+
+variable (𝕜)
+
 /-- `star` bundled as a linear isometric equivalence -/
 def starₗᵢ : E ≃ₗᵢ⋆[𝕜] E :=
-{ map_smul' := star_smul,
-  norm_map' := λ x, norm_star,
-  .. star_add_equiv }
+  { starAddEquiv with map_smul' := star_smul, norm_map' := fun x => norm_star }
 
-variables {𝕜}
+variable {𝕜}
 
-@[simp] lemma coe_starₗᵢ : (starₗᵢ 𝕜 : E → E) = star := rfl
+@[simp]
+theorem coe_starₗᵢ : (starₗᵢ 𝕜 : E → E) = star :=
+  rfl
 
-lemma starₗᵢ_apply {x : E} : starₗᵢ 𝕜 x = star x := rfl
+theorem starₗᵢ_apply {x : E} : starₗᵢ 𝕜 x = star x :=
+  rfl
 
 end starₗᵢ
 
-section matrix
+section Matrix
 
-local attribute [instance] matrix.normed_group
+attribute [local instance] Matrix.normedGroup
 
-open_locale matrix
+open_locale Matrix
 
-@[simp] lemma matrix.entrywise_sup_norm_star_eq_norm {n : Type*} [normed_ring E] [star_add_monoid E]
-  [normed_star_group E] [fintype n] (M : (matrix n n E)) : ∥star M∥ = ∥M∥ :=
-begin
-  refine le_antisymm (by simp [norm_matrix_le_iff, M.norm_entry_le_entrywise_sup_norm]) _,
-  refine ((norm_matrix_le_iff (norm_nonneg _)).mpr (λ i j, _)).trans
-    (congr_arg _ M.star_eq_conj_transpose).ge,
-  exact (normed_star_group.norm_star).symm.le.trans Mᴴ.norm_entry_le_entrywise_sup_norm
-end
+@[simp]
+theorem Matrix.entrywise_sup_norm_star_eq_norm {n : Type _} [NormedRing E] [StarAddMonoid E] [NormedStarGroup E]
+    [Fintype n] (M : Matrix n n E) : ∥star M∥ = ∥M∥ := by
+  refine'
+    le_antisymmₓ
+      (by
+        simp [norm_matrix_le_iff, M.norm_entry_le_entrywise_sup_norm])
+      _
+  refine' ((norm_matrix_le_iff (norm_nonneg _)).mpr fun i j => _).trans (congr_argₓ _ M.star_eq_conj_transpose).Ge
+  exact NormedStarGroup.norm_star.symm.le.trans Mᴴ.norm_entry_le_entrywise_sup_norm
 
-@[priority 100] -- see Note [lower instance priority]
-instance matrix.to_normed_star_group {n : Type*} [normed_ring E] [star_add_monoid E]
-  [normed_star_group E] [fintype n] : normed_star_group (matrix n n E) :=
-⟨matrix.entrywise_sup_norm_star_eq_norm⟩
+-- see Note [lower instance priority]
+instance (priority := 100) Matrix.to_normed_star_group {n : Type _} [NormedRing E] [StarAddMonoid E] [NormedStarGroup E]
+    [Fintype n] : NormedStarGroup (Matrix n n E) :=
+  ⟨Matrix.entrywise_sup_norm_star_eq_norm⟩
 
-end matrix
+end Matrix
+

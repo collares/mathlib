@@ -3,9 +3,8 @@ Copyright (c) 2021 Yury Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury Kudryashov
 -/
-
-import algebra.big_operators.basic
-import data.finset.option
+import Mathbin.Algebra.BigOperators.Basic
+import Mathbin.Data.Finset.Option
 
 /-!
 # Lemmas about products and sums over finite sets in `option α`
@@ -14,23 +13,29 @@ In this file we prove formulas for products and sums over `finset.insert_none s`
 `finset.erase_none s`.
 -/
 
-open_locale big_operators
-open function
 
-namespace finset
+open_locale BigOperators
 
-variables {α M : Type*} [comm_monoid M]
+open Function
 
-@[simp, to_additive] lemma prod_insert_none (f : option α → M) (s : finset α) :
-  ∏ x in s.insert_none, f x = f none * ∏ x in s, f (some x) :=
-by simp [insert_none]
+namespace Finset
 
-@[to_additive] lemma prod_erase_none (f : α → M) (s : finset (option α)) :
-  ∏ x in s.erase_none, f x = ∏ x in s, option.elim x 1 f :=
-by classical;
-calc ∏ x in s.erase_none, f x = ∏ x in s.erase_none.map embedding.some, option.elim x 1 f :
-  (prod_map s.erase_none embedding.some (λ x, option.elim x 1 f)).symm
-... = ∏ x in s.erase none, option.elim x 1 f : by rw map_some_erase_none
-... = ∏ x in s, option.elim x 1 f : prod_erase _ rfl
+variable {α M : Type _} [CommMonoidₓ M]
 
-end finset
+@[simp, to_additive]
+theorem prod_insert_none (f : Option α → M) (s : Finset α) :
+    (∏ x in s.insertNone, f x) = f none * ∏ x in s, f (some x) := by
+  simp [insert_none]
+
+@[to_additive]
+theorem prod_erase_none (f : α → M) (s : Finset (Option α)) : (∏ x in s.eraseNone, f x) = ∏ x in s, Option.elim x 1 f :=
+  by
+  classical <;>
+    calc (∏ x in s.erase_none, f x) = ∏ x in s.erase_none.map embedding.some, Option.elim x 1 f :=
+        (prod_mapₓ s.erase_none embedding.some fun x =>
+            Option.elim x 1 f).symm _ = ∏ x in s.erase none, Option.elim x 1 f :=
+        by
+        rw [map_some_erase_none]_ = ∏ x in s, Option.elim x 1 f := prod_erase _ rfl
+
+end Finset
+

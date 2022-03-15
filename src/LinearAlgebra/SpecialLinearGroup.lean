@@ -3,8 +3,8 @@ Copyright (c) 2020 Anne Baanen. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Anne Baanen
 -/
-import linear_algebra.matrix.adjugate
-import linear_algebra.matrix.to_lin
+import Mathbin.LinearAlgebra.Matrix.Adjugate
+import Mathbin.LinearAlgebra.Matrix.ToLin
 
 /-!
 # The Special Linear group $SL(n, R)$
@@ -46,186 +46,219 @@ of a regular `↑` coercion.
 matrix group, group, matrix inverse
 -/
 
-namespace matrix
-universes u v
-open_locale matrix
-open linear_map
 
+namespace Matrix
+
+universe u v
+
+open_locale Matrix
+
+open LinearMap
 
 section
 
-variables (n : Type u) [decidable_eq n] [fintype n] (R : Type v) [comm_ring R]
+variable (n : Type u) [DecidableEq n] [Fintype n] (R : Type v) [CommRingₓ R]
 
 /-- `special_linear_group n R` is the group of `n` by `n` `R`-matrices with determinant equal to 1.
 -/
-def special_linear_group := { A : matrix n n R // A.det = 1 }
+def SpecialLinearGroup :=
+  { A : Matrix n n R // A.det = 1 }
 
 end
 
-localized "notation `SL(` n `,` R `)`:= matrix.special_linear_group (fin n) R" in matrix_groups
+-- mathport name: «exprSL( , )»
+localized [MatrixGroups] notation "SL(" n "," R ")" => Matrix.SpecialLinearGroup (Finₓ n) R
 
-namespace special_linear_group
+namespace SpecialLinearGroup
 
-variables {n : Type u} [decidable_eq n] [fintype n] {R : Type v} [comm_ring R]
+variable {n : Type u} [DecidableEq n] [Fintype n] {R : Type v} [CommRingₓ R]
 
-instance has_coe_to_matrix : has_coe (special_linear_group n R) (matrix n n R) :=
-⟨λ A, A.val⟩
+instance hasCoeToMatrix : Coe (SpecialLinearGroup n R) (Matrix n n R) :=
+  ⟨fun A => A.val⟩
 
+-- mathport name: «expr↑ₘ »
 /- In this file, Lean often has a hard time working out the values of `n` and `R` for an expression
 like `det ↑A`. Rather than writing `(A : matrix n n R)` everywhere in this file which is annoyingly
 verbose, or `A.val` which is not the simp-normal form for subtypes, we create a local notation
 `↑ₘA`. This notation references the local `n` and `R` variables, so is not valid as a global
 notation. -/
-local prefix `↑ₘ`:1024 := @coe _ (matrix n n R) _
+local prefix:1024 "↑ₘ" => @coe _ (Matrix n n R) _
 
-lemma ext_iff (A B : special_linear_group n R) : A = B ↔ (∀ i j, ↑ₘA i j = ↑ₘB i j) :=
-subtype.ext_iff.trans matrix.ext_iff.symm
+theorem ext_iff (A B : SpecialLinearGroup n R) : A = B ↔ ∀ i j, ↑ₘA i j = ↑ₘB i j :=
+  Subtype.ext_iff.trans Matrix.ext_iff.symm
 
-@[ext] lemma ext (A B : special_linear_group n R) : (∀ i j, ↑ₘA i j = ↑ₘB i j) → A = B :=
-(special_linear_group.ext_iff A B).mpr
+@[ext]
+theorem ext (A B : SpecialLinearGroup n R) : (∀ i j, ↑ₘA i j = ↑ₘB i j) → A = B :=
+  (SpecialLinearGroup.ext_iff A B).mpr
 
-instance has_inv : has_inv (special_linear_group n R) :=
-⟨λ A, ⟨adjugate A, by rw [det_adjugate, A.prop, one_pow]⟩⟩
+instance hasInv : Inv (SpecialLinearGroup n R) :=
+  ⟨fun A =>
+    ⟨adjugate A, by
+      rw [det_adjugate, A.prop, one_pow]⟩⟩
 
-instance has_mul : has_mul (special_linear_group n R) :=
-⟨λ A B, ⟨A.1 ⬝ B.1, by erw [det_mul, A.2, B.2, one_mul]⟩⟩
+instance hasMul : Mul (SpecialLinearGroup n R) :=
+  ⟨fun A B =>
+    ⟨A.1 ⬝ B.1, by
+      erw [det_mul, A.2, B.2, one_mulₓ]⟩⟩
 
-instance has_one : has_one (special_linear_group n R) :=
-⟨⟨1, det_one⟩⟩
+instance hasOne : One (SpecialLinearGroup n R) :=
+  ⟨⟨1, det_one⟩⟩
 
-instance : has_pow (special_linear_group n R) ℕ :=
-{ pow := λ x n, ⟨x ^ n, (det_pow _ _).trans $ x.prop.symm ▸ one_pow _⟩}
+instance : Pow (SpecialLinearGroup n R) ℕ where
+  pow := fun x n => ⟨x ^ n, (det_pow _ _).trans <| x.Prop.symm ▸ one_pow _⟩
 
-instance : inhabited (special_linear_group n R) := ⟨1⟩
+instance : Inhabited (SpecialLinearGroup n R) :=
+  ⟨1⟩
 
-section coe_lemmas
+section CoeLemmas
 
-variables (A B : special_linear_group n R)
+variable (A B : SpecialLinearGroup n R)
 
-@[simp] lemma coe_mk (A : matrix n n R) (h : det A = 1) :
-  ↑(⟨A, h⟩ : special_linear_group n R) = A :=
-rfl
+@[simp]
+theorem coe_mk (A : Matrix n n R) (h : det A = 1) : ↑(⟨A, h⟩ : SpecialLinearGroup n R) = A :=
+  rfl
 
-@[simp] lemma coe_inv : ↑ₘ(A⁻¹) = adjugate A := rfl
+@[simp]
+theorem coe_inv : ↑ₘA⁻¹ = adjugate A :=
+  rfl
 
-@[simp] lemma coe_mul : ↑ₘ(A * B) = ↑ₘA ⬝ ↑ₘB := rfl
+@[simp]
+theorem coe_mul : ↑ₘ(A * B) = ↑ₘA ⬝ ↑ₘB :=
+  rfl
 
-@[simp] lemma coe_one : ↑ₘ(1 : special_linear_group n R) = (1 : matrix n n R) := rfl
+@[simp]
+theorem coe_one : ↑ₘ(1 : SpecialLinearGroup n R) = (1 : Matrix n n R) :=
+  rfl
 
-@[simp] lemma det_coe : det ↑ₘA = 1 := A.2
+@[simp]
+theorem det_coe : det ↑ₘA = 1 :=
+  A.2
 
-@[simp] lemma coe_pow (m : ℕ) : ↑ₘ(A ^ m) = ↑ₘA ^ m := rfl
+@[simp]
+theorem coe_pow (m : ℕ) : ↑ₘ(A ^ m) = ↑ₘA ^ m :=
+  rfl
 
-lemma det_ne_zero [nontrivial R] (g : special_linear_group n R) :
-  det ↑ₘg ≠ 0 :=
-by { rw g.det_coe, norm_num }
+theorem det_ne_zero [Nontrivial R] (g : SpecialLinearGroup n R) : det ↑ₘg ≠ 0 := by
+  rw [g.det_coe]
+  norm_num
 
-lemma row_ne_zero [nontrivial R] (g : special_linear_group n R) (i : n):
-  ↑ₘg i ≠ 0 :=
-λ h, g.det_ne_zero $ det_eq_zero_of_row_eq_zero i $ by simp [h]
+theorem row_ne_zero [Nontrivial R] (g : SpecialLinearGroup n R) (i : n) : ↑ₘg i ≠ 0 := fun h =>
+  g.det_ne_zero <|
+    det_eq_zero_of_row_eq_zero i <| by
+      simp [h]
 
-end coe_lemmas
+end CoeLemmas
 
-instance : monoid (special_linear_group n R) :=
-function.injective.monoid coe subtype.coe_injective coe_one coe_mul coe_pow
+instance : Monoidₓ (SpecialLinearGroup n R) :=
+  Function.Injective.monoid coe Subtype.coe_injective coe_one coe_mul coe_pow
 
-instance : group (special_linear_group n R) :=
-{ mul_left_inv := λ A, by { ext1, simp [adjugate_mul] },
-  ..special_linear_group.monoid,
-  ..special_linear_group.has_inv }
+instance : Groupₓ (SpecialLinearGroup n R) :=
+  { SpecialLinearGroup.monoid, SpecialLinearGroup.hasInv with
+    mul_left_inv := fun A => by
+      ext1
+      simp [adjugate_mul] }
 
 /-- A version of `matrix.to_lin' A` that produces linear equivalences. -/
-def to_lin' : special_linear_group n R →* (n → R) ≃ₗ[R] (n → R) :=
-{ to_fun := λ A, linear_equiv.of_linear (matrix.to_lin' ↑ₘA) (matrix.to_lin' ↑ₘ(A⁻¹))
-    (by rw [←to_lin'_mul, ←coe_mul, mul_right_inv, coe_one, to_lin'_one])
-    (by rw [←to_lin'_mul, ←coe_mul, mul_left_inv, coe_one, to_lin'_one]),
-  map_one' := linear_equiv.to_linear_map_injective matrix.to_lin'_one,
-  map_mul' := λ A B, linear_equiv.to_linear_map_injective $ matrix.to_lin'_mul A B }
+def toLin' : SpecialLinearGroup n R →* (n → R) ≃ₗ[R] n → R where
+  toFun := fun A =>
+    LinearEquiv.ofLinear (Matrix.toLin' ↑ₘA) (Matrix.toLin' ↑ₘA⁻¹)
+      (by
+        rw [← to_lin'_mul, ← coe_mul, mul_right_invₓ, coe_one, to_lin'_one])
+      (by
+        rw [← to_lin'_mul, ← coe_mul, mul_left_invₓ, coe_one, to_lin'_one])
+  map_one' := LinearEquiv.to_linear_map_injective Matrix.to_lin'_one
+  map_mul' := fun A B => LinearEquiv.to_linear_map_injective <| Matrix.to_lin'_mul A B
 
-lemma to_lin'_apply (A : special_linear_group n R) (v : n → R) :
-  special_linear_group.to_lin' A v = matrix.to_lin' ↑ₘA v := rfl
+theorem to_lin'_apply (A : SpecialLinearGroup n R) (v : n → R) :
+    SpecialLinearGroup.toLin' A v = Matrix.toLin' (↑ₘA) v :=
+  rfl
 
-lemma to_lin'_to_linear_map (A : special_linear_group n R) :
-  ↑(special_linear_group.to_lin' A) = matrix.to_lin' ↑ₘA := rfl
+theorem to_lin'_to_linear_map (A : SpecialLinearGroup n R) : ↑(SpecialLinearGroup.toLin' A) = Matrix.toLin' ↑ₘA :=
+  rfl
 
-lemma to_lin'_symm_apply (A : special_linear_group n R) (v : n → R) :
-  A.to_lin'.symm v = matrix.to_lin' ↑ₘ(A⁻¹) v := rfl
+theorem to_lin'_symm_apply (A : SpecialLinearGroup n R) (v : n → R) : A.toLin'.symm v = Matrix.toLin' (↑ₘA⁻¹) v :=
+  rfl
 
-lemma to_lin'_symm_to_linear_map (A : special_linear_group n R) :
-  ↑(A.to_lin'.symm) = matrix.to_lin' ↑ₘ(A⁻¹) := rfl
+theorem to_lin'_symm_to_linear_map (A : SpecialLinearGroup n R) : ↑A.toLin'.symm = Matrix.toLin' ↑ₘA⁻¹ :=
+  rfl
 
-lemma to_lin'_injective :
-  function.injective ⇑(to_lin' : special_linear_group n R →* (n → R) ≃ₗ[R] (n → R)) :=
-λ A B h, subtype.coe_injective $ matrix.to_lin'.injective $
-  linear_equiv.to_linear_map_injective.eq_iff.mpr h
+theorem to_lin'_injective : Function.Injective ⇑(toLin' : SpecialLinearGroup n R →* (n → R) ≃ₗ[R] n → R) := fun A B h =>
+  Subtype.coe_injective <| Matrix.toLin'.Injective <| LinearEquiv.to_linear_map_injective.eq_iff.mpr h
 
 /-- `to_GL` is the map from the special linear group to the general linear group -/
-def to_GL : special_linear_group n R →* general_linear_group R (n → R) :=
-(general_linear_group.general_linear_equiv _ _).symm.to_monoid_hom.comp to_lin'
+def toGL : SpecialLinearGroup n R →* GeneralLinearGroup R (n → R) :=
+  (GeneralLinearGroup.generalLinearEquiv _ _).symm.toMonoidHom.comp toLin'
 
-lemma coe_to_GL (A : special_linear_group n R) : ↑A.to_GL = A.to_lin'.to_linear_map := rfl
+theorem coe_to_GL (A : SpecialLinearGroup n R) : ↑A.toGL = A.toLin'.toLinearMap :=
+  rfl
 
-variables {S : Type*} [comm_ring S]
+variable {S : Type _} [CommRingₓ S]
 
 /-- A ring homomorphism from `R` to `S` induces a group homomorphism from
 `special_linear_group n R` to `special_linear_group n S`. -/
-@[simps] def map (f : R →+* S) : special_linear_group n R →* special_linear_group n S :=
-{ to_fun := λ g, ⟨f.map_matrix ↑g, by { rw ← f.map_det, simp [g.2] }⟩,
-  map_one' := subtype.ext $ f.map_matrix.map_one,
-  map_mul' := λ x y, subtype.ext $ f.map_matrix.map_mul x y }
+@[simps]
+def map (f : R →+* S) : SpecialLinearGroup n R →* SpecialLinearGroup n S where
+  toFun := fun g =>
+    ⟨f.mapMatrix ↑g, by
+      rw [← f.map_det]
+      simp [g.2]⟩
+  map_one' := Subtype.ext <| f.mapMatrix.map_one
+  map_mul' := fun x y => Subtype.ext <| f.mapMatrix.map_mul x y
 
 section cast
 
 /-- Coercion of SL `n` `ℤ` to SL `n` `R` for a commutative ring `R`. -/
-instance : has_coe (special_linear_group n ℤ) (special_linear_group n R) :=
-⟨λ x, map (int.cast_ring_hom R) x⟩
+instance : Coe (SpecialLinearGroup n ℤ) (SpecialLinearGroup n R) :=
+  ⟨fun x => map (Int.castRingHom R) x⟩
 
-@[simp] lemma coe_matrix_coe (g : special_linear_group n ℤ) :
-  ↑(g : special_linear_group n R)
-  = (↑g : matrix n n ℤ).map (int.cast_ring_hom R) :=
-map_apply_coe (int.cast_ring_hom R) g
+@[simp]
+theorem coe_matrix_coe (g : SpecialLinearGroup n ℤ) :
+    ↑(g : SpecialLinearGroup n R) = (↑g : Matrix n n ℤ).map (Int.castRingHom R) :=
+  map_apply_coe (Int.castRingHom R) g
 
 end cast
 
-section has_neg
+section Neg
 
-variables [fact (even (fintype.card n))]
+variable [Fact (Even (Fintype.card n))]
 
 /-- Formal operation of negation on special linear group on even cardinality `n` given by negating
 each element. -/
-instance : has_neg (special_linear_group n R) :=
-⟨λ g,
-  ⟨- g, by simpa [nat.neg_one_pow_of_even (fact.out (even (fintype.card n))), g.det_coe] using
-  det_smul ↑ₘg (-1)⟩⟩
-
-@[simp] lemma coe_neg (g : special_linear_group n R) :
-  ↑(- g) = - (↑g : matrix n n R) :=
-rfl
-
-instance : has_distrib_neg (special_linear_group n R) :=
-{ neg := has_neg.neg,
-  neg_neg := λ x, subtype.ext $ neg_neg _,
-  neg_mul := λ x y, subtype.ext $ neg_mul _ _,
-  mul_neg := λ x y, subtype.ext $ mul_neg _ _ }
-
-@[simp] lemma coe_int_neg (g : (special_linear_group n ℤ)) :
-  ↑(-g) = (-↑g : special_linear_group n R) :=
-subtype.ext $ (@ring_hom.map_matrix n _ _ _ _ _ _ (int.cast_ring_hom R)).map_neg ↑g
-
-end has_neg
-
--- this section should be last to ensure we do not use it in lemmas
-section coe_fn_instance
-
-/-- This instance is here for convenience, but is not the simp-normal form. -/
-instance : has_coe_to_fun (special_linear_group n R) (λ _, n → n → R) :=
-{ coe := λ A, A.val }
+instance : Neg (SpecialLinearGroup n R) :=
+  ⟨fun g =>
+    ⟨-g, by
+      simpa [Nat.neg_one_pow_of_even (Fact.out (Even (Fintype.card n))), g.det_coe] using det_smul (↑ₘg) (-1)⟩⟩
 
 @[simp]
-lemma coe_fn_eq_coe (s : special_linear_group n R) : ⇑s = ↑ₘs := rfl
+theorem coe_neg (g : SpecialLinearGroup n R) : ↑(-g) = -(↑g : Matrix n n R) :=
+  rfl
 
-end coe_fn_instance
+instance : HasDistribNeg (SpecialLinearGroup n R) where
+  neg := Neg.neg
+  neg_neg := fun x => Subtype.ext <| neg_negₓ _
+  neg_mul := fun x y => Subtype.ext <| neg_mul _ _
+  mul_neg := fun x y => Subtype.ext <| mul_neg _ _
 
-end special_linear_group
+@[simp]
+theorem coe_int_neg (g : SpecialLinearGroup n ℤ) : ↑(-g) = (-↑g : SpecialLinearGroup n R) :=
+  Subtype.ext <| (@RingHom.mapMatrix n _ _ _ _ _ _ (Int.castRingHom R)).map_neg ↑g
 
-end matrix
+end Neg
+
+-- this section should be last to ensure we do not use it in lemmas
+section CoeFnInstance
+
+/-- This instance is here for convenience, but is not the simp-normal form. -/
+instance : CoeFun (SpecialLinearGroup n R) fun _ => n → n → R where
+  coe := fun A => A.val
+
+@[simp]
+theorem coe_fn_eq_coe (s : SpecialLinearGroup n R) : ⇑s = ↑ₘs :=
+  rfl
+
+end CoeFnInstance
+
+end SpecialLinearGroup
+
+end Matrix
+

@@ -3,7 +3,7 @@ Copyright (c) 2019 Johannes Hölzl. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johannes Hölzl, Patrick Massot, Casper Putz, Anne Baanen
 -/
-import linear_algebra.matrix.to_lin
+import Mathbin.LinearAlgebra.Matrix.ToLin
 
 /-!
 # Diagonal matrices
@@ -16,79 +16,84 @@ diagonal matrix (`range`, `ker` and `rank`).
 matrix, diagonal, linear_map
 -/
 
-noncomputable theory
 
-open linear_map matrix set submodule
-open_locale big_operators
-open_locale matrix
+noncomputable section
 
-universes u v w
+open LinearMap Matrix Set Submodule
 
-namespace matrix
+open_locale BigOperators
 
-section comm_ring
+open_locale Matrix
 
-variables {n : Type*} [fintype n] [decidable_eq n] {R : Type v} [comm_ring R]
+universe u v w
 
-lemma proj_diagonal (i : n) (w : n → R) :
-  (proj i).comp (to_lin' (diagonal w)) = (w i) • proj i :=
-by ext j; simp [mul_vec_diagonal]
+namespace Matrix
 
-lemma diagonal_comp_std_basis (w : n → R) (i : n) :
-  (diagonal w).to_lin'.comp (linear_map.std_basis R (λ_:n, R) i) =
-  (w i) • linear_map.std_basis R (λ_:n, R) i :=
-begin
-  ext j,
-  simp_rw [linear_map.comp_apply, to_lin'_apply, mul_vec_diagonal, linear_map.smul_apply,
-           pi.smul_apply, algebra.id.smul_eq_mul],
-  by_cases i = j,
-  { subst h },
-  { rw [std_basis_ne R (λ_:n, R) _ _ (ne.symm h), _root_.mul_zero, _root_.mul_zero] }
-end
+section CommRingₓ
 
-lemma diagonal_to_lin' (w : n → R) :
-  (diagonal w).to_lin' = linear_map.pi (λi, w i • linear_map.proj i) :=
-by ext v j; simp [mul_vec_diagonal]
+variable {n : Type _} [Fintype n] [DecidableEq n] {R : Type v} [CommRingₓ R]
 
-end comm_ring
+theorem proj_diagonal (i : n) (w : n → R) : (proj i).comp (toLin' (diagonalₓ w)) = w i • proj i := by
+  ext j <;> simp [mul_vec_diagonal]
 
-section field
+theorem diagonal_comp_std_basis (w : n → R) (i : n) :
+    (diagonalₓ w).toLin'.comp (LinearMap.stdBasis R (fun _ : n => R) i) =
+      w i • LinearMap.stdBasis R (fun _ : n => R) i :=
+  by
+  ext j
+  simp_rw [LinearMap.comp_apply, to_lin'_apply, mul_vec_diagonal, LinearMap.smul_apply, Pi.smul_apply,
+    Algebra.id.smul_eq_mul]
+  by_cases' i = j
+  · subst h
+    
+  · rw [std_basis_ne R (fun _ : n => R) _ _ (Ne.symm h), _root_.mul_zero, _root_.mul_zero]
+    
 
-variables {m n : Type*} [fintype m] [fintype n]
-variables {K : Type u} [field K] -- maybe try to relax the universe constraint
+theorem diagonal_to_lin' (w : n → R) : (diagonalₓ w).toLin' = LinearMap.pi fun i => w i • LinearMap.proj i := by
+  ext v j <;> simp [mul_vec_diagonal]
 
-lemma ker_diagonal_to_lin' [decidable_eq m] (w : m → K) :
-  ker (diagonal w).to_lin' = (⨆i∈{i | w i = 0 }, range (linear_map.std_basis K (λi, K) i)) :=
-begin
-  rw [← comap_bot, ← infi_ker_proj, comap_infi],
-  have := λ i : m, ker_comp (to_lin' (diagonal w)) (proj i),
-  simp only [comap_infi, ← this, proj_diagonal, ker_smul'],
-  have : univ ⊆ {i : m | w i = 0} ∪ {i : m | w i = 0}ᶜ, { rw set.union_compl_self },
-  exact (supr_range_std_basis_eq_infi_ker_proj K (λi:m, K)
-    disjoint_compl_right this (finite.of_fintype _)).symm
-end
+end CommRingₓ
 
-lemma range_diagonal [decidable_eq m] (w : m → K) :
-  (diagonal w).to_lin'.range = (⨆ i ∈ {i | w i ≠ 0}, (linear_map.std_basis K (λi, K) i).range) :=
-begin
-  dsimp only [mem_set_of_eq],
-  rw [← map_top, ← supr_range_std_basis, map_supr],
-  congr, funext i,
-  rw [← linear_map.range_comp, diagonal_comp_std_basis, ← range_smul']
-end
+section Field
 
-lemma rank_diagonal [decidable_eq m] [decidable_eq K] (w : m → K) :
-  rank (diagonal w).to_lin' = fintype.card { i // w i ≠ 0 } :=
-begin
-  have hu : univ ⊆ {i : m | w i = 0}ᶜ ∪ {i : m | w i = 0}, { rw set.compl_union_self },
-  have hd : disjoint {i : m | w i ≠ 0} {i : m | w i = 0} := disjoint_compl_left,
-  have B₁ := supr_range_std_basis_eq_infi_ker_proj K (λi:m, K) hd hu (finite.of_fintype _),
-  have B₂ := @infi_ker_proj_equiv K _ _ (λi:m, K) _ _ _ _ (by simp; apply_instance) hd hu,
-  rw [rank, range_diagonal, B₁, ←@dim_fun' K],
-  apply linear_equiv.dim_eq,
-  apply B₂,
-end
+variable {m n : Type _} [Fintype m] [Fintype n]
 
-end field
+variable {K : Type u} [Field K]
 
-end matrix
+-- maybe try to relax the universe constraint
+theorem ker_diagonal_to_lin' [DecidableEq m] (w : m → K) :
+    ker (diagonalₓ w).toLin' = ⨆ i ∈ { i | w i = 0 }, Range (LinearMap.stdBasis K (fun i => K) i) := by
+  rw [← comap_bot, ← infi_ker_proj, comap_infi]
+  have := fun i : m => ker_comp (to_lin' (diagonal w)) (proj i)
+  simp only [comap_infi, ← this, proj_diagonal, ker_smul']
+  have : univ ⊆ { i : m | w i = 0 } ∪ { i : m | w i = 0 }ᶜ := by
+    rw [Set.union_compl_self]
+  exact (supr_range_std_basis_eq_infi_ker_proj K (fun i : m => K) disjoint_compl_right this (finite.of_fintype _)).symm
+
+theorem range_diagonal [DecidableEq m] (w : m → K) :
+    (diagonalₓ w).toLin'.range = ⨆ i ∈ { i | w i ≠ 0 }, (LinearMap.stdBasis K (fun i => K) i).range := by
+  dsimp only [mem_set_of_eq]
+  rw [← map_top, ← supr_range_std_basis, map_supr]
+  congr
+  funext i
+  rw [← LinearMap.range_comp, diagonal_comp_std_basis, ← range_smul']
+
+theorem rank_diagonal [DecidableEq m] [DecidableEq K] (w : m → K) :
+    rank (diagonalₓ w).toLin' = Fintype.card { i // w i ≠ 0 } := by
+  have hu : univ ⊆ { i : m | w i = 0 }ᶜ ∪ { i : m | w i = 0 } := by
+    rw [Set.compl_union_self]
+  have hd : Disjoint { i : m | w i ≠ 0 } { i : m | w i = 0 } := disjoint_compl_left
+  have B₁ := supr_range_std_basis_eq_infi_ker_proj K (fun i : m => K) hd hu (finite.of_fintype _)
+  have B₂ :=
+    @infi_ker_proj_equiv K _ _ (fun i : m => K) _ _ _ _
+      (by
+        simp <;> infer_instance)
+      hd hu
+  rw [rank, range_diagonal, B₁, ← @dim_fun' K]
+  apply LinearEquiv.dim_eq
+  apply B₂
+
+end Field
+
+end Matrix
+

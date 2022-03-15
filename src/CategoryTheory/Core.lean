@@ -3,10 +3,10 @@ Copyright (c) 2019 Scott Morrison All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import control.equiv_functor
-import category_theory.groupoid
-import category_theory.whiskering
-import category_theory.types
+import Mathbin.Control.EquivFunctor
+import Mathbin.CategoryTheory.Groupoid
+import Mathbin.CategoryTheory.Whiskering
+import Mathbin.CategoryTheory.Types
 
 /-!
 # The core of a category
@@ -20,70 +20,77 @@ Any functor `F` from a groupoid `G` into `C` factors through `core C`,
 but this is not functorial with respect to `F`.
 -/
 
-namespace category_theory
 
-universes v₁ v₂ u₁ u₂ -- morphism levels before object levels. See note [category_theory universes].
+namespace CategoryTheory
+
+universe v₁ v₂ u₁ u₂
 
 /-- The core of a category C is the groupoid whose morphisms are all the
 isomorphisms of C. -/
+-- morphism levels before object levels. See note [category_theory universes].
 @[nolint has_inhabited_instance]
-def core (C : Type u₁) := C
+def Core (C : Type u₁) :=
+  C
 
-variables {C : Type u₁} [category.{v₁} C]
+variable {C : Type u₁} [Category.{v₁} C]
 
-instance core_category : groupoid.{v₁} (core C) :=
-{ hom  := λ X Y : C, X ≅ Y,
-  inv  := λ X Y f, iso.symm f,
-  id   := λ X, iso.refl X,
-  comp := λ X Y Z f g, iso.trans f g }
+instance coreCategory : Groupoid.{v₁} (Core C) where
+  Hom := fun X Y : C => X ≅ Y
+  inv := fun X Y f => Iso.symm f
+  id := fun X => Iso.refl X
+  comp := fun X Y Z f g => Iso.trans f g
 
-namespace core
-@[simp] lemma id_hom (X : core C) : iso.hom (𝟙 X) = 𝟙 X := rfl
-@[simp] lemma comp_hom {X Y Z : core C} (f : X ⟶ Y) (g : Y ⟶ Z) : (f ≫ g).hom = f.hom ≫ g.hom :=
-rfl
+namespace Core
 
-variables (C)
+@[simp]
+theorem id_hom (X : Core C) : Iso.hom (𝟙 X) = 𝟙 X :=
+  rfl
+
+@[simp]
+theorem comp_hom {X Y Z : Core C} (f : X ⟶ Y) (g : Y ⟶ Z) : (f ≫ g).Hom = f.Hom ≫ g.Hom :=
+  rfl
+
+variable (C)
 
 /-- The core of a category is naturally included in the category. -/
-def inclusion : core C ⥤ C :=
-{ obj := id,
-  map := λ X Y f, f.hom }
+def inclusion : Core C ⥤ C where
+  obj := id
+  map := fun X Y f => f.Hom
 
-instance : faithful (inclusion C) := {}
+instance : Faithful (inclusion C) :=
+  {  }
 
-variables {C} {G : Type u₂} [groupoid.{v₂} G]
+variable {C} {G : Type u₂} [Groupoid.{v₂} G]
 
 /-- A functor from a groupoid to a category C factors through the core of C. -/
 -- Note that this function is not functorial
 -- (consider the two functors from [0] to [1], and the natural transformation between them).
-noncomputable
-def functor_to_core (F : G ⥤ C) : G ⥤ core C :=
-{ obj := λ X, F.obj X,
-  map := λ X Y f, ⟨F.map f, F.map (inv f)⟩ }
+noncomputable def functorToCore (F : G ⥤ C) : G ⥤ Core C where
+  obj := fun X => F.obj X
+  map := fun X Y f => ⟨F.map f, F.map (inv f)⟩
 
-/--
-We can functorially associate to any functor from a groupoid to the core of a category `C`,
+/-- We can functorially associate to any functor from a groupoid to the core of a category `C`,
 a functor from the groupoid to `C`, simply by composing with the embedding `core C ⥤ C`.
 -/
-def forget_functor_to_core : (G ⥤ core C) ⥤ (G ⥤ C) := (whiskering_right _ _ _).obj (inclusion C)
-end core
+def forgetFunctorToCore : (G ⥤ Core C) ⥤ G ⥤ C :=
+  (whiskeringRight _ _ _).obj (inclusion C)
 
-/--
-`of_equiv_functor m` lifts a type-level `equiv_functor`
+end Core
+
+/-- `of_equiv_functor m` lifts a type-level `equiv_functor`
 to a categorical functor `core (Type u₁) ⥤ core (Type u₂)`.
 -/
-def of_equiv_functor (m : Type u₁ → Type u₂) [equiv_functor m] :
-  core (Type u₁) ⥤ core (Type u₂) :=
-{ obj       := m,
-  map       := λ α β f, (equiv_functor.map_equiv m f.to_equiv).to_iso,
+def ofEquivFunctor (m : Type u₁ → Type u₂) [EquivFunctor m] : Core (Type u₁) ⥤ Core (Type u₂) where
+  obj := m
+  map := fun α β f => (EquivFunctor.mapEquiv m f.toEquiv).toIso
   -- These are not very pretty.
-  map_id' := λ α, begin ext, exact (congr_fun (equiv_functor.map_refl _) x), end,
-  map_comp' := λ α β γ f g,
-  begin
-    ext,
-    simp only [equiv_functor.map_equiv_apply, equiv.to_iso_hom,
-      function.comp_app, core.comp_hom, types_comp],
-    erw [iso.to_equiv_comp, equiv_functor.map_trans],
-  end, }
+  map_id' := fun α => by
+    ext
+    exact congr_funₓ (EquivFunctor.map_refl _) x
+  map_comp' := fun α β γ f g => by
+    ext
+    simp only [EquivFunctor.map_equiv_apply, Equivₓ.to_iso_hom, Function.comp_app, core.comp_hom, types_comp]
+    erw [iso.to_equiv_comp, EquivFunctor.map_trans]
 
-end category_theory
+end CategoryTheory
+

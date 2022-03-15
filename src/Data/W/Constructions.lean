@@ -3,7 +3,7 @@ Copyright (c) 2015 Joseph Hua. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Joseph Hua
 -/
-import data.W.basic
+import Mathbin.Data.W.Basic
 
 /-!
 # Examples of W-types
@@ -21,71 +21,92 @@ This file contains `nat` and `list` as examples of W types.
   `list γ`
 -/
 
-universes u v
 
-namespace W_type
+universe u v
 
-section nat
+namespace WType
+
+section Nat
 
 /-- The constructors for the naturals -/
-inductive nat_α : Type
-| zero : nat_α
-| succ : nat_α
+inductive Natα : Type
+  | zero : nat_α
+  | succ : nat_α
 
-instance : inhabited nat_α := ⟨ nat_α.zero ⟩
+instance : Inhabited Natα :=
+  ⟨Natα.zero⟩
 
 /-- The arity of the constructors for the naturals, `zero` takes no arguments, `succ` takes one -/
-def nat_β : nat_α → Type
-| nat_α.zero := empty
-| nat_α.succ := unit
+def Natβ : Natα → Type
+  | nat_α.zero => Empty
+  | nat_α.succ => Unit
 
-instance : inhabited (nat_β nat_α.succ) := ⟨ () ⟩
+instance : Inhabited (Natβ Natα.succ) :=
+  ⟨()⟩
 
 /-- The isomorphism from the naturals to its corresponding `W_type` -/
-@[simp] def of_nat : ℕ → W_type nat_β
-| nat.zero := ⟨ nat_α.zero , empty.elim ⟩
-| (nat.succ n) := ⟨ nat_α.succ , λ _ , of_nat n ⟩
+@[simp]
+def ofNat : ℕ → WType Natβ
+  | Nat.zero => ⟨Natα.zero, Empty.elimₓ⟩
+  | Nat.succ n => ⟨Natα.succ, fun _ => of_nat n⟩
 
 /-- The isomorphism from the `W_type` of the naturals to the naturals -/
-@[simp] def to_nat : W_type nat_β → ℕ
-| (W_type.mk nat_α.zero f) := 0
-| (W_type.mk nat_α.succ f) := (to_nat (f ())).succ
+@[simp]
+def toNat : WType Natβ → ℕ
+  | WType.mk nat_α.zero f => 0
+  | WType.mk nat_α.succ f => (to_nat (f ())).succ
 
-lemma left_inv_nat : function.left_inverse of_nat to_nat
-| (W_type.mk nat_α.zero f) := by { simp, tidy }
-| (W_type.mk nat_α.succ f) := by { simp, tidy }
+theorem left_inv_nat : Function.LeftInverse ofNat toNat
+  | WType.mk nat_α.zero f => by
+    simp
+    tidy
+  | WType.mk nat_α.succ f => by
+    simp
+    tidy
 
-lemma right_inv_nat : function.right_inverse of_nat to_nat
-| nat.zero := rfl
-| (nat.succ n) := by rw [of_nat, to_nat, right_inv_nat n]
+theorem right_inv_nat : Function.RightInverse ofNat toNat
+  | Nat.zero => rfl
+  | Nat.succ n => by
+    rw [of_nat, to_nat, right_inv_nat n]
 
 /-- The naturals are equivalent to their associated `W_type` -/
-def equiv_nat : W_type nat_β ≃ ℕ :=
-{ to_fun := to_nat,
-  inv_fun := of_nat,
-  left_inv := left_inv_nat,
-  right_inv := right_inv_nat }
+def equivNat : WType Natβ ≃ ℕ where
+  toFun := toNat
+  invFun := ofNat
+  left_inv := left_inv_nat
+  right_inv := right_inv_nat
 
-open sum punit
+open Sum PUnit
 
-/--
-`W_type.nat_α` is equivalent to `punit ⊕ punit`.
+/-- `W_type.nat_α` is equivalent to `punit ⊕ punit`.
 This is useful when considering the associated polynomial endofunctor.
 -/
-@[simps] def nat_α_equiv_punit_sum_punit : nat_α ≃ punit.{u + 1} ⊕ punit :=
-{ to_fun := λ c, match c with | nat_α.zero := inl star | nat_α.succ := inr star end,
-  inv_fun := λ b, match b with | inl x := nat_α.zero | inr x := nat_α.succ end,
-  left_inv := λ c, match c with | nat_α.zero := rfl | nat_α.succ := rfl end,
-  right_inv := λ b, match b with | inl star := rfl | inr star := rfl end }
+@[simps]
+def natαEquivPunitSumPunit : nat_α ≃ Sum PUnit.{u + 1} PUnit where
+  toFun := fun c =>
+    match c with
+    | nat_α.zero => inl unit
+    | nat_α.succ => inr unit
+  invFun := fun b =>
+    match b with
+    | inl x => Natα.zero
+    | inr x => Natα.succ
+  left_inv := fun c =>
+    match c with
+    | nat_α.zero => rfl
+    | nat_α.succ => rfl
+  right_inv := fun b =>
+    match b with
+    | inl star => rfl
+    | inr star => rfl
 
-end nat
+end Nat
 
-section list
+section List
 
 variable (γ : Type u)
 
-/--
-The constructors for lists.
+/-- The constructors for lists.
 There is "one constructor `cons x` for each `x : γ`",
 since we view `list γ` as
 ```
@@ -95,54 +116,72 @@ since we view `list γ` as
 |   ⋮      γ many times
 ```
 -/
-inductive list_α : Type u
-| nil : list_α
-| cons : γ → list_α
+inductive Listα : Type u
+  | nil : list_α
+  | cons : γ → list_α
 
-instance : inhabited (list_α γ) := ⟨ list_α.nil ⟩
+instance : Inhabited (Listα γ) :=
+  ⟨Listα.nil⟩
 
 /-- The arities of each constructor for lists, `nil` takes no arguments, `cons hd` takes one -/
-def list_β : list_α γ → Type u
-| list_α.nil := pempty
-| (list_α.cons hd) := punit
+def Listβ : Listα γ → Type u
+  | list_α.nil => Pempty
+  | list_α.cons hd => PUnit
 
-instance (hd : γ) : inhabited (list_β γ (list_α.cons hd)) := ⟨ punit.star ⟩
+instance (hd : γ) : Inhabited (Listβ γ (Listα.cons hd)) :=
+  ⟨PUnit.unit⟩
 
 /-- The isomorphism from lists to the `W_type` construction of lists -/
-@[simp] def of_list : list γ → W_type (list_β γ)
-| list.nil := ⟨ list_α.nil, pempty.elim ⟩
-| (list.cons hd tl) := ⟨ list_α.cons hd, λ _ , of_list tl ⟩
+@[simp]
+def ofList : List γ → WType (Listβ γ)
+  | List.nil => ⟨Listα.nil, Pempty.elimₓ⟩
+  | List.cons hd tl => ⟨Listα.cons hd, fun _ => of_list tl⟩
 
 /-- The isomorphism from the `W_type` construction of lists to lists -/
-@[simp] def to_list : W_type (list_β γ) → list γ
-| (W_type.mk list_α.nil f) := []
-| (W_type.mk (list_α.cons hd) f) := hd :: to_list (f punit.star)
+@[simp]
+def toList : WType (Listβ γ) → List γ
+  | WType.mk list_α.nil f => []
+  | WType.mk (list_α.cons hd) f => hd :: to_list (f PUnit.unit)
 
-lemma left_inv_list : function.left_inverse (of_list γ) (to_list _)
-| (W_type.mk list_α.nil f) := by { simp, tidy }
-| (W_type.mk (list_α.cons x) f) := by { simp, tidy }
+theorem left_inv_list : Function.LeftInverse (ofList γ) (toList _)
+  | WType.mk list_α.nil f => by
+    simp
+    tidy
+  | WType.mk (list_α.cons x) f => by
+    simp
+    tidy
 
-lemma right_inv_list : function.right_inverse (of_list γ) (to_list _)
-| list.nil := rfl
-| (list.cons hd tl) := by simp [right_inv_list tl]
+theorem right_inv_list : Function.RightInverse (ofList γ) (toList _)
+  | List.nil => rfl
+  | List.cons hd tl => by
+    simp [right_inv_list tl]
 
 /-- Lists are equivalent to their associated `W_type` -/
-def equiv_list : W_type (list_β γ) ≃ list γ :=
-{ to_fun := to_list _,
-  inv_fun := of_list _,
-  left_inv := left_inv_list _,
-  right_inv := right_inv_list _ }
+def equivList : WType (Listβ γ) ≃ List γ where
+  toFun := toList _
+  invFun := ofList _
+  left_inv := left_inv_list _
+  right_inv := right_inv_list _
 
-/--
-`W_type.list_α` is equivalent to `γ` with an extra point.
+/-- `W_type.list_α` is equivalent to `γ` with an extra point.
 This is useful when considering the associated polynomial endofunctor
 -/
-def list_α_equiv_punit_sum : list_α γ ≃ punit.{v + 1} ⊕ γ :=
-{ to_fun := λ c, match c with | list_α.nil := sum.inl punit.star | list_α.cons x := sum.inr x end,
-  inv_fun := sum.elim (λ _, list_α.nil) (λ x, list_α.cons x),
-  left_inv := λ c, match c with | list_α.nil := rfl | list_α.cons x := rfl end,
-  right_inv := λ x, match x with | sum.inl punit.star := rfl | sum.inr x := rfl end, }
+def listαEquivPunitSum : Listα γ ≃ Sum PUnit.{v + 1} γ where
+  toFun := fun c =>
+    match c with
+    | list_α.nil => Sum.inl PUnit.unit
+    | list_α.cons x => Sum.inr x
+  invFun := Sum.elim (fun _ => Listα.nil) fun x => Listα.cons x
+  left_inv := fun c =>
+    match c with
+    | list_α.nil => rfl
+    | list_α.cons x => rfl
+  right_inv := fun x =>
+    match x with
+    | Sum.inl PUnit.unit => rfl
+    | Sum.inr x => rfl
 
-end list
+end List
 
-end W_type
+end WType
+

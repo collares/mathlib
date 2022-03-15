@@ -1,1 +1,2 @@
-import tactic.linarith.frontend
+import Mathbin.Tactic.Linarith.Frontend
+

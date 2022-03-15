@@ -3,11 +3,10 @@ Copyright (c) 2022 Robert Y. Lewis. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Robert Y. Lewis, Heather Macbeth, Johan Commelin
 -/
-
-import ring_theory.witt_vector.domain
-import ring_theory.witt_vector.mul_coeff
-import ring_theory.discrete_valuation_ring
-import tactic.linear_combination
+import Mathbin.RingTheory.WittVector.Domain
+import Mathbin.RingTheory.WittVector.MulCoeff
+import Mathbin.RingTheory.DiscreteValuationRing
+import Mathbin.Tactic.LinearCombination
 
 /-!
 
@@ -27,133 +26,141 @@ When `k` is also a field, this `b` can be chosen to be a unit of `𝕎 k`.
 
 -/
 
-noncomputable theory
 
-namespace witt_vector
+noncomputable section
 
-variables {p : ℕ} [hp : fact p.prime]
+namespace WittVector
+
+variable {p : ℕ} [hp : Fact p.Prime]
+
 include hp
-local notation `𝕎` := witt_vector p
 
-section comm_ring
-variables {k : Type*} [comm_ring k] [char_p k p]
+-- mathport name: «expr𝕎»
+local notation "𝕎" => WittVector p
+
+section CommRingₓ
+
+variable {k : Type _} [CommRingₓ k] [CharP k p]
 
 /-- This is the `n+1`st coefficient of our inverse. -/
-def succ_nth_val_units (n : ℕ) (a : units k) (A : 𝕎 k) (bs : fin (n+1) → k) : k :=
-- ↑(a⁻¹ ^ (p^(n+1)))
-* (A.coeff (n + 1) * ↑(a⁻¹ ^ (p^(n+1))) + nth_remainder p n (truncate_fun (n+1) A) bs)
+def succNthValUnits (n : ℕ) (a : Units k) (A : 𝕎 k) (bs : Finₓ (n + 1) → k) : k :=
+  -↑(a⁻¹ ^ p ^ (n + 1)) * (A.coeff (n + 1) * ↑(a⁻¹ ^ p ^ (n + 1)) + nthRemainder p n (truncateFun (n + 1) A) bs)
 
-/--
-Recursively defines the sequence of coefficients for the inverse to a Witt vector whose first entry
+/-- Recursively defines the sequence of coefficients for the inverse to a Witt vector whose first entry
 is a unit.
 -/
-noncomputable def inverse_coeff (a : units k) (A : 𝕎 k) : ℕ → k
-| 0       := ↑a⁻¹
-| (n + 1) := succ_nth_val_units n a A (λ i, inverse_coeff i.val)
-              using_well_founded { dec_tac := `[apply fin.is_lt] }
+noncomputable def inverseCoeff (a : Units k) (A : 𝕎 k) : ℕ → k
+  | 0 => ↑a⁻¹
+  | n + 1 => succNthValUnits n a A fun i => inverse_coeff i.val
 
-/--
-Upgrade a Witt vector `A` whose first entry `A.coeff 0` is a unit to be, itself, a unit in `𝕎 k`.
+/-- Upgrade a Witt vector `A` whose first entry `A.coeff 0` is a unit to be, itself, a unit in `𝕎 k`.
 -/
-def mk_unit {a : units k} {A : 𝕎 k} (hA : A.coeff 0 = a) : units (𝕎 k) :=
-units.mk_of_mul_eq_one A (witt_vector.mk p (inverse_coeff a A))
-  begin
-    ext n,
-    induction n with n ih,
-    { simp [witt_vector.mul_coeff_zero, inverse_coeff, hA] },
-    let H_coeff := A.coeff (n + 1) * ↑(a⁻¹ ^ p ^ (n + 1))
-      + nth_remainder p n (truncate_fun (n + 1) A) (λ (i : fin (n + 1)), inverse_coeff a A i),
-    have H := units.mul_inv (a ^ p ^ (n + 1)),
-    linear_combination (H, -H_coeff) { normalize := ff },
-    have ha : (a:k) ^ (p ^ (n + 1)) = ↑(a ^ (p ^ (n + 1))) := by norm_cast,
-    have ha_inv : (↑(a⁻¹):k) ^ (p ^ (n + 1)) = ↑(a ^ (p ^ (n + 1)))⁻¹ :=
-      by exact_mod_cast inv_pow _ _,
-    simp only [nth_remainder_spec, inverse_coeff, succ_nth_val_units, hA, fin.val_eq_coe,
-      one_coeff_eq_of_pos, nat.succ_pos', H_coeff, ha_inv, ha, inv_pow],
-    ring!,
-  end
+def mkUnit {a : Units k} {A : 𝕎 k} (hA : A.coeff 0 = a) : Units (𝕎 k) :=
+  Units.mkOfMulEqOne A (WittVector.mk p (inverseCoeff a A))
+    (by
+      ext n
+      induction' n with n ih
+      · simp [WittVector.mul_coeff_zero, inverse_coeff, hA]
+        
+      let H_coeff :=
+        A.coeff (n + 1) * ↑(a⁻¹ ^ p ^ (n + 1)) +
+          nth_remainder p n (truncate_fun (n + 1) A) fun i : Finₓ (n + 1) => inverse_coeff a A i
+      have H := Units.mul_inv (a ^ p ^ (n + 1))
+      linear_combination(config := { normalize := false })H * -H_coeff
+      have ha : (a : k) ^ p ^ (n + 1) = ↑(a ^ p ^ (n + 1)) := by
+        norm_cast
+      have ha_inv : (↑a⁻¹ : k) ^ p ^ (n + 1) = ↑(a ^ p ^ (n + 1))⁻¹ := by
+        exact_mod_cast inv_pow _ _
+      simp only [nth_remainder_spec, inverse_coeff, succ_nth_val_units, hA, Finₓ.val_eq_coe, one_coeff_eq_of_pos,
+        Nat.succ_pos', H_coeff, ha_inv, ha, inv_pow]
+      ring!)
 
-@[simp] lemma coe_mk_unit {a : units k} {A : 𝕎 k} (hA : A.coeff 0 = a) : (mk_unit hA : 𝕎 k) = A :=
-rfl
+@[simp]
+theorem coe_mk_unit {a : Units k} {A : 𝕎 k} (hA : A.coeff 0 = a) : (mkUnit hA : 𝕎 k) = A :=
+  rfl
 
-end comm_ring
+end CommRingₓ
 
-section field
-variables {k : Type*} [field k] [char_p k p]
+section Field
 
-lemma is_unit_of_coeff_zero_ne_zero (x : 𝕎 k) (hx : x.coeff 0 ≠ 0) : is_unit x :=
-begin
-  let y : kˣ := units.mk0 (x.coeff 0) hx,
-  have hy : x.coeff 0 = y := rfl,
-  exact (mk_unit hy).is_unit
-end
+variable {k : Type _} [Field k] [CharP k p]
 
-variables (p)
-lemma irreducible : irreducible (p : 𝕎 k) :=
-begin
-  have hp : ¬ is_unit (p : 𝕎 k),
-  { intro hp,
-    simpa only [constant_coeff_apply, coeff_p_zero, not_is_unit_zero]
-      using (constant_coeff : witt_vector p k →+* _).is_unit_map hp, },
-  refine ⟨hp, λ a b hab, _⟩,
-  obtain ⟨ha0, hb0⟩ : a ≠ 0 ∧ b ≠ 0,
-  { rw ← mul_ne_zero_iff, intro h, rw h at hab, exact p_nonzero p k hab },
-  obtain ⟨m, a, ha, rfl⟩ := verschiebung_nonzero ha0,
-  obtain ⟨n, b, hb, rfl⟩ := verschiebung_nonzero hb0,
-  cases m, { exact or.inl (is_unit_of_coeff_zero_ne_zero a ha) },
-  cases n, { exact or.inr (is_unit_of_coeff_zero_ne_zero b hb) },
-  rw iterate_verschiebung_mul at hab,
-  apply_fun (λ x, coeff x 1) at hab,
-  simp only [coeff_p_one, nat.add_succ, add_comm _ n, function.iterate_succ', function.comp_app,
-    verschiebung_coeff_add_one, verschiebung_coeff_zero] at hab,
+theorem is_unit_of_coeff_zero_ne_zero (x : 𝕎 k) (hx : x.coeff 0 ≠ 0) : IsUnit x := by
+  let y : kˣ := Units.mk0 (x.coeff 0) hx
+  have hy : x.coeff 0 = y := rfl
+  exact (mk_unit hy).IsUnit
+
+variable (p)
+
+theorem irreducible : Irreducible (p : 𝕎 k) := by
+  have hp : ¬IsUnit (p : 𝕎 k) := by
+    intro hp
+    simpa only [constant_coeff_apply, coeff_p_zero, not_is_unit_zero] using
+      (constant_coeff : WittVector p k →+* _).is_unit_map hp
+  refine' ⟨hp, fun a b hab => _⟩
+  obtain ⟨ha0, hb0⟩ : a ≠ 0 ∧ b ≠ 0 := by
+    rw [← mul_ne_zero_iff]
+    intro h
+    rw [h] at hab
+    exact p_nonzero p k hab
+  obtain ⟨m, a, ha, rfl⟩ := verschiebung_nonzero ha0
+  obtain ⟨n, b, hb, rfl⟩ := verschiebung_nonzero hb0
+  cases m
+  · exact Or.inl (is_unit_of_coeff_zero_ne_zero a ha)
+    
+  cases n
+  · exact Or.inr (is_unit_of_coeff_zero_ne_zero b hb)
+    
+  rw [iterate_verschiebung_mul] at hab
+  apply_fun fun x => coeff x 1  at hab
+  simp only [coeff_p_one, Nat.add_succ, add_commₓ _ n, Function.iterate_succ', Function.comp_app,
+    verschiebung_coeff_add_one, verschiebung_coeff_zero] at hab
   exact (one_ne_zero hab).elim
-end
 
-end field
+end Field
 
-section perfect_ring
-variables {k : Type*} [comm_ring k] [char_p k p] [perfect_ring k p]
+section PerfectRing
 
-lemma exists_eq_pow_p_mul (a : 𝕎 k) (ha : a ≠ 0) :
-  ∃ (m : ℕ) (b : 𝕎 k), b.coeff 0 ≠ 0 ∧ a = p ^ m * b :=
-begin
-  obtain ⟨m, c, hc, hcm⟩ := witt_vector.verschiebung_nonzero ha,
-  obtain ⟨b, rfl⟩ := (frobenius_bijective p k).surjective.iterate m c,
-  rw witt_vector.iterate_frobenius_coeff at hc,
-  have := congr_fun (witt_vector.verschiebung_frobenius_comm.comp_iterate m) b,
-  simp only [function.comp_app] at this,
-  rw ← this at hcm,
-  refine ⟨m, b, _, _⟩,
-  { contrapose! hc,
-    have : 0 < p ^ m := pow_pos (nat.prime.pos (fact.out _)) _,
-    simp [hc, zero_pow this] },
-  { rw ← mul_left_iterate (p : 𝕎 k) m,
-    convert hcm,
-    ext1 x,
-    rw [mul_comm, ← witt_vector.verschiebung_frobenius x] },
-end
+variable {k : Type _} [CommRingₓ k] [CharP k p] [PerfectRing k p]
 
-end perfect_ring
+theorem exists_eq_pow_p_mul (a : 𝕎 k) (ha : a ≠ 0) : ∃ (m : ℕ)(b : 𝕎 k), b.coeff 0 ≠ 0 ∧ a = p ^ m * b := by
+  obtain ⟨m, c, hc, hcm⟩ := WittVector.verschiebung_nonzero ha
+  obtain ⟨b, rfl⟩ := (frobenius_bijective p k).Surjective.iterate m c
+  rw [WittVector.iterate_frobenius_coeff] at hc
+  have := congr_funₓ (witt_vector.verschiebung_frobenius_comm.comp_iterate m) b
+  simp only [Function.comp_app] at this
+  rw [← this] at hcm
+  refine' ⟨m, b, _, _⟩
+  · contrapose! hc
+    have : 0 < p ^ m := pow_pos (Nat.Prime.pos (Fact.out _)) _
+    simp [hc, zero_pow this]
+    
+  · rw [← mul_left_iterate (p : 𝕎 k) m]
+    convert hcm
+    ext1 x
+    rw [mul_comm, ← WittVector.verschiebung_frobenius x]
+    
 
-section perfect_field
-variables {k : Type*} [field k] [char_p k p] [perfect_ring k p]
+end PerfectRing
 
-lemma exists_eq_pow_p_mul' (a : 𝕎 k) (ha : a ≠ 0) :
-  ∃ (m : ℕ) (b : units (𝕎 k)), a = p ^ m * b :=
-begin
-  obtain ⟨m, b, h₁, h₂⟩ := exists_eq_pow_p_mul a ha,
-  let b₀ := units.mk0 (b.coeff 0) h₁,
-  have hb₀ : b.coeff 0 = b₀ := rfl,
-  exact ⟨m, mk_unit hb₀, h₂⟩,
-end
+section PerfectField
 
-instance : discrete_valuation_ring (𝕎 k) :=
-discrete_valuation_ring.of_has_unit_mul_pow_irreducible_factorization
-begin
-  refine ⟨p, irreducible p, λ x hx, _⟩,
-  obtain ⟨n, b, hb⟩ := exists_eq_pow_p_mul' x hx,
-  exact ⟨n, b, hb.symm⟩,
-end
+variable {k : Type _} [Field k] [CharP k p] [PerfectRing k p]
 
-end perfect_field
-end witt_vector
+theorem exists_eq_pow_p_mul' (a : 𝕎 k) (ha : a ≠ 0) : ∃ (m : ℕ)(b : Units (𝕎 k)), a = p ^ m * b := by
+  obtain ⟨m, b, h₁, h₂⟩ := exists_eq_pow_p_mul a ha
+  let b₀ := Units.mk0 (b.coeff 0) h₁
+  have hb₀ : b.coeff 0 = b₀ := rfl
+  exact ⟨m, mk_unit hb₀, h₂⟩
+
+instance : DiscreteValuationRing (𝕎 k) :=
+  DiscreteValuationRing.of_has_unit_mul_pow_irreducible_factorization
+    (by
+      refine' ⟨p, Irreducible p, fun x hx => _⟩
+      obtain ⟨n, b, hb⟩ := exists_eq_pow_p_mul' x hx
+      exact ⟨n, b, hb.symm⟩)
+
+end PerfectField
+
+end WittVector
+

@@ -3,9 +3,9 @@ Copyright (c) 2021 Anne Baanen. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johan Commelin, Anne Baanen
 -/
-import logic.function.iterate
-import order.galois_connection
-import order.hom.basic
+import Mathbin.Logic.Function.Iterate
+import Mathbin.Order.GaloisConnection
+import Mathbin.Order.Hom.Basic
 
 /-!
 # Lattice structure on order homomorphisms
@@ -22,113 +22,105 @@ monotone functions.
 monotone map, bundled morphism
 -/
 
-namespace order_hom
 
-variables {α β : Type*}
+namespace OrderHom
 
-section preorder
+variable {α β : Type _}
 
-variables [preorder α]
+section Preorderₓ
 
-@[simps]
-instance [semilattice_sup β] : has_sup (α →o β) :=
-{ sup := λ f g, ⟨λ a, f a ⊔ g a, f.mono.sup g.mono⟩ }
-
-instance [semilattice_sup β] : semilattice_sup (α →o β) :=
-{ sup := has_sup.sup,
-  le_sup_left := λ a b x, le_sup_left,
-  le_sup_right := λ a b x, le_sup_right,
-  sup_le := λ a b c h₀ h₁ x, sup_le (h₀ x) (h₁ x),
-  .. (_ : partial_order (α →o β)) }
+variable [Preorderₓ α]
 
 @[simps]
-instance [semilattice_inf β] : has_inf (α →o β) :=
-{ inf := λ f g, ⟨λ a, f a ⊓ g a, f.mono.inf g.mono⟩ }
+instance [SemilatticeSup β] : HasSup (α →o β) where
+  sup := fun f g => ⟨fun a => f a⊔g a, f.mono.sup g.mono⟩
 
-instance [semilattice_inf β] : semilattice_inf (α →o β) :=
-{ inf := (⊓),
-  .. (_ : partial_order (α →o β)),
-  .. (dual_iso α β).symm.to_galois_insertion.lift_semilattice_inf }
-
-instance [lattice β] : lattice (α →o β) :=
-{ .. (_ : semilattice_sup (α →o β)),
-  .. (_ : semilattice_inf (α →o β)) }
+instance [SemilatticeSup β] : SemilatticeSup (α →o β) :=
+  { (_ : PartialOrderₓ (α →o β)) with sup := HasSup.sup, le_sup_left := fun a b x => le_sup_left,
+    le_sup_right := fun a b x => le_sup_right, sup_le := fun a b c h₀ h₁ x => sup_le (h₀ x) (h₁ x) }
 
 @[simps]
-instance [preorder β] [order_bot β] : has_bot (α →o β) :=
-{ bot := const α ⊥ }
+instance [SemilatticeInf β] : HasInf (α →o β) where
+  inf := fun f g => ⟨fun a => f a⊓g a, f.mono.inf g.mono⟩
 
-instance [preorder β] [order_bot β] : order_bot (α →o β) :=
-{ bot := ⊥,
-  bot_le := λ a x, bot_le }
+instance [SemilatticeInf β] : SemilatticeInf (α →o β) :=
+  { (_ : PartialOrderₓ (α →o β)), (dualIso α β).symm.toGaloisInsertion.liftSemilatticeInf with inf := (·⊓·) }
+
+instance [Lattice β] : Lattice (α →o β) :=
+  { (_ : SemilatticeSup (α →o β)), (_ : SemilatticeInf (α →o β)) with }
 
 @[simps]
-instance [preorder β] [order_top β] : has_top (α →o β) :=
-{ top := const α ⊤ }
+instance [Preorderₓ β] [OrderBot β] : HasBot (α →o β) where
+  bot := const α ⊥
 
-instance [preorder β] [order_top β] : order_top (α →o β) :=
-{ top := ⊤,
-  le_top := λ a x, le_top }
+instance [Preorderₓ β] [OrderBot β] : OrderBot (α →o β) where
+  bot := ⊥
+  bot_le := fun a x => bot_le
 
-instance [complete_lattice β] : has_Inf (α →o β) :=
-{ Inf := λ s, ⟨λ x, ⨅ f ∈ s, (f : _) x, λ x y h, binfi_le_binfi (λ f _, f.mono h)⟩ }
+@[simps]
+instance [Preorderₓ β] [OrderTop β] : HasTop (α →o β) where
+  top := const α ⊤
 
-@[simp] lemma Inf_apply [complete_lattice β] (s : set (α →o β)) (x : α) :
-  Inf s x = ⨅ f ∈ s, (f : _) x := rfl
+instance [Preorderₓ β] [OrderTop β] : OrderTop (α →o β) where
+  top := ⊤
+  le_top := fun a x => le_top
 
-lemma infi_apply {ι : Sort*} [complete_lattice β] (f : ι → α →o β) (x : α) :
-  (⨅ i, f i) x = ⨅ i, f i x :=
-(Inf_apply _ _).trans infi_range
+instance [CompleteLattice β] : HasInfₓ (α →o β) where
+  inf := fun s => ⟨fun x => ⨅ f ∈ s, (f : _) x, fun x y h => binfi_le_binfi fun f _ => f.mono h⟩
 
-@[simp, norm_cast] lemma coe_infi {ι : Sort*} [complete_lattice β] (f : ι → α →o β) :
-  ((⨅ i, f i : α →o β) : α → β) = ⨅ i, f i :=
-funext $ λ x, (infi_apply f x).trans (@_root_.infi_apply _ _ _ _ (λ i, f i) _).symm
+@[simp]
+theorem Inf_apply [CompleteLattice β] (s : Set (α →o β)) (x : α) : inf s x = ⨅ f ∈ s, (f : _) x :=
+  rfl
 
-instance [complete_lattice β] : has_Sup (α →o β) :=
-{ Sup := λ s, ⟨λ x, ⨆ f ∈ s, (f : _) x, λ x y h, bsupr_le_bsupr (λ f _, f.mono h)⟩ }
+theorem infi_apply {ι : Sort _} [CompleteLattice β] (f : ι → α →o β) (x : α) : (⨅ i, f i) x = ⨅ i, f i x :=
+  (Inf_apply _ _).trans infi_range
 
-@[simp] lemma Sup_apply [complete_lattice β] (s : set (α →o β)) (x : α) :
-  Sup s x = ⨆ f ∈ s, (f : _) x := rfl
+@[simp, norm_cast]
+theorem coe_infi {ι : Sort _} [CompleteLattice β] (f : ι → α →o β) : ((⨅ i, f i : α →o β) : α → β) = ⨅ i, f i :=
+  funext fun x => (infi_apply f x).trans (@infi_apply _ _ _ _ (fun i => f i) _).symm
 
-lemma supr_apply {ι : Sort*} [complete_lattice β] (f : ι → α →o β) (x : α) :
-  (⨆ i, f i) x = ⨆ i, f i x :=
-(Sup_apply _ _).trans supr_range
+instance [CompleteLattice β] : HasSupₓ (α →o β) where
+  sup := fun s => ⟨fun x => ⨆ f ∈ s, (f : _) x, fun x y h => bsupr_le_bsupr fun f _ => f.mono h⟩
 
-@[simp, norm_cast] lemma coe_supr {ι : Sort*} [complete_lattice β] (f : ι → α →o β) :
-  ((⨆ i, f i : α →o β) : α → β) = ⨆ i, f i :=
-funext $ λ x, (supr_apply f x).trans (@_root_.supr_apply _ _ _ _ (λ i, f i) _).symm
+@[simp]
+theorem Sup_apply [CompleteLattice β] (s : Set (α →o β)) (x : α) : sup s x = ⨆ f ∈ s, (f : _) x :=
+  rfl
 
-instance [complete_lattice β] : complete_lattice (α →o β) :=
-{ Sup := Sup,
-  le_Sup := λ s f hf x, le_supr_of_le f (le_supr _ hf),
-  Sup_le := λ s f hf x, bsupr_le (λ g hg, hf g hg x),
-  Inf := Inf,
-  le_Inf := λ s f hf x, le_binfi (λ g hg, hf g hg x),
-  Inf_le := λ s f hf x, infi_le_of_le f (infi_le _ hf),
-  .. (_ : lattice (α →o β)),
-  .. order_hom.order_top,
-  .. order_hom.order_bot }
+theorem supr_apply {ι : Sort _} [CompleteLattice β] (f : ι → α →o β) (x : α) : (⨆ i, f i) x = ⨆ i, f i x :=
+  (Sup_apply _ _).trans supr_range
 
-lemma iterate_sup_le_sup_iff {α : Type*} [semilattice_sup α] (f : α →o α) :
-  (∀ n₁ n₂ a₁ a₂, f^[n₁ + n₂] (a₁ ⊔ a₂) ≤ (f^[n₁] a₁) ⊔ (f^[n₂] a₂)) ↔
-  (∀ a₁ a₂, f (a₁ ⊔ a₂) ≤ (f a₁) ⊔ a₂) :=
-begin
-  split; intros h,
-  { exact h 1 0, },
-  { intros n₁ n₂ a₁ a₂, have h' : ∀ n a₁ a₂, f^[n] (a₁ ⊔ a₂) ≤ (f^[n] a₁) ⊔ a₂,
-    { intros n, induction n with n ih; intros a₁ a₂,
-      { refl, },
-      { calc f^[n + 1] (a₁ ⊔ a₂) = (f^[n] (f (a₁ ⊔ a₂))) : function.iterate_succ_apply f n _
-                             ... ≤ (f^[n] ((f a₁) ⊔ a₂)) : f.mono.iterate n (h a₁ a₂)
-                             ... ≤ (f^[n] (f a₁)) ⊔ a₂ : ih _ _
-                             ... = (f^[n + 1] a₁) ⊔ a₂ : by rw ← function.iterate_succ_apply, }, },
-    calc f^[n₁ + n₂] (a₁ ⊔ a₂) = (f^[n₁] (f^[n₂] (a₁ ⊔ a₂))) : function.iterate_add_apply f n₁ n₂ _
-                           ... = (f^[n₁] (f^[n₂] (a₂ ⊔ a₁))) : by rw sup_comm
-                           ... ≤ (f^[n₁] ((f^[n₂] a₂) ⊔ a₁)) : f.mono.iterate n₁ (h' n₂ _ _)
-                           ... = (f^[n₁] (a₁ ⊔ (f^[n₂] a₂))) : by rw sup_comm
-                           ... ≤ (f^[n₁] a₁) ⊔ (f^[n₂] a₂) : h' n₁ a₁ _, },
-end
+@[simp, norm_cast]
+theorem coe_supr {ι : Sort _} [CompleteLattice β] (f : ι → α →o β) : ((⨆ i, f i : α →o β) : α → β) = ⨆ i, f i :=
+  funext fun x => (supr_apply f x).trans (@supr_apply _ _ _ _ (fun i => f i) _).symm
 
-end preorder
+instance [CompleteLattice β] : CompleteLattice (α →o β) :=
+  { (_ : Lattice (α →o β)), OrderHom.orderTop, OrderHom.orderBot with sup := sup,
+    le_Sup := fun s f hf x => le_supr_of_le f (le_supr _ hf), Sup_le := fun s f hf x => bsupr_le fun g hg => hf g hg x,
+    inf := inf, le_Inf := fun s f hf x => le_binfi fun g hg => hf g hg x,
+    Inf_le := fun s f hf x => infi_le_of_le f (infi_le _ hf) }
 
-end order_hom
+theorem iterate_sup_le_sup_iff {α : Type _} [SemilatticeSup α] (f : α →o α) :
+    (∀ n₁ n₂ a₁ a₂, (f^[n₁ + n₂]) (a₁⊔a₂) ≤ (f^[n₁]) a₁⊔(f^[n₂]) a₂) ↔ ∀ a₁ a₂, f (a₁⊔a₂) ≤ f a₁⊔a₂ := by
+  constructor <;> intro h
+  · exact h 1 0
+    
+  · intro n₁ n₂ a₁ a₂
+    have h' : ∀ n a₁ a₂, (f^[n]) (a₁⊔a₂) ≤ (f^[n]) a₁⊔a₂ := by
+      intro n
+      induction' n with n ih <;> intro a₁ a₂
+      · rfl
+        
+      · calc (f^[n + 1]) (a₁⊔a₂) = (f^[n]) (f (a₁⊔a₂)) := Function.iterate_succ_apply f n _ _ ≤ (f^[n]) (f a₁⊔a₂) :=
+            f.mono.iterate n (h a₁ a₂)_ ≤ (f^[n]) (f a₁)⊔a₂ := ih _ _ _ = (f^[n + 1]) a₁⊔a₂ := by
+            rw [← Function.iterate_succ_apply]
+        
+    calc (f^[n₁ + n₂]) (a₁⊔a₂) = (f^[n₁]) ((f^[n₂]) (a₁⊔a₂)) :=
+        Function.iterate_add_apply f n₁ n₂ _ _ = (f^[n₁]) ((f^[n₂]) (a₂⊔a₁)) := by
+        rw [sup_comm]_ ≤ (f^[n₁]) ((f^[n₂]) a₂⊔a₁) := f.mono.iterate n₁ (h' n₂ _ _)_ = (f^[n₁]) (a₁⊔(f^[n₂]) a₂) := by
+        rw [sup_comm]_ ≤ (f^[n₁]) a₁⊔(f^[n₂]) a₂ := h' n₁ a₁ _
+    
+
+end Preorderₓ
+
+end OrderHom
+

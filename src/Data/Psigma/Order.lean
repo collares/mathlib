@@ -3,8 +3,8 @@ Copyright (c) 2019 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison, Minchao Wu
 -/
-import data.sigma.lex
-import order.lexicographic
+import Mathbin.Data.Sigma.Lex
+import Mathbin.Order.Lexicographic
 
 /-!
 # Lexicographic order on a sigma type
@@ -33,75 +33,92 @@ Prove that a sigma type is a `no_max_order`, `no_min_order`, `densely_ordered` w
 are.
 -/
 
-variables {ι : Type*} {α : ι → Type*}
 
-namespace psigma
+variable {ι : Type _} {α : ι → Type _}
 
-notation `Σₗ'` binders `, ` r:(scoped p, _root_.lex (psigma p)) := r
+namespace PSigma
+
+-- mathport name: «exprΣₗ' , »
+notation3 "Σₗ' " (...) ", " r:(scoped p => Lex PSigma p) => r
 
 /-- The lexicographical `≤` on a sigma type. -/
-instance lex.has_le [has_lt ι] [Π i, has_le (α i)] : has_le (Σₗ' i, α i) :=
-{ le := lex (<) (λ i, (≤)) }
+instance Lex.hasLe [LT ι] [∀ i, LE (α i)] : LE (Σₗ' i, α i) where
+  le := Lex (· < ·) fun i => (· ≤ ·)
 
 /-- The lexicographical `<` on a sigma type. -/
-instance lex.has_lt [has_lt ι] [Π i, has_lt (α i)] : has_lt (Σₗ' i, α i) :=
-{ lt := lex (<) (λ i, (<)) }
+instance Lex.hasLt [LT ι] [∀ i, LT (α i)] : LT (Σₗ' i, α i) where
+  lt := Lex (· < ·) fun i => (· < ·)
 
-instance lex.preorder [preorder ι] [Π i, preorder (α i)] : preorder (Σₗ' i, α i) :=
-{ le_refl := λ ⟨i, a⟩, lex.right _ le_rfl,
-  le_trans :=
-  begin
-    rintro ⟨a₁, b₁⟩ ⟨a₂, b₂⟩ ⟨a₃, b₃⟩ ⟨h₁l, h₁r⟩ ⟨h₂l, h₂r⟩,
-    { left, apply lt_trans, repeat { assumption } },
-    { left, assumption },
-    { left, assumption },
-    { right, apply le_trans, repeat { assumption } }
-  end,
-  lt_iff_le_not_le :=
-  begin
-    refine λ a b, ⟨λ hab, ⟨hab.mono_right (λ i a b, le_of_lt), _⟩, _⟩,
-    { rintro (⟨j, i, b, a, hji⟩ | ⟨i, b, a, hba⟩);
-        obtain (⟨_, _, _, _, hij⟩ | ⟨_, _, _, hab⟩) := hab,
-      { exact hij.not_lt hji },
-      { exact lt_irrefl _ hji },
-      { exact lt_irrefl _ hij },
-      { exact hab.not_le hba } },
-    { rintro ⟨⟨i, j, a, b, hij⟩ |⟨i, a, b, hab⟩, hba⟩,
-      { exact lex.left _ _ hij },
-      { exact lex.right _ (hab.lt_of_not_le $ λ h, hba $ lex.right _ h) } }
-  end,
-  .. lex.has_le,
-  .. lex.has_lt }
+instance Lex.preorder [Preorderₓ ι] [∀ i, Preorderₓ (α i)] : Preorderₓ (Σₗ' i, α i) :=
+  { Lex.hasLe, Lex.hasLt with le_refl := fun ⟨i, a⟩ => Lex.right _ le_rfl,
+    le_trans := by
+      rintro ⟨a₁, b₁⟩ ⟨a₂, b₂⟩ ⟨a₃, b₃⟩ ⟨h₁l, h₁r⟩ ⟨h₂l, h₂r⟩
+      · left
+        apply lt_transₓ
+        repeat'
+          assumption
+        
+      · left
+        assumption
+        
+      · left
+        assumption
+        
+      · right
+        apply le_transₓ
+        repeat'
+          assumption
+        ,
+    lt_iff_le_not_le := by
+      refine' fun a b => ⟨fun hab => ⟨hab.mono_right fun i a b => le_of_ltₓ, _⟩, _⟩
+      · rintro (⟨j, i, b, a, hji⟩ | ⟨i, b, a, hba⟩) <;> obtain ⟨_, _, _, _, hij⟩ | ⟨_, _, _, hab⟩ := hab
+        · exact hij.not_lt hji
+          
+        · exact lt_irreflₓ _ hji
+          
+        · exact lt_irreflₓ _ hij
+          
+        · exact hab.not_le hba
+          
+        
+      · rintro ⟨⟨i, j, a, b, hij⟩ | ⟨i, a, b, hab⟩, hba⟩
+        · exact lex.left _ _ hij
+          
+        · exact lex.right _ (hab.lt_of_not_le fun h => hba <| lex.right _ h)
+          
+         }
 
 /-- Dictionary / lexicographic partial_order for dependent pairs. -/
-instance lex.partial_order [partial_order ι] [Π i, partial_order (α i)] :
-  partial_order (Σₗ' i, α i) :=
-{ le_antisymm :=
-  begin
-    rintro ⟨a₁, b₁⟩ ⟨a₂, b₂⟩
-      (⟨_, _, _, _, hlt₁⟩ | ⟨_, _, _, hlt₁⟩) (⟨_, _, _, _, hlt₂⟩ | ⟨_, _, _, hlt₂⟩),
-    { exact (lt_irrefl a₁ $ hlt₁.trans hlt₂).elim },
-    { exact (lt_irrefl a₁ hlt₁).elim },
-    { exact (lt_irrefl a₁ hlt₂).elim },
-    { rw hlt₁.antisymm hlt₂ }
-  end
-  .. lex.preorder }
+instance Lex.partialOrder [PartialOrderₓ ι] [∀ i, PartialOrderₓ (α i)] : PartialOrderₓ (Σₗ' i, α i) :=
+  { Lex.preorder with
+    le_antisymm := by
+      rintro ⟨a₁, b₁⟩ ⟨a₂, b₂⟩ (⟨_, _, _, _, hlt₁⟩ | ⟨_, _, _, hlt₁⟩) (⟨_, _, _, _, hlt₂⟩ | ⟨_, _, _, hlt₂⟩)
+      · exact (lt_irreflₓ a₁ <| hlt₁.trans hlt₂).elim
+        
+      · exact (lt_irreflₓ a₁ hlt₁).elim
+        
+      · exact (lt_irreflₓ a₁ hlt₂).elim
+        
+      · rw [hlt₁.antisymm hlt₂]
+         }
 
 /-- Dictionary / lexicographic linear_order for pairs. -/
-instance lex.linear_order [linear_order ι] [Π i, linear_order (α i)] : linear_order (Σₗ' i, α i) :=
-{ le_total :=
-  begin
-  rintro ⟨i, a⟩ ⟨j, b⟩,
-  obtain hij | rfl | hji := lt_trichotomy i j,
-  { exact or.inl (lex.left _ _ hij) },
-  { obtain hab | hba := le_total a b,
-    { exact or.inl (lex.right _ hab) },
-    { exact or.inr (lex.right _ hba) } },
-  { exact or.inr (lex.left _ _ hji) }
-  end,
-  decidable_eq := psigma.decidable_eq,
-  decidable_le := lex.decidable _ _,
-  decidable_lt := lex.decidable _ _,
-  .. lex.partial_order }
+instance Lex.linearOrder [LinearOrderₓ ι] [∀ i, LinearOrderₓ (α i)] : LinearOrderₓ (Σₗ' i, α i) :=
+  { Lex.partialOrder with
+    le_total := by
+      rintro ⟨i, a⟩ ⟨j, b⟩
+      obtain hij | rfl | hji := lt_trichotomyₓ i j
+      · exact Or.inl (lex.left _ _ hij)
+        
+      · obtain hab | hba := le_totalₓ a b
+        · exact Or.inl (lex.right _ hab)
+          
+        · exact Or.inr (lex.right _ hba)
+          
+        
+      · exact Or.inr (lex.left _ _ hji)
+        ,
+    DecidableEq := PSigma.decidableEq, decidableLe := Lex.decidable _ _, decidableLt := Lex.decidable _ _ }
 
-end psigma
+end PSigma
+

@@ -3,65 +3,67 @@ Copyright (c) 2018 Keeley Hoek. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Keeley Hoek, Scott Morrison
 -/
-import tactic.core
+import Mathbin.Tactic.Core
 
-open tactic
+open Tactic
 
-@[derive decidable_eq, derive inhabited]
-inductive side
-| L
-| R
+inductive Side
+  | L
+  | R
+  deriving DecidableEq, Inhabited
 
-def side.other : side → side
-| side.L := side.R
-| side.R := side.L
+def Side.other : Side → Side
+  | Side.L => Side.R
+  | Side.R => Side.L
 
-def side.to_string : side → string
-| side.L := "L"
-| side.R := "R"
+def Side.toString : Side → Stringₓ
+  | Side.L => "L"
+  | Side.R => "R"
 
-instance : has_to_string side := ⟨side.to_string⟩
+instance : HasToString Side :=
+  ⟨Side.toString⟩
 
-namespace tactic.rewrite_all
+namespace Tactic.RewriteAll
 
-meta structure cfg extends rewrite_cfg :=
-(try_simp   : bool := ff)
-(discharger : tactic unit := skip)
- -- Warning: rewrite_search can't produce tactic scripts when the simplifier is used.
-(simplifier : expr → tactic (expr × expr) := λ e, failed)
+unsafe structure cfg extends RewriteCfg where
+  try_simp : Bool := false
+  discharger : tactic Unit := skip
+  -- Warning: rewrite_search can't produce tactic scripts when the simplifier is used.
+  simplifier : expr → tactic (expr × expr) := fun e => failed
 
-meta structure tracked_rewrite :=
-(exp : expr)
-(proof : tactic expr)
--- If `addr` is not provided by the underlying implementation of `rewrite_all` (i.e. kabstract)
--- `rewrite_search` will not be able to produce tactic scripts.
-(addr : option (list side))
+unsafe structure tracked_rewrite where
+  exp : expr
+  proof : tactic expr
+  -- If `addr` is not provided by the underlying implementation of `rewrite_all` (i.e. kabstract)
+  -- `rewrite_search` will not be able to produce tactic scripts.
+  addr : Option (List Side)
 
-namespace tracked_rewrite
+namespace TrackedRewrite
 
-meta def eval (rw : tracked_rewrite) : tactic (expr × expr) :=
-do prf ← rw.proof,
-   return (rw.exp, prf)
+unsafe def eval (rw : tracked_rewrite) : tactic (expr × expr) := do
+  let prf ← rw.proof
+  return (rw, prf)
 
-meta def replace_target (rw : tracked_rewrite) : tactic unit :=
-do (exp, prf) ← rw.eval,
-   tactic.replace_target exp prf
+unsafe def replace_target (rw : tracked_rewrite) : tactic Unit := do
+  let (exp, prf) ← rw.eval
+  tactic.replace_target exp prf
 
-private meta def replace_target_side (new_target lam : pexpr) (prf : expr) : tactic unit :=
-do new_target ← to_expr new_target tt ff,
-   prf' ← to_expr ``(congr_arg %%lam %%prf) tt ff,
-   tactic.replace_target new_target prf'
+private unsafe def replace_target_side (new_target lam : pexpr) (prf : expr) : tactic Unit := do
+  let new_target ← to_expr new_target true false
+  let prf' ← to_expr (pquote.1 (congr_argₓ (%%ₓlam) (%%ₓprf))) true false
+  tactic.replace_target new_target prf'
 
-meta def replace_target_lhs (rw : tracked_rewrite) : tactic unit :=
-do (new_lhs, prf) ← rw.eval,
-   `(%%_ = %%rhs) ← target,
-   replace_target_side ``(%%new_lhs = %%rhs) ``(λ L, L = %%rhs) prf
+unsafe def replace_target_lhs (rw : tracked_rewrite) : tactic Unit := do
+  let (new_lhs, prf) ← rw.eval
+  let quote.1 ((%%ₓ_) = %%ₓrhs) ← target
+  replace_target_side (pquote.1 ((%%ₓnew_lhs) = %%ₓrhs)) (pquote.1 fun L => L = %%ₓrhs) prf
 
-meta def replace_target_rhs (rw : tracked_rewrite) : tactic unit :=
-do (new_rhs, prf) ← rw.eval,
-   `(%%lhs = %%_) ← target,
-   replace_target_side ``(%%lhs = %%new_rhs) ``(λ R, %%lhs = R) prf
+unsafe def replace_target_rhs (rw : tracked_rewrite) : tactic Unit := do
+  let (new_rhs, prf) ← rw.eval
+  let quote.1 ((%%ₓlhs) = %%ₓ_) ← target
+  replace_target_side (pquote.1 ((%%ₓlhs) = %%ₓnew_rhs)) (pquote.1 fun R => (%%ₓlhs) = R) prf
 
-end tracked_rewrite
+end TrackedRewrite
 
-end tactic.rewrite_all
+end Tactic.RewriteAll
+

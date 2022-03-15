@@ -1,2 +1,3 @@
-import data.pfunctor.univariate.basic
-import data.pfunctor.univariate.M
+import Mathbin.Data.Pfunctor.Univariate.Basic
+import Mathbin.Data.Pfunctor.Univariate.M
+

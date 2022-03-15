@@ -3,8 +3,7 @@ Copyright © 2020 Nicolò Cavalleri. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolò Cavalleri
 -/
-
-import geometry.manifold.algebra.monoid
+import Mathbin.Geometry.Manifold.Algebra.Monoid
 
 /-!
 # Lie groups
@@ -36,109 +35,95 @@ so the definition does not apply. Hence the definition should be more general, a
 `I : model_with_corners 𝕜 E H`.
 -/
 
-noncomputable theory
 
-open_locale manifold
+noncomputable section
+
+open_locale Manifold
 
 /-- A Lie (additive) group is a group and a smooth manifold at the same time in which
 the addition and negation operations are smooth. -/
 -- See note [Design choices about smooth algebraic structures]
-@[ancestor has_smooth_add]
-class lie_add_group {𝕜 : Type*} [nondiscrete_normed_field 𝕜]
-  {H : Type*} [topological_space H]
-  {E : Type*} [normed_group E] [normed_space 𝕜 E] (I : model_with_corners 𝕜 E H)
-  (G : Type*) [add_group G] [topological_space G] [charted_space H G]
-  extends has_smooth_add I G : Prop :=
-(smooth_neg : smooth I I (λ a:G, -a))
+@[ancestor HasSmoothAdd]
+class LieAddGroup {𝕜 : Type _} [NondiscreteNormedField 𝕜] {H : Type _} [TopologicalSpace H] {E : Type _} [NormedGroup E]
+  [NormedSpace 𝕜 E] (I : ModelWithCorners 𝕜 E H) (G : Type _) [AddGroupₓ G] [TopologicalSpace G]
+  [ChartedSpace H G] extends HasSmoothAdd I G : Prop where
+  smooth_neg : Smooth I I fun a : G => -a
 
 /-- A Lie group is a group and a smooth manifold at the same time in which
 the multiplication and inverse operations are smooth. -/
 -- See note [Design choices about smooth algebraic structures]
-@[ancestor has_smooth_mul, to_additive]
-class lie_group {𝕜 : Type*} [nondiscrete_normed_field 𝕜]
-  {H : Type*} [topological_space H]
-  {E : Type*} [normed_group E] [normed_space 𝕜 E] (I : model_with_corners 𝕜 E H)
-  (G : Type*) [group G] [topological_space G] [charted_space H G]
-  extends has_smooth_mul I G : Prop :=
-(smooth_inv : smooth I I (λ a:G, a⁻¹))
+@[ancestor HasSmoothMul, to_additive]
+class LieGroup {𝕜 : Type _} [NondiscreteNormedField 𝕜] {H : Type _} [TopologicalSpace H] {E : Type _} [NormedGroup E]
+  [NormedSpace 𝕜 E] (I : ModelWithCorners 𝕜 E H) (G : Type _) [Groupₓ G] [TopologicalSpace G] [ChartedSpace H G] extends
+  HasSmoothMul I G : Prop where
+  smooth_inv : Smooth I I fun a : G => a⁻¹
 
-section lie_group
+section LieGroup
 
-variables {𝕜 : Type*} [nondiscrete_normed_field 𝕜]
-{H : Type*} [topological_space H]
-{E : Type*} [normed_group E] [normed_space 𝕜 E] {I : model_with_corners 𝕜 E H}
-{F : Type*} [normed_group F] [normed_space 𝕜 F] {J : model_with_corners 𝕜 F F}
-{G : Type*} [topological_space G] [charted_space H G] [group G] [lie_group I G]
-{E' : Type*} [normed_group E'] [normed_space 𝕜 E']
-{H' : Type*} [topological_space H'] {I' : model_with_corners 𝕜 E' H'}
-{M : Type*} [topological_space M] [charted_space H' M]
-{E'' : Type*} [normed_group E''] [normed_space 𝕜 E'']
-{H'' : Type*} [topological_space H''] {I'' : model_with_corners 𝕜 E'' H''}
-{M' : Type*} [topological_space M'] [charted_space H'' M']
+variable {𝕜 : Type _} [NondiscreteNormedField 𝕜] {H : Type _} [TopologicalSpace H] {E : Type _} [NormedGroup E]
+  [NormedSpace 𝕜 E] {I : ModelWithCorners 𝕜 E H} {F : Type _} [NormedGroup F] [NormedSpace 𝕜 F]
+  {J : ModelWithCorners 𝕜 F F} {G : Type _} [TopologicalSpace G] [ChartedSpace H G] [Groupₓ G] [LieGroup I G]
+  {E' : Type _} [NormedGroup E'] [NormedSpace 𝕜 E'] {H' : Type _} [TopologicalSpace H'] {I' : ModelWithCorners 𝕜 E' H'}
+  {M : Type _} [TopologicalSpace M] [ChartedSpace H' M] {E'' : Type _} [NormedGroup E''] [NormedSpace 𝕜 E'']
+  {H'' : Type _} [TopologicalSpace H''] {I'' : ModelWithCorners 𝕜 E'' H''} {M' : Type _} [TopologicalSpace M']
+  [ChartedSpace H'' M']
 
 section
 
 variable (I)
 
 @[to_additive]
-lemma smooth_inv : smooth I I (λ x : G, x⁻¹) :=
-lie_group.smooth_inv
+theorem smooth_inv : Smooth I I fun x : G => x⁻¹ :=
+  LieGroup.smooth_inv
 
 /-- A Lie group is a topological group. This is not an instance for technical reasons,
 see note [Design choices about smooth algebraic structures]. -/
 @[to_additive
-"An additive Lie group is an additive topological group. This is not an instance for technical
-reasons, see note [Design choices about smooth algebraic structures]."]
-lemma topological_group_of_lie_group : topological_group G :=
-{ continuous_inv := (smooth_inv I).continuous,
-  .. has_continuous_mul_of_smooth I }
+      "An additive Lie group is an additive topological group. This is not an instance for technical\nreasons, see note [Design choices about smooth algebraic structures]."]
+theorem topological_group_of_lie_group : TopologicalGroup G :=
+  { has_continuous_mul_of_smooth I with continuous_inv := (smooth_inv I).Continuous }
 
 end
 
 @[to_additive]
-lemma smooth.inv {f : M → G}
-  (hf : smooth I' I f) : smooth I' I (λx, (f x)⁻¹) :=
-(smooth_inv I).comp hf
+theorem Smooth.inv {f : M → G} (hf : Smooth I' I f) : Smooth I' I fun x => (f x)⁻¹ :=
+  (smooth_inv I).comp hf
 
 @[to_additive]
-lemma smooth_on.inv {f : M → G} {s : set M}
-  (hf : smooth_on I' I f s) : smooth_on I' I (λx, (f x)⁻¹) s :=
-(smooth_inv I).comp_smooth_on hf
+theorem SmoothOn.inv {f : M → G} {s : Set M} (hf : SmoothOn I' I f s) : SmoothOn I' I (fun x => (f x)⁻¹) s :=
+  (smooth_inv I).comp_smooth_on hf
 
 @[to_additive]
-lemma smooth.div {f g : M → G}
-  (hf : smooth I' I f) (hg : smooth I' I g) : smooth I' I (f / g) :=
-by { rw div_eq_mul_inv, exact ((smooth_mul I).comp (hf.prod_mk hg.inv) : _), }
+theorem Smooth.div {f g : M → G} (hf : Smooth I' I f) (hg : Smooth I' I g) : Smooth I' I (f / g) := by
+  rw [div_eq_mul_inv]
+  exact ((smooth_mul I).comp (hf.prod_mk hg.inv) : _)
 
 @[to_additive]
-lemma smooth_on.div {f g : M → G} {s : set M}
-  (hf : smooth_on I' I f s) (hg : smooth_on I' I g s) : smooth_on I' I (f / g) s :=
-by { rw div_eq_mul_inv, exact ((smooth_mul I).comp_smooth_on (hf.prod_mk hg.inv) : _), }
+theorem SmoothOn.div {f g : M → G} {s : Set M} (hf : SmoothOn I' I f s) (hg : SmoothOn I' I g s) :
+    SmoothOn I' I (f / g) s := by
+  rw [div_eq_mul_inv]
+  exact ((smooth_mul I).comp_smooth_on (hf.prod_mk hg.inv) : _)
 
-end lie_group
+end LieGroup
 
-section prod_lie_group
+section ProdLieGroup
 
-/- Instance of product group -/
+-- Instance of product group
 @[to_additive]
-instance {𝕜 : Type*} [nondiscrete_normed_field 𝕜] {H : Type*} [topological_space H]
-  {E : Type*} [normed_group E] [normed_space 𝕜 E]  {I : model_with_corners 𝕜 E H}
-  {G : Type*} [topological_space G] [charted_space H G] [group G] [lie_group I G]
-  {E' : Type*} [normed_group E'] [normed_space 𝕜 E']
-  {H' : Type*} [topological_space H'] {I' : model_with_corners 𝕜 E' H'}
-  {G' : Type*} [topological_space G'] [charted_space H' G']
-  [group G'] [lie_group I' G'] :
-  lie_group (I.prod I') (G×G') :=
-{ smooth_inv := smooth_fst.inv.prod_mk smooth_snd.inv,
-  ..has_smooth_mul.prod _ _ _ _ }
+instance {𝕜 : Type _} [NondiscreteNormedField 𝕜] {H : Type _} [TopologicalSpace H] {E : Type _} [NormedGroup E]
+    [NormedSpace 𝕜 E] {I : ModelWithCorners 𝕜 E H} {G : Type _} [TopologicalSpace G] [ChartedSpace H G] [Groupₓ G]
+    [LieGroup I G] {E' : Type _} [NormedGroup E'] [NormedSpace 𝕜 E'] {H' : Type _} [TopologicalSpace H']
+    {I' : ModelWithCorners 𝕜 E' H'} {G' : Type _} [TopologicalSpace G'] [ChartedSpace H' G'] [Groupₓ G']
+    [LieGroup I' G'] : LieGroup (I.Prod I') (G × G') :=
+  { HasSmoothMul.prod _ _ _ _ with smooth_inv := smooth_fst.inv.prod_mk smooth_snd.inv }
 
-end prod_lie_group
+end ProdLieGroup
 
 /-! ### Normed spaces are Lie groups -/
 
-instance normed_space_lie_add_group {𝕜 : Type*} [nondiscrete_normed_field 𝕜]
-  {E : Type*} [normed_group E] [normed_space 𝕜 E] :
-  lie_add_group (𝓘(𝕜, E)) E :=
-{ smooth_add := smooth_iff.2 ⟨continuous_add, λ x y, cont_diff_add.cont_diff_on⟩,
-  smooth_neg := smooth_iff.2 ⟨continuous_neg, λ x y, cont_diff_neg.cont_diff_on⟩,
-  .. model_space_smooth }
+
+instance normed_space_lie_add_group {𝕜 : Type _} [NondiscreteNormedField 𝕜] {E : Type _} [NormedGroup E]
+    [NormedSpace 𝕜 E] : LieAddGroup 𝓘(𝕜, E) E :=
+  { model_space_smooth with smooth_add := smooth_iff.2 ⟨continuous_add, fun x y => cont_diff_add.ContDiffOn⟩,
+    smooth_neg := smooth_iff.2 ⟨continuous_neg, fun x y => cont_diff_neg.ContDiffOn⟩ }
+

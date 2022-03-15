@@ -3,8 +3,8 @@ Copyright (c) 2021 Yury Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury Kudryashov
 -/
-import analysis.inner_product_space.calculus
-import analysis.inner_product_space.pi_L2
+import Mathbin.Analysis.InnerProductSpace.Calculus
+import Mathbin.Analysis.InnerProductSpace.PiL2
 
 /-!
 # Euclidean distance on a finite dimensional space
@@ -17,103 +17,93 @@ provide some definitions (`euclidean.ball`, `euclidean.closed_ball`) and simple 
 distance. This way we hide the usage of `to_euclidean` behind an API.
 -/
 
-open_locale topological_space
-open set
 
-variables {E : Type*} [normed_group E] [normed_space ℝ E] [finite_dimensional ℝ E]
+open_locale TopologicalSpace
 
-noncomputable theory
+open Set
+
+variable {E : Type _} [NormedGroup E] [NormedSpace ℝ E] [FiniteDimensional ℝ E]
+
+noncomputable section
 
 /-- If `E` is a finite dimensional space over `ℝ`, then `to_euclidean` is a continuous `ℝ`-linear
 equivalence between `E` and the Euclidean space of the same dimension. -/
-def to_euclidean : E ≃L[ℝ] euclidean_space ℝ (fin $ finite_dimensional.finrank ℝ E) :=
-continuous_linear_equiv.of_finrank_eq finrank_euclidean_space_fin.symm
+def toEuclidean : E ≃L[ℝ] EuclideanSpace ℝ (Finₓ <| FiniteDimensional.finrank ℝ E) :=
+  ContinuousLinearEquiv.ofFinrankEq finrank_euclidean_space_fin.symm
 
-namespace euclidean
+namespace Euclidean
 
 /-- If `x` and `y` are two points in a finite dimensional space over `ℝ`, then `euclidean.dist x y`
 is the distance between these points in the metric defined by some inner product space structure on
 `E`. -/
-def dist (x y : E) : ℝ := dist (to_euclidean x) (to_euclidean y)
+def dist (x y : E) : ℝ :=
+  dist (toEuclidean x) (toEuclidean y)
 
 /-- Closed ball w.r.t. the euclidean distance. -/
-def closed_ball (x : E) (r : ℝ) : set E := {y | dist y x ≤ r}
+def ClosedBall (x : E) (r : ℝ) : Set E :=
+  { y | dist y x ≤ r }
 
 /-- Open ball w.r.t. the euclidean distance. -/
-def ball (x : E) (r : ℝ) : set E := {y | dist y x < r}
+def Ball (x : E) (r : ℝ) : Set E :=
+  { y | dist y x < r }
 
-lemma ball_eq_preimage (x : E) (r : ℝ) :
-  ball x r = to_euclidean ⁻¹' (metric.ball (to_euclidean x) r) :=
-rfl
+theorem ball_eq_preimage (x : E) (r : ℝ) : Ball x r = toEuclidean ⁻¹' Metric.Ball (toEuclidean x) r :=
+  rfl
 
-lemma closed_ball_eq_preimage (x : E) (r : ℝ) :
-  closed_ball x r = to_euclidean ⁻¹' (metric.closed_ball (to_euclidean x) r) :=
-rfl
+theorem closed_ball_eq_preimage (x : E) (r : ℝ) :
+    ClosedBall x r = toEuclidean ⁻¹' Metric.ClosedBall (toEuclidean x) r :=
+  rfl
 
-lemma ball_subset_closed_ball {x : E} {r : ℝ} : ball x r ⊆ closed_ball x r :=
-λ y (hy : _ < _), le_of_lt hy
+theorem ball_subset_closed_ball {x : E} {r : ℝ} : Ball x r ⊆ ClosedBall x r := fun hy : _ < _ => le_of_ltₓ hy
 
-lemma is_open_ball {x : E} {r : ℝ} : is_open (ball x r) :=
-metric.is_open_ball.preimage to_euclidean.continuous
+theorem is_open_ball {x : E} {r : ℝ} : IsOpen (Ball x r) :=
+  Metric.is_open_ball.Preimage toEuclidean.Continuous
 
-lemma mem_ball_self {x : E} {r : ℝ} (hr : 0 < r) : x ∈ ball x r := metric.mem_ball_self hr
+theorem mem_ball_self {x : E} {r : ℝ} (hr : 0 < r) : x ∈ Ball x r :=
+  Metric.mem_ball_self hr
 
-lemma closed_ball_eq_image (x : E) (r : ℝ) :
-  closed_ball x r = to_euclidean.symm '' metric.closed_ball (to_euclidean x) r :=
-by rw [to_euclidean.image_symm_eq_preimage, closed_ball_eq_preimage]
+theorem closed_ball_eq_image (x : E) (r : ℝ) :
+    ClosedBall x r = toEuclidean.symm '' Metric.ClosedBall (toEuclidean x) r := by
+  rw [to_euclidean.image_symm_eq_preimage, closed_ball_eq_preimage]
 
-lemma is_compact_closed_ball {x : E} {r : ℝ} : is_compact (closed_ball x r) :=
-begin
-  rw closed_ball_eq_image,
-  exact (is_compact_closed_ball _ _).image to_euclidean.symm.continuous
-end
+theorem is_compact_closed_ball {x : E} {r : ℝ} : IsCompact (ClosedBall x r) := by
+  rw [closed_ball_eq_image]
+  exact (is_compact_closed_ball _ _).Image to_euclidean.symm.continuous
 
-lemma is_closed_closed_ball {x : E} {r : ℝ} : is_closed (closed_ball x r) :=
-is_compact_closed_ball.is_closed
+theorem is_closed_closed_ball {x : E} {r : ℝ} : IsClosed (ClosedBall x r) :=
+  is_compact_closed_ball.IsClosed
 
-lemma closure_ball (x : E) {r : ℝ} (h : 0 < r) : closure (ball x r) = closed_ball x r :=
-by rw [ball_eq_preimage, ← to_euclidean.preimage_closure, closure_ball (to_euclidean x) h,
-  closed_ball_eq_preimage]
+theorem closure_ball (x : E) {r : ℝ} (h : 0 < r) : Closure (Ball x r) = ClosedBall x r := by
+  rw [ball_eq_preimage, ← to_euclidean.preimage_closure, closure_ball (toEuclidean x) h, closed_ball_eq_preimage]
 
-lemma exists_pos_lt_subset_ball {R : ℝ} {s : set E} {x : E}
-  (hR : 0 < R) (hs : is_closed s) (h : s ⊆ ball x R) :
-  ∃ r ∈ Ioo 0 R, s ⊆ ball x r :=
-begin
-  rw [ball_eq_preimage, ← image_subset_iff] at h,
-  rcases exists_pos_lt_subset_ball hR (to_euclidean.is_closed_image.2 hs) h with ⟨r, hr, hsr⟩,
+theorem exists_pos_lt_subset_ball {R : ℝ} {s : Set E} {x : E} (hR : 0 < R) (hs : IsClosed s) (h : s ⊆ Ball x R) :
+    ∃ r ∈ Ioo 0 R, s ⊆ Ball x r := by
+  rw [ball_eq_preimage, ← image_subset_iff] at h
+  rcases exists_pos_lt_subset_ball hR (to_euclidean.is_closed_image.2 hs) h with ⟨r, hr, hsr⟩
   exact ⟨r, hr, image_subset_iff.1 hsr⟩
-end
 
-lemma nhds_basis_closed_ball {x : E} :
-  (𝓝 x).has_basis (λ r : ℝ, 0 < r) (closed_ball x) :=
-begin
-  rw [to_euclidean.to_homeomorph.nhds_eq_comap],
+theorem nhds_basis_closed_ball {x : E} : (𝓝 x).HasBasis (fun r : ℝ => 0 < r) (ClosedBall x) := by
+  rw [to_euclidean.to_homeomorph.nhds_eq_comap]
   exact metric.nhds_basis_closed_ball.comap _
-end
 
-lemma closed_ball_mem_nhds {x : E} {r : ℝ} (hr : 0 < r) : closed_ball x r ∈ 𝓝 x :=
-nhds_basis_closed_ball.mem_of_mem hr
+theorem closed_ball_mem_nhds {x : E} {r : ℝ} (hr : 0 < r) : ClosedBall x r ∈ 𝓝 x :=
+  nhds_basis_closed_ball.mem_of_mem hr
 
-lemma nhds_basis_ball {x : E} :
-  (𝓝 x).has_basis (λ r : ℝ, 0 < r) (ball x) :=
-begin
-  rw [to_euclidean.to_homeomorph.nhds_eq_comap],
+theorem nhds_basis_ball {x : E} : (𝓝 x).HasBasis (fun r : ℝ => 0 < r) (Ball x) := by
+  rw [to_euclidean.to_homeomorph.nhds_eq_comap]
   exact metric.nhds_basis_ball.comap _
-end
 
-lemma ball_mem_nhds {x : E} {r : ℝ} (hr : 0 < r) : ball x r ∈ 𝓝 x :=
-nhds_basis_ball.mem_of_mem hr
+theorem ball_mem_nhds {x : E} {r : ℝ} (hr : 0 < r) : Ball x r ∈ 𝓝 x :=
+  nhds_basis_ball.mem_of_mem hr
 
-end euclidean
+end Euclidean
 
-variables {F : Type*} [normed_group F] [normed_space ℝ F] {f g : F → E} {n : with_top ℕ}
+variable {F : Type _} [NormedGroup F] [NormedSpace ℝ F] {f g : F → E} {n : WithTop ℕ}
 
-lemma cont_diff.euclidean_dist (hf : cont_diff ℝ n f) (hg : cont_diff ℝ n g)
-  (h : ∀ x, f x ≠ g x) :
-  cont_diff ℝ n (λ x, euclidean.dist (f x) (g x)) :=
-begin
-  simp only [euclidean.dist],
-  apply @cont_diff.dist ℝ,
-  exacts [(@to_euclidean E _ _ _).cont_diff.comp hf,
-    (@to_euclidean E _ _ _).cont_diff.comp hg, λ x, to_euclidean.injective.ne (h x)]
-end
+theorem ContDiff.euclidean_dist (hf : ContDiff ℝ n f) (hg : ContDiff ℝ n g) (h : ∀ x, f x ≠ g x) :
+    ContDiff ℝ n fun x => Euclidean.dist (f x) (g x) := by
+  simp only [Euclidean.dist]
+  apply @ContDiff.dist ℝ
+  exacts[(@toEuclidean E _ _ _).ContDiff.comp hf, (@toEuclidean E _ _ _).ContDiff.comp hg, fun x =>
+    to_euclidean.injective.ne (h x)]
+

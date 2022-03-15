@@ -3,11 +3,13 @@ Copyright (c) 2020 Oliver Nash. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison, Oliver Nash
 -/
-import tactic.abel
+import Mathbin.Tactic.Abel
 
-namespace tactic
-namespace interactive
+namespace Tactic
 
+namespace Interactive
+
+-- ././Mathport/Syntax/Translate/Basic.lean:915:4: warning: unsupported (TODO): `[tacs]
 /-- A tactic for simplifying identities in not-necessarily-commutative rings.
 
 An example:
@@ -16,26 +18,20 @@ example {R : Type*} [ring R] (a b c : R) : a * (b + c + c - b) = 2*a*c :=
 by noncomm_ring
 ```
 -/
-meta def noncomm_ring :=
-`[simp only [-- Expand everything out.
-             add_mul, mul_add, sub_eq_add_neg,
-             -- Right associate all products.
-             mul_assoc,
-             -- Expand powers to numerals.
-             pow_bit0, pow_bit1, pow_one,
-             -- Replace multiplication by numerals with `zsmul`.
-             bit0_mul, mul_bit0, bit1_mul, mul_bit1, one_mul, mul_one, zero_mul, mul_zero,
-             -- Pull `zsmul n` out the front so `abel` can see them.
-             ←mul_zsmul_assoc, ←mul_zsmul_left,
-             -- Pull out negations.
-             neg_mul, mul_neg] {fail_if_unchanged := ff};
-  abel]
+unsafe def noncomm_ring :=
+  sorry
 
+-- Expand everything out.
+-- Right associate all products.
+-- Expand powers to numerals.
+-- Replace multiplication by numerals with `zsmul`.
+-- Pull `zsmul n` out the front so `abel` can see them.
+-- Pull out negations.
 add_tactic_doc
-{ name       := "noncomm_ring",
-  category   := doc_category.tactic,
-  decl_names := [`tactic.interactive.noncomm_ring],
-  tags       := ["arithmetic", "simplification", "decision procedure"] }
+  { Name := "noncomm_ring", category := DocCategory.tactic, declNames := [`tactic.interactive.noncomm_ring],
+    tags := ["arithmetic", "simplification", "decision procedure"] }
 
-end interactive
-end tactic
+end Interactive
+
+end Tactic
+

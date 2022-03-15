@@ -3,10 +3,10 @@ Copyright (c) 2021 Henry Swanson. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Henry Swanson
 -/
-import combinatorics.derangements.basic
-import data.fintype.card
-import tactic.delta_instance
-import tactic.ring
+import Mathbin.Combinatorics.Derangements.Basic
+import Mathbin.Data.Fintype.Card
+import Mathbin.Tactic.DeltaInstance
+import Mathbin.Tactic.Ring
 
 /-!
 # Derangements on fintypes
@@ -25,91 +25,96 @@ This file contains lemmas that describe the cardinality of `derangements α` whe
     factorials.
 -/
 
-open derangements equiv fintype
-open_locale big_operators
 
-variables {α : Type*} [decidable_eq α] [fintype α]
+open Derangements Equivₓ Fintype
 
-instance : decidable_pred (derangements α) := λ _, fintype.decidable_forall_fintype
+open_locale BigOperators
 
-instance : fintype (derangements α) := by delta_instance derangements
+variable {α : Type _} [DecidableEq α] [Fintype α]
 
-lemma card_derangements_invariant {α β : Type*} [fintype α] [decidable_eq α]
-  [fintype β] [decidable_eq β] (h : card α = card β) :
-  card (derangements α) = card (derangements β) :=
-fintype.card_congr (equiv.derangements_congr $ equiv_of_card_eq h)
+instance : DecidablePred (Derangements α) := fun _ => Fintype.decidableForallFintype
 
-lemma card_derangements_fin_add_two (n : ℕ) :
-  card (derangements (fin (n+2))) = (n+1) * card (derangements (fin n)) +
-  (n+1) * card (derangements (fin (n+1))) :=
-begin
+instance : Fintype (Derangements α) := by
+  delta_instance derangements
+
+theorem card_derangements_invariant {α β : Type _} [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
+    (h : card α = card β) : card (Derangements α) = card (Derangements β) :=
+  Fintype.card_congr (Equivₓ.derangementsCongr <| equivOfCardEq h)
+
+theorem card_derangements_fin_add_two (n : ℕ) :
+    card (Derangements (Finₓ (n + 2))) =
+      (n + 1) * card (Derangements (Finₓ n)) + (n + 1) * card (Derangements (Finₓ (n + 1))) :=
+  by
   -- get some basic results about the size of fin (n+1) plus or minus an element
-  have h1 : ∀ a : fin (n+1), card ({a}ᶜ : set (fin (n+1))) = card (fin n),
-  { intro a,
-    simp only [fintype.card_fin, finset.card_fin, fintype.card_of_finset, finset.filter_ne' _ a,
-      set.mem_compl_singleton_iff, finset.card_erase_of_mem (finset.mem_univ a),
-      add_tsub_cancel_right] },
-  have h2 : card (fin (n+2)) = card (option (fin (n+1))),
-  { simp only [card_fin, card_option] },
+  have h1 : ∀ a : Finₓ (n + 1), card ({a}ᶜ : Set (Finₓ (n + 1))) = card (Finₓ n) := by
+    intro a
+    simp only [Fintype.card_fin, Finset.card_fin, Fintype.card_of_finset, Finset.filter_ne' _ a,
+      Set.mem_compl_singleton_iff, Finset.card_erase_of_mem (Finset.mem_univ a), add_tsub_cancel_right]
+  have h2 : card (Finₓ (n + 2)) = card (Option (Finₓ (n + 1))) := by
+    simp only [card_fin, card_option]
   -- rewrite the LHS and substitute in our fintype-level equivalence
   simp only [card_derangements_invariant h2,
-    card_congr (@derangements_recursion_equiv (fin (n+1)) _),
-  -- push the cardinality through the Σ and ⊕ so that we can use `card_n`
-    card_sigma, card_sum, card_derangements_invariant (h1 _), finset.sum_const, nsmul_eq_mul,
-    finset.card_fin, mul_add, nat.cast_id],
-end
+    card_congr
+      (@derangements_recursion_equiv (Finₓ (n + 1))
+        _),-- push the cardinality through the Σ and ⊕ so that we can use `card_n`
+    card_sigma,
+    card_sum, card_derangements_invariant (h1 _), Finset.sum_const, nsmul_eq_mul, Finset.card_fin, mul_addₓ,
+    Nat.cast_idₓ]
 
 /-- The number of derangements of an `n`-element set. -/
-def num_derangements : ℕ → ℕ
-| 0 := 1
-| 1 := 0
-| (n + 2) := (n + 1) * (num_derangements n + num_derangements (n+1))
+def numDerangements : ℕ → ℕ
+  | 0 => 1
+  | 1 => 0
+  | n + 2 => (n + 1) * (numDerangements n + numDerangements (n + 1))
 
-@[simp] lemma num_derangements_zero : num_derangements 0 = 1 := rfl
+@[simp]
+theorem num_derangements_zero : numDerangements 0 = 1 :=
+  rfl
 
-@[simp] lemma num_derangements_one : num_derangements 1 = 0 := rfl
+@[simp]
+theorem num_derangements_one : numDerangements 1 = 0 :=
+  rfl
 
-lemma num_derangements_add_two (n : ℕ) :
-  num_derangements (n+2) = (n+1) * (num_derangements n + num_derangements (n+1)) := rfl
+theorem num_derangements_add_two (n : ℕ) :
+    numDerangements (n + 2) = (n + 1) * (numDerangements n + numDerangements (n + 1)) :=
+  rfl
 
-lemma num_derangements_succ (n : ℕ) :
-  (num_derangements (n+1) : ℤ) = (n + 1) * (num_derangements n : ℤ) - (-1)^n :=
-begin
-  induction n with n hn,
-  { refl },
-  { simp only [num_derangements_add_two, hn, pow_succ,
-      int.coe_nat_mul, int.coe_nat_add, int.coe_nat_succ],
-    ring }
-end
+theorem num_derangements_succ (n : ℕ) : (numDerangements (n + 1) : ℤ) = (n + 1) * (numDerangements n : ℤ) - -1 ^ n := by
+  induction' n with n hn
+  · rfl
+    
+  · simp only [num_derangements_add_two, hn, pow_succₓ, Int.coe_nat_mul, Int.coe_nat_add, Int.coe_nat_succ]
+    ring
+    
 
-lemma card_derangements_fin_eq_num_derangements {n : ℕ} :
-  card (derangements (fin n)) = num_derangements n :=
-begin
-  induction n using nat.strong_induction_on with n hyp,
-  obtain (_|_|n) := n, { refl }, { refl },  -- knock out cases 0 and 1
+theorem card_derangements_fin_eq_num_derangements {n : ℕ} : card (Derangements (Finₓ n)) = numDerangements n := by
+  induction' n using Nat.strong_induction_onₓ with n hyp
+  obtain _ | _ | n := n
+  · rfl
+    
+  · rfl
+    
+  -- knock out cases 0 and 1
   -- now we have n ≥ 2. rewrite everything in terms of card_derangements, so that we can use
   -- `card_derangements_fin_add_two`
-  rw [num_derangements_add_two, card_derangements_fin_add_two, mul_add,
-    hyp _ (nat.lt_add_of_pos_right zero_lt_two), hyp _ (lt_add_one _)],
-end
+  rw [num_derangements_add_two, card_derangements_fin_add_two, mul_addₓ, hyp _ (Nat.lt_add_of_pos_rightₓ zero_lt_two),
+    hyp _ (lt_add_one _)]
 
-lemma card_derangements_eq_num_derangements (α : Type*) [fintype α] [decidable_eq α] :
-  card (derangements α) = num_derangements (card α) :=
-begin
-  rw ←card_derangements_invariant (card_fin _),
-  exact card_derangements_fin_eq_num_derangements,
-end
+theorem card_derangements_eq_num_derangements (α : Type _) [Fintype α] [DecidableEq α] :
+    card (Derangements α) = numDerangements (card α) := by
+  rw [← card_derangements_invariant (card_fin _)]
+  exact card_derangements_fin_eq_num_derangements
 
 theorem num_derangements_sum (n : ℕ) :
-  (num_derangements n : ℤ) = ∑ k in finset.range (n + 1), (-1:ℤ)^k * nat.asc_factorial k (n - k) :=
-begin
-  induction n with n hn, { refl },
-  rw [finset.sum_range_succ, num_derangements_succ, hn, finset.mul_sum, tsub_self,
-    nat.asc_factorial_zero, int.coe_nat_one, mul_one, pow_succ, neg_one_mul, sub_eq_add_neg,
-    add_left_inj, finset.sum_congr rfl],
+    (numDerangements n : ℤ) = ∑ k in Finset.range (n + 1), (-1 : ℤ) ^ k * Nat.ascFactorial k (n - k) := by
+  induction' n with n hn
+  · rfl
+    
+  rw [Finset.sum_range_succ, num_derangements_succ, hn, Finset.mul_sum, tsub_self, Nat.asc_factorial_zero,
+    Int.coe_nat_one, mul_oneₓ, pow_succₓ, neg_one_mul, sub_eq_add_neg, add_left_injₓ, Finset.sum_congr rfl]
   -- show that (n + 1) * (-1)^x * asc_fac x (n - x) = (-1)^x * asc_fac x (n.succ - x)
-  intros x hx,
-  have h_le : x ≤ n := finset.mem_range_succ_iff.mp hx,
-  rw [nat.succ_sub h_le, nat.asc_factorial_succ, add_tsub_cancel_of_le h_le,
-    int.coe_nat_mul, int.coe_nat_succ, mul_left_comm],
-end
+  intro x hx
+  have h_le : x ≤ n := finset.mem_range_succ_iff.mp hx
+  rw [Nat.succ_subₓ h_le, Nat.asc_factorial_succ, add_tsub_cancel_of_le h_le, Int.coe_nat_mul, Int.coe_nat_succ,
+    mul_left_commₓ]
+

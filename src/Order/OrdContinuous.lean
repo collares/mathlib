@@ -3,9 +3,9 @@ Copyright (c) 2020 Yury G. Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury G. Kudryashov, Johannes Hölzl
 -/
-import order.conditionally_complete_lattice
-import logic.function.iterate
-import order.rel_iso
+import Mathbin.Order.ConditionallyCompleteLattice
+import Mathbin.Logic.Function.Iterate
+import Mathbin.Order.RelIso
 
 /-!
 # Order continuity
@@ -19,235 +19,219 @@ We prove some basic lemmas (`map_sup`, `map_Sup` etc) and prove that an `rel_iso
 and right order continuous.
 -/
 
-universes u v w x
 
-variables {α : Type u} {β : Type v} {γ : Type w} {ι : Sort x}
+universe u v w x
 
-open set function
+variable {α : Type u} {β : Type v} {γ : Type w} {ι : Sort x}
+
+open Set Function
 
 /-!
 ### Definitions
 -/
 
+
 /-- A function `f` between preorders is left order continuous if it preserves all suprema.  We
 define it using `is_lub` instead of `Sup` so that the proof works both for complete lattices and
 conditionally complete lattices. -/
-def left_ord_continuous [preorder α] [preorder β] (f : α → β) :=
-∀ ⦃s : set α⦄ ⦃x⦄, is_lub s x → is_lub (f '' s) (f x)
+def LeftOrdContinuous [Preorderₓ α] [Preorderₓ β] (f : α → β) :=
+  ∀ ⦃s : Set α⦄ ⦃x⦄, IsLub s x → IsLub (f '' s) (f x)
 
 /-- A function `f` between preorders is right order continuous if it preserves all infima.  We
 define it using `is_glb` instead of `Inf` so that the proof works both for complete lattices and
 conditionally complete lattices. -/
-def right_ord_continuous [preorder α] [preorder β] (f : α → β) :=
-∀ ⦃s : set α⦄ ⦃x⦄, is_glb s x → is_glb (f '' s) (f x)
+def RightOrdContinuous [Preorderₓ α] [Preorderₓ β] (f : α → β) :=
+  ∀ ⦃s : Set α⦄ ⦃x⦄, IsGlb s x → IsGlb (f '' s) (f x)
 
-namespace left_ord_continuous
+namespace LeftOrdContinuous
 
-section preorder
+section Preorderₓ
 
-variables (α) [preorder α] [preorder β] [preorder γ] {g : β → γ} {f : α → β}
+variable (α) [Preorderₓ α] [Preorderₓ β] [Preorderₓ γ] {g : β → γ} {f : α → β}
 
-protected lemma id : left_ord_continuous (id : α → α) := λ s x h, by simpa only [image_id] using h
+protected theorem id : LeftOrdContinuous (id : α → α) := fun s x h => by
+  simpa only [image_id] using h
 
 variable {α}
 
-protected lemma order_dual (hf : left_ord_continuous f) :
-  @right_ord_continuous (order_dual α) (order_dual β) _ _ f := hf
+protected theorem order_dual (hf : LeftOrdContinuous f) : @RightOrdContinuous (OrderDual α) (OrderDual β) _ _ f :=
+  hf
 
-lemma map_is_greatest (hf : left_ord_continuous f) {s : set α} {x : α} (h : is_greatest s x):
-  is_greatest (f '' s) (f x) :=
-⟨mem_image_of_mem f h.1, (hf h.is_lub).1⟩
+theorem map_is_greatest (hf : LeftOrdContinuous f) {s : Set α} {x : α} (h : IsGreatest s x) :
+    IsGreatest (f '' s) (f x) :=
+  ⟨mem_image_of_mem f h.1, (hf h.IsLub).1⟩
 
-lemma mono (hf : left_ord_continuous f) : monotone f :=
-λ a₁ a₂ h,
-have is_greatest {a₁, a₂} a₂ := ⟨or.inr rfl, by simp [*]⟩,
-(hf.map_is_greatest this).2 $ mem_image_of_mem _ (or.inl rfl)
+theorem mono (hf : LeftOrdContinuous f) : Monotone f := fun a₁ a₂ h =>
+  have : IsGreatest {a₁, a₂} a₂ :=
+    ⟨Or.inr rfl, by
+      simp [*]⟩
+  (hf.map_is_greatest this).2 <| mem_image_of_mem _ (Or.inl rfl)
 
-lemma comp (hg : left_ord_continuous g) (hf : left_ord_continuous f) :
-  left_ord_continuous (g ∘ f) :=
-λ s x h, by simpa only [image_image] using hg (hf h)
+theorem comp (hg : LeftOrdContinuous g) (hf : LeftOrdContinuous f) : LeftOrdContinuous (g ∘ f) := fun s x h => by
+  simpa only [image_image] using hg (hf h)
 
-protected lemma iterate {f : α → α} (hf : left_ord_continuous f) (n : ℕ) :
-  left_ord_continuous (f^[n]) :=
-nat.rec_on n (left_ord_continuous.id α) $ λ n ihn, ihn.comp hf
+protected theorem iterate {f : α → α} (hf : LeftOrdContinuous f) (n : ℕ) : LeftOrdContinuous (f^[n]) :=
+  (Nat.recOn n (LeftOrdContinuous.id α)) fun n ihn => ihn.comp hf
 
-end preorder
+end Preorderₓ
 
-section semilattice_sup
+section SemilatticeSup
 
-variables [semilattice_sup α] [semilattice_sup β] {f : α → β}
+variable [SemilatticeSup α] [SemilatticeSup β] {f : α → β}
 
-lemma map_sup (hf : left_ord_continuous f) (x y : α) :
-  f (x ⊔ y) = f x ⊔ f y :=
-(hf is_lub_pair).unique $ by simp only [image_pair, is_lub_pair]
+theorem map_sup (hf : LeftOrdContinuous f) (x y : α) : f (x⊔y) = f x⊔f y :=
+  (hf is_lub_pair).unique <| by
+    simp only [image_pair, is_lub_pair]
 
-lemma le_iff (hf : left_ord_continuous f) (h : injective f) {x y} :
-  f x ≤ f y ↔ x ≤ y :=
-by simp only [← sup_eq_right, ← hf.map_sup, h.eq_iff]
+theorem le_iff (hf : LeftOrdContinuous f) (h : Injective f) {x y} : f x ≤ f y ↔ x ≤ y := by
+  simp only [← sup_eq_right, ← hf.map_sup, h.eq_iff]
 
-lemma lt_iff (hf : left_ord_continuous f) (h : injective f) {x y} :
-  f x < f y ↔ x < y :=
-by simp only [lt_iff_le_not_le, hf.le_iff h]
+theorem lt_iff (hf : LeftOrdContinuous f) (h : Injective f) {x y} : f x < f y ↔ x < y := by
+  simp only [lt_iff_le_not_leₓ, hf.le_iff h]
 
 variable (f)
 
 /-- Convert an injective left order continuous function to an order embedding. -/
-def to_order_embedding (hf : left_ord_continuous f) (h : injective f) :
-  α ↪o β :=
-⟨⟨f, h⟩, λ x y, hf.le_iff h⟩
+def toOrderEmbedding (hf : LeftOrdContinuous f) (h : Injective f) : α ↪o β :=
+  ⟨⟨f, h⟩, fun x y => hf.le_iff h⟩
 
 variable {f}
 
-@[simp] lemma coe_to_order_embedding (hf : left_ord_continuous f) (h : injective f) :
-  ⇑(hf.to_order_embedding f h) = f := rfl
+@[simp]
+theorem coe_to_order_embedding (hf : LeftOrdContinuous f) (h : Injective f) : ⇑(hf.toOrderEmbedding f h) = f :=
+  rfl
 
-end semilattice_sup
+end SemilatticeSup
 
-section complete_lattice
+section CompleteLattice
 
-variables [complete_lattice α] [complete_lattice β] {f : α → β}
+variable [CompleteLattice α] [CompleteLattice β] {f : α → β}
 
-lemma map_Sup' (hf : left_ord_continuous f) (s : set α) :
-  f (Sup s) = Sup (f '' s) :=
-(hf $ is_lub_Sup s).Sup_eq.symm
+theorem map_Sup' (hf : LeftOrdContinuous f) (s : Set α) : f (sup s) = sup (f '' s) :=
+  (hf <| is_lub_Sup s).Sup_eq.symm
 
-lemma map_Sup (hf : left_ord_continuous f) (s : set α) :
-  f (Sup s) = ⨆ x ∈ s, f x :=
-by rw [hf.map_Sup', Sup_image]
+theorem map_Sup (hf : LeftOrdContinuous f) (s : Set α) : f (sup s) = ⨆ x ∈ s, f x := by
+  rw [hf.map_Sup', Sup_image]
 
-lemma map_supr (hf : left_ord_continuous f) (g : ι → α) :
-  f (⨆ i, g i) = ⨆ i, f (g i) :=
-by simp only [supr, hf.map_Sup', ← range_comp]
+theorem map_supr (hf : LeftOrdContinuous f) (g : ι → α) : f (⨆ i, g i) = ⨆ i, f (g i) := by
+  simp only [supr, hf.map_Sup', ← range_comp]
 
-end complete_lattice
+end CompleteLattice
 
-section conditionally_complete_lattice
+section ConditionallyCompleteLattice
 
-variables [conditionally_complete_lattice α] [conditionally_complete_lattice β] [nonempty ι]
-  {f : α → β}
+variable [ConditionallyCompleteLattice α] [ConditionallyCompleteLattice β] [Nonempty ι] {f : α → β}
 
-lemma map_cSup (hf : left_ord_continuous f) {s : set α} (sne : s.nonempty) (sbdd : bdd_above s) :
-  f (Sup s) = Sup (f '' s) :=
-((hf $ is_lub_cSup sne sbdd).cSup_eq $ sne.image f).symm
+theorem map_cSup (hf : LeftOrdContinuous f) {s : Set α} (sne : s.Nonempty) (sbdd : BddAbove s) :
+    f (sup s) = sup (f '' s) :=
+  ((hf <| is_lub_cSup sne sbdd).cSup_eq <| sne.Image f).symm
 
-lemma map_csupr (hf : left_ord_continuous f) {g : ι → α} (hg : bdd_above (range g)) :
-  f (⨆ i, g i) = ⨆ i, f (g i) :=
-by simp only [supr, hf.map_cSup (range_nonempty _) hg, ← range_comp]
+theorem map_csupr (hf : LeftOrdContinuous f) {g : ι → α} (hg : BddAbove (Range g)) : f (⨆ i, g i) = ⨆ i, f (g i) := by
+  simp only [supr, hf.map_cSup (range_nonempty _) hg, ← range_comp]
 
-end conditionally_complete_lattice
+end ConditionallyCompleteLattice
 
-end left_ord_continuous
+end LeftOrdContinuous
 
-namespace right_ord_continuous
+namespace RightOrdContinuous
 
-section preorder
+section Preorderₓ
 
-variables (α) [preorder α] [preorder β] [preorder γ] {g : β → γ} {f : α → β}
+variable (α) [Preorderₓ α] [Preorderₓ β] [Preorderₓ γ] {g : β → γ} {f : α → β}
 
-protected lemma id : right_ord_continuous (id : α → α) := λ s x h, by simpa only [image_id] using h
+protected theorem id : RightOrdContinuous (id : α → α) := fun s x h => by
+  simpa only [image_id] using h
 
 variable {α}
 
-protected lemma order_dual (hf : right_ord_continuous f) :
-  @left_ord_continuous (order_dual α) (order_dual β) _ _ f := hf
+protected theorem order_dual (hf : RightOrdContinuous f) : @LeftOrdContinuous (OrderDual α) (OrderDual β) _ _ f :=
+  hf
 
-lemma map_is_least (hf : right_ord_continuous f) {s : set α} {x : α} (h : is_least s x):
-  is_least (f '' s) (f x) :=
-hf.order_dual.map_is_greatest h
+theorem map_is_least (hf : RightOrdContinuous f) {s : Set α} {x : α} (h : IsLeast s x) : IsLeast (f '' s) (f x) :=
+  hf.OrderDual.map_is_greatest h
 
-lemma mono (hf : right_ord_continuous f) : monotone f :=
-hf.order_dual.mono.dual
+theorem mono (hf : RightOrdContinuous f) : Monotone f :=
+  hf.OrderDual.mono.dual
 
-lemma comp (hg : right_ord_continuous g) (hf : right_ord_continuous f) :
-  right_ord_continuous (g ∘ f) :=
-hg.order_dual.comp hf.order_dual
+theorem comp (hg : RightOrdContinuous g) (hf : RightOrdContinuous f) : RightOrdContinuous (g ∘ f) :=
+  hg.OrderDual.comp hf.OrderDual
 
-protected lemma iterate {f : α → α} (hf : right_ord_continuous f) (n : ℕ) :
-  right_ord_continuous (f^[n]) :=
-hf.order_dual.iterate n
+protected theorem iterate {f : α → α} (hf : RightOrdContinuous f) (n : ℕ) : RightOrdContinuous (f^[n]) :=
+  hf.OrderDual.iterate n
 
-end preorder
+end Preorderₓ
 
-section semilattice_inf
+section SemilatticeInf
 
-variables [semilattice_inf α] [semilattice_inf β] {f : α → β}
+variable [SemilatticeInf α] [SemilatticeInf β] {f : α → β}
 
-lemma map_inf (hf : right_ord_continuous f) (x y : α) :
-  f (x ⊓ y) = f x ⊓ f y :=
-hf.order_dual.map_sup x y
+theorem map_inf (hf : RightOrdContinuous f) (x y : α) : f (x⊓y) = f x⊓f y :=
+  hf.OrderDual.map_sup x y
 
-lemma le_iff (hf : right_ord_continuous f) (h : injective f) {x y} :
-  f x ≤ f y ↔ x ≤ y :=
-hf.order_dual.le_iff h
+theorem le_iff (hf : RightOrdContinuous f) (h : Injective f) {x y} : f x ≤ f y ↔ x ≤ y :=
+  hf.OrderDual.le_iff h
 
-lemma lt_iff (hf : right_ord_continuous f) (h : injective f) {x y} :
-  f x < f y ↔ x < y :=
-hf.order_dual.lt_iff h
+theorem lt_iff (hf : RightOrdContinuous f) (h : Injective f) {x y} : f x < f y ↔ x < y :=
+  hf.OrderDual.lt_iff h
 
 variable (f)
 
 /-- Convert an injective left order continuous function to a `order_embedding`. -/
-def to_order_embedding (hf : right_ord_continuous f) (h : injective f) : α ↪o β :=
-⟨⟨f, h⟩, λ x y, hf.le_iff h⟩
+def toOrderEmbedding (hf : RightOrdContinuous f) (h : Injective f) : α ↪o β :=
+  ⟨⟨f, h⟩, fun x y => hf.le_iff h⟩
 
 variable {f}
 
-@[simp] lemma coe_to_order_embedding (hf : right_ord_continuous f) (h : injective f) :
-  ⇑(hf.to_order_embedding f h) = f := rfl
+@[simp]
+theorem coe_to_order_embedding (hf : RightOrdContinuous f) (h : Injective f) : ⇑(hf.toOrderEmbedding f h) = f :=
+  rfl
 
-end semilattice_inf
+end SemilatticeInf
 
-section complete_lattice
+section CompleteLattice
 
-variables [complete_lattice α] [complete_lattice β] {f : α → β}
+variable [CompleteLattice α] [CompleteLattice β] {f : α → β}
 
-lemma map_Inf' (hf : right_ord_continuous f) (s : set α) :
-  f (Inf s) = Inf (f '' s) :=
-hf.order_dual.map_Sup' s
+theorem map_Inf' (hf : RightOrdContinuous f) (s : Set α) : f (inf s) = inf (f '' s) :=
+  hf.OrderDual.map_Sup' s
 
-lemma map_Inf (hf : right_ord_continuous f) (s : set α) :
-  f (Inf s) = ⨅ x ∈ s, f x :=
-hf.order_dual.map_Sup s
+theorem map_Inf (hf : RightOrdContinuous f) (s : Set α) : f (inf s) = ⨅ x ∈ s, f x :=
+  hf.OrderDual.map_Sup s
 
-lemma map_infi (hf : right_ord_continuous f) (g : ι → α) :
-  f (⨅ i, g i) = ⨅ i, f (g i) :=
-hf.order_dual.map_supr g
+theorem map_infi (hf : RightOrdContinuous f) (g : ι → α) : f (⨅ i, g i) = ⨅ i, f (g i) :=
+  hf.OrderDual.map_supr g
 
-end complete_lattice
+end CompleteLattice
 
-section conditionally_complete_lattice
+section ConditionallyCompleteLattice
 
-variables [conditionally_complete_lattice α] [conditionally_complete_lattice β] [nonempty ι]
-  {f : α → β}
+variable [ConditionallyCompleteLattice α] [ConditionallyCompleteLattice β] [Nonempty ι] {f : α → β}
 
-lemma map_cInf (hf : right_ord_continuous f) {s : set α} (sne : s.nonempty) (sbdd : bdd_below s) :
-  f (Inf s) = Inf (f '' s) :=
-hf.order_dual.map_cSup sne sbdd
+theorem map_cInf (hf : RightOrdContinuous f) {s : Set α} (sne : s.Nonempty) (sbdd : BddBelow s) :
+    f (inf s) = inf (f '' s) :=
+  hf.OrderDual.map_cSup sne sbdd
 
-lemma map_cinfi (hf : right_ord_continuous f) {g : ι → α} (hg : bdd_below (range g)) :
-  f (⨅ i, g i) = ⨅ i, f (g i) :=
-hf.order_dual.map_csupr hg
+theorem map_cinfi (hf : RightOrdContinuous f) {g : ι → α} (hg : BddBelow (Range g)) : f (⨅ i, g i) = ⨅ i, f (g i) :=
+  hf.OrderDual.map_csupr hg
 
-end conditionally_complete_lattice
+end ConditionallyCompleteLattice
 
-end right_ord_continuous
+end RightOrdContinuous
 
-namespace order_iso
+namespace OrderIso
 
-section preorder
+section Preorderₓ
 
-variables [preorder α] [preorder β] (e : α ≃o β)
-  {s : set α} {x : α}
+variable [Preorderₓ α] [Preorderₓ β] (e : α ≃o β) {s : Set α} {x : α}
 
-protected lemma left_ord_continuous : left_ord_continuous e :=
-λ s x hx,
-⟨monotone.mem_upper_bounds_image (λ x y, e.map_rel_iff.2) hx.1,
-  λ y hy, e.rel_symm_apply.1 $ (is_lub_le_iff hx).2 $ λ x' hx', e.rel_symm_apply.2 $ hy $
-    mem_image_of_mem _ hx'⟩
+protected theorem left_ord_continuous : LeftOrdContinuous e := fun s x hx =>
+  ⟨Monotone.mem_upper_bounds_image (fun x y => e.map_rel_iff.2) hx.1, fun y hy =>
+    e.rel_symm_apply.1 <| (is_lub_le_iff hx).2 fun x' hx' => e.rel_symm_apply.2 <| hy <| mem_image_of_mem _ hx'⟩
 
-protected lemma right_ord_continuous : right_ord_continuous e :=
-order_iso.left_ord_continuous e.dual
+protected theorem right_ord_continuous : RightOrdContinuous e :=
+  OrderIso.left_ord_continuous e.dual
 
-end preorder
+end Preorderₓ
 
-end order_iso
+end OrderIso
+

@@ -3,10 +3,10 @@ Copyright (c) 2021 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import algebra.category.Module.basic
-import category_theory.linear
-import category_theory.preadditive.additive_functor
-import category_theory.preadditive.yoneda
+import Mathbin.Algebra.Category.Module.Basic
+import Mathbin.CategoryTheory.Linear.Default
+import Mathbin.CategoryTheory.Preadditive.AdditiveFunctor
+import Mathbin.CategoryTheory.Preadditive.Yoneda
 
 /-!
 # The Yoneda embedding for `R`-linear categories
@@ -19,77 +19,103 @@ TODO: `linear_yoneda R C` is `R`-linear.
 TODO: In fact, `linear_yoneda` itself is additive and `R`-linear.
 -/
 
-universes w v u
 
-open opposite
+universe w v u
 
-namespace category_theory
+open Opposite
 
-variables (R : Type w) [ring R] (C : Type u) [category.{v} C] [preadditive C] [linear R C]
+namespace CategoryTheory
+
+variable (R : Type w) [Ringₓ R] (C : Type u) [Category.{v} C] [Preadditive C] [Linear R C]
 
 /-- The Yoneda embedding for `R`-linear categories `C`,
 sending an object `X : C` to the `Module R`-valued presheaf on `C`,
 with value on `Y : Cᵒᵖ` given by `Module.of R (unop Y ⟶ X)`. -/
 @[simps]
-def linear_yoneda : C ⥤ Cᵒᵖ ⥤ Module R :=
-{ obj := λ X,
-  { obj := λ Y, Module.of R (unop Y ⟶ X),
-    map := λ Y Y' f, linear.left_comp R _ f.unop,
-    map_comp' := λ _ _ _ f g, begin ext, dsimp, erw [category.assoc] end,
-    map_id' := λ Y, begin ext, dsimp, erw [category.id_comp] end },
-  map := λ X X' f, { app := λ Y, linear.right_comp R _ f },
-  map_id' := λ X, by { ext, simp }, -- `obviously` provides these, but slowly
-  map_comp' := λ _ _ _ f g, by { ext, simp } }
+def linearYoneda : C ⥤ Cᵒᵖ ⥤ ModuleCat R where
+  obj := fun X =>
+    { obj := fun Y => ModuleCat.of R (unop Y ⟶ X), map := fun Y Y' f => Linear.leftComp R _ f.unop,
+      map_comp' := fun _ _ _ f g => by
+        ext
+        dsimp
+        erw [category.assoc],
+      map_id' := fun Y => by
+        ext
+        dsimp
+        erw [category.id_comp] }
+  map := fun X X' f => { app := fun Y => Linear.rightComp R _ f }
+  map_id' := fun X => by
+    ext
+    simp
+  -- `obviously` provides these, but slowly
+  map_comp' := fun _ _ _ f g => by
+    ext
+    simp
 
 /-- The Yoneda embedding for `R`-linear categories `C`,
 sending an object `Y : Cᵒᵖ` to the `Module R`-valued copresheaf on `C`,
 with value on `X : C` given by `Module.of R (unop Y ⟶ X)`. -/
 @[simps]
-def linear_coyoneda : Cᵒᵖ ⥤ C ⥤ Module R :=
-{ obj := λ Y,
-  { obj := λ X, Module.of R (unop Y ⟶ X),
-    map := λ Y Y', linear.right_comp _ _,
-    map_id' := λ Y, by { ext, exact category.comp_id _ },
-    map_comp' := λ _ _ _ f g, by { ext, exact eq.symm (category.assoc _ _ _) } },
-  map := λ Y Y' f, { app := λ X, linear.left_comp _ _ f.unop },
-  map_id' := λ X, by { ext, simp }, -- `obviously` provides these, but slowly
-  map_comp' := λ _ _ _ f g, by { ext, simp } }
+def linearCoyoneda : Cᵒᵖ ⥤ C ⥤ ModuleCat R where
+  obj := fun Y =>
+    { obj := fun X => ModuleCat.of R (unop Y ⟶ X), map := fun Y Y' => Linear.rightComp _ _,
+      map_id' := fun Y => by
+        ext
+        exact category.comp_id _,
+      map_comp' := fun _ _ _ f g => by
+        ext
+        exact Eq.symm (category.assoc _ _ _) }
+  map := fun Y Y' f => { app := fun X => Linear.leftComp _ _ f.unop }
+  map_id' := fun X => by
+    ext
+    simp
+  -- `obviously` provides these, but slowly
+  map_comp' := fun _ _ _ f g => by
+    ext
+    simp
 
-instance linear_yoneda_obj_additive (X : C) : ((linear_yoneda R C).obj X).additive := {}
-instance linear_coyoneda_obj_additive (Y : Cᵒᵖ) : ((linear_coyoneda R C).obj Y).additive := {}
+instance linear_yoneda_obj_additive (X : C) : ((linearYoneda R C).obj X).Additive :=
+  {  }
 
-@[simp] lemma whiskering_linear_yoneda : linear_yoneda R C ⋙
-  (whiskering_right _ _ _).obj (forget (Module.{v} R)) = yoneda :=
-rfl
+instance linear_coyoneda_obj_additive (Y : Cᵒᵖ) : ((linearCoyoneda R C).obj Y).Additive :=
+  {  }
 
-@[simp] lemma whiskering_linear_yoneda₂ : linear_yoneda R C ⋙
-  (whiskering_right _ _ _).obj (forget₂ (Module.{v} R) AddCommGroup.{v}) = preadditive_yoneda :=
-rfl
+@[simp]
+theorem whiskering_linear_yoneda : linearYoneda R C ⋙ (whiskeringRight _ _ _).obj (forget (ModuleCat.{v} R)) = yoneda :=
+  rfl
 
-@[simp] lemma whiskering_linear_coyoneda : linear_coyoneda R C ⋙
-  (whiskering_right _ _ _).obj (forget (Module.{v} R)) = coyoneda :=
-rfl
+@[simp]
+theorem whiskering_linear_yoneda₂ :
+    linearYoneda R C ⋙ (whiskeringRight _ _ _).obj (forget₂ (ModuleCat.{v} R) AddCommGroupₓₓ.{v}) =
+      preadditive_yoneda :=
+  rfl
 
-@[simp] lemma whiskering_linear_coyoneda₂ : linear_coyoneda R C ⋙
-  (whiskering_right _ _ _).obj (forget₂ (Module.{v} R) AddCommGroup.{v}) = preadditive_coyoneda :=
-rfl
+@[simp]
+theorem whiskering_linear_coyoneda :
+    linearCoyoneda R C ⋙ (whiskeringRight _ _ _).obj (forget (ModuleCat.{v} R)) = coyoneda :=
+  rfl
 
-instance linear_yoneda_full : full (linear_yoneda R C) :=
-let yoneda_full : full (linear_yoneda R C ⋙
-  (whiskering_right _ _ _).obj (forget (Module.{v} R))) := yoneda.yoneda_full in
-by exactI full.of_comp_faithful (linear_yoneda R C)
-  (((whiskering_right _ _ _)).obj (forget (Module.{v} R)))
+@[simp]
+theorem whiskering_linear_coyoneda₂ :
+    linearCoyoneda R C ⋙ (whiskeringRight _ _ _).obj (forget₂ (ModuleCat.{v} R) AddCommGroupₓₓ.{v}) =
+      preadditive_coyoneda :=
+  rfl
 
-instance linear_coyoneda_full : full (linear_coyoneda R C) :=
-let coyoneda_full : full (linear_coyoneda R C ⋙
-  (whiskering_right _ _ _).obj (forget (Module.{v} R))) := coyoneda.coyoneda_full in
-by exactI full.of_comp_faithful (linear_coyoneda R C)
-  (((whiskering_right _ _ _)).obj (forget (Module.{v} R)))
+instance linearYonedaFull : Full (linearYoneda R C) :=
+  let yoneda_full : Full (linearYoneda R C ⋙ (whiskeringRight _ _ _).obj (forget (ModuleCat.{v} R))) :=
+    yoneda.yonedaFull
+  full.of_comp_faithful (linear_yoneda R C) ((whiskering_right _ _ _).obj (forget (ModuleCat.{v} R)))
 
-instance linear_yoneda_faithful : faithful (linear_yoneda R C) :=
-faithful.of_comp_eq (whiskering_linear_yoneda R C)
+instance linearCoyonedaFull : Full (linearCoyoneda R C) :=
+  let coyoneda_full : Full (linearCoyoneda R C ⋙ (whiskeringRight _ _ _).obj (forget (ModuleCat.{v} R))) :=
+    coyoneda.coyonedaFull
+  full.of_comp_faithful (linear_coyoneda R C) ((whiskering_right _ _ _).obj (forget (ModuleCat.{v} R)))
 
-instance linear_coyoneda_faithful : faithful (linear_coyoneda R C) :=
-faithful.of_comp_eq (whiskering_linear_coyoneda R C)
+instance linear_yoneda_faithful : Faithful (linearYoneda R C) :=
+  Faithful.of_comp_eq (whiskering_linear_yoneda R C)
 
-end category_theory
+instance linear_coyoneda_faithful : Faithful (linearCoyoneda R C) :=
+  Faithful.of_comp_eq (whiskering_linear_coyoneda R C)
+
+end CategoryTheory
+

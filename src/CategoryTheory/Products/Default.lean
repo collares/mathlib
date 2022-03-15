@@ -1,2 +1,3 @@
-import category_theory.products.bifunctor
-import category_theory.products.associator
+import Mathbin.CategoryTheory.Products.Bifunctor
+import Mathbin.CategoryTheory.Products.Associator
+

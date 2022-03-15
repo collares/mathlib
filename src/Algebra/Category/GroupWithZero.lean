@@ -3,8 +3,8 @@ Copyright (c) 2022 Yaël Dillies. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yaël Dillies
 -/
-import algebra.category.Group.basic
-import category_theory.category.Bipointed
+import Mathbin.Algebra.Category.Group.Basic
+import Mathbin.CategoryTheory.Category.Bipointed
 
 /-!
 # The category of groups with zero
@@ -12,46 +12,59 @@ import category_theory.category.Bipointed
 This file defines `GroupWithZero`, the category of groups with zero.
 -/
 
-universes u
 
-open category_theory order
+universe u
+
+open CategoryTheory Order
 
 /-- The category of groups with zero. -/
-def GroupWithZero := bundled group_with_zero
+def GroupWithZeroₓₓ :=
+  Bundled GroupWithZeroₓ
 
-namespace GroupWithZero
+namespace GroupWithZeroₓₓ
 
-instance : has_coe_to_sort GroupWithZero Type* := bundled.has_coe_to_sort
-instance (X : GroupWithZero) : group_with_zero X := X.str
+instance : CoeSort GroupWithZeroₓₓ (Type _) :=
+  bundled.has_coe_to_sort
+
+instance (X : GroupWithZeroₓₓ) : GroupWithZeroₓ X :=
+  X.str
 
 /-- Construct a bundled `GroupWithZero` from a `group_with_zero`. -/
-def of (α : Type*) [group_with_zero α] : GroupWithZero := bundled.of α
+def of (α : Type _) [GroupWithZeroₓ α] : GroupWithZeroₓₓ :=
+  Bundled.of α
 
-instance : inhabited GroupWithZero := ⟨of (with_zero punit)⟩
+instance : Inhabited GroupWithZeroₓₓ :=
+  ⟨of (WithZero PUnit)⟩
 
-instance : large_category.{u} GroupWithZero :=
-{ hom := λ X Y, monoid_with_zero_hom X Y,
-  id := λ X, monoid_with_zero_hom.id X,
-  comp := λ X Y Z f g, g.comp f,
-  id_comp' := λ X Y, monoid_with_zero_hom.comp_id,
-  comp_id' := λ X Y, monoid_with_zero_hom.id_comp,
-  assoc' := λ W X Y Z _ _ _, monoid_with_zero_hom.comp_assoc _ _ _ }
+instance : LargeCategory.{u} GroupWithZeroₓₓ where
+  Hom := fun X Y => MonoidWithZeroHom X Y
+  id := fun X => MonoidWithZeroHom.id X
+  comp := fun X Y Z f g => g.comp f
+  id_comp' := fun X Y => MonoidWithZeroHom.comp_id
+  comp_id' := fun X Y => MonoidWithZeroHom.id_comp
+  assoc' := fun W X Y Z _ _ _ => MonoidWithZeroHom.comp_assoc _ _ _
 
-instance : concrete_category GroupWithZero :=
-{ forget := ⟨coe_sort, λ X Y, coe_fn, λ X, rfl, λ X Y Z f g, rfl⟩,
-  forget_faithful := ⟨λ X Y f g h, fun_like.coe_injective h⟩ }
+instance : ConcreteCategory GroupWithZeroₓₓ where
+  forget := ⟨coeSort, fun X Y => coeFn, fun X => rfl, fun X Y Z f g => rfl⟩
+  forget_faithful := ⟨fun X Y f g h => FunLike.coe_injective h⟩
 
-instance has_forget_to_Bipointed : has_forget₂ GroupWithZero Bipointed :=
-{ forget₂ := { obj := λ X, ⟨X, 0, 1⟩, map := λ X Y f, ⟨f, f.map_zero', f.map_one'⟩ } }
+instance hasForgetToBipointed : HasForget₂ GroupWithZeroₓₓ Bipointed where
+  forget₂ := { obj := fun X => ⟨X, 0, 1⟩, map := fun X Y f => ⟨f, f.map_zero', f.map_one'⟩ }
 
-instance has_forget_to_Mon : has_forget₂ GroupWithZero Mon :=
-{ forget₂ := { obj := λ X, ⟨X⟩, map := λ X Y, monoid_with_zero_hom.to_monoid_hom } }
+instance hasForgetToMon : HasForget₂ GroupWithZeroₓₓ Mon where
+  forget₂ := { obj := fun X => ⟨X⟩, map := fun X Y => MonoidWithZeroHom.toMonoidHom }
 
 /-- Constructs an isomorphism of groups with zero from a group isomorphism between them. -/
-@[simps] def iso.mk {α β : GroupWithZero.{u}} (e : α ≃* β) : α ≅ β :=
-{ hom := e,
-  inv := e.symm,
-  hom_inv_id' := by { ext, exact e.symm_apply_apply _ },
-  inv_hom_id' := by { ext, exact e.apply_symm_apply _ } }
+@[simps]
+def Iso.mk {α β : GroupWithZeroₓₓ.{u}} (e : α ≃* β) : α ≅ β where
+  Hom := e
+  inv := e.symm
+  hom_inv_id' := by
+    ext
+    exact e.symm_apply_apply _
+  inv_hom_id' := by
+    ext
+    exact e.apply_symm_apply _
 
-end GroupWithZero
+end GroupWithZeroₓₓ
+

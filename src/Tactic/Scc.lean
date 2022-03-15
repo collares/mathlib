@@ -3,7 +3,7 @@ Copyright (c) 2018 Simon Hudon All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Simon Hudon
 -/
-import tactic.tauto
+import Mathbin.Tactic.Tauto
 
 /-!
 # Strongly Connected Components
@@ -38,10 +38,10 @@ reason about arbitrary partial orders.
 graphs, tactic, strongly connected components, disjoint sets
 -/
 
-namespace tactic
 
-/--
-`closure` implements a disjoint set data structure using path compression
+namespace Tactic
+
+/-- `closure` implements a disjoint set data structure using path compression
 optimization. For the sake of the scc algorithm, it also stores the preorder
 numbering of the equivalence graph of the local assumptions.
 
@@ -79,55 +79,58 @@ A description of the path compression optimization can be found at:
 <https://en.wikipedia.org/wiki/Disjoint-set_data_structure#Path_compression>
 
 -/
-meta def closure := ref (expr_map (ℕ ⊕ (expr × expr)))
+unsafe def closure :=
+  ref (expr_map (Sum ℕ (expr × expr)))
 
-namespace closure
+namespace Closure
 
 /-- `with_new_closure f` creates an empty `closure` `c`, executes `f` on `c`, and then deletes `c`,
 returning the output of `f`. -/
-meta def with_new_closure {α} : (closure → tactic α) → tactic α :=
-using_new_ref (expr_map.mk _)
+unsafe def with_new_closure {α} : (closure → tactic α) → tactic α :=
+  using_new_ref (expr_map.mk _)
 
 /-- `to_tactic_format cl` pretty-prints the `closure` `cl` as a list. Assuming `cl` was built by
 `dfs_at`, each element corresponds to a node `pᵢ : expr` and is one of the folllowing:
 - if `pᵢ` is a root: `"pᵢ ⇐ i"`, where `i` is the preorder number of `pᵢ`,
 - otherwise: `"(pᵢ, pⱼ) : P"`, where `P` is `pᵢ ↔ pⱼ`.
 Useful for debugging. -/
-meta def to_tactic_format (cl : closure) : tactic format :=
-do m ← read_ref cl,
-   let l := m.to_list,
-   fmt ← l.mmap $ λ ⟨x,y⟩, match y with
-                           | sum.inl y := pformat!"{x} ⇐ {y}"
-                           | sum.inr ⟨y,p⟩ := pformat!"({x}, {y}) : {infer_type p}"
-                           end,
-   pure $ to_fmt fmt
+unsafe def to_tactic_format (cl : closure) : tactic format := do
+  let m ← read_ref cl
+  let l := m.toList
+  let fmt ←
+    l.mmap fun ⟨x, y⟩ =>
+        match y with
+        | Sum.inl y => f!"{(← x)} ⇐ {← y}"
+        | Sum.inr ⟨y, p⟩ => f!"({(← x)}, {(← y)}) : {← infer_type p}"
+  pure <| to_fmt fmt
 
-meta instance : has_to_tactic_format closure := ⟨ to_tactic_format ⟩
+unsafe instance : has_to_tactic_format closure :=
+  ⟨to_tactic_format⟩
 
 /-- `(n,r,p) ← root cl e` returns `r` the root of the tree that `e` is a part of (which might be
 itself) along with `p` a proof of `e ↔ r` and `n`, the preorder numbering of the root. -/
-meta def root (cl : closure) : expr → tactic (ℕ × expr × expr) | e :=
-do m ← read_ref cl,
-   match m.find e with
-   | none :=
-     do p ← mk_app ``iff.refl [e],
-        pure (0,e,p)
-   | (some (sum.inl n)) :=
-     do p ← mk_app ``iff.refl [e],
-        pure (n,e,p)
-   | (some (sum.inr (e₀,p₀))) :=
-     do (n,e₁,p₁) ← root e₀,
-        p ← mk_app ``iff.trans [p₀,p₁],
-        modify_ref cl $ λ m, m.insert e (sum.inr (e₁,p)),
-        pure (n,e₁,p)
-   end
+unsafe def root (cl : closure) : expr → tactic (ℕ × expr × expr)
+  | e => do
+    let m ← read_ref cl
+    match m e with
+      | none => do
+        let p ← mk_app `` Iff.refl [e]
+        pure (0, e, p)
+      | some (Sum.inl n) => do
+        let p ← mk_app `` Iff.refl [e]
+        pure (n, e, p)
+      | some (Sum.inr (e₀, p₀)) => do
+        let (n, e₁, p₁) ← root e₀
+        let p ← mk_app `` Iff.trans [p₀, p₁]
+        (modify_ref cl) fun m => m e (Sum.inr (e₁, p))
+        pure (n, e₁, p)
 
 /-- (Implementation of `merge`.) -/
-meta def merge_intl (cl : closure) (p e₀ p₀ e₁ p₁ : expr) : tactic unit :=
-do p₂ ← mk_app ``iff.symm [p₀],
-   p ← mk_app ``iff.trans [p₂,p],
-   p ← mk_app ``iff.trans [p,p₁],
-   modify_ref cl $ λ m, m.insert e₀ $ sum.inr (e₁,p)
+unsafe def merge_intl (cl : closure) (p e₀ p₀ e₁ p₁ : expr) : tactic Unit := do
+  let p₂ ← mk_app `` Iff.symm [p₀]
+  let p ← mk_app `` Iff.trans [p₂, p]
+  let p ← mk_app `` Iff.trans [p, p₁]
+  (modify_ref cl) fun m => m e₀ <| Sum.inr (e₁, p)
 
 /-- `merge cl p`, with `p` a proof of `e₀ ↔ e₁` for some `e₀` and `e₁`,
 merges the trees of `e₀` and `e₁` and keeps the root with the smallest preorder
@@ -135,112 +138,115 @@ number as the root. This ensures that, in the depth-first traversal of the graph
 when encountering an edge going into a vertex whose equivalence class includes
 a vertex that originated the current search, that vertex will be the root of
 the corresponding tree. -/
-meta def merge (cl : closure) (p : expr) : tactic unit :=
-do `(%%e₀ ↔ %%e₁) ← infer_type p >>= instantiate_mvars,
-   (n₂,e₂,p₂) ← root cl e₀,
-   (n₃,e₃,p₃) ← root cl e₁,
-   if e₂ ≠ e₃ then do
-     if n₂ < n₃ then do p ← mk_app ``iff.symm [p],
-                        cl.merge_intl p e₃ p₃ e₂ p₂
-                else cl.merge_intl p e₂ p₂ e₃ p₃
-   else pure ()
+unsafe def merge (cl : closure) (p : expr) : tactic Unit := do
+  let quote.1 ((%%ₓe₀) ↔ %%ₓe₁) ← infer_type p >>= instantiate_mvars
+  let (n₂, e₂, p₂) ← root cl e₀
+  let (n₃, e₃, p₃) ← root cl e₁
+  if e₂ ≠ e₃ then do
+      if n₂ < n₃ then do
+          let p ← mk_app `` Iff.symm [p]
+          cl p e₃ p₃ e₂ p₂
+        else cl p e₂ p₂ e₃ p₃
+    else pure ()
 
 /-- Sequentially assign numbers to the nodes of the graph as they are being visited. -/
-meta def assign_preorder (cl : closure) (e : expr) : tactic unit :=
-modify_ref cl $ λ m, m.insert e (sum.inl m.size)
+unsafe def assign_preorder (cl : closure) (e : expr) : tactic Unit :=
+  (modify_ref cl) fun m => m.insert e (Sum.inl m.size)
 
 /-- `prove_eqv cl e₀ e₁` constructs a proof of equivalence of `e₀` and `e₁` if
 they are equivalent. -/
-meta def prove_eqv (cl : closure) (e₀ e₁ : expr) : tactic expr :=
-do (_,r,p₀) ← root cl e₀,
-   (_,r',p₁) ← root cl e₁,
-   guard (r = r') <|> fail!"{e₀} and {e₁} are not equivalent",
-   p₁ ← mk_app ``iff.symm [p₁],
-   mk_app ``iff.trans [p₀,p₁]
+unsafe def prove_eqv (cl : closure) (e₀ e₁ : expr) : tactic expr := do
+  let (_, r, p₀) ← root cl e₀
+  let (_, r', p₁) ← root cl e₁
+  guardₓ (r = r') <|> throwError "{(← e₀)} and {← e₁} are not equivalent"
+  let p₁ ← mk_app `` Iff.symm [p₁]
+  mk_app `` Iff.trans [p₀, p₁]
 
 /-- `prove_impl cl e₀ e₁` constructs a proof of `e₀ -> e₁` if they are equivalent. -/
-meta def prove_impl (cl : closure) (e₀ e₁ : expr) : tactic expr :=
-cl.prove_eqv e₀ e₁ >>= iff_mp
+unsafe def prove_impl (cl : closure) (e₀ e₁ : expr) : tactic expr :=
+  cl.prove_eqv e₀ e₁ >>= iff_mp
 
 /-- `is_eqv cl e₀ e₁` checks whether `e₀` and `e₁` are equivalent without building a proof. -/
-meta def is_eqv (cl : closure) (e₀ e₁ : expr) : tactic bool :=
-do (_,r,p₀) ← root cl e₀,
-   (_,r',p₁) ← root cl e₁,
-   return $ r = r'
+unsafe def is_eqv (cl : closure) (e₀ e₁ : expr) : tactic Bool := do
+  let (_, r, p₀) ← root cl e₀
+  let (_, r', p₁) ← root cl e₁
+  return <| r = r'
 
-end closure
+end Closure
 
 /-- mutable graphs between local propositions that imply each other with the proof of implication -/
 @[reducible]
-meta def impl_graph := ref (expr_map (list $ expr × expr))
+unsafe def impl_graph :=
+  ref (expr_map (List <| expr × expr))
 
 /-- `with_impl_graph f` creates an empty `impl_graph` `g`, executes `f` on `g`, and then deletes
 `g`, returning the output of `f`. -/
-meta def with_impl_graph {α} : (impl_graph → tactic α) → tactic α :=
-using_new_ref (expr_map.mk (list $ expr × expr))
+unsafe def with_impl_graph {α} : (impl_graph → tactic α) → tactic α :=
+  using_new_ref (expr_map.mk (List <| expr × expr))
 
-namespace impl_graph
+namespace ImplGraph
 
 /-- `add_edge g p`, with `p` a proof of `v₀ → v₁` or `v₀ ↔ v₁`, adds an edge to the implication
 graph `g`. -/
-meta def add_edge (g : impl_graph) : expr → tactic unit | p :=
-do t ← infer_type p,
-   match t with
-   | `(%%v₀ → %%v₁) :=
-     do is_prop v₀ >>= guardb,
-        is_prop v₁ >>= guardb,
-        m ← read_ref g,
-        let xs := (m.find v₀).get_or_else [],
-        let xs' := (m.find v₁).get_or_else [],
-        modify_ref g $ λ m, (m.insert v₀ ((v₁,p) :: xs)).insert v₁ xs'
-   | `(%%v₀ ↔ %%v₁) :=
-     do p₀ ← mk_mapp ``iff.mp [none,none,p],
-        p₁ ← mk_mapp ``iff.mpr [none,none,p],
-        add_edge p₀, add_edge p₁
-   | _ := failed
-   end
+unsafe def add_edge (g : impl_graph) : expr → tactic Unit
+  | p => do
+    let t ← infer_type p
+    match t with
+      | quote.1 ((%%ₓv₀) → %%ₓv₁) => do
+        is_prop v₀ >>= guardb
+        is_prop v₁ >>= guardb
+        let m ← read_ref g
+        let xs := (m v₀).getOrElse []
+        let xs' := (m v₁).getOrElse []
+        (modify_ref g) fun m => (m v₀ ((v₁, p) :: xs)).insert v₁ xs'
+      | quote.1 ((%%ₓv₀) ↔ %%ₓv₁) => do
+        let p₀ ← mk_mapp `` Iff.mp [none, none, p]
+        let p₁ ← mk_mapp `` Iff.mpr [none, none, p]
+        add_edge p₀
+        add_edge p₁
+      | _ => failed
 
-section scc
-open list
-parameter g : expr_map (list $ expr × expr)
-parameter visit : ref $ expr_map bool
-parameter cl : closure
+section Scc
+
+open List
+
+parameter (g : expr_map (List <| expr × expr))
+
+parameter (visit : ref <| expr_map Bool)
+
+parameter (cl : closure)
 
 /-- `merge_path path e`, where `path` and `e` forms a cycle with proofs of implication between
 consecutive vertices. The proofs are compiled into proofs of equivalences and added to the closure
 structure. `e` and the first vertex of `path` do not have to be the same but they have to be
 in the same equivalence class. -/
-meta def merge_path (path : list (expr × expr)) (e : expr) : tactic unit :=
-do p₁ ← cl.prove_impl e path.head.fst,
-   p₂ ← mk_mapp ``id [e],
-   let path := (e,p₁) :: path,
-
-   (_,ls) ← path.mmap_accuml (λ p p',
-     prod.mk <$> mk_mapp ``implies.trans [none,p'.1,none,p,p'.2] <*> pure p) p₂,
-   (_,rs) ← path.mmap_accumr (λ p p',
-     prod.mk <$> mk_mapp ``implies.trans [none,none,none,p.2,p'] <*> pure p') p₂,
-   ps ← mzip_with (λ p₀ p₁, mk_app ``iff.intro [p₀,p₁]) ls.tail rs.init,
-   ps.mmap' cl.merge
+unsafe def merge_path (path : List (expr × expr)) (e : expr) : tactic Unit := do
+  let p₁ ← cl.prove_impl e path.head.fst
+  let p₂ ← mk_mapp `` id [e]
+  let path := (e, p₁) :: path
+  let (_, ls) ←
+    path.mmapAccuml (fun p p' => Prod.mk <$> mk_mapp `` Implies.trans [none, p'.1, none, p, p'.2] <*> pure p) p₂
+  let (_, rs) ←
+    path.mmapAccumr (fun p p' => Prod.mk <$> mk_mapp `` Implies.trans [none, none, none, p.2, p'] <*> pure p') p₂
+  let ps ← mzipWith (fun p₀ p₁ => mk_app `` Iff.intro [p₀, p₁]) ls.tail rs.init
+  ps cl
 
 /-- (implementation of `collapse`) -/
-meta def collapse' : list (expr × expr) → list (expr × expr) → expr → tactic unit
-| acc [] v := merge_path acc v
-| acc ((x,pr) :: xs) v :=
-  do b ← cl.is_eqv x v,
-     let acc' := (x,pr)::acc,
-     if b
-       then merge_path acc' v
-       else collapse' acc' xs v
+unsafe def collapse' : List (expr × expr) → List (expr × expr) → expr → tactic Unit
+  | Acc, [], v => merge_path Acc v
+  | Acc, (x, pr) :: xs, v => do
+    let b ← cl.is_eqv x v
+    let acc' := (x, pr) :: Acc
+    if b then merge_path acc' v else collapse' acc' xs v
 
 /-- `collapse path v`, where `v` is a vertex that originated the current search
 (or a vertex in the same equivalence class as the one that originated the current search).
 It or its equivalent should be found in `path`. Since the vertices following `v` in the path
 form a cycle with `v`, they can all be added to an equivalence class. -/
-meta def collapse : list (expr × expr) → expr → tactic unit :=
-collapse' []
+unsafe def collapse : List (expr × expr) → expr → tactic Unit :=
+  collapse' []
 
-/--
-Strongly connected component algorithm inspired by Tarjan's and
+/-- Strongly connected component algorithm inspired by Tarjan's and
 Dijkstra's scc algorithm. Whereas they return strongly connected
 components by enumerating them, this algorithm returns a disjoint set
 data structure using path compression. This is a compact
@@ -251,45 +257,40 @@ equivalence between any two members of an equivalence class.
    SIAM Journal on Computing, 1 (2): 146–160, doi:10.1137/0201010
  * Dijkstra, Edsger (1976), A Discipline of Programming, NJ: Prentice Hall, Ch. 25.
 -/
-meta def dfs_at :
-  list (expr × expr) → expr → tactic unit
-| vs v :=
-do m ← read_ref visit,
-   (_,v',_) ← cl.root v,
-   match m.find v' with
-   | (some tt) :=
+unsafe def dfs_at : List (expr × expr) → expr → tactic Unit
+  | vs, v => do
+    let m ← read_ref visit
+    let (_, v', _) ← cl.root v
+    match m v' with
+      | some tt => pure ()
+      | some ff => collapse vs v
+      | none => do
+        cl v
+        (modify_ref visit) fun m => m v ff
+        let ns ← g v
+        ns fun ⟨w, e⟩ => dfs_at ((v, e) :: vs) w
+        (modify_ref visit) fun m => m v tt
         pure ()
-   | (some ff) :=
-        collapse vs v
-   | none :=
-     do cl.assign_preorder v,
-        modify_ref visit $ λ m, m.insert v ff,
-        ns ← g.find v,
-        ns.mmap' $ λ ⟨w,e⟩, dfs_at ((v,e) :: vs) w,
-        modify_ref visit $ λ m, m.insert v tt,
-        pure ()
-   end
 
-end scc
+end Scc
 
 /-- Use the local assumptions to create a set of equivalence classes. -/
-meta def mk_scc (cl : closure) : tactic (expr_map (list (expr × expr))) :=
-with_impl_graph $ λ g,
-using_new_ref (expr_map.mk bool) $ λ visit,
-do ls ← local_context,
-   ls.mmap' $ λ l, try (g.add_edge l),
-   m ← read_ref g,
-   m.to_list.mmap $ λ ⟨v,_⟩, impl_graph.dfs_at m visit cl [] v,
-   pure m
+unsafe def mk_scc (cl : closure) : tactic (expr_map (List (expr × expr))) :=
+  with_impl_graph fun g =>
+    (using_new_ref (expr_map.mk Bool)) fun visit => do
+      let ls ← local_context
+      ls fun l => try (g l)
+      let m ← read_ref g
+      m fun ⟨v, _⟩ => impl_graph.dfs_at m visit cl [] v
+      pure m
 
-end impl_graph
+end ImplGraph
 
-meta def prove_eqv_target (cl : closure) : tactic unit :=
-do `(%%p ↔ %%q) ← target >>= whnf,
-   cl.prove_eqv p q >>= exact
+unsafe def prove_eqv_target (cl : closure) : tactic Unit := do
+  let quote.1 ((%%ₓp) ↔ %%ₓq) ← target >>= whnf
+  cl p q >>= exact
 
-/--
-`scc` uses the available equivalences and implications to prove
+/-- `scc` uses the available equivalences and implications to prove
 a goal of the form `p ↔ q`.
 
 ```lean
@@ -297,26 +298,25 @@ example (p q r : Prop) (hpq : p → q) (hqr : q ↔ r) (hrp : r → p) : p ↔ r
 by scc
 ```
 -/
-meta def interactive.scc : tactic unit :=
-closure.with_new_closure $ λ cl,
-do impl_graph.mk_scc cl,
-   `(%%p ↔ %%q) ← target,
-   cl.prove_eqv p q >>= exact
+unsafe def interactive.scc : tactic Unit :=
+  closure.with_new_closure fun cl => do
+    impl_graph.mk_scc cl
+    let quote.1 ((%%ₓp) ↔ %%ₓq) ← target
+    cl p q >>= exact
 
 /-- Collect all the available equivalences and implications and
 add assumptions for every equivalence that can be proven using the
 strongly connected components technique. Mostly useful for testing. -/
-meta def interactive.scc' : tactic unit :=
-closure.with_new_closure $ λ cl,
-do m ← impl_graph.mk_scc cl,
-   let ls := m.to_list.map prod.fst,
-   let ls' := prod.mk <$> ls <*> ls,
-   ls'.mmap' $ λ x,
-     do { h ← get_unused_name `h,
-          try $ closure.prove_eqv cl x.1 x.2 >>= note h none }
+unsafe def interactive.scc' : tactic Unit :=
+  closure.with_new_closure fun cl => do
+    let m ← impl_graph.mk_scc cl
+    let ls := m.toList.map Prod.fst
+    let ls' := Prod.mk <$> ls <*> ls
+    ls' fun x => do
+        let h ← get_unused_name `h
+        try <| closure.prove_eqv cl x.1 x.2 >>= note h none
 
-/--
-`scc` uses the available equivalences and implications to prove
+/-- `scc` uses the available equivalences and implications to prove
 a goal of the form `p ↔ q`.
 
 ```lean
@@ -328,9 +328,8 @@ The variant `scc'` populates the local context with all equivalences that `scc` 
 This is mostly useful for testing purposes.
 -/
 add_tactic_doc
-{ name := "scc",
-  category := doc_category.tactic,
-  decl_names := [``interactive.scc, ``interactive.scc'],
-  tags := ["logic"] }
+  { Name := "scc", category := DocCategory.tactic, declNames := [`` interactive.scc, `` interactive.scc'],
+    tags := ["logic"] }
 
-end tactic
+end Tactic
+

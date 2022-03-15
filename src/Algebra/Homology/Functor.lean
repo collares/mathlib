@@ -3,7 +3,7 @@ Copyright (c) 2021 Johan Commelin. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johan Commelin
 -/
-import algebra.homology.homological_complex
+import Mathbin.Algebra.Homology.HomologicalComplex
 
 /-!
 # Complexes in functor categories
@@ -16,50 +16,53 @@ In fact this is an equivalence of categories.
 
 -/
 
-universes v u
 
-open category_theory
-open category_theory.limits
+universe v u
 
-namespace homological_complex
+open CategoryTheory
 
-variables {V : Type u} [category.{v} V] [has_zero_morphisms V]
-variables {ι : Type*} {c : complex_shape ι}
+open CategoryTheory.Limits
+
+namespace HomologicalComplex
+
+variable {V : Type u} [Category.{v} V] [HasZeroMorphisms V]
+
+variable {ι : Type _} {c : ComplexShape ι}
 
 /-- A complex of functors gives a functor to complexes. -/
 @[simps obj map]
-def as_functor {T : Type*} [category T]
-  (C : homological_complex (T ⥤ V) c) :
-  T ⥤ homological_complex V c :=
-{ obj := λ t,
-  { X := λ i, (C.X i).obj t,
-    d := λ i j, (C.d i j).app t,
-    d_comp_d' := λ i j k hij hjk, begin
-      have := C.d_comp_d i j k,
-      rw [nat_trans.ext_iff, function.funext_iff] at this,
-      exact this t
-    end,
-    shape' := λ i j h, begin
-      have := C.shape _ _ h,
-      rw [nat_trans.ext_iff, function.funext_iff] at this,
-      exact this t
-    end },
-  map := λ t₁ t₂ h,
-  { f := λ i, (C.X i).map h,
-    comm' := λ i j hij, nat_trans.naturality _ _ },
-  map_id' := λ t, by { ext i, dsimp, rw (C.X i).map_id, },
-  map_comp' := λ t₁ t₂ t₃ h₁ h₂, by { ext i, dsimp, rw functor.map_comp, } }
+def asFunctor {T : Type _} [Category T] (C : HomologicalComplex (T ⥤ V) c) : T ⥤ HomologicalComplex V c where
+  obj := fun t =>
+    { x := fun i => (C.x i).obj t, d := fun i j => (C.d i j).app t,
+      d_comp_d' := fun i j k hij hjk => by
+        have := C.d_comp_d i j k
+        rw [nat_trans.ext_iff, Function.funext_iffₓ] at this
+        exact this t,
+      shape' := fun i j h => by
+        have := C.shape _ _ h
+        rw [nat_trans.ext_iff, Function.funext_iffₓ] at this
+        exact this t }
+  map := fun t₁ t₂ h => { f := fun i => (C.x i).map h, comm' := fun i j hij => NatTrans.naturality _ _ }
+  map_id' := fun t => by
+    ext i
+    dsimp
+    rw [(C.X i).map_id]
+  map_comp' := fun t₁ t₂ t₃ h₁ h₂ => by
+    ext i
+    dsimp
+    rw [functor.map_comp]
 
 /-- The functorial version of `homological_complex.as_functor`. -/
 -- TODO in fact, this is an equivalence of categories.
 @[simps]
-def complex_of_functors_to_functor_to_complex {T : Type*} [category T] :
-  (homological_complex (T ⥤ V) c) ⥤ (T ⥤ homological_complex V c) :=
-{ obj := λ C, C.as_functor,
-  map := λ C D f,
-  { app := λ t,
-    { f := λ i, (f.f i).app t,
-      comm' := λ i j w, nat_trans.congr_app (f.comm i j) t, },
-    naturality' := λ t t' g, by { ext i, exact (f.f i).naturality g, }, } }
+def complexOfFunctorsToFunctorToComplex {T : Type _} [Category T] :
+    HomologicalComplex (T ⥤ V) c ⥤ T ⥤ HomologicalComplex V c where
+  obj := fun C => C.asFunctor
+  map := fun C D f =>
+    { app := fun t => { f := fun i => (f.f i).app t, comm' := fun i j w => NatTrans.congr_app (f.comm i j) t },
+      naturality' := fun t t' g => by
+        ext i
+        exact (f.f i).naturality g }
 
-end homological_complex
+end HomologicalComplex
+

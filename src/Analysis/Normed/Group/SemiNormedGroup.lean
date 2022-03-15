@@ -3,8 +3,8 @@ Copyright (c) 2021 Johan Commelin. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johan Commelin, Riccardo Brasca
 -/
-import analysis.normed.group.hom
-import category_theory.limits.shapes.zero
+import Mathbin.Analysis.Normed.Group.Hom
+import Mathbin.CategoryTheory.Limits.Shapes.Zero
 
 /-!
 # The category of seminormed groups
@@ -13,151 +13,191 @@ We define `SemiNormedGroup`, the category of seminormed groups and normed group 
 as well as `SemiNormedGroup₁`, the subcategory of norm non-increasing morphisms.
 -/
 
-noncomputable theory
 
-universes u
+noncomputable section
 
-open category_theory
+universe u
+
+open CategoryTheory
 
 /-- The category of seminormed abelian groups and bounded group homomorphisms. -/
-def SemiNormedGroup : Type (u+1) := bundled semi_normed_group
+def SemiNormedGroupₓ : Type (u + 1) :=
+  Bundled SemiNormedGroup
 
-namespace SemiNormedGroup
+namespace SemiNormedGroupₓ
 
-instance bundled_hom : bundled_hom @normed_group_hom :=
-⟨@normed_group_hom.to_fun, @normed_group_hom.id, @normed_group_hom.comp, @normed_group_hom.coe_inj⟩
+instance bundledHom : BundledHom @NormedGroupHom :=
+  ⟨@NormedGroupHom.toFun, @NormedGroupHom.id, @NormedGroupHom.comp, @NormedGroupHom.coe_inj⟩
 
-attribute [derive [large_category, concrete_category]] SemiNormedGroup
+deriving instance LargeCategory, ConcreteCategory for SemiNormedGroupₓ
 
-instance : has_coe_to_sort SemiNormedGroup (Type u) := bundled.has_coe_to_sort
+instance : CoeSort SemiNormedGroupₓ (Type u) :=
+  bundled.has_coe_to_sort
 
 /-- Construct a bundled `SemiNormedGroup` from the underlying type and typeclass. -/
-def of (M : Type u) [semi_normed_group M] : SemiNormedGroup := bundled.of M
+def of (M : Type u) [SemiNormedGroup M] : SemiNormedGroupₓ :=
+  Bundled.of M
 
-instance (M : SemiNormedGroup) : semi_normed_group M := M.str
+instance (M : SemiNormedGroupₓ) : SemiNormedGroup M :=
+  M.str
 
-@[simp] lemma coe_of (V : Type u) [semi_normed_group V] : (SemiNormedGroup.of V : Type u) = V := rfl
-@[simp] lemma coe_id (V : SemiNormedGroup) : ⇑(𝟙 V) = id := rfl
-@[simp] lemma coe_comp {M N K : SemiNormedGroup} (f : M ⟶ N) (g : N ⟶ K) :
-  ((f ≫ g) : M → K) = g ∘ f := rfl
+@[simp]
+theorem coe_of (V : Type u) [SemiNormedGroup V] : (SemiNormedGroupₓ.of V : Type u) = V :=
+  rfl
 
-instance : has_zero SemiNormedGroup := ⟨of punit⟩
-instance : inhabited SemiNormedGroup := ⟨0⟩
+@[simp]
+theorem coe_id (V : SemiNormedGroupₓ) : ⇑(𝟙 V) = id :=
+  rfl
 
-instance : limits.has_zero_morphisms.{u (u+1)} SemiNormedGroup := {}
+@[simp]
+theorem coe_comp {M N K : SemiNormedGroupₓ} (f : M ⟶ N) (g : N ⟶ K) : (f ≫ g : M → K) = g ∘ f :=
+  rfl
 
-@[simp] lemma zero_apply {V W : SemiNormedGroup} (x : V) : (0 : V ⟶ W) x = 0 := rfl
+instance : Zero SemiNormedGroupₓ :=
+  ⟨of PUnit⟩
 
-instance has_zero_object : limits.has_zero_object SemiNormedGroup.{u} :=
-{ zero := 0,
-  unique_to := λ X,
-  { default := 0,
-    uniq := λ a, by { ext ⟨⟩, exact a.map_zero, }, },
-  unique_from := λ X,
-  { default := 0,
-    uniq := λ f, by ext } }
+instance : Inhabited SemiNormedGroupₓ :=
+  ⟨0⟩
 
-lemma iso_isometry_of_norm_noninc {V W : SemiNormedGroup} (i : V ≅ W)
-  (h1 : i.hom.norm_noninc) (h2 : i.inv.norm_noninc) :
-  isometry i.hom :=
-begin
-  apply normed_group_hom.isometry_of_norm,
-  intro v,
-  apply le_antisymm (h1 v),
-  calc ∥v∥ = ∥i.inv (i.hom v)∥ : by rw [coe_hom_inv_id]
-  ... ≤ ∥i.hom v∥ : h2 _,
-end
+instance : Limits.HasZeroMorphisms.{u, u + 1} SemiNormedGroupₓ :=
+  {  }
 
-end SemiNormedGroup
+@[simp]
+theorem zero_apply {V W : SemiNormedGroupₓ} (x : V) : (0 : V ⟶ W) x = 0 :=
+  rfl
 
-/--
-`SemiNormedGroup₁` is a type synonym for `SemiNormedGroup`,
+instance hasZeroObject : Limits.HasZeroObject SemiNormedGroupₓ.{u} where
+  zero := 0
+  uniqueTo := fun X =>
+    { default := 0,
+      uniq := fun a => by
+        ext ⟨⟩
+        exact a.map_zero }
+  uniqueFrom := fun X =>
+    { default := 0,
+      uniq := fun f => by
+        ext }
+
+theorem iso_isometry_of_norm_noninc {V W : SemiNormedGroupₓ} (i : V ≅ W) (h1 : i.hom.NormNoninc)
+    (h2 : i.inv.NormNoninc) : Isometry i.hom := by
+  apply NormedGroupHom.isometry_of_norm
+  intro v
+  apply le_antisymmₓ (h1 v)
+  calc ∥v∥ = ∥i.inv (i.hom v)∥ := by
+      rw [coe_hom_inv_id]_ ≤ ∥i.hom v∥ := h2 _
+
+end SemiNormedGroupₓ
+
+/-- `SemiNormedGroup₁` is a type synonym for `SemiNormedGroup`,
 which we shall equip with the category structure consisting only of the norm non-increasing maps.
 -/
-def SemiNormedGroup₁ : Type (u+1) := bundled semi_normed_group
+def SemiNormedGroup₁ : Type (u + 1) :=
+  Bundled SemiNormedGroup
 
 namespace SemiNormedGroup₁
 
-instance : has_coe_to_sort SemiNormedGroup₁ (Type u) := bundled.has_coe_to_sort
+instance : CoeSort SemiNormedGroup₁ (Type u) :=
+  bundled.has_coe_to_sort
 
-instance : large_category.{u} SemiNormedGroup₁ :=
-{ hom := λ X Y, { f : normed_group_hom X Y // f.norm_noninc },
-  id := λ X, ⟨normed_group_hom.id X, normed_group_hom.norm_noninc.id⟩,
-  comp := λ X Y Z f g, ⟨(g : normed_group_hom Y Z).comp (f : normed_group_hom X Y), g.2.comp f.2⟩, }
+instance : LargeCategory.{u} SemiNormedGroup₁ where
+  hom := fun X Y => { f : NormedGroupHom X Y // f.NormNoninc }
+  id := fun X => ⟨NormedGroupHom.id X, NormedGroupHom.NormNoninc.id⟩
+  comp := fun X Y Z f g => ⟨(g : NormedGroupHom Y Z).comp (f : NormedGroupHom X Y), g.2.comp f.2⟩
 
-@[ext] lemma hom_ext {M N : SemiNormedGroup₁} (f g : M ⟶ N) (w : (f : M → N) = (g : M → N)) :
-  f = g :=
-subtype.eq (normed_group_hom.ext (congr_fun w))
+@[ext]
+theorem hom_ext {M N : SemiNormedGroup₁} (f g : M ⟶ N) (w : (f : M → N) = (g : M → N)) : f = g :=
+  Subtype.eq (NormedGroupHom.ext (congr_funₓ w))
 
-instance : concrete_category.{u} SemiNormedGroup₁ :=
-{ forget :=
-  { obj := λ X, X,
-    map := λ X Y f, f, },
-  forget_faithful := {} }
+instance : ConcreteCategory.{u} SemiNormedGroup₁ where
+  forget := { obj := fun X => X, map := fun X Y f => f }
+  forget_faithful := {  }
 
 /-- Construct a bundled `SemiNormedGroup₁` from the underlying type and typeclass. -/
-def of (M : Type u) [semi_normed_group M] : SemiNormedGroup₁ := bundled.of M
+def of (M : Type u) [SemiNormedGroup M] : SemiNormedGroup₁ :=
+  Bundled.of M
 
-instance (M : SemiNormedGroup₁) : semi_normed_group M := M.str
+instance (M : SemiNormedGroup₁) : SemiNormedGroup M :=
+  M.str
 
 /-- Promote a morphism in `SemiNormedGroup` to a morphism in `SemiNormedGroup₁`. -/
-def mk_hom {M N : SemiNormedGroup} (f : M ⟶ N) (i : f.norm_noninc) :
-  SemiNormedGroup₁.of M ⟶ SemiNormedGroup₁.of N :=
-⟨f, i⟩
+def mkHom {M N : SemiNormedGroupₓ} (f : M ⟶ N) (i : f.NormNoninc) : SemiNormedGroup₁.of M ⟶ SemiNormedGroup₁.of N :=
+  ⟨f, i⟩
 
-@[simp] lemma mk_hom_apply {M N : SemiNormedGroup} (f : M ⟶ N) (i : f.norm_noninc) (x) :
-  mk_hom f i x = f x := rfl
+@[simp]
+theorem mk_hom_apply {M N : SemiNormedGroupₓ} (f : M ⟶ N) (i : f.NormNoninc) x : mkHom f i x = f x :=
+  rfl
 
 /-- Promote an isomorphism in `SemiNormedGroup` to an isomorphism in `SemiNormedGroup₁`. -/
 @[simps]
-def mk_iso {M N : SemiNormedGroup} (f : M ≅ N) (i : f.hom.norm_noninc) (i' : f.inv.norm_noninc) :
-  SemiNormedGroup₁.of M ≅ SemiNormedGroup₁.of N :=
-{ hom := mk_hom f.hom i,
-  inv := mk_hom f.inv i',
-  hom_inv_id' := by { apply subtype.eq, exact f.hom_inv_id, },
-  inv_hom_id' := by { apply subtype.eq, exact f.inv_hom_id, }, }
+def mkIso {M N : SemiNormedGroupₓ} (f : M ≅ N) (i : f.hom.NormNoninc) (i' : f.inv.NormNoninc) :
+    SemiNormedGroup₁.of M ≅ SemiNormedGroup₁.of N where
+  hom := mkHom f.hom i
+  inv := mkHom f.inv i'
+  hom_inv_id' := by
+    apply Subtype.eq
+    exact f.hom_inv_id
+  inv_hom_id' := by
+    apply Subtype.eq
+    exact f.inv_hom_id
 
-instance : has_forget₂ SemiNormedGroup₁ SemiNormedGroup :=
-{ forget₂ :=
-  { obj := λ X, X,
-    map := λ X Y f, f.1, }, }
+instance : HasForget₂ SemiNormedGroup₁ SemiNormedGroupₓ where
+  forget₂ := { obj := fun X => X, map := fun X Y f => f.1 }
 
-@[simp] lemma coe_of (V : Type u) [semi_normed_group V] : (SemiNormedGroup₁.of V : Type u) = V :=
-rfl
-@[simp] lemma coe_id (V : SemiNormedGroup₁) : ⇑(𝟙 V) = id := rfl
-@[simp] lemma coe_comp {M N K : SemiNormedGroup₁} (f : M ⟶ N) (g : N ⟶ K) :
-  ((f ≫ g) : M → K) = g ∘ f := rfl
+@[simp]
+theorem coe_of (V : Type u) [SemiNormedGroup V] : (SemiNormedGroup₁.of V : Type u) = V :=
+  rfl
+
+@[simp]
+theorem coe_id (V : SemiNormedGroup₁) : ⇑(𝟙 V) = id :=
+  rfl
+
+@[simp]
+theorem coe_comp {M N K : SemiNormedGroup₁} (f : M ⟶ N) (g : N ⟶ K) : (f ≫ g : M → K) = g ∘ f :=
+  rfl
+
 -- If `coe_fn_coe_base` fires before `coe_comp`, `coe_comp'` puts us back in normal form.
-@[simp] lemma coe_comp' {M N K : SemiNormedGroup₁} (f : M ⟶ N) (g : N ⟶ K) :
-  ((f ≫ g) : normed_group_hom M K) = (↑g : normed_group_hom N K).comp ↑f := rfl
+@[simp]
+theorem coe_comp' {M N K : SemiNormedGroup₁} (f : M ⟶ N) (g : N ⟶ K) :
+    (f ≫ g : NormedGroupHom M K) = (↑g : NormedGroupHom N K).comp ↑f :=
+  rfl
 
-instance : has_zero SemiNormedGroup₁ := ⟨of punit⟩
-instance : inhabited SemiNormedGroup₁ := ⟨0⟩
+instance : Zero SemiNormedGroup₁ :=
+  ⟨of PUnit⟩
 
-instance : limits.has_zero_morphisms.{u (u+1)} SemiNormedGroup₁ :=
-{ has_zero := λ X Y, { zero := ⟨0, normed_group_hom.norm_noninc.zero⟩, },
-  comp_zero' := λ X Y f Z, by { ext, refl, },
-  zero_comp' := λ X Y Z f, by { ext, simp [coe_fn_coe_base'] } }
+instance : Inhabited SemiNormedGroup₁ :=
+  ⟨0⟩
 
-@[simp] lemma zero_apply {V W : SemiNormedGroup₁} (x : V) : (0 : V ⟶ W) x = 0 := rfl
+instance : Limits.HasZeroMorphisms.{u, u + 1} SemiNormedGroup₁ where
+  HasZero := fun X Y => { zero := ⟨0, NormedGroupHom.NormNoninc.zero⟩ }
+  comp_zero' := fun X Y f Z => by
+    ext
+    rfl
+  zero_comp' := fun X Y Z f => by
+    ext
+    simp [coe_fn_coe_base']
 
-instance has_zero_object : limits.has_zero_object SemiNormedGroup₁.{u} :=
-{ zero := 0,
-  unique_to := λ X,
-  { default := 0,
-    uniq := λ a, by { ext ⟨⟩, exact a.1.map_zero, }, },
-  unique_from := λ X,
-  { default := 0,
-    uniq := λ f, by ext } }
+@[simp]
+theorem zero_apply {V W : SemiNormedGroup₁} (x : V) : (0 : V ⟶ W) x = 0 :=
+  rfl
 
-lemma iso_isometry {V W : SemiNormedGroup₁} (i : V ≅ W) :
-  isometry i.hom :=
-begin
-  apply normed_group_hom.isometry_of_norm,
-  intro v,
-  apply le_antisymm (i.hom.2 v),
-  calc ∥v∥ = ∥i.inv (i.hom v)∥ : by rw [coe_hom_inv_id]
-      ... ≤ ∥i.hom v∥ : i.inv.2 _,
-end
+instance hasZeroObject : Limits.HasZeroObject SemiNormedGroup₁.{u} where
+  zero := 0
+  uniqueTo := fun X =>
+    { default := 0,
+      uniq := fun a => by
+        ext ⟨⟩
+        exact a.1.map_zero }
+  uniqueFrom := fun X =>
+    { default := 0,
+      uniq := fun f => by
+        ext }
+
+theorem iso_isometry {V W : SemiNormedGroup₁} (i : V ≅ W) : Isometry i.hom := by
+  apply NormedGroupHom.isometry_of_norm
+  intro v
+  apply le_antisymmₓ (i.hom.2 v)
+  calc ∥v∥ = ∥i.inv (i.hom v)∥ := by
+      rw [coe_hom_inv_id]_ ≤ ∥i.hom v∥ := i.inv.2 _
 
 end SemiNormedGroup₁
+

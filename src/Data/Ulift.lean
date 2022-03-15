@@ -3,7 +3,7 @@ Copyright (c) 2021 Yury Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury Kudryashov
 -/
-import data.equiv.basic
+import Mathbin.Data.Equiv.Basic
 
 /-!
 # Extra lemmas about `ulift` and `plift`
@@ -13,38 +13,58 @@ In this file we provide `subsingleton`, `unique`, `decidable_eq`, and `is_empty`
 `plift.exists`.
 -/
 
-universes u v
 
-namespace plift
+universe u v
 
-variables {α : Sort u} {β : Sort v}
+namespace Plift
 
-instance [subsingleton α] : subsingleton (plift α) := equiv.plift.subsingleton
-instance [unique α] : unique (plift α) := equiv.plift.unique
-instance [decidable_eq α] : decidable_eq (plift α) := equiv.plift.decidable_eq
-instance [is_empty α] : is_empty (plift α) := equiv.plift.is_empty
+variable {α : Sort u} {β : Sort v}
 
-@[simp] lemma «forall» {p : plift α → Prop} : (∀ x, p x) ↔ ∀ x : α, p (plift.up x) :=
-equiv.plift.forall_congr_left'
+instance [Subsingleton α] : Subsingleton (Plift α) :=
+  Equivₓ.plift.Subsingleton
 
-@[simp] lemma «exists» {p : plift α → Prop} : (∃ x, p x) ↔ ∃ x : α, p (plift.up x) :=
-equiv.plift.exists_congr_left
+instance [Unique α] : Unique (Plift α) :=
+  Equivₓ.plift.unique
 
-end plift
+instance [DecidableEq α] : DecidableEq (Plift α) :=
+  Equivₓ.plift.DecidableEq
 
-namespace ulift
+instance [IsEmpty α] : IsEmpty (Plift α) :=
+  Equivₓ.plift.isEmpty
 
-variables {α : Type u} {β : Type v}
+@[simp]
+theorem forall {p : Plift α → Prop} : (∀ x, p x) ↔ ∀ x : α, p (Plift.up x) :=
+  Equivₓ.plift.forall_congr_left'
 
-instance [subsingleton α] : subsingleton (ulift α) := equiv.ulift.subsingleton
-instance [unique α] : unique (ulift α) := equiv.ulift.unique
-instance [decidable_eq α] : decidable_eq (ulift α) := equiv.ulift.decidable_eq
-instance [is_empty α] : is_empty (ulift α) := equiv.ulift.is_empty
+@[simp]
+theorem exists {p : Plift α → Prop} : (∃ x, p x) ↔ ∃ x : α, p (Plift.up x) :=
+  Equivₓ.plift.exists_congr_left
 
-@[simp] lemma «forall» {p : ulift α → Prop} : (∀ x, p x) ↔ ∀ x : α, p (ulift.up x) :=
-equiv.ulift.forall_congr_left'
+end Plift
 
-@[simp] lemma «exists» {p : ulift α → Prop} : (∃ x, p x) ↔ ∃ x : α, p (ulift.up x) :=
-equiv.ulift.exists_congr_left
+namespace ULift
 
-end ulift
+variable {α : Type u} {β : Type v}
+
+instance [Subsingleton α] : Subsingleton (ULift α) :=
+  Equivₓ.ulift.Subsingleton
+
+instance [Unique α] : Unique (ULift α) :=
+  Equivₓ.ulift.unique
+
+instance [DecidableEq α] : DecidableEq (ULift α) :=
+  Equivₓ.ulift.DecidableEq
+
+instance [IsEmpty α] : IsEmpty (ULift α) :=
+  Equivₓ.ulift.isEmpty
+
+@[simp]
+theorem forall {p : ULift α → Prop} : (∀ x, p x) ↔ ∀ x : α, p (ULift.up x) :=
+  Equivₓ.ulift.forall_congr_left'
+
+@[simp]
+theorem exists {p : ULift α → Prop} : (∃ x, p x) ↔ ∃ x : α, p (ULift.up x) :=
+  Equivₓ.ulift.exists_congr_left
+
+end ULift
+

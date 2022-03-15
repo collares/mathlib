@@ -3,7 +3,7 @@ Copyright (c) 2020 Simon Hudon. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Simon Hudon
 -/
-import tactic.core
+import Mathbin.Tactic.Core
 
 /-!
 # `pretty_cases` tactic
@@ -38,29 +38,35 @@ end
  * `pretty_cases` main tactic
 -/
 
-namespace tactic
+
+namespace Tactic
 
 /-- Query the proof goal and print the skeleton of a proof by cases. -/
-meta def pretty_cases_advice : tactic string := retrieve $ do
-gs ← get_goals,
-cases ← gs.mmap $ λ g, do
-{ t : list name ← get_tag g,
-  let vs := t.tail,
-  let ⟨vs,ts⟩ := vs.span (λ n, name.last_string n = "_arg"),
-  set_goals [g],
-  ls ← local_context,
-  let m := native.rb_map.of_list $ (ls.map expr.local_uniq_name).zip (ls.map expr.local_pp_name),
-  let vs := vs.map $ λ v, (m.find v.get_prefix).get_or_else `_,
-  let var_decls := string.intercalate " " $ vs.map to_string,
-  let var_decls := if vs.empty then "" else " : " ++ var_decls,
-  pure sformat!"  case {ts.head}{var_decls}\n  {{ admit }}" },
-let cases := string.intercalate ",\n" cases,
-pure sformat!"Try this:\n{cases}"
+unsafe def pretty_cases_advice : tactic Stringₓ :=
+  retrieve <| do
+    let gs ← get_goals
+    let cases ←
+      gs.mmap fun g => do
+          let t : List Name ← get_tag g
+          let vs := t.tail
+          let ⟨vs, ts⟩ := vs.span fun n => Name.lastString n = "_arg"
+          set_goals [g]
+          let ls ← local_context
+          let m := native.rb_map.of_list <| (ls.map expr.local_uniq_name).zip (ls.map expr.local_pp_name)
+          let vs := vs.map fun v => (m.find v.getPrefix).getOrElse `_
+          let var_decls := Stringₓ.intercalate " " <| vs.map toString
+          let var_decls := if vs.Empty then "" else " : " ++ var_decls
+          pure
+              s! "  case {ts }{var_decls}
+                  \{ admit }}"
+    let cases := Stringₓ.intercalate ",\n" cases
+    pure
+        s! "Try this:
+          {cases}"
 
-namespace interactive
+namespace Interactive
 
-/--
-Query the proof goal and print the skeleton of a proof by
+/-- Query the proof goal and print the skeleton of a proof by
 cases.
 
 For example, let us consider the following proof:
@@ -85,15 +91,14 @@ end
 The output helps the user layout the cases and rename the
 introduced variables.
 -/
-meta def pretty_cases : tactic unit :=
-pretty_cases_advice >>= trace
+unsafe def pretty_cases : tactic Unit :=
+  pretty_cases_advice >>= trace
 
 add_tactic_doc
-{ name       := "pretty_cases",
-  category   := doc_category.tactic,
-  decl_names := [``tactic.interactive.pretty_cases],
-  tags       := ["context management", "goal management"] }
+  { Name := "pretty_cases", category := DocCategory.tactic, declNames := [`` tactic.interactive.pretty_cases],
+    tags := ["context management", "goal management"] }
 
-end interactive
+end Interactive
 
-end tactic
+end Tactic
+

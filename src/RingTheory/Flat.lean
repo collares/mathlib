@@ -3,8 +3,7 @@ Copyright (c) 2020 Johan Commelin. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johan Commelin
 -/
-
-import ring_theory.noetherian
+import Mathbin.RingTheory.Noetherian
 
 /-!
 # Flat modules
@@ -44,33 +43,36 @@ This result is not yet formalised.
 
 -/
 
-universes u v
 
-namespace module
-open function (injective)
-open linear_map (lsmul)
+universe u v
 
-open_locale tensor_product
+namespace Module
+
+open Function (Injective)
+
+open LinearMap (lsmul)
+
+open_locale TensorProduct
 
 /-- An `R`-module `M` is flat if for all finitely generated ideals `I` of `R`,
 the canonical map `I ⊗ M →ₗ M` is injective. -/
-class flat (R : Type u) (M : Type v) [comm_ring R] [add_comm_group M] [module R M] : Prop :=
-(out : ∀ ⦃I : ideal R⦄ (hI : I.fg), injective (tensor_product.lift ((lsmul R M).comp I.subtype)))
+class Flat (R : Type u) (M : Type v) [CommRingₓ R] [AddCommGroupₓ M] [Module R M] : Prop where
+  out : ∀ ⦃I : Ideal R⦄ hI : I.Fg, Injective (TensorProduct.lift ((lsmul R M).comp I.Subtype))
 
-namespace flat
+namespace Flat
 
-open tensor_product linear_map _root_.submodule
+open TensorProduct LinearMap _Root_.Submodule
 
-instance self (R : Type u) [comm_ring R] : flat R R :=
-⟨begin
-  intros I hI,
-  rw ← equiv.injective_comp (tensor_product.rid R I).symm.to_equiv,
-  convert subtype.coe_injective using 1,
-  ext x,
-  simp only [function.comp_app, linear_equiv.coe_to_equiv, rid_symm_apply, comp_apply,
-    mul_one, lift.tmul, subtype_apply, algebra.id.smul_eq_mul, lsmul_apply]
-end⟩
+instance self (R : Type u) [CommRingₓ R] : Flat R R :=
+  ⟨by
+    intro I hI
+    rw [← Equivₓ.injective_comp (TensorProduct.rid R I).symm.toEquiv]
+    convert Subtype.coe_injective using 1
+    ext x
+    simp only [Function.comp_app, LinearEquiv.coe_to_equiv, rid_symm_apply, comp_apply, mul_oneₓ, lift.tmul,
+      subtype_apply, Algebra.id.smul_eq_mul, lsmul_apply]⟩
 
-end flat
+end Flat
 
-end module
+end Module
+

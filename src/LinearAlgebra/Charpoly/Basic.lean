@@ -3,9 +3,8 @@ Copyright (c) 2021 Riccardo Brasca. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Riccardo Brasca
 -/
-
-import linear_algebra.free_module.finite.basic
-import linear_algebra.matrix.charpoly.coeff
+import Mathbin.LinearAlgebra.FreeModule.Finite.Basic
+import Mathbin.LinearAlgebra.Matrix.Charpoly.Coeff
 
 /-!
 
@@ -21,75 +20,74 @@ in any basis is in `linear_algebra/charpoly/to_matrix`.
 
 -/
 
-universes u v w
 
-variables {R : Type u} {M : Type v} [comm_ring R] [nontrivial R]
-variables [add_comm_group M] [module R M] [module.free R M] [module.finite R M] (f : M →ₗ[R] M)
+universe u v w
 
-open_locale classical matrix polynomial
+variable {R : Type u} {M : Type v} [CommRingₓ R] [Nontrivial R]
 
-noncomputable theory
+variable [AddCommGroupₓ M] [Module R M] [Module.Free R M] [Module.Finite R M] (f : M →ₗ[R] M)
 
-open module.free polynomial matrix
+open_locale Classical Matrix Polynomial
 
-namespace linear_map
+noncomputable section
 
-section basic
+open Module.Free Polynomial Matrix
+
+namespace LinearMap
+
+section Basic
 
 /-- The characteristic polynomial of `f : M →ₗ[R] M`. -/
 def charpoly : R[X] :=
-(to_matrix (choose_basis R M) (choose_basis R M) f).charpoly
+  (toMatrix (chooseBasis R M) (chooseBasis R M) f).charpoly
 
-lemma charpoly_def :
-  f.charpoly = (to_matrix (choose_basis R M) (choose_basis R M) f).charpoly := rfl
+theorem charpoly_def : f.charpoly = (toMatrix (chooseBasis R M) (chooseBasis R M) f).charpoly :=
+  rfl
 
-end basic
+end Basic
 
-section coeff
+section Coeff
 
-lemma charpoly_monic : f.charpoly.monic := charpoly_monic _
+theorem charpoly_monic : f.charpoly.Monic :=
+  charpoly_monic _
 
-end coeff
+end Coeff
 
-section cayley_hamilton
+section CayleyHamilton
 
 /-- The Cayley-Hamilton Theorem, that the characteristic polynomial of a linear map, applied to
 the linear map itself, is zero. -/
-lemma aeval_self_charpoly : aeval f f.charpoly = 0 :=
-begin
-  apply (linear_equiv.map_eq_zero_iff (alg_equiv_matrix _).to_linear_equiv).1,
-  rw [alg_equiv.to_linear_equiv_apply, ← alg_equiv.coe_alg_hom,
-    ← polynomial.aeval_alg_hom_apply _ _ _, charpoly_def],
-  exact aeval_self_charpoly _,
-end
+theorem aeval_self_charpoly : aeval f f.charpoly = 0 := by
+  apply (LinearEquiv.map_eq_zero_iff (algEquivMatrix _).toLinearEquiv).1
+  rw [AlgEquiv.to_linear_equiv_apply, ← AlgEquiv.coe_alg_hom, ← Polynomial.aeval_alg_hom_apply _ _ _, charpoly_def]
+  exact aeval_self_charpoly _
 
-lemma is_integral : is_integral R f := ⟨f.charpoly, ⟨charpoly_monic f, aeval_self_charpoly f⟩⟩
+theorem is_integral : IsIntegral R f :=
+  ⟨f.charpoly, ⟨charpoly_monic f, aeval_self_charpoly f⟩⟩
 
-lemma minpoly_dvd_charpoly {K : Type u} {M : Type v} [field K] [add_comm_group M] [module K M]
-  [finite_dimensional K M] (f : M →ₗ[K] M) : minpoly K f ∣ f.charpoly :=
-minpoly.dvd _ _ (aeval_self_charpoly f)
+theorem minpoly_dvd_charpoly {K : Type u} {M : Type v} [Field K] [AddCommGroupₓ M] [Module K M] [FiniteDimensional K M]
+    (f : M →ₗ[K] M) : minpoly K f ∣ f.charpoly :=
+  minpoly.dvd _ _ (aeval_self_charpoly f)
 
 variable {f}
 
-lemma minpoly_coeff_zero_of_injective (hf : function.injective f) : (minpoly R f).coeff 0 ≠ 0 :=
-begin
-  intro h,
-  obtain ⟨P, hP⟩ := X_dvd_iff.2 h,
-  have hdegP : P.degree < (minpoly R f).degree,
-  { rw [hP, mul_comm],
-    refine degree_lt_degree_mul_X (λ h, _),
-    rw [h, mul_zero] at hP,
-    exact minpoly.ne_zero (is_integral f) hP },
-  have hPmonic : P.monic,
-  { suffices : (minpoly R f).monic,
-    { rwa [monic.def, hP, mul_comm, leading_coeff_mul_X, ← monic.def] at this },
-    exact minpoly.monic (is_integral f) },
-  have hzero : aeval f (minpoly R f) = 0 := minpoly.aeval _ _,
-  simp only [hP, mul_eq_comp, ext_iff, hf, aeval_X, map_eq_zero_iff, coe_comp, alg_hom.map_mul,
-    zero_apply] at hzero,
-  exact not_le.2 hdegP (minpoly.min _ _ hPmonic (ext hzero)),
-end
+theorem minpoly_coeff_zero_of_injective (hf : Function.Injective f) : (minpoly R f).coeff 0 ≠ 0 := by
+  intro h
+  obtain ⟨P, hP⟩ := X_dvd_iff.2 h
+  have hdegP : P.degree < (minpoly R f).degree := by
+    rw [hP, mul_comm]
+    refine' degree_lt_degree_mul_X fun h => _
+    rw [h, mul_zero] at hP
+    exact minpoly.ne_zero (IsIntegral f) hP
+  have hPmonic : P.monic := by
+    suffices (minpoly R f).Monic by
+      rwa [monic.def, hP, mul_comm, leading_coeff_mul_X, ← monic.def] at this
+    exact minpoly.monic (IsIntegral f)
+  have hzero : aeval f (minpoly R f) = 0 := minpoly.aeval _ _
+  simp only [hP, mul_eq_comp, ext_iff, hf, aeval_X, map_eq_zero_iff, coe_comp, AlgHom.map_mul, zero_apply] at hzero
+  exact not_leₓ.2 hdegP (minpoly.min _ _ hPmonic (ext hzero))
 
-end cayley_hamilton
+end CayleyHamilton
 
-end linear_map
+end LinearMap
+

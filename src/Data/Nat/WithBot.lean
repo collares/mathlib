@@ -3,50 +3,94 @@ Copyright (c) 2018 Chris Hughes. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chris Hughes
 -/
-import data.nat.basic
-import algebra.order.group
+import Mathbin.Data.Nat.Basic
+import Mathbin.Algebra.Order.Group
+
 /-!
 # `with_bot ℕ`
 
 Lemmas about the type of natural numbers with a bottom element adjoined.
 -/
-namespace nat
 
-lemma with_bot.add_eq_zero_iff : ∀ {n m : with_bot ℕ}, n + m = 0 ↔ n = 0 ∧ m = 0
-| none     m        := iff_of_false dec_trivial (λ h, absurd h.1 dec_trivial)
-| n        none     := iff_of_false (by cases n; exact dec_trivial)
-  (λ h, absurd h.2 dec_trivial)
-| (some n) (some m) := show (n + m : with_bot ℕ) = (0 : ℕ) ↔ (n : with_bot ℕ) = (0 : ℕ) ∧
-    (m : with_bot ℕ) = (0 : ℕ),
-  by rw [← with_bot.coe_add, with_bot.coe_eq_coe, with_bot.coe_eq_coe,
-    with_bot.coe_eq_coe, add_eq_zero_iff' (nat.zero_le _) (nat.zero_le _)]
 
-lemma with_bot.add_eq_one_iff : ∀ {n m : with_bot ℕ}, n + m = 1 ↔ (n = 0 ∧ m = 1) ∨ (n = 1 ∧ m = 0)
-| none     none     := dec_trivial
-| none     (some m) := dec_trivial
-| (some n) none     := iff_of_false dec_trivial (λ h, h.elim (λ h, absurd h.2 dec_trivial)
-  (λ h, absurd h.2 dec_trivial))
-| (some n) (some 0) := by erw [with_bot.coe_eq_coe, with_bot.coe_eq_coe, with_bot.coe_eq_coe,
-    with_bot.coe_eq_coe]; simp
-| (some n) (some (m + 1)) := by erw [with_bot.coe_eq_coe, with_bot.coe_eq_coe, with_bot.coe_eq_coe,
-    with_bot.coe_eq_coe, with_bot.coe_eq_coe]; simp [nat.add_succ, nat.succ_inj', nat.succ_ne_zero]
+namespace Nat
 
-@[simp] lemma with_bot.coe_nonneg {n : ℕ} : 0 ≤ (n : with_bot ℕ) :=
-by rw [← with_bot.coe_zero, with_bot.coe_le_coe]; exact nat.zero_le _
+theorem WithBot.add_eq_zero_iff : ∀ {n m : WithBot ℕ}, n + m = 0 ↔ n = 0 ∧ m = 0
+  | none, m =>
+    iff_of_false
+      (by
+        decide)
+      fun h =>
+      absurd h.1
+        (by
+          decide)
+  | n, none =>
+    iff_of_false
+      (by
+        cases n <;>
+          exact by
+            decide)
+      fun h =>
+      absurd h.2
+        (by
+          decide)
+  | some n, some m =>
+    show (n + m : WithBot ℕ) = (0 : ℕ) ↔ (n : WithBot ℕ) = (0 : ℕ) ∧ (m : WithBot ℕ) = (0 : ℕ) by
+      rw [← WithBot.coe_add, WithBot.coe_eq_coe, WithBot.coe_eq_coe, WithBot.coe_eq_coe,
+        add_eq_zero_iff' (Nat.zero_leₓ _) (Nat.zero_leₓ _)]
 
-@[simp] lemma with_bot.lt_zero_iff (n : with_bot ℕ) : n < 0 ↔ n = ⊥ :=
-option.cases_on n dec_trivial (λ n, iff_of_false
-  (by simp [with_bot.some_eq_coe]) (λ h, option.no_confusion h))
+theorem WithBot.add_eq_one_iff : ∀ {n m : WithBot ℕ}, n + m = 1 ↔ n = 0 ∧ m = 1 ∨ n = 1 ∧ m = 0
+  | none, none => by
+    decide
+  | none, some m => by
+    decide
+  | some n, none =>
+    iff_of_false
+      (by
+        decide)
+      fun h =>
+      h.elim
+        (fun h =>
+          absurd h.2
+            (by
+              decide))
+        fun h =>
+        absurd h.2
+          (by
+            decide)
+  | some n, some 0 => by
+    erw [WithBot.coe_eq_coe, WithBot.coe_eq_coe, WithBot.coe_eq_coe, WithBot.coe_eq_coe] <;> simp
+  | some n, some (m + 1) => by
+    erw [WithBot.coe_eq_coe, WithBot.coe_eq_coe, WithBot.coe_eq_coe, WithBot.coe_eq_coe, WithBot.coe_eq_coe] <;>
+      simp [Nat.add_succ, Nat.succ_inj', Nat.succ_ne_zero]
 
-lemma with_bot.one_le_iff_zero_lt {x : with_bot ℕ} : 1 ≤ x ↔ 0 < x :=
-begin
-  refine ⟨λ h, lt_of_lt_of_le (with_bot.coe_lt_coe.mpr zero_lt_one) h, λ h, _⟩,
-  induction x using with_bot.rec_bot_coe,
-  { exact (not_lt_bot h).elim },
-  { exact with_bot.coe_le_coe.mpr (nat.succ_le_iff.mpr (with_bot.coe_lt_coe.mp h)) }
-end
+@[simp]
+theorem WithBot.coe_nonneg {n : ℕ} : 0 ≤ (n : WithBot ℕ) := by
+  rw [← WithBot.coe_zero, WithBot.coe_le_coe] <;> exact Nat.zero_leₓ _
 
-lemma with_bot.lt_one_iff_le_zero {x : with_bot ℕ} : x < 1 ↔ x ≤ 0 :=
-not_iff_not.mp (by simpa using with_bot.one_le_iff_zero_lt)
+@[simp]
+theorem WithBot.lt_zero_iff (n : WithBot ℕ) : n < 0 ↔ n = ⊥ :=
+  Option.casesOn n
+    (by
+      decide)
+    fun n =>
+    iff_of_false
+      (by
+        simp [WithBot.some_eq_coe])
+      fun h => Option.noConfusion h
 
-end nat
+theorem WithBot.one_le_iff_zero_lt {x : WithBot ℕ} : 1 ≤ x ↔ 0 < x := by
+  refine' ⟨fun h => lt_of_lt_of_leₓ (with_bot.coe_lt_coe.mpr zero_lt_one) h, fun h => _⟩
+  induction x using WithBot.recBotCoe
+  · exact (not_lt_bot h).elim
+    
+  · exact with_bot.coe_le_coe.mpr (nat.succ_le_iff.mpr (with_bot.coe_lt_coe.mp h))
+    
+
+theorem WithBot.lt_one_iff_le_zero {x : WithBot ℕ} : x < 1 ↔ x ≤ 0 :=
+  not_iff_not.mp
+    (by
+      simpa using with_bot.one_le_iff_zero_lt)
+
+end Nat
+

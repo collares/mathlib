@@ -3,7 +3,7 @@ Copyright (c) 2020 Yakov Pechersky. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yakov Pechersky
 -/
-import data.buffer.parser.basic
+import Mathbin.Data.Buffer.Parser.Basic
 
 /-!
 # Numeral parsers
@@ -35,85 +35,69 @@ In the definitions of the parsers (except for `parser.numeral`), there is an
 explicit `nat.bin_cast` instead an explicit or implicit `nat.cast`.
 -/
 
-open parser parse_result
 
-namespace parser
+open Parser ParseResult
 
-variables (α : Type) [has_zero α] [has_one α] [has_add α]
+namespace Parser
 
-/--
-Parse a string of digits as a numeral while casting it to target type `α`.
+variable (α : Type) [Zero α] [One α] [Add α]
+
+/-- Parse a string of digits as a numeral while casting it to target type `α`.
 -/
-@[derive [mono, bounded, prog]]
-def numeral : parser α :=
-nat.bin_cast <$> nat
+def numeral : Parser α :=
+  Nat.binCast <$> Nat deriving Mono, Bounded, Prog
 
-/--
-Parse a string of digits as a numeral while casting it to target type `α`,
+/-- Parse a string of digits as a numeral while casting it to target type `α`,
 which has a `[fintype α]` constraint. The parser ensures that the numeral parsed in
 is within the cardinality of the type `α`.
 -/
-@[derive [mono, bounded, prog]]
-def numeral.of_fintype [fintype α] : parser α :=
-do
-  c ← nat,
-  decorate_error (sformat!"<numeral less than {to_string (fintype.card α)}>")
-    (guard (c < fintype.card α)),
-  pure $ nat.bin_cast c
+def numeral.ofFintype [Fintype α] : Parser α := do
+  let c ← nat
+  decorate_error (s! "<numeral less than {toString (Fintype.card α)}>") (guardₓ (c < Fintype.card α))
+  pure <| Nat.binCast c deriving Mono, Bounded, Prog
 
-/--
-Parse a string of digits as a numeral while casting it to target type `α`. The parsing starts
+/-- Parse a string of digits as a numeral while casting it to target type `α`. The parsing starts
 at "1", so `"1"` is parsed in as `nat.cast 0`. Providing `"0"` to the parser causes a failure.
 -/
-@[derive [mono, bounded, prog]]
-def numeral.from_one : parser α :=
-do
-  c ← nat,
-  decorate_error ("<positive numeral>")
-    (guard (0 < c)),
-  pure $ nat.bin_cast (c - 1)
+def numeral.fromOne : Parser α := do
+  let c ← nat
+  decorate_error "<positive numeral>" (guardₓ (0 < c))
+  pure <| Nat.binCast (c - 1)deriving Mono, Bounded, Prog
 
-/--
-Parse a string of digits as a numeral while casting it to target type `α`,
+/-- Parse a string of digits as a numeral while casting it to target type `α`,
 which has a `[fintype α]` constraint. The parser ensures that the numeral parsed in
 is within the cardinality of the type `α`. The parsing starts
 at "1", so `"1"` is parsed in as `nat.cast 0`. Providing `"0"` to the parser causes a failure.
 -/
-@[derive [mono, bounded, prog]]
-def numeral.from_one.of_fintype [fintype α] : parser α :=
-do
-  c ← nat,
-  decorate_error (sformat!"<positive numeral less than or equal to {to_string (fintype.card α)}>")
-    (guard (0 < c ∧ c ≤ fintype.card α)),
-  pure $ nat.bin_cast (c - 1)
+def numeral.fromOne.ofFintype [Fintype α] : Parser α := do
+  let c ← nat
+  decorate_error (s! "<positive numeral less than or equal to {toString (Fintype.card α)}>")
+      (guardₓ (0 < c ∧ c ≤ Fintype.card α))
+  pure <| Nat.binCast (c - 1)deriving Mono, Bounded, Prog
 
-/--
-Parse a character as a numeral while casting it to target type `α`,
+/-- Parse a character as a numeral while casting it to target type `α`,
 The parser ensures that the character parsed in is within the bounds set by `fromc` and `toc`,
 and subtracts the value of `fromc` from the parsed in character.
 -/
-@[derive [mono, bounded, err_static, step]]
-def numeral.char (fromc toc : char) : parser α :=
-do
-  c ← decorate_error
-    (sformat!"<char between '{fromc.to_string}' to '{toc.to_string}' inclusively>")
-    (sat (λ c, fromc ≤ c ∧ c ≤ toc)),
-  pure $ nat.bin_cast (c.to_nat - fromc.to_nat)
+def numeral.char (fromc toc : Charₓ) : Parser α := do
+  let c ←
+    decorateError (s! "<char between '{fromc.toString }' to '{toc.toString}' inclusively>")
+        (sat fun c => fromc ≤ c ∧ c ≤ toc)
+  pure <| Nat.binCast (c - fromc)deriving Mono, Bounded, ErrStatic, Step
 
-/--
-Parse a character as a numeral while casting it to target type `α`,
+/-- Parse a character as a numeral while casting it to target type `α`,
 which has a `[fintype α]` constraint.
 The parser ensures that the character parsed in is greater or equal to `fromc` and
 and subtracts the value of `fromc` from the parsed in character. There is also a check
 that the resulting value is within the cardinality of the type `α`.
 -/
-@[derive [mono, bounded, err_static, step]]
-def numeral.char.of_fintype [fintype α] (fromc : char) : parser α :=
-do
-  c ← decorate_error
-    (sformat!"<char from '{fromc.to_string}' to '
-    { (char.of_nat (fromc.to_nat + fintype.card α - 1)).to_string}' inclusively>")
-    (sat (λ c, fromc ≤ c ∧ c.to_nat - fintype.card α < fromc.to_nat)),
-  pure $ nat.bin_cast (c.to_nat - fromc.to_nat)
+def numeral.char.ofFintype [Fintype α] (fromc : Charₓ) : Parser α := do
+  let c ←
+    decorateError
+        (s! "<char from '{fromc.toString}' to '
+              {(Charₓ.ofNat (fromc.toNat + Fintype.card α - 1)).toString}' inclusively>")
+        (sat fun c => fromc ≤ c ∧ c.toNat - Fintype.card α < fromc.toNat)
+  pure <| Nat.binCast (c - fromc)deriving Mono, Bounded, ErrStatic, Step
 
-end parser
+end Parser
+

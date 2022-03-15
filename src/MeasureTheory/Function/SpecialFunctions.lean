@@ -3,11 +3,10 @@ Copyright (c) 2020 Yury Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury Kudryashov
 -/
-
-import analysis.special_functions.pow
-import analysis.special_functions.trigonometric.arctan
-import analysis.inner_product_space.basic
-import measure_theory.constructions.borel_space
+import Mathbin.Analysis.SpecialFunctions.Pow
+import Mathbin.Analysis.SpecialFunctions.Trigonometric.Arctan
+import Mathbin.Analysis.InnerProductSpace.Basic
+import Mathbin.MeasureTheory.Constructions.BorelSpace
 
 /-!
 # Measurability of real and complex functions
@@ -16,242 +15,297 @@ We show that most standard real and complex functions are measurable, notably `e
 `cosh`, `sinh`, `log`, `pow`, `arcsin`, `arccos`, `arctan`, and scalar products.
 -/
 
-noncomputable theory
-open_locale nnreal ennreal
 
-namespace real
+noncomputable section
 
-@[measurability] lemma measurable_exp : measurable exp := continuous_exp.measurable
+open_locale Nnreal Ennreal
 
-@[measurability] lemma measurable_log : measurable log :=
-measurable_of_measurable_on_compl_singleton 0 $ continuous.measurable $
-  continuous_on_iff_continuous_restrict.1 continuous_on_log
+namespace Real
 
-@[measurability] lemma measurable_sin : measurable sin := continuous_sin.measurable
+@[measurability]
+theorem measurable_exp : Measurable exp :=
+  continuous_exp.Measurable
 
-@[measurability] lemma measurable_cos : measurable cos := continuous_cos.measurable
+@[measurability]
+theorem measurable_log : Measurable log :=
+  measurable_of_measurable_on_compl_singleton 0 <|
+    Continuous.measurable <| continuous_on_iff_continuous_restrict.1 continuous_on_log
 
-@[measurability] lemma measurable_sinh : measurable sinh := continuous_sinh.measurable
+@[measurability]
+theorem measurable_sin : Measurable sin :=
+  continuous_sin.Measurable
 
-@[measurability] lemma measurable_cosh : measurable cosh := continuous_cosh.measurable
+@[measurability]
+theorem measurable_cos : Measurable cos :=
+  continuous_cos.Measurable
 
-@[measurability] lemma measurable_arcsin : measurable arcsin := continuous_arcsin.measurable
+@[measurability]
+theorem measurable_sinh : Measurable sinh :=
+  continuous_sinh.Measurable
 
-@[measurability] lemma measurable_arccos : measurable arccos := continuous_arccos.measurable
+@[measurability]
+theorem measurable_cosh : Measurable cosh :=
+  continuous_cosh.Measurable
 
-@[measurability] lemma measurable_arctan : measurable arctan := continuous_arctan.measurable
+@[measurability]
+theorem measurable_arcsin : Measurable arcsin :=
+  continuous_arcsin.Measurable
 
-end real
+@[measurability]
+theorem measurable_arccos : Measurable arccos :=
+  continuous_arccos.Measurable
 
-namespace complex
+@[measurability]
+theorem measurable_arctan : Measurable arctan :=
+  continuous_arctan.Measurable
 
-@[measurability] lemma measurable_re : measurable re := continuous_re.measurable
+end Real
 
-@[measurability] lemma measurable_im : measurable im := continuous_im.measurable
+namespace Complex
 
-@[measurability] lemma measurable_of_real : measurable (coe : ℝ → ℂ) :=
-continuous_of_real.measurable
+@[measurability]
+theorem measurable_re : Measurable re :=
+  continuous_re.Measurable
 
-@[measurability] lemma measurable_exp : measurable exp := continuous_exp.measurable
+@[measurability]
+theorem measurable_im : Measurable im :=
+  continuous_im.Measurable
 
-@[measurability] lemma measurable_sin : measurable sin := continuous_sin.measurable
+@[measurability]
+theorem measurable_of_real : Measurable (coe : ℝ → ℂ) :=
+  continuous_of_real.Measurable
 
-@[measurability] lemma measurable_cos : measurable cos := continuous_cos.measurable
+@[measurability]
+theorem measurable_exp : Measurable exp :=
+  continuous_exp.Measurable
 
-@[measurability] lemma measurable_sinh : measurable sinh := continuous_sinh.measurable
+@[measurability]
+theorem measurable_sin : Measurable sin :=
+  continuous_sin.Measurable
 
-@[measurability] lemma measurable_cosh : measurable cosh := continuous_cosh.measurable
+@[measurability]
+theorem measurable_cos : Measurable cos :=
+  continuous_cos.Measurable
 
-@[measurability] lemma measurable_arg : measurable arg :=
-have A : measurable (λ x : ℂ, real.arcsin (x.im / x.abs)),
-  from real.measurable_arcsin.comp (measurable_im.div measurable_norm),
-have B : measurable (λ x : ℂ, real.arcsin ((-x).im / x.abs)),
-  from real.measurable_arcsin.comp ((measurable_im.comp measurable_neg).div measurable_norm),
-measurable.ite (is_closed_le continuous_const continuous_re).measurable_set A $
-  measurable.ite (is_closed_le continuous_const continuous_im).measurable_set
-    (B.add_const _) (B.sub_const _)
+@[measurability]
+theorem measurable_sinh : Measurable sinh :=
+  continuous_sinh.Measurable
 
-@[measurability] lemma measurable_log : measurable log :=
-(measurable_of_real.comp $ real.measurable_log.comp measurable_norm).add $
-  (measurable_of_real.comp measurable_arg).mul_const I
+@[measurability]
+theorem measurable_cosh : Measurable cosh :=
+  continuous_cosh.Measurable
 
-end complex
+@[measurability]
+theorem measurable_arg : Measurable arg :=
+  have A : Measurable fun x : ℂ => Real.arcsin (x.im / x.abs) :=
+    Real.measurable_arcsin.comp (measurable_im.div measurable_norm)
+  have B : Measurable fun x : ℂ => Real.arcsin ((-x).im / x.abs) :=
+    Real.measurable_arcsin.comp ((measurable_im.comp measurable_neg).div measurable_norm)
+  Measurable.ite (is_closed_le continuous_const continuous_re).MeasurableSet A <|
+    Measurable.ite (is_closed_le continuous_const continuous_im).MeasurableSet (B.AddConst _) (B.sub_const _)
 
-namespace is_R_or_C
+@[measurability]
+theorem measurable_log : Measurable log :=
+  (measurable_of_real.comp <| Real.measurable_log.comp measurable_norm).add <|
+    (measurable_of_real.comp measurable_arg).mul_const i
 
-variables {𝕜 : Type*} [is_R_or_C 𝕜]
+end Complex
 
-@[measurability] lemma measurable_re : measurable (re : 𝕜 → ℝ) := continuous_re.measurable
+namespace IsROrC
 
-@[measurability] lemma measurable_im : measurable (im : 𝕜 → ℝ) := continuous_im.measurable
+variable {𝕜 : Type _} [IsROrC 𝕜]
 
-end is_R_or_C
+@[measurability]
+theorem measurable_re : Measurable (re : 𝕜 → ℝ) :=
+  continuous_re.Measurable
 
-section real_composition
-open real
-variables {α : Type*} {m : measurable_space α} {f : α → ℝ} (hf : measurable f)
+@[measurability]
+theorem measurable_im : Measurable (im : 𝕜 → ℝ) :=
+  continuous_im.Measurable
 
-@[measurability] lemma measurable.exp : measurable (λ x, real.exp (f x)) :=
-real.measurable_exp.comp hf
+end IsROrC
 
-@[measurability] lemma measurable.log : measurable (λ x, log (f x)) :=
-measurable_log.comp hf
+section RealComposition
 
-@[measurability] lemma measurable.cos : measurable (λ x, real.cos (f x)) :=
-real.measurable_cos.comp hf
+open Real
 
-@[measurability] lemma measurable.sin : measurable (λ x, real.sin (f x)) :=
-real.measurable_sin.comp hf
+variable {α : Type _} {m : MeasurableSpace α} {f : α → ℝ} (hf : Measurable f)
 
-@[measurability] lemma measurable.cosh : measurable (λ x, real.cosh (f x)) :=
-real.measurable_cosh.comp hf
+@[measurability]
+theorem Measurable.exp : Measurable fun x => Real.exp (f x) :=
+  Real.measurable_exp.comp hf
 
-@[measurability] lemma measurable.sinh : measurable (λ x, real.sinh (f x)) :=
-real.measurable_sinh.comp hf
+@[measurability]
+theorem Measurable.log : Measurable fun x => log (f x) :=
+  measurable_log.comp hf
 
-@[measurability] lemma measurable.arctan : measurable (λ x, arctan (f x)) :=
-measurable_arctan.comp hf
+@[measurability]
+theorem Measurable.cos : Measurable fun x => Real.cos (f x) :=
+  Real.measurable_cos.comp hf
 
-@[measurability] lemma measurable.sqrt : measurable (λ x, sqrt (f x)) :=
-continuous_sqrt.measurable.comp hf
+@[measurability]
+theorem Measurable.sin : Measurable fun x => Real.sin (f x) :=
+  Real.measurable_sin.comp hf
 
-end real_composition
+@[measurability]
+theorem Measurable.cosh : Measurable fun x => Real.cosh (f x) :=
+  Real.measurable_cosh.comp hf
 
-section complex_composition
-open complex
-variables {α : Type*} {m : measurable_space α} {f : α → ℂ} (hf : measurable f)
+@[measurability]
+theorem Measurable.sinh : Measurable fun x => Real.sinh (f x) :=
+  Real.measurable_sinh.comp hf
 
-@[measurability] lemma measurable.cexp : measurable (λ x, complex.exp (f x)) :=
-complex.measurable_exp.comp hf
+@[measurability]
+theorem Measurable.arctan : Measurable fun x => arctan (f x) :=
+  measurable_arctan.comp hf
 
-@[measurability] lemma measurable.ccos : measurable (λ x, complex.cos (f x)) :=
-complex.measurable_cos.comp hf
+@[measurability]
+theorem Measurable.sqrt : Measurable fun x => sqrt (f x) :=
+  continuous_sqrt.Measurable.comp hf
 
-@[measurability] lemma measurable.csin : measurable (λ x, complex.sin (f x)) :=
-complex.measurable_sin.comp hf
+end RealComposition
 
-@[measurability] lemma measurable.ccosh : measurable (λ x, complex.cosh (f x)) :=
-complex.measurable_cosh.comp hf
+section ComplexComposition
 
-@[measurability] lemma measurable.csinh : measurable (λ x, complex.sinh (f x)) :=
-complex.measurable_sinh.comp hf
+open Complex
 
-@[measurability] lemma measurable.carg : measurable (λ x, arg (f x)) :=
-measurable_arg.comp hf
+variable {α : Type _} {m : MeasurableSpace α} {f : α → ℂ} (hf : Measurable f)
 
-@[measurability] lemma measurable.clog : measurable (λ x, log (f x)) :=
-measurable_log.comp hf
+@[measurability]
+theorem Measurable.cexp : Measurable fun x => Complex.exp (f x) :=
+  Complex.measurable_exp.comp hf
 
-end complex_composition
+@[measurability]
+theorem Measurable.ccos : Measurable fun x => Complex.cos (f x) :=
+  Complex.measurable_cos.comp hf
 
-section is_R_or_C_composition
+@[measurability]
+theorem Measurable.csin : Measurable fun x => Complex.sin (f x) :=
+  Complex.measurable_sin.comp hf
 
-variables {α 𝕜 : Type*} [is_R_or_C 𝕜] {m : measurable_space α}
-  {f : α → 𝕜} {μ : measure_theory.measure α}
+@[measurability]
+theorem Measurable.ccosh : Measurable fun x => Complex.cosh (f x) :=
+  Complex.measurable_cosh.comp hf
+
+@[measurability]
+theorem Measurable.csinh : Measurable fun x => Complex.sinh (f x) :=
+  Complex.measurable_sinh.comp hf
+
+@[measurability]
+theorem Measurable.carg : Measurable fun x => arg (f x) :=
+  measurable_arg.comp hf
+
+@[measurability]
+theorem Measurable.clog : Measurable fun x => log (f x) :=
+  measurable_log.comp hf
+
+end ComplexComposition
+
+section IsROrCComposition
+
+variable {α 𝕜 : Type _} [IsROrC 𝕜] {m : MeasurableSpace α} {f : α → 𝕜} {μ : MeasureTheory.Measure α}
 
 include m
 
-@[measurability] lemma measurable.re (hf : measurable f) : measurable (λ x, is_R_or_C.re (f x)) :=
-is_R_or_C.measurable_re.comp hf
+@[measurability]
+theorem Measurable.re (hf : Measurable f) : Measurable fun x => IsROrC.re (f x) :=
+  IsROrC.measurable_re.comp hf
 
-@[measurability] lemma ae_measurable.re (hf : ae_measurable f μ) :
-  ae_measurable (λ x, is_R_or_C.re (f x)) μ :=
-is_R_or_C.measurable_re.comp_ae_measurable hf
+@[measurability]
+theorem AeMeasurable.re (hf : AeMeasurable f μ) : AeMeasurable (fun x => IsROrC.re (f x)) μ :=
+  IsROrC.measurable_re.comp_ae_measurable hf
 
-@[measurability] lemma measurable.im (hf : measurable f) : measurable (λ x, is_R_or_C.im (f x)) :=
-is_R_or_C.measurable_im.comp hf
+@[measurability]
+theorem Measurable.im (hf : Measurable f) : Measurable fun x => IsROrC.im (f x) :=
+  IsROrC.measurable_im.comp hf
 
-@[measurability] lemma ae_measurable.im (hf : ae_measurable f μ) :
-  ae_measurable (λ x, is_R_or_C.im (f x)) μ :=
-is_R_or_C.measurable_im.comp_ae_measurable hf
+@[measurability]
+theorem AeMeasurable.im (hf : AeMeasurable f μ) : AeMeasurable (fun x => IsROrC.im (f x)) μ :=
+  IsROrC.measurable_im.comp_ae_measurable hf
 
 omit m
 
-end is_R_or_C_composition
+end IsROrCComposition
 
 section
 
-variables {α 𝕜 : Type*} [is_R_or_C 𝕜] [measurable_space α]
-  {f : α → 𝕜} {μ : measure_theory.measure α}
+variable {α 𝕜 : Type _} [IsROrC 𝕜] [MeasurableSpace α] {f : α → 𝕜} {μ : MeasureTheory.Measure α}
 
-@[measurability] lemma is_R_or_C.measurable_of_real : measurable (coe : ℝ → 𝕜) :=
-is_R_or_C.continuous_of_real.measurable
+@[measurability]
+theorem IsROrC.measurable_of_real : Measurable (coe : ℝ → 𝕜) :=
+  IsROrC.continuous_of_real.Measurable
 
-lemma measurable_of_re_im
-  (hre : measurable (λ x, is_R_or_C.re (f x)))
-  (him : measurable (λ x, is_R_or_C.im (f x))) : measurable f :=
-begin
-  convert (is_R_or_C.measurable_of_real.comp hre).add
-    ((is_R_or_C.measurable_of_real.comp him).mul_const is_R_or_C.I),
-  { ext1 x,
-    exact (is_R_or_C.re_add_im _).symm },
-  all_goals { apply_instance },
-end
+theorem measurable_of_re_im (hre : Measurable fun x => IsROrC.re (f x)) (him : Measurable fun x => IsROrC.im (f x)) :
+    Measurable f := by
+  convert (is_R_or_C.measurable_of_real.comp hre).add ((is_R_or_C.measurable_of_real.comp him).mul_const IsROrC.i)
+  · ext1 x
+    exact (IsROrC.re_add_im _).symm
+    
+  all_goals
+    infer_instance
 
-lemma ae_measurable_of_re_im
-  (hre : ae_measurable (λ x, is_R_or_C.re (f x)) μ)
-  (him : ae_measurable (λ x, is_R_or_C.im (f x)) μ) : ae_measurable f μ :=
-begin
-  convert (is_R_or_C.measurable_of_real.comp_ae_measurable hre).add
-    ((is_R_or_C.measurable_of_real.comp_ae_measurable him).mul_const is_R_or_C.I),
-  { ext1 x,
-    exact (is_R_or_C.re_add_im _).symm },
-  all_goals { apply_instance },
-end
+theorem ae_measurable_of_re_im (hre : AeMeasurable (fun x => IsROrC.re (f x)) μ)
+    (him : AeMeasurable (fun x => IsROrC.im (f x)) μ) : AeMeasurable f μ := by
+  convert
+    (is_R_or_C.measurable_of_real.comp_ae_measurable hre).add
+      ((is_R_or_C.measurable_of_real.comp_ae_measurable him).mul_const IsROrC.i)
+  · ext1 x
+    exact (IsROrC.re_add_im _).symm
+    
+  all_goals
+    infer_instance
 
 end
 
-section pow_instances
+section PowInstances
 
-instance complex.has_measurable_pow : has_measurable_pow ℂ ℂ :=
-⟨measurable.ite (measurable_fst (measurable_set_singleton 0))
-  (measurable.ite (measurable_snd (measurable_set_singleton 0)) measurable_one measurable_zero)
-  (measurable_fst.clog.mul measurable_snd).cexp⟩
+instance Complex.hasMeasurablePow : HasMeasurablePow ℂ ℂ :=
+  ⟨Measurable.ite (measurable_fst (measurable_set_singleton 0))
+      (Measurable.ite (measurable_snd (measurable_set_singleton 0)) measurable_one measurable_zero)
+      (measurable_fst.clog.mul measurable_snd).cexp⟩
 
-instance real.has_measurable_pow : has_measurable_pow ℝ ℝ :=
-⟨complex.measurable_re.comp $ ((complex.measurable_of_real.comp measurable_fst).pow
-  (complex.measurable_of_real.comp measurable_snd))⟩
+instance Real.hasMeasurablePow : HasMeasurablePow ℝ ℝ :=
+  ⟨Complex.measurable_re.comp <|
+      (Complex.measurable_of_real.comp measurable_fst).pow (Complex.measurable_of_real.comp measurable_snd)⟩
 
-instance nnreal.has_measurable_pow : has_measurable_pow ℝ≥0 ℝ :=
-⟨(measurable_fst.coe_nnreal_real.pow measurable_snd).subtype_mk⟩
+instance Nnreal.hasMeasurablePow : HasMeasurablePow ℝ≥0 ℝ :=
+  ⟨(measurable_fst.coe_nnreal_real.pow measurable_snd).subtype_mk⟩
 
-instance ennreal.has_measurable_pow : has_measurable_pow ℝ≥0∞ ℝ :=
-begin
-  refine ⟨ennreal.measurable_of_measurable_nnreal_prod _ _⟩,
-  { simp_rw ennreal.coe_rpow_def,
-    refine measurable.ite _ measurable_const
-      (measurable_fst.pow measurable_snd).coe_nnreal_ennreal,
-    exact measurable_set.inter (measurable_fst (measurable_set_singleton 0))
-      (measurable_snd measurable_set_Iio), },
-  { simp_rw ennreal.top_rpow_def,
-    refine measurable.ite measurable_set_Ioi measurable_const _,
-    exact measurable.ite (measurable_set_singleton 0) measurable_const measurable_const, },
-end
+instance Ennreal.hasMeasurablePow : HasMeasurablePow ℝ≥0∞ ℝ := by
+  refine' ⟨Ennreal.measurable_of_measurable_nnreal_prod _ _⟩
+  · simp_rw [Ennreal.coe_rpow_def]
+    refine' Measurable.ite _ measurable_const (measurable_fst.pow measurable_snd).coe_nnreal_ennreal
+    exact MeasurableSet.inter (measurable_fst (measurable_set_singleton 0)) (measurable_snd measurable_set_Iio)
+    
+  · simp_rw [Ennreal.top_rpow_def]
+    refine' Measurable.ite measurable_set_Ioi measurable_const _
+    exact Measurable.ite (measurable_set_singleton 0) measurable_const measurable_const
+    
 
-end pow_instances
+end PowInstances
 
 section
-variables {α : Type*} {𝕜 : Type*} {E : Type*} [is_R_or_C 𝕜] [inner_product_space 𝕜 E]
-local notation `⟪`x`, `y`⟫` := @inner 𝕜 _ _ x y
+
+variable {α : Type _} {𝕜 : Type _} {E : Type _} [IsROrC 𝕜] [InnerProductSpace 𝕜 E]
+
+-- mathport name: «expr⟪ , ⟫»
+local notation "⟪" x ", " y "⟫" => @inner 𝕜 _ _ x y
 
 @[measurability]
-lemma measurable.inner {m : measurable_space α} [measurable_space E] [opens_measurable_space E]
-  [topological_space.second_countable_topology E]
-  {f g : α → E} (hf : measurable f) (hg : measurable g) :
-  measurable (λ t, ⟪f t, g t⟫) :=
-continuous.measurable2 continuous_inner hf hg
+theorem Measurable.inner {m : MeasurableSpace α} [MeasurableSpace E] [OpensMeasurableSpace E]
+    [TopologicalSpace.SecondCountableTopology E] {f g : α → E} (hf : Measurable f) (hg : Measurable g) :
+    Measurable fun t => ⟪f t, g t⟫ :=
+  Continuous.measurable2 continuous_inner hf hg
 
 @[measurability]
-lemma ae_measurable.inner {m : measurable_space α} [measurable_space E] [opens_measurable_space E]
-  [topological_space.second_countable_topology E]
-  {μ : measure_theory.measure α} {f g : α → E} (hf : ae_measurable f μ) (hg : ae_measurable g μ) :
-  ae_measurable (λ x, ⟪f x, g x⟫) μ :=
-begin
-  refine ⟨λ x, ⟪hf.mk f x, hg.mk g x⟫, hf.measurable_mk.inner hg.measurable_mk, _⟩,
-  refine hf.ae_eq_mk.mp (hg.ae_eq_mk.mono (λ x hxg hxf, _)),
-  dsimp only,
-  congr,
-  exacts [hxf, hxg],
-end
+theorem AeMeasurable.inner {m : MeasurableSpace α} [MeasurableSpace E] [OpensMeasurableSpace E]
+    [TopologicalSpace.SecondCountableTopology E] {μ : MeasureTheory.Measure α} {f g : α → E} (hf : AeMeasurable f μ)
+    (hg : AeMeasurable g μ) : AeMeasurable (fun x => ⟪f x, g x⟫) μ := by
+  refine' ⟨fun x => ⟪hf.mk f x, hg.mk g x⟫, hf.measurable_mk.inner hg.measurable_mk, _⟩
+  refine' hf.ae_eq_mk.mp (hg.ae_eq_mk.mono fun x hxg hxf => _)
+  dsimp only
+  congr
+  exacts[hxf, hxg]
 
 end
+

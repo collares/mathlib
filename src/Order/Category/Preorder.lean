@@ -3,9 +3,9 @@ Copyright (c) 2020 Johan Commelin. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johan Commelin
 -/
-import category_theory.concrete_category.bundled_hom
-import algebra.punit_instances
-import order.hom.basic
+import Mathbin.CategoryTheory.ConcreteCategory.BundledHom
+import Mathbin.Algebra.PunitInstances
+import Mathbin.Order.Hom.Basic
 
 /-!
 # Category of preorders
@@ -13,49 +13,65 @@ import order.hom.basic
 This defines `Preorder`, the category of preorders with monotone maps.
 -/
 
+
 universe u
 
-open category_theory
+open CategoryTheory
 
 /-- The category of preorders. -/
-def Preorder := bundled preorder
+def Preorderₓₓ :=
+  Bundled Preorderₓ
 
-namespace Preorder
+namespace Preorderₓₓ
 
-instance : bundled_hom @order_hom :=
-{ to_fun := @order_hom.to_fun,
-  id := @order_hom.id,
-  comp := @order_hom.comp,
-  hom_ext := @order_hom.ext }
+instance : BundledHom @OrderHom where
+  toFun := @OrderHom.toFun
+  id := @OrderHom.id
+  comp := @OrderHom.comp
+  hom_ext := @OrderHom.ext
 
-attribute [derive [large_category, concrete_category]] Preorder
+deriving instance LargeCategory, ConcreteCategory for Preorderₓₓ
 
-instance : has_coe_to_sort Preorder Type* := bundled.has_coe_to_sort
+instance : CoeSort Preorderₓₓ (Type _) :=
+  bundled.has_coe_to_sort
 
 /-- Construct a bundled Preorder from the underlying type and typeclass. -/
-def of (α : Type*) [preorder α] : Preorder := bundled.of α
+def of (α : Type _) [Preorderₓ α] : Preorderₓₓ :=
+  Bundled.of α
 
-@[simp] lemma coe_of (α : Type*) [preorder α] : ↥(of α) = α := rfl
+@[simp]
+theorem coe_of (α : Type _) [Preorderₓ α] : ↥(of α) = α :=
+  rfl
 
-instance : inhabited Preorder := ⟨of punit⟩
+instance : Inhabited Preorderₓₓ :=
+  ⟨of PUnit⟩
 
-instance (α : Preorder) : preorder α := α.str
+instance (α : Preorderₓₓ) : Preorderₓ α :=
+  α.str
 
 /-- Constructs an equivalence between preorders from an order isomorphism between them. -/
-@[simps] def iso.mk {α β : Preorder.{u}} (e : α ≃o β) : α ≅ β :=
-{ hom := e,
-  inv := e.symm,
-  hom_inv_id' := by { ext, exact e.symm_apply_apply x },
-  inv_hom_id' := by { ext, exact e.apply_symm_apply x } }
+@[simps]
+def Iso.mk {α β : Preorderₓₓ.{u}} (e : α ≃o β) : α ≅ β where
+  Hom := e
+  inv := e.symm
+  hom_inv_id' := by
+    ext
+    exact e.symm_apply_apply x
+  inv_hom_id' := by
+    ext
+    exact e.apply_symm_apply x
 
 /-- `order_dual` as a functor. -/
-@[simps] def dual : Preorder ⥤ Preorder :=
-{ obj := λ X, of (order_dual X), map := λ X Y, order_hom.dual }
+@[simps]
+def dual : Preorderₓₓ ⥤ Preorderₓₓ where
+  obj := fun X => of (OrderDual X)
+  map := fun X Y => OrderHom.dual
 
 /-- The equivalence between `Preorder` and itself induced by `order_dual` both ways. -/
-@[simps functor inverse] def dual_equiv : Preorder ≌ Preorder :=
-equivalence.mk dual dual
-  (nat_iso.of_components (λ X, iso.mk $ order_iso.dual_dual X) $ λ X Y f, rfl)
-  (nat_iso.of_components (λ X, iso.mk $ order_iso.dual_dual X) $ λ X Y f, rfl)
+@[simps Functor inverse]
+def dualEquiv : Preorderₓₓ ≌ Preorderₓₓ :=
+  Equivalence.mk dual dual ((NatIso.ofComponents fun X => iso.mk <| OrderIso.dualDual X) fun X Y f => rfl)
+    ((NatIso.ofComponents fun X => iso.mk <| OrderIso.dualDual X) fun X Y f => rfl)
 
-end Preorder
+end Preorderₓₓ
+

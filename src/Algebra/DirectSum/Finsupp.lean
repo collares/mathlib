@@ -3,8 +3,8 @@ Copyright (c) 2019 Johannes Hölzl. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johannes Hölzl
 -/
-import algebra.direct_sum.module
-import data.finsupp.to_dfinsupp
+import Mathbin.Algebra.DirectSum.Module
+import Mathbin.Data.Finsupp.ToDfinsupp
 
 /-!
 # Results on direct sums and finitely supported functions.
@@ -13,32 +13,37 @@ import data.finsupp.to_dfinsupp
 the direct sum of copies of `M` indexed by `ι`.
 -/
 
-universes u v w
 
-noncomputable theory
-open_locale direct_sum
+universe u v w
 
-open linear_map submodule
-variables {R : Type u} {M : Type v} [ring R] [add_comm_group M] [module R M]
+noncomputable section
 
-section finsupp_lequiv_direct_sum
+open_locale DirectSum
 
-variables (R M) (ι : Type*) [decidable_eq ι]
+open LinearMap Submodule
+
+variable {R : Type u} {M : Type v} [Ringₓ R] [AddCommGroupₓ M] [Module R M]
+
+section finsuppLequivDirectSum
+
+variable (R M) (ι : Type _) [DecidableEq ι]
 
 /-- The finitely supported functions `ι →₀ M` are in linear equivalence with the direct sum of
 copies of M indexed by ι. -/
-def finsupp_lequiv_direct_sum : (ι →₀ M) ≃ₗ[R] ⨁ i : ι, M :=
-by haveI : Π m : M, decidable (m ≠ 0) := classical.dec_pred _; exact finsupp_lequiv_dfinsupp R
+def finsuppLequivDirectSum : (ι →₀ M) ≃ₗ[R] ⨁ i : ι, M :=
+  have : ∀ m : M, Decidable (m ≠ 0) := Classical.decPred _
+  finsuppLequivDfinsupp R
 
-@[simp] theorem finsupp_lequiv_direct_sum_single (i : ι) (m : M) :
-  finsupp_lequiv_direct_sum R M ι (finsupp.single i m) = direct_sum.lof R ι _ i m :=
-finsupp.to_dfinsupp_single i m
+@[simp]
+theorem finsupp_lequiv_direct_sum_single (i : ι) (m : M) :
+    finsuppLequivDirectSum R M ι (Finsupp.single i m) = DirectSum.lof R ι _ i m :=
+  Finsupp.to_dfinsupp_single i m
 
-@[simp] theorem finsupp_lequiv_direct_sum_symm_lof (i : ι) (m : M) :
-  (finsupp_lequiv_direct_sum R M ι).symm (direct_sum.lof R ι _ i m) = finsupp.single i m :=
-begin
-  letI : Π m : M, decidable (m ≠ 0) := classical.dec_pred _,
-  exact (dfinsupp.to_finsupp_single i m),
-end
+@[simp]
+theorem finsupp_lequiv_direct_sum_symm_lof (i : ι) (m : M) :
+    (finsuppLequivDirectSum R M ι).symm (DirectSum.lof R ι _ i m) = Finsupp.single i m := by
+  let this' : ∀ m : M, Decidable (m ≠ 0) := Classical.decPred _
+  exact Dfinsupp.to_finsupp_single i m
 
-end finsupp_lequiv_direct_sum
+end finsuppLequivDirectSum
+

@@ -4,8 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jeremy Avigad, Leonardo de Moura, Floris van Doorn, Amelia Livingston, Yury Kudryashov,
 Neil Strickland, Aaron Anderson
 -/
-
-import algebra.group_with_zero.basic
+import Mathbin.Algebra.GroupWithZero.Basic
 
 /-!
 # Divisibility
@@ -29,295 +28,362 @@ The divisibility relation is defined for all monoids, and as such, depends on th
 divisibility, divides
 -/
 
-variables {α : Type*}
 
-section semigroup
+variable {α : Type _}
 
-variables [semigroup α] {a b c : α}
+section Semigroupₓ
+
+variable [Semigroupₓ α] {a b c : α}
 
 /-- There are two possible conventions for divisibility, which coincide in a `comm_monoid`.
     This matches the convention for ordinals. -/
-@[priority 100]
-instance semigroup_has_dvd : has_dvd α :=
-has_dvd.mk (λ a b, ∃ c, b = a * c)
+instance (priority := 100) semigroupHasDvd : Dvd α :=
+  Dvd.mk fun a b => ∃ c, b = a * c
 
 -- TODO: this used to not have `c` explicit, but that seems to be important
 --       for use with tactics, similar to `exists.intro`
-theorem dvd.intro (c : α) (h : a * c = b) : a ∣ b :=
-exists.intro c h^.symm
+theorem Dvd.intro (c : α) (h : a * c = b) : a ∣ b :=
+  Exists.introₓ c h
 
-alias dvd.intro ← dvd_of_mul_right_eq
+alias Dvd.intro ← dvd_of_mul_right_eq
 
-theorem exists_eq_mul_right_of_dvd (h : a ∣ b) : ∃ c, b = a * c := h
+theorem exists_eq_mul_right_of_dvd (h : a ∣ b) : ∃ c, b = a * c :=
+  h
 
-theorem dvd.elim {P : Prop} {a b : α} (H₁ : a ∣ b) (H₂ : ∀ c, b = a * c → P) : P :=
-exists.elim H₁ H₂
+theorem Dvd.elim {P : Prop} {a b : α} (H₁ : a ∣ b) (H₂ : ∀ c, b = a * c → P) : P :=
+  Exists.elim H₁ H₂
 
-local attribute [simp] mul_assoc mul_comm mul_left_comm
+attribute [local simp] mul_assoc mul_comm mul_left_commₓ
 
-@[trans] theorem dvd_trans (h₁ : a ∣ b) (h₂ : b ∣ c) : a ∣ c :=
-match h₁, h₂ with
-| ⟨d, (h₃ : b = a * d)⟩, ⟨e, (h₄ : c = b * e)⟩ :=
-  ⟨d * e, show c = a * (d * e), by simp [h₃, h₄]⟩
-end
+@[trans]
+theorem dvd_trans (h₁ : a ∣ b) (h₂ : b ∣ c) : a ∣ c :=
+  match h₁, h₂ with
+  | ⟨d, (h₃ : b = a * d)⟩, ⟨e, (h₄ : c = b * e)⟩ =>
+    ⟨d * e,
+      show c = a * (d * e) by
+        simp [h₃, h₄]⟩
 
-alias dvd_trans ← has_dvd.dvd.trans
+alias dvd_trans ← Dvd.Dvd.trans
 
-@[simp] theorem dvd_mul_right (a b : α) : a ∣ a * b := dvd.intro b rfl
+@[simp]
+theorem dvd_mul_right (a b : α) : a ∣ a * b :=
+  Dvd.intro b rfl
 
 theorem dvd_mul_of_dvd_left (h : a ∣ b) (c : α) : a ∣ b * c :=
-h.trans (dvd_mul_right b c)
+  h.trans (dvd_mul_right b c)
 
-alias dvd_mul_of_dvd_left ← has_dvd.dvd.mul_right
+alias dvd_mul_of_dvd_left ← Dvd.Dvd.mul_right
 
 theorem dvd_of_mul_right_dvd (h : a * b ∣ c) : a ∣ c :=
-(dvd_mul_right a b).trans h
+  (dvd_mul_right a b).trans h
 
-section map_dvd
+section MapDvd
 
-variables {M N : Type*}
+variable {M N : Type _}
 
-lemma mul_hom.map_dvd [monoid M] [monoid N] (f : mul_hom M N) {a b} : a ∣ b → f a ∣ f b
-| ⟨c, h⟩ := ⟨f c, h.symm ▸ f.map_mul a c⟩
+theorem MulHom.map_dvd [Monoidₓ M] [Monoidₓ N] (f : MulHom M N) {a b} : a ∣ b → f a ∣ f b
+  | ⟨c, h⟩ => ⟨f c, h.symm ▸ f.map_mul a c⟩
 
-lemma monoid_hom.map_dvd [monoid M] [monoid N] (f : M →* N) {a b} : a ∣ b → f a ∣ f b :=
-f.to_mul_hom.map_dvd
+theorem MonoidHom.map_dvd [Monoidₓ M] [Monoidₓ N] (f : M →* N) {a b} : a ∣ b → f a ∣ f b :=
+  f.toMulHom.map_dvd
 
-end map_dvd
+end MapDvd
 
-end semigroup
+end Semigroupₓ
 
-section monoid
+section Monoidₓ
 
-variables [monoid α]
+variable [Monoidₓ α]
 
-@[refl, simp] theorem dvd_refl (a : α) : a ∣ a :=
-dvd.intro 1 (mul_one _)
+@[refl, simp]
+theorem dvd_refl (a : α) : a ∣ a :=
+  Dvd.intro 1 (mul_oneₓ _)
 
-lemma dvd_rfl {a : α} : a ∣ a :=
-dvd_refl a
+theorem dvd_rfl {a : α} : a ∣ a :=
+  dvd_refl a
 
-theorem one_dvd (a : α) : 1 ∣ a := dvd.intro a (one_mul _)
+theorem one_dvd (a : α) : 1 ∣ a :=
+  Dvd.intro a (one_mulₓ _)
 
-end monoid
+end Monoidₓ
 
-section comm_semigroup
+section CommSemigroupₓ
 
-variables [comm_semigroup α] {a b c : α}
+variable [CommSemigroupₓ α] {a b c : α}
 
-theorem dvd.intro_left (c : α) (h : c * a = b) : a ∣ b :=
-dvd.intro _ (begin rewrite mul_comm at h, apply h end)
+theorem Dvd.intro_left (c : α) (h : c * a = b) : a ∣ b :=
+  Dvd.intro _
+    (by
+      rw [mul_comm] at h
+      apply h)
 
-alias dvd.intro_left ← dvd_of_mul_left_eq
+alias Dvd.intro_left ← dvd_of_mul_left_eq
 
 theorem exists_eq_mul_left_of_dvd (h : a ∣ b) : ∃ c, b = c * a :=
-dvd.elim h (assume c, assume H1 : b = a * c, exists.intro c (eq.trans H1 (mul_comm a c)))
+  Dvd.elim h fun c => fun H1 : b = a * c => Exists.introₓ c (Eq.trans H1 (mul_comm a c))
 
-lemma dvd_iff_exists_eq_mul_left : a ∣ b ↔ ∃ c, b = c * a :=
-⟨exists_eq_mul_left_of_dvd, by { rintro ⟨c, rfl⟩, exact ⟨c, mul_comm _ _⟩, }⟩
+theorem dvd_iff_exists_eq_mul_left : a ∣ b ↔ ∃ c, b = c * a :=
+  ⟨exists_eq_mul_left_of_dvd, by
+    rintro ⟨c, rfl⟩
+    exact ⟨c, mul_comm _ _⟩⟩
 
-theorem dvd.elim_left {P : Prop} (h₁ : a ∣ b) (h₂ : ∀ c, b = c * a → P) : P :=
-exists.elim (exists_eq_mul_left_of_dvd h₁) (assume c, assume h₃ : b = c * a, h₂ c h₃)
+theorem Dvd.elim_left {P : Prop} (h₁ : a ∣ b) (h₂ : ∀ c, b = c * a → P) : P :=
+  Exists.elim (exists_eq_mul_left_of_dvd h₁) fun c => fun h₃ : b = c * a => h₂ c h₃
 
-@[simp] theorem dvd_mul_left (a b : α) : a ∣ b * a := dvd.intro b (mul_comm a b)
+@[simp]
+theorem dvd_mul_left (a b : α) : a ∣ b * a :=
+  Dvd.intro b (mul_comm a b)
 
-theorem dvd_mul_of_dvd_right (h : a ∣ b) (c : α) : a ∣ c * b :=
-begin rw mul_comm, exact h.mul_right _ end
+theorem dvd_mul_of_dvd_right (h : a ∣ b) (c : α) : a ∣ c * b := by
+  rw [mul_comm]
+  exact h.mul_right _
 
-alias dvd_mul_of_dvd_right ← has_dvd.dvd.mul_left
+alias dvd_mul_of_dvd_right ← Dvd.Dvd.mul_left
 
-local attribute [simp] mul_assoc mul_comm mul_left_comm
+attribute [local simp] mul_assoc mul_comm mul_left_commₓ
 
 theorem mul_dvd_mul : ∀ {a b c d : α}, a ∣ b → c ∣ d → a * c ∣ b * d
-| a ._ c ._ ⟨e, rfl⟩ ⟨f, rfl⟩ := ⟨e * f, by simp⟩
+  | a, _, c, _, ⟨e, rfl⟩, ⟨f, rfl⟩ =>
+    ⟨e * f, by
+      simp ⟩
 
 theorem dvd_of_mul_left_dvd (h : a * b ∣ c) : b ∣ c :=
-dvd.elim h (λ d ceq, dvd.intro (a * d) (by simp [ceq]))
+  Dvd.elim h fun d ceq =>
+    Dvd.intro (a * d)
+      (by
+        simp [ceq])
 
-end comm_semigroup
+end CommSemigroupₓ
 
-section comm_monoid
+section CommMonoidₓ
 
-variables [comm_monoid α] {a b : α}
+variable [CommMonoidₓ α] {a b : α}
 
 theorem mul_dvd_mul_left (a : α) {b c : α} (h : b ∣ c) : a * b ∣ a * c :=
-mul_dvd_mul (dvd_refl a) h
+  mul_dvd_mul (dvd_refl a) h
 
 theorem mul_dvd_mul_right (h : a ∣ b) (c : α) : a * c ∣ b * c :=
-mul_dvd_mul h (dvd_refl c)
+  mul_dvd_mul h (dvd_refl c)
 
-end comm_monoid
+end CommMonoidₓ
 
-section semigroup_with_zero
+section SemigroupWithZeroₓ
 
-variables [semigroup_with_zero α] {a : α}
+variable [SemigroupWithZeroₓ α] {a : α}
 
 theorem eq_zero_of_zero_dvd (h : 0 ∣ a) : a = 0 :=
-dvd.elim h (assume c, assume H' : a = 0 * c, eq.trans H' (zero_mul c))
+  Dvd.elim h fun c => fun H' : a = 0 * c => Eq.trans H' (zero_mul c)
 
 /-- Given an element `a` of a commutative semigroup with zero, there exists another element whose
     product with zero equals `a` iff `a` equals zero. -/
-@[simp] lemma zero_dvd_iff : 0 ∣ a ↔ a = 0 :=
-⟨eq_zero_of_zero_dvd, λ h, by { rw h, use 0, simp, }⟩
+@[simp]
+theorem zero_dvd_iff : 0 ∣ a ↔ a = 0 :=
+  ⟨eq_zero_of_zero_dvd, fun h => by
+    rw [h]
+    use 0
+    simp ⟩
 
-@[simp] theorem dvd_zero (a : α) : a ∣ 0 := dvd.intro 0 (by simp)
+@[simp]
+theorem dvd_zero (a : α) : a ∣ 0 :=
+  Dvd.intro 0
+    (by
+      simp )
 
-end semigroup_with_zero
+end SemigroupWithZeroₓ
 
 /-- Given two elements `b`, `c` of a `cancel_monoid_with_zero` and a nonzero element `a`,
  `a*b` divides `a*c` iff `b` divides `c`. -/
-theorem mul_dvd_mul_iff_left [cancel_monoid_with_zero α] {a b c : α}
-  (ha : a ≠ 0) : a * b ∣ a * c ↔ b ∣ c :=
-exists_congr $ λ d, by rw [mul_assoc, mul_right_inj' ha]
+theorem mul_dvd_mul_iff_left [CancelMonoidWithZero α] {a b c : α} (ha : a ≠ 0) : a * b ∣ a * c ↔ b ∣ c :=
+  exists_congr fun d => by
+    rw [mul_assoc, mul_right_inj' ha]
 
 /-- Given two elements `a`, `b` of a commutative `cancel_monoid_with_zero` and a nonzero
   element `c`, `a*c` divides `b*c` iff `a` divides `b`. -/
-theorem mul_dvd_mul_iff_right [cancel_comm_monoid_with_zero α] {a b c : α} (hc : c ≠ 0) :
-  a * c ∣ b * c ↔ a ∣ b :=
-exists_congr $ λ d, by rw [mul_right_comm, mul_left_inj' hc]
+theorem mul_dvd_mul_iff_right [CancelCommMonoidWithZero α] {a b c : α} (hc : c ≠ 0) : a * c ∣ b * c ↔ a ∣ b :=
+  exists_congr fun d => by
+    rw [mul_right_commₓ, mul_left_inj' hc]
 
 /-!
 ### Units in various monoids
 -/
 
-namespace units
 
-section monoid
-variables [monoid α] {a b : α} {u : αˣ}
+namespace Units
+
+section Monoidₓ
+
+variable [Monoidₓ α] {a b : α} {u : αˣ}
 
 /-- Elements of the unit group of a monoid represented as elements of the monoid
     divide any element of the monoid. -/
-lemma coe_dvd : ↑u ∣ a := ⟨↑u⁻¹ * a, by simp⟩
+theorem coe_dvd : ↑u ∣ a :=
+  ⟨↑u⁻¹ * a, by
+    simp ⟩
 
 /-- In a monoid, an element `a` divides an element `b` iff `a` divides all
     associates of `b`. -/
-lemma dvd_mul_right : a ∣ b * u ↔ a ∣ b :=
-iff.intro
-  (assume ⟨c, eq⟩, ⟨c * ↑u⁻¹, by rw [← mul_assoc, ← eq, units.mul_inv_cancel_right]⟩)
-  (assume ⟨c, eq⟩, eq.symm ▸ (dvd_mul_right _ _).mul_right _)
+theorem dvd_mul_right : a ∣ b * u ↔ a ∣ b :=
+  Iff.intro
+    (fun ⟨c, Eq⟩ =>
+      ⟨c * ↑u⁻¹, by
+        rw [← mul_assoc, ← Eq, Units.mul_inv_cancel_right]⟩)
+    fun ⟨c, Eq⟩ => Eq.symm ▸ (dvd_mul_right _ _).mul_right _
 
 /-- In a monoid, an element `a` divides an element `b` iff all associates of `a` divide `b`. -/
-lemma mul_right_dvd : a * u ∣ b ↔ a ∣ b :=
-iff.intro
-  (λ ⟨c, eq⟩, ⟨↑u * c, eq.trans (mul_assoc _ _ _)⟩)
-  (λ h, dvd_trans (dvd.intro ↑u⁻¹ (by rw [mul_assoc, u.mul_inv, mul_one])) h)
+theorem mul_right_dvd : a * u ∣ b ↔ a ∣ b :=
+  Iff.intro (fun ⟨c, Eq⟩ => ⟨↑u * c, Eq.trans (mul_assoc _ _ _)⟩) fun h =>
+    dvd_trans
+      (Dvd.intro (↑u⁻¹)
+        (by
+          rw [mul_assoc, u.mul_inv, mul_oneₓ]))
+      h
 
-end monoid
+end Monoidₓ
 
-section comm_monoid
-variables [comm_monoid α] {a b : α} {u : αˣ}
+section CommMonoidₓ
+
+variable [CommMonoidₓ α] {a b : α} {u : αˣ}
 
 /-- In a commutative monoid, an element `a` divides an element `b` iff `a` divides all left
     associates of `b`. -/
-lemma dvd_mul_left : a ∣ u * b ↔ a ∣ b := by { rw mul_comm, apply dvd_mul_right }
+theorem dvd_mul_left : a ∣ u * b ↔ a ∣ b := by
+  rw [mul_comm]
+  apply dvd_mul_right
 
 /-- In a commutative monoid, an element `a` divides an element `b` iff all
   left associates of `a` divide `b`.-/
-lemma mul_left_dvd : ↑u * a ∣ b ↔ a ∣ b :=
-by { rw mul_comm, apply mul_right_dvd }
+theorem mul_left_dvd : ↑u * a ∣ b ↔ a ∣ b := by
+  rw [mul_comm]
+  apply mul_right_dvd
 
-end comm_monoid
+end CommMonoidₓ
 
-end units
+end Units
 
-namespace is_unit
+namespace IsUnit
 
-section monoid
+section Monoidₓ
 
-variables [monoid α] {a b u : α} (hu : is_unit u)
+variable [Monoidₓ α] {a b u : α} (hu : IsUnit u)
+
 include hu
 
 /-- Units of a monoid divide any element of the monoid. -/
-@[simp] lemma dvd : u ∣ a := by { rcases hu with ⟨u, rfl⟩, apply units.coe_dvd, }
+@[simp]
+theorem dvd : u ∣ a := by
+  rcases hu with ⟨u, rfl⟩
+  apply Units.coe_dvd
 
-@[simp] lemma dvd_mul_right : a ∣ b * u ↔ a ∣ b :=
-by { rcases hu with ⟨u, rfl⟩, apply units.dvd_mul_right, }
+@[simp]
+theorem dvd_mul_right : a ∣ b * u ↔ a ∣ b := by
+  rcases hu with ⟨u, rfl⟩
+  apply Units.dvd_mul_right
 
 /-- In a monoid, an element a divides an element b iff all associates of `a` divide `b`.-/
-@[simp] lemma mul_right_dvd : a * u ∣ b ↔ a ∣ b :=
-by { rcases hu with ⟨u, rfl⟩, apply units.mul_right_dvd, }
+@[simp]
+theorem mul_right_dvd : a * u ∣ b ↔ a ∣ b := by
+  rcases hu with ⟨u, rfl⟩
+  apply Units.mul_right_dvd
 
-end monoid
+end Monoidₓ
 
-section comm_monoid
-variables [comm_monoid α] (a b u : α) (hu : is_unit u)
+section CommMonoidₓ
+
+variable [CommMonoidₓ α] (a b u : α) (hu : IsUnit u)
+
 include hu
 
 /-- In a commutative monoid, an element `a` divides an element `b` iff `a` divides all left
     associates of `b`. -/
-@[simp] lemma dvd_mul_left : a ∣ u * b ↔ a ∣ b :=
-by { rcases hu with ⟨u, rfl⟩, apply units.dvd_mul_left, }
+@[simp]
+theorem dvd_mul_left : a ∣ u * b ↔ a ∣ b := by
+  rcases hu with ⟨u, rfl⟩
+  apply Units.dvd_mul_left
 
 /-- In a commutative monoid, an element `a` divides an element `b` iff all
   left associates of `a` divide `b`.-/
-@[simp] lemma mul_left_dvd : u * a ∣ b ↔ a ∣ b :=
-by { rcases hu with ⟨u, rfl⟩, apply units.mul_left_dvd, }
+@[simp]
+theorem mul_left_dvd : u * a ∣ b ↔ a ∣ b := by
+  rcases hu with ⟨u, rfl⟩
+  apply Units.mul_left_dvd
 
-end comm_monoid
+end CommMonoidₓ
 
-end is_unit
+end IsUnit
 
-section comm_monoid
-variables [comm_monoid α]
+section CommMonoidₓ
 
-theorem is_unit_iff_dvd_one {x : α} : is_unit x ↔ x ∣ 1 :=
-⟨by rintro ⟨u, rfl⟩; exact ⟨_, u.mul_inv.symm⟩,
- λ ⟨y, h⟩, ⟨⟨x, y, h.symm, by rw [h, mul_comm]⟩, rfl⟩⟩
+variable [CommMonoidₓ α]
 
-theorem is_unit_iff_forall_dvd {x : α} :
-  is_unit x ↔ ∀ y, x ∣ y :=
-is_unit_iff_dvd_one.trans ⟨λ h y, h.trans (one_dvd _), λ h, h _⟩
+theorem is_unit_iff_dvd_one {x : α} : IsUnit x ↔ x ∣ 1 :=
+  ⟨by
+    rintro ⟨u, rfl⟩ <;> exact ⟨_, u.mul_inv.symm⟩, fun ⟨y, h⟩ =>
+    ⟨⟨x, y, h.symm, by
+        rw [h, mul_comm]⟩,
+      rfl⟩⟩
 
-theorem is_unit_of_dvd_unit {x y : α}
-  (xy : x ∣ y) (hu : is_unit y) : is_unit x :=
-is_unit_iff_dvd_one.2 $ xy.trans $ is_unit_iff_dvd_one.1 hu
+theorem is_unit_iff_forall_dvd {x : α} : IsUnit x ↔ ∀ y, x ∣ y :=
+  is_unit_iff_dvd_one.trans ⟨fun h y => h.trans (one_dvd _), fun h => h _⟩
 
-lemma is_unit_of_dvd_one : ∀a ∣ 1, is_unit (a:α)
-| a ⟨b, eq⟩ := ⟨units.mk_of_mul_eq_one a b eq.symm, rfl⟩
+theorem is_unit_of_dvd_unit {x y : α} (xy : x ∣ y) (hu : IsUnit y) : IsUnit x :=
+  is_unit_iff_dvd_one.2 <| xy.trans <| is_unit_iff_dvd_one.1 hu
 
-lemma not_is_unit_of_not_is_unit_dvd {a b : α} (ha : ¬is_unit a) (hb : a ∣ b) :
-  ¬ is_unit b :=
-mt (is_unit_of_dvd_unit hb) ha
+-- ././Mathport/Syntax/Translate/Basic.lean:598:2: warning: expanding binder collection (a «expr ∣ » 1)
+theorem is_unit_of_dvd_one : ∀ a _ : a ∣ 1, IsUnit (a : α)
+  | a, ⟨b, Eq⟩ => ⟨Units.mkOfMulEqOne a b Eq.symm, rfl⟩
 
-end comm_monoid
+theorem not_is_unit_of_not_is_unit_dvd {a b : α} (ha : ¬IsUnit a) (hb : a ∣ b) : ¬IsUnit b :=
+  mt (is_unit_of_dvd_unit hb) ha
 
-section comm_monoid_with_zero
+end CommMonoidₓ
 
-variable [comm_monoid_with_zero α]
+section CommMonoidWithZero
+
+variable [CommMonoidWithZero α]
 
 /-- `dvd_not_unit a b` expresses that `a` divides `b` "strictly", i.e. that `b` divided by `a`
 is not a unit. -/
-def dvd_not_unit (a b : α) : Prop := a ≠ 0 ∧ ∃ x, ¬is_unit x ∧ b = a * x
+def DvdNotUnit (a b : α) : Prop :=
+  a ≠ 0 ∧ ∃ x, ¬IsUnit x ∧ b = a * x
 
-lemma dvd_not_unit_of_dvd_of_not_dvd {a b : α} (hd : a ∣ b) (hnd : ¬ b ∣ a) :
-  dvd_not_unit a b :=
-begin
-  split,
-  { rintro rfl, exact hnd (dvd_zero _) },
-  { rcases hd with ⟨c, rfl⟩,
-    refine ⟨c, _, rfl⟩,
-    rintro ⟨u, rfl⟩,
-    simpa using hnd }
-end
+theorem dvd_not_unit_of_dvd_of_not_dvd {a b : α} (hd : a ∣ b) (hnd : ¬b ∣ a) : DvdNotUnit a b := by
+  constructor
+  · rintro rfl
+    exact hnd (dvd_zero _)
+    
+  · rcases hd with ⟨c, rfl⟩
+    refine' ⟨c, _, rfl⟩
+    rintro ⟨u, rfl⟩
+    simpa using hnd
+    
 
-end comm_monoid_with_zero
+end CommMonoidWithZero
 
-lemma dvd_and_not_dvd_iff [cancel_comm_monoid_with_zero α] {x y : α} :
-  x ∣ y ∧ ¬y ∣ x ↔ dvd_not_unit x y :=
-⟨λ ⟨⟨d, hd⟩, hyx⟩, ⟨λ hx0, by simpa [hx0] using hyx, ⟨d,
-    mt is_unit_iff_dvd_one.1 (λ ⟨e, he⟩, hyx ⟨e, by rw [hd, mul_assoc, ← he, mul_one]⟩), hd⟩⟩,
-  λ ⟨hx0, d, hdu, hdx⟩, ⟨⟨d, hdx⟩, λ ⟨e, he⟩, hdu (is_unit_of_dvd_one _
-    ⟨e, mul_left_cancel₀ hx0 $ by conv {to_lhs, rw [he, hdx]};simp [mul_assoc]⟩)⟩⟩
+theorem dvd_and_not_dvd_iff [CancelCommMonoidWithZero α] {x y : α} : x ∣ y ∧ ¬y ∣ x ↔ DvdNotUnit x y :=
+  ⟨fun ⟨⟨d, hd⟩, hyx⟩ =>
+    ⟨fun hx0 => by
+      simpa [hx0] using hyx,
+      ⟨d,
+        mt is_unit_iff_dvd_one.1 fun ⟨e, he⟩ =>
+          hyx
+            ⟨e, by
+              rw [hd, mul_assoc, ← he, mul_oneₓ]⟩,
+        hd⟩⟩,
+    fun ⟨hx0, d, hdu, hdx⟩ =>
+    ⟨⟨d, hdx⟩, fun ⟨e, he⟩ =>
+      hdu
+        (is_unit_of_dvd_one _
+          ⟨e,
+            mul_left_cancel₀ hx0 <| by
+              conv => lhs rw [he, hdx] <;> simp [mul_assoc]⟩)⟩⟩
 
-section monoid_with_zero
+section MonoidWithZeroₓ
 
-variable [monoid_with_zero α]
+variable [MonoidWithZeroₓ α]
 
-theorem ne_zero_of_dvd_ne_zero {p q : α} (h₁ : q ≠ 0)
-  (h₂ : p ∣ q) : p ≠ 0 :=
-begin
-  rcases h₂ with ⟨u, rfl⟩,
-  exact left_ne_zero_of_mul h₁,
-end
+theorem ne_zero_of_dvd_ne_zero {p q : α} (h₁ : q ≠ 0) (h₂ : p ∣ q) : p ≠ 0 := by
+  rcases h₂ with ⟨u, rfl⟩
+  exact left_ne_zero_of_mul h₁
 
-end monoid_with_zero
+end MonoidWithZeroₓ
+

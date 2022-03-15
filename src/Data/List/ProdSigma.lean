@@ -3,7 +3,7 @@ Copyright (c) 2015 Leonardo de Moura. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura, Mario Carneiro
 -/
-import data.list.big_operators
+import Mathbin.Data.List.BigOperators
 
 /-!
 # Lists in product and sigma types
@@ -14,54 +14,67 @@ living in `prod` and `sigma` types respectively. Their definitions can be found 
 product.
 -/
 
-variables {α β : Type*}
 
-namespace list
+variable {α β : Type _}
+
+namespace List
 
 /-! ### product -/
 
-@[simp] lemma nil_product (l : list β) : product (@nil α) l = [] := rfl
 
-@[simp] lemma product_cons (a : α) (l₁ : list α) (l₂ : list β)
-        : product (a::l₁) l₂ = map (λ b, (a, b)) l₂ ++ product l₁ l₂ := rfl
+@[simp]
+theorem nil_product (l : List β) : product (@nil α) l = [] :=
+  rfl
 
-@[simp] lemma product_nil : ∀ (l : list α), product l (@nil β) = []
-| []     := rfl
-| (a::l) := by rw [product_cons, product_nil]; refl
+@[simp]
+theorem product_cons (a : α) (l₁ : List α) (l₂ : List β) :
+    product (a :: l₁) l₂ = map (fun b => (a, b)) l₂ ++ product l₁ l₂ :=
+  rfl
 
-@[simp] lemma mem_product {l₁ : list α} {l₂ : list β} {a : α} {b : β} :
-  (a, b) ∈ product l₁ l₂ ↔ a ∈ l₁ ∧ b ∈ l₂ :=
-by simp only [product, mem_bind, mem_map, prod.ext_iff, exists_prop,
-  and.left_comm, exists_and_distrib_left, exists_eq_left, exists_eq_right]
+@[simp]
+theorem product_nil : ∀ l : List α, product l (@nil β) = []
+  | [] => rfl
+  | a :: l => by
+    rw [product_cons, product_nil] <;> rfl
 
-lemma length_product (l₁ : list α) (l₂ : list β) :
-  length (product l₁ l₂) = length l₁ * length l₂ :=
-by induction l₁ with x l₁ IH; [exact (zero_mul _).symm,
-  simp only [length, product_cons, length_append, IH,
-    right_distrib, one_mul, length_map, add_comm]]
+@[simp]
+theorem mem_product {l₁ : List α} {l₂ : List β} {a : α} {b : β} : (a, b) ∈ product l₁ l₂ ↔ a ∈ l₁ ∧ b ∈ l₂ := by
+  simp only [product, mem_bind, mem_map, Prod.ext_iff, exists_prop, And.left_comm, exists_and_distrib_left,
+    exists_eq_left, exists_eq_right]
 
+theorem length_product (l₁ : List α) (l₂ : List β) : length (product l₁ l₂) = length l₁ * length l₂ := by
+  induction' l₁ with x l₁ IH <;> [exact (zero_mul _).symm,
+    simp only [length, product_cons, length_append, IH, right_distrib, one_mulₓ, length_map, add_commₓ]]
 
 /-! ### sigma -/
 
-variable {σ : α → Type*}
 
-@[simp] lemma nil_sigma (l : Π a, list (σ a)) : (@nil α).sigma l = [] := rfl
+variable {σ : α → Type _}
 
-@[simp] lemma sigma_cons (a : α) (l₁ : list α) (l₂ : Π a, list (σ a))
-        : (a::l₁).sigma l₂ = map (sigma.mk a) (l₂ a) ++ l₁.sigma l₂ := rfl
+@[simp]
+theorem nil_sigma (l : ∀ a, List (σ a)) : (@nil α).Sigma l = [] :=
+  rfl
 
-@[simp] lemma sigma_nil : ∀ (l : list α), l.sigma (λ a, @nil (σ a)) = []
-| []     := rfl
-| (a::l) := by rw [sigma_cons, sigma_nil]; refl
+@[simp]
+theorem sigma_cons (a : α) (l₁ : List α) (l₂ : ∀ a, List (σ a)) :
+    (a :: l₁).Sigma l₂ = map (Sigma.mk a) (l₂ a) ++ l₁.Sigma l₂ :=
+  rfl
 
-@[simp] lemma mem_sigma {l₁ : list α} {l₂ : Π a, list (σ a)} {a : α} {b : σ a} :
-  sigma.mk a b ∈ l₁.sigma l₂ ↔ a ∈ l₁ ∧ b ∈ l₂ a :=
-by simp only [list.sigma, mem_bind, mem_map, exists_prop, exists_and_distrib_left,
-  and.left_comm, exists_eq_left, heq_iff_eq, exists_eq_right]
+@[simp]
+theorem sigma_nil : ∀ l : List α, (l.Sigma fun a => @nil (σ a)) = []
+  | [] => rfl
+  | a :: l => by
+    rw [sigma_cons, sigma_nil] <;> rfl
 
-lemma length_sigma (l₁ : list α) (l₂ : Π a, list (σ a)) :
-  length (l₁.sigma l₂) = (l₁.map (λ a, length (l₂ a))).sum :=
-by induction l₁ with x l₁ IH; [refl,
-simp only [map, sigma_cons, length_append, length_map, IH, sum_cons]]
+@[simp]
+theorem mem_sigma {l₁ : List α} {l₂ : ∀ a, List (σ a)} {a : α} {b : σ a} :
+    Sigma.mk a b ∈ l₁.Sigma l₂ ↔ a ∈ l₁ ∧ b ∈ l₂ a := by
+  simp only [List.sigma, mem_bind, mem_map, exists_prop, exists_and_distrib_left, And.left_comm, exists_eq_left,
+    heq_iff_eq, exists_eq_right]
 
-end list
+theorem length_sigma (l₁ : List α) (l₂ : ∀ a, List (σ a)) :
+    length (l₁.Sigma l₂) = (l₁.map fun a => length (l₂ a)).Sum := by
+  induction' l₁ with x l₁ IH <;> [rfl, simp only [map, sigma_cons, length_append, length_map, IH, sum_cons]]
+
+end List
+

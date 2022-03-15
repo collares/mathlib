@@ -3,7 +3,7 @@ Copyright (c) 2021 Anatole Dedecker. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Anatole Dedecker
 -/
-import topology.continuous_on
+import Mathbin.Topology.ContinuousOn
 
 /-!
 # Left and right continuity
@@ -22,42 +22,41 @@ In this file we prove a few lemmas about left and right continuous functions:
 left continuous, right continuous
 -/
 
-open set filter
-open_locale topological_space
 
-section partial_order
+open Set Filter
 
-variables {α β : Type*} [topological_space α] [partial_order α] [topological_space β]
+open_locale TopologicalSpace
 
-lemma continuous_within_at_Ioi_iff_Ici {a : α} {f : α → β} :
-  continuous_within_at f (Ioi a) a ↔ continuous_within_at f (Ici a) a :=
-by simp only [← Ici_diff_left, continuous_within_at_diff_self]
+section PartialOrderₓ
 
-lemma continuous_within_at_Iio_iff_Iic {a : α} {f : α → β} :
-  continuous_within_at f (Iio a) a ↔ continuous_within_at f (Iic a) a :=
-@continuous_within_at_Ioi_iff_Ici (order_dual α) _ ‹topological_space α› _ _ _ f
+variable {α β : Type _} [TopologicalSpace α] [PartialOrderₓ α] [TopologicalSpace β]
 
-end partial_order
+theorem continuous_within_at_Ioi_iff_Ici {a : α} {f : α → β} :
+    ContinuousWithinAt f (Ioi a) a ↔ ContinuousWithinAt f (Ici a) a := by
+  simp only [← Ici_diff_left, continuous_within_at_diff_self]
 
-variables {α β : Type*} [topological_space α] [linear_order α] [topological_space β]
+theorem continuous_within_at_Iio_iff_Iic {a : α} {f : α → β} :
+    ContinuousWithinAt f (Iio a) a ↔ ContinuousWithinAt f (Iic a) a :=
+  @continuous_within_at_Ioi_iff_Ici (OrderDual α) _ ‹TopologicalSpace α› _ _ _ f
 
-lemma nhds_left_sup_nhds_right (a : α) :
-  𝓝[≤] a ⊔ 𝓝[≥] a = 𝓝 a :=
-by rw [← nhds_within_union, Iic_union_Ici, nhds_within_univ]
+end PartialOrderₓ
 
-lemma nhds_left'_sup_nhds_right (a : α) :
-  𝓝[<] a ⊔ 𝓝[≥] a = 𝓝 a :=
-by rw [← nhds_within_union, Iio_union_Ici, nhds_within_univ]
+variable {α β : Type _} [TopologicalSpace α] [LinearOrderₓ α] [TopologicalSpace β]
 
-lemma nhds_left_sup_nhds_right' (a : α) :
-  𝓝[≤] a ⊔ 𝓝[>] a = 𝓝 a :=
-by rw [← nhds_within_union, Iic_union_Ioi, nhds_within_univ]
+theorem nhds_left_sup_nhds_right (a : α) : 𝓝[≤] a⊔𝓝[≥] a = 𝓝 a := by
+  rw [← nhds_within_union, Iic_union_Ici, nhds_within_univ]
 
-lemma continuous_at_iff_continuous_left_right {a : α} {f : α → β} :
-  continuous_at f a ↔ continuous_within_at f (Iic a) a ∧ continuous_within_at f (Ici a) a :=
-by simp only [continuous_within_at, continuous_at, ← tendsto_sup, nhds_left_sup_nhds_right]
+theorem nhds_left'_sup_nhds_right (a : α) : 𝓝[<] a⊔𝓝[≥] a = 𝓝 a := by
+  rw [← nhds_within_union, Iio_union_Ici, nhds_within_univ]
 
-lemma continuous_at_iff_continuous_left'_right' {a : α} {f : α → β} :
-  continuous_at f a ↔ continuous_within_at f (Iio a) a ∧ continuous_within_at f (Ioi a) a :=
-by rw [continuous_within_at_Ioi_iff_Ici, continuous_within_at_Iio_iff_Iic,
-  continuous_at_iff_continuous_left_right]
+theorem nhds_left_sup_nhds_right' (a : α) : 𝓝[≤] a⊔𝓝[>] a = 𝓝 a := by
+  rw [← nhds_within_union, Iic_union_Ioi, nhds_within_univ]
+
+theorem continuous_at_iff_continuous_left_right {a : α} {f : α → β} :
+    ContinuousAt f a ↔ ContinuousWithinAt f (Iic a) a ∧ ContinuousWithinAt f (Ici a) a := by
+  simp only [ContinuousWithinAt, ContinuousAt, ← tendsto_sup, nhds_left_sup_nhds_right]
+
+theorem continuous_at_iff_continuous_left'_right' {a : α} {f : α → β} :
+    ContinuousAt f a ↔ ContinuousWithinAt f (Iio a) a ∧ ContinuousWithinAt f (Ioi a) a := by
+  rw [continuous_within_at_Ioi_iff_Ici, continuous_within_at_Iio_iff_Iic, continuous_at_iff_continuous_left_right]
+

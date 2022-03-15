@@ -3,9 +3,9 @@ Copyright (c) 2021 Oliver Nash. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oliver Nash
 -/
-import algebra.lie.abelian
-import algebra.lie.solvable
-import linear_algebra.dual
+import Mathbin.Algebra.Lie.Abelian
+import Mathbin.Algebra.Lie.Solvable
+import Mathbin.LinearAlgebra.Dual
 
 /-!
 # Characters of Lie algebras
@@ -24,42 +24,54 @@ algebra (e.g., a Cartan subalgebra of a semisimple Lie algebra) a character is j
 lie algebra, lie character
 -/
 
-universes u v w w₁
 
-namespace lie_algebra
+universe u v w w₁
 
-variables (R : Type u) (L : Type v) [comm_ring R] [lie_ring L] [lie_algebra R L]
+namespace LieAlgebra
+
+variable (R : Type u) (L : Type v) [CommRingₓ R] [LieRing L] [LieAlgebra R L]
 
 /-- A character of a Lie algebra is a morphism to the scalars. -/
-abbreviation lie_character := L →ₗ⁅R⁆ R
+abbrev LieCharacter :=
+  L →ₗ⁅R⁆ R
 
-variables {R L}
+variable {R L}
 
-@[simp] lemma lie_character_apply_lie (χ : lie_character R L) (x y : L) : χ ⁅x, y⁆ = 0 :=
-by rw [lie_hom.map_lie, lie_ring.of_associative_ring_bracket, mul_comm, sub_self]
+@[simp]
+theorem lie_character_apply_lie (χ : LieCharacter R L) (x y : L) : χ ⁅x,y⁆ = 0 := by
+  rw [LieHom.map_lie, LieRing.of_associative_ring_bracket, mul_comm, sub_self]
 
-lemma lie_character_apply_of_mem_derived
-  (χ : lie_character R L) {x : L} (h : x ∈ derived_series R L 1) : χ x = 0 :=
-begin
-  rw [derived_series_def, derived_series_of_ideal_succ, derived_series_of_ideal_zero,
-    ← lie_submodule.mem_coe_submodule, lie_submodule.lie_ideal_oper_eq_linear_span] at h,
-  apply submodule.span_induction h,
-  { rintros y ⟨⟨z, hz⟩, ⟨⟨w, hw⟩, rfl⟩⟩, apply lie_character_apply_lie, },
-  { exact χ.map_zero, },
-  { intros y z hy hz, rw [lie_hom.map_add, hy, hz, add_zero], },
-  { intros t y hy, rw [lie_hom.map_smul, hy, smul_zero], },
-end
+theorem lie_character_apply_of_mem_derived (χ : LieCharacter R L) {x : L} (h : x ∈ derivedSeries R L 1) : χ x = 0 := by
+  rw [derived_series_def, derived_series_of_ideal_succ, derived_series_of_ideal_zero, ← LieSubmodule.mem_coe_submodule,
+    LieSubmodule.lie_ideal_oper_eq_linear_span] at h
+  apply Submodule.span_induction h
+  · rintro y ⟨⟨z, hz⟩, ⟨⟨w, hw⟩, rfl⟩⟩
+    apply lie_character_apply_lie
+    
+  · exact χ.map_zero
+    
+  · intro y z hy hz
+    rw [LieHom.map_add, hy, hz, add_zeroₓ]
+    
+  · intro t y hy
+    rw [LieHom.map_smul, hy, smul_zero]
+    
 
 /-- For an Abelian Lie algebra, characters are just linear forms. -/
-@[simps] def lie_character_equiv_linear_dual [is_lie_abelian L] :
-  lie_character R L ≃ module.dual R L :=
-{ to_fun    := λ χ, (χ : L →ₗ[R] R),
-  inv_fun   := λ ψ,
-  { map_lie' := λ x y, by
-    rw [lie_module.is_trivial.trivial, lie_ring.of_associative_ring_bracket, mul_comm, sub_self,
-      linear_map.to_fun_eq_coe, linear_map.map_zero],
-    .. ψ, },
-  left_inv  := λ χ, by { ext, refl, },
-  right_inv := λ ψ, by { ext, refl, }, }
+@[simps]
+def lieCharacterEquivLinearDual [IsLieAbelian L] : LieCharacter R L ≃ Module.Dual R L where
+  toFun := fun χ => (χ : L →ₗ[R] R)
+  invFun := fun ψ =>
+    { ψ with
+      map_lie' := fun x y => by
+        rw [LieModule.IsTrivial.trivial, LieRing.of_associative_ring_bracket, mul_comm, sub_self,
+          LinearMap.to_fun_eq_coe, LinearMap.map_zero] }
+  left_inv := fun χ => by
+    ext
+    rfl
+  right_inv := fun ψ => by
+    ext
+    rfl
 
-end lie_algebra
+end LieAlgebra
+

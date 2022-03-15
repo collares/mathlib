@@ -3,10 +3,10 @@ Copyright (c) 2018 Johannes Hölzl. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johannes Hölzl
 -/
-import measure_theory.measure.giry_monad
-import category_theory.concrete_category.unbundled_hom
-import category_theory.monad.algebra
-import topology.category.Top.basic
+import Mathbin.MeasureTheory.Measure.GiryMonad
+import Mathbin.CategoryTheory.ConcreteCategory.UnbundledHom
+import Mathbin.CategoryTheory.Monad.Algebra
+import Mathbin.Topology.Category.Top.Basic
 
 /-!
 # The category of measurable spaces
@@ -26,30 +26,42 @@ to the space of measures on `X`; it is a monad (the "Giry monad").
 measurable space, giry monad, borel
 -/
 
-noncomputable theory
 
-open category_theory measure_theory
-open_locale ennreal
-universes u v
+noncomputable section
+
+open CategoryTheory MeasureTheory
+
+open_locale Ennreal
+
+universe u v
 
 /-- The category of measurable spaces and measurable functions. -/
-def Meas : Type (u+1) := bundled measurable_space
+def Meas : Type (u + 1) :=
+  Bundled MeasurableSpace
 
 namespace Meas
 
-instance : has_coe_to_sort Meas Type* := bundled.has_coe_to_sort
-instance (X : Meas) : measurable_space X := X.str
+instance : CoeSort Meas (Type _) :=
+  bundled.has_coe_to_sort
+
+instance (X : Meas) : MeasurableSpace X :=
+  X.str
 
 /-- Construct a bundled `Meas` from the underlying type and the typeclass. -/
-def of (α : Type u) [measurable_space α] : Meas := ⟨α⟩
+def of (α : Type u) [MeasurableSpace α] : Meas :=
+  ⟨α⟩
 
-@[simp] lemma coe_of (X : Type u) [measurable_space X] : (of X : Type u) = X := rfl
+@[simp]
+theorem coe_of (X : Type u) [MeasurableSpace X] : (of X : Type u) = X :=
+  rfl
 
-instance unbundled_hom : unbundled_hom @measurable := ⟨@measurable_id, @measurable.comp⟩
+instance unbundledHom : UnbundledHom @Measurable :=
+  ⟨@measurable_id, @Measurable.comp⟩
 
-attribute [derive [large_category, concrete_category]] Meas
+deriving instance LargeCategory, ConcreteCategory for Meas
 
-instance : inhabited Meas := ⟨Meas.of empty⟩
+instance : Inhabited Meas :=
+  ⟨Meas.of Empty⟩
 
 /-- `Measure X` is the measurable space of measures over the measurable space `X`. It is the
 weakest measurable space, s.t. λμ, μ s is measurable for all measurable sets `s` in `X`. An
@@ -60,46 +72,46 @@ the pure values are the Dirac measure, and the bind operation maps to the integr
 In probability theory, the `Meas`-morphisms `X → Prob X` are (sub-)Markov kernels (here `Prob` is
 the restriction of `Measure` to (sub-)probability space.)
 -/
-def Measure : Meas ⥤ Meas :=
-{ obj      := λX, ⟨@measure_theory.measure X.1 X.2⟩,
-  map      := λX Y f, ⟨measure.map (f : X → Y), measure.measurable_map f f.2⟩,
-  map_id'  := assume ⟨α, I⟩, subtype.eq $ funext $ assume μ, @measure.map_id α I μ,
-  map_comp':=
-    assume X Y Z ⟨f, hf⟩ ⟨g, hg⟩, subtype.eq $ funext $ assume μ, (measure.map_map hg hf).symm }
+def measure : Meas ⥤ Meas where
+  obj := fun X => ⟨@MeasureTheory.Measure X.1 X.2⟩
+  map := fun X Y f => ⟨Measure.map (f : X → Y), Measure.measurable_map f f.2⟩
+  map_id' := fun ⟨α, I⟩ => Subtype.eq <| funext fun μ => @Measure.map_id α I μ
+  map_comp' := fun X Y Z ⟨f, hf⟩ ⟨g, hg⟩ => Subtype.eq <| funext fun μ => (Measure.map_map hg hf).symm
 
 /-- The Giry monad, i.e. the monadic structure associated with `Measure`. -/
-def Giry : category_theory.monad Meas :=
-{ to_functor := Measure,
+def giry : CategoryTheory.Monad Meas where
+  toFunctor := measure
   η' :=
-  { app         := λX, ⟨@measure.dirac X.1 X.2, measure.measurable_dirac⟩,
-    naturality' :=
-      assume X Y ⟨f, hf⟩, subtype.eq $ funext $ assume a, (measure.map_dirac hf a).symm },
+    { app := fun X => ⟨@Measure.dirac X.1 X.2, Measure.measurable_dirac⟩,
+      naturality' := fun X Y ⟨f, hf⟩ => Subtype.eq <| funext fun a => (Measure.map_dirac hf a).symm }
   μ' :=
-  { app         := λX, ⟨@measure.join X.1 X.2, measure.measurable_join⟩,
-    naturality' :=
-      assume X Y ⟨f, hf⟩, subtype.eq $ funext $ assume μ, measure.join_map_map hf μ },
-  assoc' := assume α, subtype.eq $ funext $ assume μ, @measure.join_map_join _ _ _,
-  left_unit' := assume α, subtype.eq $ funext $ assume μ, @measure.join_dirac _ _ _,
-  right_unit' := assume α, subtype.eq $ funext $ assume μ, @measure.join_map_dirac _ _ _ }
+    { app := fun X => ⟨@Measure.join X.1 X.2, Measure.measurable_join⟩,
+      naturality' := fun X Y ⟨f, hf⟩ => Subtype.eq <| funext fun μ => Measure.join_map_map hf μ }
+  assoc' := fun α => Subtype.eq <| funext fun μ => @Measure.join_map_join _ _ _
+  left_unit' := fun α => Subtype.eq <| funext fun μ => @Measure.join_dirac _ _ _
+  right_unit' := fun α => Subtype.eq <| funext fun μ => @Measure.join_map_dirac _ _ _
 
 /-- An example for an algebra on `Measure`: the nonnegative Lebesgue integral is a hom, behaving
 nicely under the monad operations. -/
-def Integral : Giry.algebra :=
-{ A      := Meas.of ℝ≥0∞ ,
-  a      := ⟨λm:measure ℝ≥0∞, ∫⁻ x, x ∂m, measure.measurable_lintegral measurable_id ⟩,
-  unit'  := subtype.eq $ funext $ assume r:ℝ≥0∞, lintegral_dirac' _ measurable_id,
-  assoc' := subtype.eq $ funext $ assume μ : measure (measure ℝ≥0∞),
-    show ∫⁻ x, x ∂ μ.join = ∫⁻ x, x ∂ (measure.map (λm:measure ℝ≥0∞, ∫⁻ x, x ∂m) μ),
-    by rw [measure.lintegral_join, lintegral_map];
-      apply_rules [measurable_id, measure.measurable_lintegral] }
+def integral : giry.Algebra where
+  A := Meas.of ℝ≥0∞
+  a := ⟨fun m : Measureₓ ℝ≥0∞ => ∫⁻ x, x ∂m, Measure.measurable_lintegral measurable_id⟩
+  unit' := Subtype.eq <| funext fun r : ℝ≥0∞ => lintegral_dirac' _ measurable_id
+  assoc' :=
+    Subtype.eq <|
+      funext fun μ : Measureₓ (Measureₓ ℝ≥0∞) =>
+        show (∫⁻ x, x ∂μ.join) = ∫⁻ x, x ∂Measure.map (fun m : Measureₓ ℝ≥0∞ => ∫⁻ x, x ∂m) μ by
+          rw [measure.lintegral_join, lintegral_map] <;> apply_rules [measurable_id, measure.measurable_lintegral]
 
 end Meas
 
-instance Top.has_forget_to_Meas : has_forget₂ Top.{u} Meas.{u} :=
-bundled_hom.mk_has_forget₂
-  borel
-  (λ X Y f, ⟨f.1, f.2.borel_measurable⟩)
-  (by intros; refl)
+instance Top.hasForgetToMeas : HasForget₂ Top.{u} Meas.{u} :=
+  BundledHom.mkHasForget₂ borel (fun X Y f => ⟨f.1, f.2.borel_measurable⟩)
+    (by
+      intros <;> rfl)
 
 /-- The Borel functor, the canonical embedding of topological spaces into measurable spaces. -/
-@[reducible] def Borel : Top.{u} ⥤ Meas.{u} := forget₂ Top.{u} Meas.{u}
+@[reducible]
+def borelₓ : Top.{u} ⥤ Meas.{u} :=
+  forget₂ Top.{u} Meas.{u}
+

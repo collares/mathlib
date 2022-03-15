@@ -3,8 +3,8 @@ Copyright (c) 2019 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import algebraic_geometry.presheafed_space.has_colimits
-import topology.sheaves.functors
+import Mathbin.AlgebraicGeometry.PresheafedSpace.HasColimits
+import Mathbin.Topology.Sheaves.Functors
 
 /-!
 # Sheafed spaces
@@ -16,154 +16,183 @@ We further describe how to apply functors and natural transformations to the val
 presheaves.
 -/
 
-universes v u
 
-open category_theory
+universe v u
+
+open CategoryTheory
+
 open Top
-open topological_space
-open opposite
-open category_theory.limits
-open category_theory.category category_theory.functor
 
-variables (C : Type u) [category.{v} C] [limits.has_products C]
+open TopologicalSpace
 
-local attribute [tidy] tactic.op_induction'
+open Opposite
 
-namespace algebraic_geometry
+open CategoryTheory.Limits
+
+open CategoryTheory.Category CategoryTheory.Functor
+
+variable (C : Type u) [Category.{v} C] [Limits.HasProducts C]
+
+attribute [local tidy] tactic.op_induction'
+
+namespace AlgebraicGeometry
 
 /-- A `SheafedSpace C` is a topological space equipped with a sheaf of `C`s. -/
-structure SheafedSpace extends PresheafedSpace C :=
-(is_sheaf : presheaf.is_sheaf)
+structure SheafedSpace extends PresheafedSpace C where
+  IsSheaf : presheaf.IsSheaf
 
-variables {C}
+variable {C}
 
 namespace SheafedSpace
 
-instance coe_carrier : has_coe (SheafedSpace C) Top :=
-{ coe := λ X, X.carrier }
+instance coeCarrier : Coe (SheafedSpace C) Top where
+  coe := fun X => X.Carrier
 
 /-- Extract the `sheaf C (X : Top)` from a `SheafedSpace C`. -/
-def sheaf (X : SheafedSpace C) : sheaf C (X : Top.{v}) := ⟨X.presheaf, X.is_sheaf⟩
+def sheaf (X : SheafedSpace C) : Sheaf C (X : Top.{v}) :=
+  ⟨X.Presheaf, X.IsSheaf⟩
 
-@[simp] lemma as_coe (X : SheafedSpace C) : X.carrier = (X : Top.{v}) := rfl
-@[simp] lemma mk_coe (carrier) (presheaf) (h) :
-  (({ carrier := carrier, presheaf := presheaf, is_sheaf := h } : SheafedSpace.{v} C) :
-  Top.{v}) = carrier :=
-rfl
+@[simp]
+theorem as_coe (X : SheafedSpace C) : X.Carrier = (X : Top.{v}) :=
+  rfl
 
-instance (X : SheafedSpace.{v} C) : topological_space X := X.carrier.str
+@[simp]
+theorem mk_coe carrier presheaf h : (({ Carrier, Presheaf, IsSheaf := h } : SheafedSpace.{v} C) : Top.{v}) = carrier :=
+  rfl
+
+instance (X : SheafedSpace.{v} C) : TopologicalSpace X :=
+  X.Carrier.str
 
 /-- The trivial `punit` valued sheaf on any topological space. -/
-def punit (X : Top) : SheafedSpace (discrete punit) :=
-{ is_sheaf := presheaf.is_sheaf_punit _,
-  ..@PresheafedSpace.const (discrete punit) _ X punit.star }
+def punit (X : Top) : SheafedSpace (discrete PUnit) :=
+  { @PresheafedSpace.const (discrete PUnit) _ X PUnit.unit with IsSheaf := Presheaf.is_sheaf_punit _ }
 
-instance : inhabited (SheafedSpace (discrete _root_.punit)) := ⟨punit (Top.of pempty)⟩
+instance : Inhabited (SheafedSpace (discrete PUnit)) :=
+  ⟨punit (Top.of Pempty)⟩
 
-instance : category (SheafedSpace C) :=
-show category (induced_category (PresheafedSpace C) SheafedSpace.to_PresheafedSpace),
-by apply_instance
+instance : Category (SheafedSpace C) :=
+  show Category (InducedCategory (PresheafedSpace C) SheafedSpace.toPresheafedSpace) by
+    infer_instance
 
 /-- Forgetting the sheaf condition is a functor from `SheafedSpace C` to `PresheafedSpace C`. -/
-@[derive [full, faithful]]
-def forget_to_PresheafedSpace : (SheafedSpace C) ⥤ (PresheafedSpace C) :=
-induced_functor _
+def forgetToPresheafedSpace : SheafedSpace C ⥤ PresheafedSpace C :=
+  inducedFunctor _ deriving Full, Faithful
 
-instance is_PresheafedSpace_iso {X Y : SheafedSpace C} (f : X ⟶ Y) [is_iso f] :
-  @is_iso (PresheafedSpace C) _ _ _ f :=
-SheafedSpace.forget_to_PresheafedSpace.map_is_iso f
+instance is_PresheafedSpace_iso {X Y : SheafedSpace C} (f : X ⟶ Y) [IsIso f] : @IsIso (PresheafedSpace C) _ _ _ f :=
+  SheafedSpace.forgetToPresheafedSpace.map_is_iso f
 
-variables {C}
+variable {C}
 
 section
-local attribute [simp] id comp
 
-@[simp] lemma id_base (X : SheafedSpace C) :
-  ((𝟙 X) : X ⟶ X).base = (𝟙 (X : Top.{v})) := rfl
+attribute [local simp] id comp
 
-lemma id_c (X : SheafedSpace C) :
-  ((𝟙 X) : X ⟶ X).c = eq_to_hom (presheaf.pushforward.id_eq X.presheaf).symm := rfl
+@[simp]
+theorem id_base (X : SheafedSpace C) : (𝟙 X : X ⟶ X).base = 𝟙 (X : Top.{v}) :=
+  rfl
 
-@[simp] lemma id_c_app (X : SheafedSpace C) (U) :
-  ((𝟙 X) : X ⟶ X).c.app U = eq_to_hom (by { induction U using opposite.rec, cases U, refl }) :=
-by { induction U using opposite.rec, cases U, simp only [id_c], dsimp, simp, }
+theorem id_c (X : SheafedSpace C) : (𝟙 X : X ⟶ X).c = eqToHom (Presheaf.Pushforward.id_eq X.Presheaf).symm :=
+  rfl
 
-@[simp] lemma comp_base {X Y Z : SheafedSpace C} (f : X ⟶ Y) (g : Y ⟶ Z) :
-  (f ≫ g).base = f.base ≫ g.base := rfl
+@[simp]
+theorem id_c_app (X : SheafedSpace C) U :
+    (𝟙 X : X ⟶ X).c.app U =
+      eqToHom
+        (by
+          induction U using Opposite.rec
+          cases U
+          rfl) :=
+  by
+  induction U using Opposite.rec
+  cases U
+  simp only [id_c]
+  dsimp
+  simp
 
-@[simp] lemma comp_c_app {X Y Z : SheafedSpace C} (α : X ⟶ Y) (β : Y ⟶ Z) (U) :
-  (α ≫ β).c.app U = (β.c).app U ≫ (α.c).app (op ((opens.map (β.base)).obj (unop U)))
-:= rfl
+@[simp]
+theorem comp_base {X Y Z : SheafedSpace C} (f : X ⟶ Y) (g : Y ⟶ Z) : (f ≫ g).base = f.base ≫ g.base :=
+  rfl
 
-lemma comp_c_app' {X Y Z : SheafedSpace C} (α : X ⟶ Y) (β : Y ⟶ Z) (U) :
-  (α ≫ β).c.app (op U) = (β.c).app (op U) ≫ (α.c).app (op ((opens.map (β.base)).obj U))
-:= rfl
+@[simp]
+theorem comp_c_app {X Y Z : SheafedSpace C} (α : X ⟶ Y) (β : Y ⟶ Z) U :
+    (α ≫ β).c.app U = β.c.app U ≫ α.c.app (op ((Opens.map β.base).obj (unop U))) :=
+  rfl
 
-lemma congr_app {X Y : SheafedSpace C} {α β : X ⟶ Y} (h : α = β) (U) :
-  α.c.app U = β.c.app U ≫ X.presheaf.map (eq_to_hom (by subst h)) :=
-PresheafedSpace.congr_app h U
+theorem comp_c_app' {X Y Z : SheafedSpace C} (α : X ⟶ Y) (β : Y ⟶ Z) U :
+    (α ≫ β).c.app (op U) = β.c.app (op U) ≫ α.c.app (op ((Opens.map β.base).obj U)) :=
+  rfl
 
-variables (C)
+theorem congr_app {X Y : SheafedSpace C} {α β : X ⟶ Y} (h : α = β) U :
+    α.c.app U =
+      β.c.app U ≫
+        X.Presheaf.map
+          (eqToHom
+            (by
+              subst h)) :=
+  PresheafedSpace.congr_app h U
+
+variable (C)
 
 /-- The forgetful functor from `SheafedSpace` to `Top`. -/
-def forget : SheafedSpace C ⥤ Top :=
-{ obj := λ X, (X : Top.{v}),
-  map := λ X Y f, f.base }
+def forget : SheafedSpace C ⥤ Top where
+  obj := fun X => (X : Top.{v})
+  map := fun X Y f => f.base
 
 end
 
-open Top.presheaf
+open Top.Presheaf
 
-/--
-The restriction of a sheafed space along an open embedding into the space.
+/-- The restriction of a sheafed space along an open embedding into the space.
 -/
-def restrict {U : Top} (X : SheafedSpace C)
-  {f : U ⟶ (X : Top.{v})} (h : open_embedding f) : SheafedSpace C :=
-{ is_sheaf := λ ι 𝒰, ⟨is_limit.of_iso_limit
-    ((is_limit.postcompose_inv_equiv _ _).inv_fun (X.is_sheaf _).some)
-    (sheaf_condition_equalizer_products.fork.iso_of_open_embedding h 𝒰).symm⟩,
-  ..X.to_PresheafedSpace.restrict h }
+def restrict {U : Top} (X : SheafedSpace C) {f : U ⟶ (X : Top.{v})} (h : OpenEmbedding f) : SheafedSpace C :=
+  { X.toPresheafedSpace.restrict h with
+    IsSheaf := fun ι 𝒰 =>
+      ⟨IsLimit.ofIsoLimit ((IsLimit.postcomposeInvEquiv _ _).invFun (X.IsSheaf _).some)
+          (SheafConditionEqualizerProducts.fork.isoOfOpenEmbedding h 𝒰).symm⟩ }
 
-/--
-The restriction of a sheafed space `X` to the top subspace is isomorphic to `X` itself.
+/-- The restriction of a sheafed space `X` to the top subspace is isomorphic to `X` itself.
 -/
-def restrict_top_iso (X : SheafedSpace C) :
-  X.restrict (opens.open_embedding ⊤) ≅ X :=
-@preimage_iso _ _ _ _ forget_to_PresheafedSpace _ _
-  (X.restrict (opens.open_embedding ⊤)) _
-  X.to_PresheafedSpace.restrict_top_iso
+def restrictTopIso (X : SheafedSpace C) : X.restrict (Opens.open_embedding ⊤) ≅ X :=
+  @preimageIso _ _ _ _ forgetToPresheafedSpace _ _ (X.restrict (Opens.open_embedding ⊤)) _
+    X.toPresheafedSpace.restrictTopIso
 
-/--
-The global sections, notated Gamma.
+/-- The global sections, notated Gamma.
 -/
 def Γ : (SheafedSpace C)ᵒᵖ ⥤ C :=
-forget_to_PresheafedSpace.op ⋙ PresheafedSpace.Γ
+  forgetToPresheafedSpace.op ⋙ PresheafedSpace.Γ
 
-lemma Γ_def : (Γ : _ ⥤ C) = forget_to_PresheafedSpace.op ⋙ PresheafedSpace.Γ := rfl
+theorem Γ_def : (Γ : _ ⥤ C) = forgetToPresheafedSpace.op ⋙ PresheafedSpace.Γ :=
+  rfl
 
-@[simp] lemma Γ_obj (X : (SheafedSpace C)ᵒᵖ) : Γ.obj X = (unop X).presheaf.obj (op ⊤) := rfl
+@[simp]
+theorem Γ_obj (X : (SheafedSpace C)ᵒᵖ) : Γ.obj X = (unop X).Presheaf.obj (op ⊤) :=
+  rfl
 
-lemma Γ_obj_op (X : SheafedSpace C) : Γ.obj (op X) = X.presheaf.obj (op ⊤) := rfl
+theorem Γ_obj_op (X : SheafedSpace C) : Γ.obj (op X) = X.Presheaf.obj (op ⊤) :=
+  rfl
 
-@[simp] lemma Γ_map {X Y : (SheafedSpace C)ᵒᵖ} (f : X ⟶ Y) :
-  Γ.map f = f.unop.c.app (op ⊤) := rfl
+@[simp]
+theorem Γ_map {X Y : (SheafedSpace C)ᵒᵖ} (f : X ⟶ Y) : Γ.map f = f.unop.c.app (op ⊤) :=
+  rfl
 
-lemma Γ_map_op {X Y : SheafedSpace C} (f : X ⟶ Y) :
-  Γ.map f.op = f.c.app (op ⊤) := rfl
+theorem Γ_map_op {X Y : SheafedSpace C} (f : X ⟶ Y) : Γ.map f.op = f.c.app (op ⊤) :=
+  rfl
 
-noncomputable
-instance [has_limits C] : creates_colimits (forget_to_PresheafedSpace : SheafedSpace C ⥤ _) :=
-⟨λ J hJ, by exactI ⟨λ K, creates_colimit_of_fully_faithful_of_iso
-  ⟨(PresheafedSpace.colimit_cocone (K ⋙ forget_to_PresheafedSpace)).X,
-    limit_is_sheaf _ (λ j, sheaf.pushforward_sheaf_of_sheaf _ (K.obj (unop j)).2)⟩
-  (colimit.iso_colimit_cocone ⟨_, PresheafedSpace.colimit_cocone_is_colimit _⟩).symm⟩⟩
+noncomputable instance [HasLimits C] : CreatesColimits (forgetToPresheafedSpace : SheafedSpace C ⥤ _) :=
+  ⟨fun J hJ =>
+    ⟨fun K =>
+      creates_colimit_of_fully_faithful_of_iso
+        ⟨(PresheafedSpace.colimit_cocone (K ⋙ forget_to_PresheafedSpace)).x,
+          limit_is_sheaf _ fun j => sheaf.pushforward_sheaf_of_sheaf _ (K.obj (unop j)).2⟩
+        (colimit.iso_colimit_cocone ⟨_, PresheafedSpace.colimit_cocone_is_colimit _⟩).symm⟩⟩
 
-instance [has_limits C] : has_colimits (SheafedSpace C) :=
-has_colimits_of_has_colimits_creates_colimits forget_to_PresheafedSpace
+instance [HasLimits C] : HasColimits (SheafedSpace C) :=
+  has_colimits_of_has_colimits_creates_colimits forgetToPresheafedSpace
 
-noncomputable instance [has_limits C] : preserves_colimits (forget C) :=
-limits.comp_preserves_colimits forget_to_PresheafedSpace (PresheafedSpace.forget C)
+noncomputable instance [HasLimits C] : PreservesColimits (forget C) :=
+  Limits.compPreservesColimits forgetToPresheafedSpace (PresheafedSpace.forget C)
 
 end SheafedSpace
 
-end algebraic_geometry
+end AlgebraicGeometry
+

@@ -3,9 +3,9 @@ Copyright (c) 2021 Damiano Testa. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Damiano Testa
 -/
-import algebra.group_power.basic
-import algebra.regular.basic
-import algebra.iterate_hom
+import Mathbin.Algebra.GroupPower.Basic
+import Mathbin.Algebra.Regular.Basic
+import Mathbin.Algebra.IterateHom
 
 /-!
 # Regular elements
@@ -18,46 +18,42 @@ algebra hierarchy.
 
 -/
 
-variables {R : Type*} {a b : R}
 
-section monoid
+variable {R : Type _} {a b : R}
 
-variable [monoid R]
+section Monoidₓ
 
-/--  Any power of a left-regular element is left-regular. -/
-lemma is_left_regular.pow (n : ℕ) (rla : is_left_regular a) : is_left_regular (a ^ n) :=
-by simp only [is_left_regular, ← mul_left_iterate, rla.iterate n]
+variable [Monoidₓ R]
 
-/--  Any power of a right-regular element is right-regular. -/
-lemma is_right_regular.pow (n : ℕ) (rra : is_right_regular a) : is_right_regular (a ^ n) :=
-by { rw [is_right_regular, ← mul_right_iterate], exact rra.iterate n }
+/-- Any power of a left-regular element is left-regular. -/
+theorem IsLeftRegular.pow (n : ℕ) (rla : IsLeftRegular a) : IsLeftRegular (a ^ n) := by
+  simp only [IsLeftRegular, ← mul_left_iterate, rla.iterate n]
 
-/--  Any power of a regular element is regular. -/
-lemma is_regular.pow (n : ℕ) (ra : is_regular a) : is_regular (a ^ n) :=
-⟨is_left_regular.pow n ra.left, is_right_regular.pow n ra.right⟩
+/-- Any power of a right-regular element is right-regular. -/
+theorem IsRightRegular.pow (n : ℕ) (rra : IsRightRegular a) : IsRightRegular (a ^ n) := by
+  rw [IsRightRegular, ← mul_right_iterate]
+  exact rra.iterate n
 
-/--  An element `a` is left-regular if and only if a positive power of `a` is left-regular. -/
-lemma is_left_regular.pow_iff {n : ℕ} (n0 : 0 < n) :
-  is_left_regular (a ^ n) ↔ is_left_regular a :=
-begin
-  refine ⟨_, is_left_regular.pow n⟩,
-  rw [← nat.succ_pred_eq_of_pos n0, pow_succ'],
-  exact is_left_regular.of_mul,
-end
+/-- Any power of a regular element is regular. -/
+theorem IsRegular.pow (n : ℕ) (ra : IsRegular a) : IsRegular (a ^ n) :=
+  ⟨IsLeftRegular.pow n ra.left, IsRightRegular.pow n ra.right⟩
 
-/--  An element `a` is right-regular if and only if a positive power of `a` is right-regular. -/
-lemma is_right_regular.pow_iff {n : ℕ} (n0 : 0 < n) :
-  is_right_regular (a ^ n) ↔ is_right_regular a :=
-begin
-  refine ⟨_, is_right_regular.pow n⟩,
-  rw [← nat.succ_pred_eq_of_pos n0, pow_succ],
-  exact is_right_regular.of_mul,
-end
+/-- An element `a` is left-regular if and only if a positive power of `a` is left-regular. -/
+theorem IsLeftRegular.pow_iff {n : ℕ} (n0 : 0 < n) : IsLeftRegular (a ^ n) ↔ IsLeftRegular a := by
+  refine' ⟨_, IsLeftRegular.pow n⟩
+  rw [← Nat.succ_pred_eq_of_posₓ n0, pow_succ'ₓ]
+  exact IsLeftRegular.of_mul
 
-/--  An element `a` is regular if and only if a positive power of `a` is regular. -/
-lemma is_regular.pow_iff {n : ℕ} (n0 : 0 < n) :
-  is_regular (a ^ n) ↔ is_regular a :=
-⟨λ h, ⟨(is_left_regular.pow_iff n0).mp h.left, (is_right_regular.pow_iff n0).mp h.right⟩,
-  λ h, ⟨is_left_regular.pow n h.left, is_right_regular.pow n h.right⟩⟩
+/-- An element `a` is right-regular if and only if a positive power of `a` is right-regular. -/
+theorem IsRightRegular.pow_iff {n : ℕ} (n0 : 0 < n) : IsRightRegular (a ^ n) ↔ IsRightRegular a := by
+  refine' ⟨_, IsRightRegular.pow n⟩
+  rw [← Nat.succ_pred_eq_of_posₓ n0, pow_succₓ]
+  exact IsRightRegular.of_mul
 
-end monoid
+/-- An element `a` is regular if and only if a positive power of `a` is regular. -/
+theorem IsRegular.pow_iff {n : ℕ} (n0 : 0 < n) : IsRegular (a ^ n) ↔ IsRegular a :=
+  ⟨fun h => ⟨(IsLeftRegular.pow_iff n0).mp h.left, (IsRightRegular.pow_iff n0).mp h.right⟩, fun h =>
+    ⟨IsLeftRegular.pow n h.left, IsRightRegular.pow n h.right⟩⟩
+
+end Monoidₓ
+

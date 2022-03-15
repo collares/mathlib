@@ -3,8 +3,8 @@ Copyright (c) 2022 Markus Himmel. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Markus Himmel
 -/
-import category_theory.limits.preserves.shapes.terminal
-import category_theory.limits.shapes.zero
+import Mathbin.CategoryTheory.Limits.Preserves.Shapes.Terminal
+import Mathbin.CategoryTheory.Limits.Shapes.Zero
 
 /-!
 # Preservation of zero objects and zero morphisms
@@ -22,105 +22,123 @@ We provide the following results:
 
 -/
 
-universes v₁ v₂ u₁ u₂
 
-noncomputable theory
+universe v₁ v₂ u₁ u₂
 
-open category_theory
-open category_theory.limits
+noncomputable section
 
-namespace category_theory.functor
-variables {C : Type u₁} [category.{v₁} C] {D : Type u₂} [category.{v₂} D]
+open CategoryTheory
 
-section zero_morphisms
-variables [has_zero_morphisms C] [has_zero_morphisms D]
+open CategoryTheory.Limits
+
+namespace CategoryTheory.Functor
+
+variable {C : Type u₁} [Category.{v₁} C] {D : Type u₂} [Category.{v₂} D]
+
+section ZeroMorphisms
+
+variable [HasZeroMorphisms C] [HasZeroMorphisms D]
 
 /-- A functor preserves zero morphisms if it sends zero morphisms to zero morphisms. -/
-class preserves_zero_morphisms (F : C ⥤ D) : Prop :=
-(map_zero' : ∀ (X Y : C), F.map (0 : X ⟶ Y) = 0 . obviously)
+class PreservesZeroMorphisms (F : C ⥤ D) : Prop where
+  map_zero' : ∀ X Y : C, F.map (0 : X ⟶ Y) = 0 := by
+    run_tac
+      obviously
 
 @[simp]
-protected lemma map_zero (F : C ⥤ D) [preserves_zero_morphisms F] (X Y : C) :
-  F.map (0 : X ⟶ Y) = 0 :=
-preserves_zero_morphisms.map_zero' _ _
+protected theorem map_zero (F : C ⥤ D) [PreservesZeroMorphisms F] (X Y : C) : F.map (0 : X ⟶ Y) = 0 :=
+  PreservesZeroMorphisms.map_zero' _ _
 
-lemma zero_of_map_zero (F : C ⥤ D) [preserves_zero_morphisms F] [faithful F] {X Y : C}
-  (f : X ⟶ Y) (h : F.map f = 0) : f = 0 :=
-F.map_injective $ h.trans $ eq.symm $ F.map_zero _ _
+theorem zero_of_map_zero (F : C ⥤ D) [PreservesZeroMorphisms F] [Faithful F] {X Y : C} (f : X ⟶ Y) (h : F.map f = 0) :
+    f = 0 :=
+  F.map_injective <| h.trans <| Eq.symm <| F.map_zero _ _
 
-lemma map_eq_zero_iff (F : C ⥤ D) [preserves_zero_morphisms F] [faithful F] {X Y : C} {f : X ⟶ Y} :
-  F.map f = 0 ↔ f = 0 :=
-⟨F.zero_of_map_zero _, by { rintro rfl, exact F.map_zero _ _ }⟩
+theorem map_eq_zero_iff (F : C ⥤ D) [PreservesZeroMorphisms F] [Faithful F] {X Y : C} {f : X ⟶ Y} :
+    F.map f = 0 ↔ f = 0 :=
+  ⟨F.zero_of_map_zero _, by
+    rintro rfl
+    exact F.map_zero _ _⟩
 
-@[priority 100]
-instance preserves_zero_morphisms_of_is_left_adjoint (F : C ⥤ D) [is_left_adjoint F] :
-  preserves_zero_morphisms F :=
-{ map_zero' := λ X Y, let adj := adjunction.of_left_adjoint F in
-  begin
-    calc F.map (0 : X ⟶ Y) = F.map 0 ≫ F.map (adj.unit.app Y) ≫ adj.counit.app (F.obj Y) : _
-    ... = F.map 0 ≫ F.map ((right_adjoint F).map (0 : F.obj X ⟶ _)) ≫ adj.counit.app (F.obj Y) : _
-    ... = 0 : _,
-    { rw adjunction.left_triangle_components, exact (category.comp_id _).symm },
-    { simp only [← category.assoc, ← F.map_comp, zero_comp] },
-    { simp only [adjunction.counit_naturality, comp_zero] }
-  end }
+instance (priority := 100) preserves_zero_morphisms_of_is_left_adjoint (F : C ⥤ D) [IsLeftAdjoint F] :
+    PreservesZeroMorphisms F where
+  map_zero' := fun X Y => by
+    let adj := Adjunction.ofLeftAdjoint F
+    calc F.map (0 : X ⟶ Y) = F.map 0 ≫ F.map (adj.unit.app Y) ≫ adj.counit.app (F.obj Y) :=
+        _ _ = F.map 0 ≫ F.map ((right_adjoint F).map (0 : F.obj X ⟶ _)) ≫ adj.counit.app (F.obj Y) := _ _ = 0 := _
+    · rw [adjunction.left_triangle_components]
+      exact (category.comp_id _).symm
+      
+    · simp only [← category.assoc, ← F.map_comp, zero_comp]
+      
+    · simp only [adjunction.counit_naturality, comp_zero]
+      
 
-@[priority 100]
-instance preserves_zero_morphisms_of_is_right_adjoint (G : C ⥤ D) [is_right_adjoint G] :
-  preserves_zero_morphisms G :=
-{ map_zero' := λ X Y, let adj := adjunction.of_right_adjoint G in
-  begin
-    calc G.map (0 : X ⟶ Y) = adj.unit.app (G.obj X) ≫ G.map (adj.counit.app X) ≫ G.map 0 : _
-    ... = adj.unit.app (G.obj X) ≫ G.map ((left_adjoint G).map (0 : _ ⟶ G.obj X)) ≫ G.map 0 : _
-    ... = 0 : _,
-    { rw adjunction.right_triangle_components_assoc },
-    { simp only [← G.map_comp, comp_zero] },
-    { simp only [adjunction.unit_naturality_assoc, zero_comp] }
-  end }
+instance (priority := 100) preserves_zero_morphisms_of_is_right_adjoint (G : C ⥤ D) [IsRightAdjoint G] :
+    PreservesZeroMorphisms G where
+  map_zero' := fun X Y => by
+    let adj := Adjunction.ofRightAdjoint G
+    calc G.map (0 : X ⟶ Y) = adj.unit.app (G.obj X) ≫ G.map (adj.counit.app X) ≫ G.map 0 :=
+        _ _ = adj.unit.app (G.obj X) ≫ G.map ((left_adjoint G).map (0 : _ ⟶ G.obj X)) ≫ G.map 0 := _ _ = 0 := _
+    · rw [adjunction.right_triangle_components_assoc]
+      
+    · simp only [← G.map_comp, comp_zero]
+      
+    · simp only [adjunction.unit_naturality_assoc, zero_comp]
+      
 
-@[priority 100]
-instance preserves_zero_morphisms_of_full (F : C ⥤ D) [full F] : preserves_zero_morphisms F :=
-{ map_zero' := λ X Y, calc
-  F.map (0 : X ⟶ Y) = F.map (0 ≫ (F.preimage (0 : F.obj Y ⟶ F.obj Y))) : by rw zero_comp
-                ... = 0 : by rw [F.map_comp, F.image_preimage, comp_zero] }
+instance (priority := 100) preserves_zero_morphisms_of_full (F : C ⥤ D) [Full F] : PreservesZeroMorphisms F where
+  map_zero' := fun X Y =>
+    calc
+      F.map (0 : X ⟶ Y) = F.map (0 ≫ F.Preimage (0 : F.obj Y ⟶ F.obj Y)) := by
+        rw [zero_comp]
+      _ = 0 := by
+        rw [F.map_comp, F.image_preimage, comp_zero]
+      
 
-end zero_morphisms
+end ZeroMorphisms
 
-section zero_object
-variables [has_zero_object C] [has_zero_object D]
+section ZeroObject
 
-open_locale zero_object
+variable [HasZeroObject C] [HasZeroObject D]
 
-variables [has_zero_morphisms C] [has_zero_morphisms D] (F : C ⥤ D)
+open_locale ZeroObject
+
+variable [HasZeroMorphisms C] [HasZeroMorphisms D] (F : C ⥤ D)
 
 /-- A functor that preserves zero morphisms also preserves the zero object. -/
-@[simps] def map_zero_object [preserves_zero_morphisms F] : F.obj 0 ≅ 0 :=
-{ hom := 0,
-  inv := 0,
-  hom_inv_id' := by rw [← F.map_id, id_zero, F.map_zero, zero_comp],
-  inv_hom_id' := by rw [id_zero, comp_zero] }
+@[simps]
+def mapZeroObject [PreservesZeroMorphisms F] : F.obj 0 ≅ 0 where
+  Hom := 0
+  inv := 0
+  hom_inv_id' := by
+    rw [← F.map_id, id_zero, F.map_zero, zero_comp]
+  inv_hom_id' := by
+    rw [id_zero, comp_zero]
 
-variables {F}
+variable {F}
 
-lemma preserves_zero_morphisms_of_map_zero_object (i : F.obj 0 ≅ 0) : preserves_zero_morphisms F :=
-{ map_zero' := λ X Y, calc
-  F.map (0 : X ⟶ Y) = F.map (0 : X ⟶ 0) ≫ F.map 0 : by rw [← functor.map_comp, comp_zero]
-                ... = F.map 0 ≫ (i.hom ≫ i.inv) ≫ F.map 0
-                        : by rw [iso.hom_inv_id, category.id_comp]
-                ... = 0 : by simp only [zero_of_to_zero i.hom, zero_comp, comp_zero] }
+theorem preserves_zero_morphisms_of_map_zero_object (i : F.obj 0 ≅ 0) : PreservesZeroMorphisms F :=
+  { map_zero' := fun X Y =>
+      calc
+        F.map (0 : X ⟶ Y) = F.map (0 : X ⟶ 0) ≫ F.map 0 := by
+          rw [← functor.map_comp, comp_zero]
+        _ = F.map 0 ≫ (i.Hom ≫ i.inv) ≫ F.map 0 := by
+          rw [iso.hom_inv_id, category.id_comp]
+        _ = 0 := by
+          simp only [zero_of_to_zero i.hom, zero_comp, comp_zero]
+         }
 
-@[priority 100]
-instance preserves_zero_morphisms_of_preserves_initial_object
-  [preserves_colimit (functor.empty.{v₁} C) F] : preserves_zero_morphisms F :=
-preserves_zero_morphisms_of_map_zero_object $ (F.map_iso has_zero_object.zero_iso_initial).trans $
-  (preserves_initial.iso F).trans has_zero_object.zero_iso_initial.symm
+instance (priority := 100) preserves_zero_morphisms_of_preserves_initial_object
+    [PreservesColimit (Functor.empty.{v₁} C) F] : PreservesZeroMorphisms F :=
+  preserves_zero_morphisms_of_map_zero_object <|
+    (F.mapIso HasZeroObject.zeroIsoInitial).trans <| (PreservesInitial.iso F).trans HasZeroObject.zeroIsoInitial.symm
 
-@[priority 100]
-instance preserves_zero_morphisms_of_preserves_terminal_object
-  [preserves_limit (functor.empty.{v₁} C) F] : preserves_zero_morphisms F :=
-preserves_zero_morphisms_of_map_zero_object $ (F.map_iso has_zero_object.zero_iso_terminal).trans $
-    (preserves_terminal.iso F).trans has_zero_object.zero_iso_terminal.symm
+instance (priority := 100) preserves_zero_morphisms_of_preserves_terminal_object
+    [PreservesLimit (Functor.empty.{v₁} C) F] : PreservesZeroMorphisms F :=
+  preserves_zero_morphisms_of_map_zero_object <|
+    (F.mapIso HasZeroObject.zeroIsoTerminal).trans <| (PreservesTerminal.iso F).trans HasZeroObject.zeroIsoTerminal.symm
 
-end zero_object
+end ZeroObject
 
-end category_theory.functor
+end CategoryTheory.Functor
+

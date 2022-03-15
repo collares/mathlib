@@ -3,7 +3,7 @@ Copyright (c) 2020 Simon Hudon. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Simon Hudon
 -/
-import data.nat.basic
+import Mathbin.Data.Nat.Basic
 
 /-!
 # `nat.upto`
@@ -20,7 +20,8 @@ the difference that, in `nat.upto p`, `p` does not need to be decidable. In fact
 well founded relation and would then fulfill the same purpose as this file.
 -/
 
-namespace nat
+
+namespace Nat
 
 /-- The subtype of natural numbers `i` which have the property that
 no `j` less than `i` satisfies `p`. This is an initial segment of the
@@ -29,38 +30,42 @@ natural numbers, up to and including the first value satisfying `p`.
 We will be particularly interested in the case where there exists a value
 satisfying `p`, because in this case the `>` relation is well-founded.  -/
 @[reducible]
-def upto (p : ℕ → Prop) : Type := {i : ℕ // ∀ j < i, ¬ p j}
+def Upto (p : ℕ → Prop) : Type :=
+  { i : ℕ // ∀, ∀ j < i, ∀, ¬p j }
 
-namespace upto
+namespace Upto
 
 variable {p : ℕ → Prop}
 
 /-- Lift the "greater than" relation on natural numbers to `nat.upto`. -/
-protected def gt (p) (x y : upto p) : Prop := x.1 > y.1
+protected def Gt p (x y : Upto p) : Prop :=
+  x.1 > y.1
 
-instance : has_lt (upto p) := ⟨λ x y, x.1 < y.1⟩
+instance : LT (Upto p) :=
+  ⟨fun x y => x.1 < y.1⟩
 
 /-- The "greater than" relation on `upto p` is well founded if (and only if) there exists a value
 satisfying `p`. -/
-protected lemma wf : (∃ x, p x) → well_founded (upto.gt p)
-| ⟨x, h⟩ := begin
-  suffices : upto.gt p = measure (λ y : nat.upto p, x - y.val),
-  { rw this, apply measure_wf },
-  ext ⟨a, ha⟩ ⟨b, _⟩,
-  dsimp [measure, inv_image, upto.gt],
-  rw tsub_lt_tsub_iff_left_of_le,
-  exact le_of_not_lt (λ h', ha _ h' h),
-end
+protected theorem wf : (∃ x, p x) → WellFounded (Upto.Gt p)
+  | ⟨x, h⟩ => by
+    suffices upto.gt p = Measureₓ fun y : Nat.Upto p => x - y.val by
+      rw [this]
+      apply measure_wf
+    ext ⟨a, ha⟩ ⟨b, _⟩
+    dsimp [Measureₓ, InvImage, upto.gt]
+    rw [tsub_lt_tsub_iff_left_of_le]
+    exact le_of_not_ltₓ fun h' => ha _ h' h
 
 /-- Zero is always a member of `nat.upto p` because it has no predecessors. -/
-def zero : nat.upto p := ⟨0, λ j h, false.elim (nat.not_lt_zero _ h)⟩
+def zero : Nat.Upto p :=
+  ⟨0, fun j h => False.elim (Nat.not_lt_zeroₓ _ h)⟩
 
 /-- The successor of `n` is in `nat.upto p` provided that `n` doesn't satisfy `p`. -/
-def succ (x : nat.upto p) (h : ¬ p x.val) : nat.upto p :=
-⟨x.val.succ, λ j h', begin
-  rcases nat.lt_succ_iff_lt_or_eq.1 h' with h' | rfl;
-  [exact x.2 _ h', exact h]
-end⟩
+def succ (x : Nat.Upto p) (h : ¬p x.val) : Nat.Upto p :=
+  ⟨x.val.succ, fun j h' => by
+    rcases Nat.lt_succ_iff_lt_or_eq.1 h' with (h' | rfl) <;> [exact x.2 _ h', exact h]⟩
 
-end upto
-end nat
+end Upto
+
+end Nat
+

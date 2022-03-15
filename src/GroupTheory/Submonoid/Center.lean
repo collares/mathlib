@@ -3,8 +3,8 @@ Copyright (c) 2021 Eric Wieser. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Eric Wieser
 -/
-import group_theory.submonoid.operations
-import data.fintype.basic
+import Mathbin.GroupTheory.Submonoid.Operations
+import Mathbin.Data.Fintype.Basic
 
 /-!
 # Centers of magmas and monoids
@@ -20,135 +20,137 @@ We provide `subgroup.center`, `add_subgroup.center`, `subsemiring.center`, and `
 other files.
 -/
 
-variables {M : Type*}
 
-namespace set
+variable {M : Type _}
 
-variables (M)
+namespace Set
+
+variable (M)
 
 /-- The center of a magma. -/
-@[to_additive add_center /-" The center of an additive magma. "-/]
-def center [has_mul M] : set M := {z | ∀ m, m * z = z * m}
+@[to_additive add_center " The center of an additive magma. "]
+def Center [Mul M] : Set M :=
+  { z | ∀ m, m * z = z * m }
 
 @[to_additive mem_add_center]
-lemma mem_center_iff [has_mul M] {z : M} : z ∈ center M ↔ ∀ g, g * z = z * g := iff.rfl
+theorem mem_center_iff [Mul M] {z : M} : z ∈ Center M ↔ ∀ g, g * z = z * g :=
+  Iff.rfl
 
-instance decidable_mem_center [has_mul M] [decidable_eq M] [fintype M] :
-  decidable_pred (∈ center M) :=
-λ _, decidable_of_iff' _ (mem_center_iff M)
+instance decidableMemCenter [Mul M] [DecidableEq M] [Fintype M] : DecidablePred (· ∈ Center M) := fun _ =>
+  decidableOfIff' _ (mem_center_iff M)
 
 @[simp, to_additive zero_mem_add_center]
-lemma one_mem_center [mul_one_class M] : (1 : M) ∈ set.center M := by simp [mem_center_iff]
+theorem one_mem_center [MulOneClassₓ M] : (1 : M) ∈ Set.Center M := by
+  simp [mem_center_iff]
 
 @[simp]
-lemma zero_mem_center [mul_zero_class M] : (0 : M) ∈ set.center M := by simp [mem_center_iff]
+theorem zero_mem_center [MulZeroClassₓ M] : (0 : M) ∈ Set.Center M := by
+  simp [mem_center_iff]
 
-variables {M}
+variable {M}
 
 @[simp, to_additive add_mem_add_center]
-lemma mul_mem_center [semigroup M] {a b : M}
-  (ha : a ∈ set.center M) (hb : b ∈ set.center M) : a * b ∈ set.center M :=
-λ g, by rw [mul_assoc, ←hb g, ← mul_assoc, ha g, mul_assoc]
+theorem mul_mem_center [Semigroupₓ M] {a b : M} (ha : a ∈ Set.Center M) (hb : b ∈ Set.Center M) :
+    a * b ∈ Set.Center M := fun g => by
+  rw [mul_assoc, ← hb g, ← mul_assoc, ha g, mul_assoc]
 
 @[simp, to_additive neg_mem_add_center]
-lemma inv_mem_center [group M] {a : M} (ha : a ∈ set.center M) : a⁻¹ ∈ set.center M :=
-λ g, by rw [← inv_inj, mul_inv_rev, inv_inv, ← ha, mul_inv_rev, inv_inv]
+theorem inv_mem_center [Groupₓ M] {a : M} (ha : a ∈ Set.Center M) : a⁻¹ ∈ Set.Center M := fun g => by
+  rw [← inv_inj, mul_inv_rev, inv_invₓ, ← ha, mul_inv_rev, inv_invₓ]
 
 @[simp]
-lemma add_mem_center [distrib M] {a b : M}
-  (ha : a ∈ set.center M) (hb : b ∈ set.center M) : a + b ∈ set.center M :=
-λ c, by rw [add_mul, mul_add, ha c, hb c]
+theorem add_mem_center [Distribₓ M] {a b : M} (ha : a ∈ Set.Center M) (hb : b ∈ Set.Center M) : a + b ∈ Set.Center M :=
+  fun c => by
+  rw [add_mulₓ, mul_addₓ, ha c, hb c]
 
 @[simp]
-lemma neg_mem_center [ring M] {a : M} (ha : a ∈ set.center M) : -a ∈ set.center M :=
-λ c, by rw [←neg_mul_comm, ha (-c), neg_mul_comm]
+theorem neg_mem_center [Ringₓ M] {a : M} (ha : a ∈ Set.Center M) : -a ∈ Set.Center M := fun c => by
+  rw [← neg_mul_comm, ha (-c), neg_mul_comm]
 
 @[to_additive subset_add_center_add_units]
-lemma subset_center_units [monoid M] :
-  (coe : Mˣ → M) ⁻¹' center M ⊆ set.center Mˣ :=
-λ a ha b, units.ext $ ha _
+theorem subset_center_units [Monoidₓ M] : (coe : Mˣ → M) ⁻¹' Center M ⊆ Set.Center Mˣ := fun a ha b => Units.ext <| ha _
 
-lemma center_units_subset [group_with_zero M] :
-  set.center Mˣ ⊆ (coe : Mˣ → M) ⁻¹' center M :=
-λ a ha b, begin
-  obtain rfl | hb := eq_or_ne b 0,
-  { rw [zero_mul, mul_zero], },
-  { exact units.ext_iff.mp (ha (units.mk0 _ hb)) }
-end
+theorem center_units_subset [GroupWithZeroₓ M] : Set.Center Mˣ ⊆ (coe : Mˣ → M) ⁻¹' Center M := fun a ha b => by
+  obtain rfl | hb := eq_or_ne b 0
+  · rw [zero_mul, mul_zero]
+    
+  · exact units.ext_iff.mp (ha (Units.mk0 _ hb))
+    
 
 /-- In a group with zero, the center of the units is the preimage of the center. -/
-lemma center_units_eq [group_with_zero M] :
-  set.center Mˣ = (coe : Mˣ → M) ⁻¹' center M :=
-subset.antisymm center_units_subset subset_center_units
+theorem center_units_eq [GroupWithZeroₓ M] : Set.Center Mˣ = (coe : Mˣ → M) ⁻¹' Center M :=
+  Subset.antisymm center_units_subset subset_center_units
 
 @[simp]
-lemma inv_mem_center₀ [group_with_zero M] {a : M} (ha : a ∈ set.center M) : a⁻¹ ∈ set.center M :=
-begin
-  obtain rfl | ha0 := eq_or_ne a 0,
-  { rw inv_zero, exact zero_mem_center M },
-  rcases is_unit.mk0 _ ha0 with ⟨a, rfl⟩,
-  rw ←units.coe_inv',
-  exact center_units_subset (inv_mem_center (subset_center_units ha)),
-end
+theorem inv_mem_center₀ [GroupWithZeroₓ M] {a : M} (ha : a ∈ Set.Center M) : a⁻¹ ∈ Set.Center M := by
+  obtain rfl | ha0 := eq_or_ne a 0
+  · rw [inv_zero]
+    exact zero_mem_center M
+    
+  rcases IsUnit.mk0 _ ha0 with ⟨a, rfl⟩
+  rw [← Units.coe_inv']
+  exact center_units_subset (inv_mem_center (subset_center_units ha))
 
 @[simp, to_additive sub_mem_add_center]
-lemma div_mem_center [group M] {a b : M} (ha : a ∈ set.center M) (hb : b ∈ set.center M) :
-  a / b ∈ set.center M :=
-begin
-  rw [div_eq_mul_inv],
-  exact mul_mem_center ha (inv_mem_center hb),
-end
+theorem div_mem_center [Groupₓ M] {a b : M} (ha : a ∈ Set.Center M) (hb : b ∈ Set.Center M) : a / b ∈ Set.Center M := by
+  rw [div_eq_mul_inv]
+  exact mul_mem_center ha (inv_mem_center hb)
 
 @[simp]
-lemma div_mem_center₀ [group_with_zero M] {a b : M} (ha : a ∈ set.center M)
-  (hb : b ∈ set.center M) : a / b ∈ set.center M :=
-begin
-  rw div_eq_mul_inv,
-  exact mul_mem_center ha (inv_mem_center₀ hb),
-end
+theorem div_mem_center₀ [GroupWithZeroₓ M] {a b : M} (ha : a ∈ Set.Center M) (hb : b ∈ Set.Center M) :
+    a / b ∈ Set.Center M := by
+  rw [div_eq_mul_inv]
+  exact mul_mem_center ha (inv_mem_center₀ hb)
 
-variables (M)
+variable (M)
 
 @[simp, to_additive add_center_eq_univ]
-lemma center_eq_univ [comm_semigroup M] : center M = set.univ :=
-subset.antisymm (subset_univ _) $ λ x _ y, mul_comm y x
+theorem center_eq_univ [CommSemigroupₓ M] : Center M = Set.Univ :=
+  (Subset.antisymm (subset_univ _)) fun x _ y => mul_comm y x
 
-end set
+end Set
 
-namespace submonoid
+namespace Submonoid
+
 section
-variables (M) [monoid M]
+
+variable (M) [Monoidₓ M]
 
 /-- The center of a monoid `M` is the set of elements that commute with everything in `M` -/
-@[to_additive "The center of a monoid `M` is the set of elements that commute with everything in
-`M`"]
-def center : submonoid M :=
-{ carrier := set.center M,
-  one_mem' := set.one_mem_center M,
-  mul_mem' := λ a b, set.mul_mem_center }
+@[to_additive "The center of a monoid `M` is the set of elements that commute with everything in\n`M`"]
+def center : Submonoid M where
+  Carrier := Set.Center M
+  one_mem' := Set.one_mem_center M
+  mul_mem' := fun a b => Set.mul_mem_center
 
-@[to_additive] lemma coe_center : ↑(center M) = set.center M := rfl
+@[to_additive]
+theorem coe_center : ↑(center M) = Set.Center M :=
+  rfl
 
-variables {M}
+variable {M}
 
-@[to_additive] lemma mem_center_iff {z : M} : z ∈ center M ↔ ∀ g, g * z = z * g := iff.rfl
+@[to_additive]
+theorem mem_center_iff {z : M} : z ∈ center M ↔ ∀ g, g * z = z * g :=
+  Iff.rfl
 
-instance decidable_mem_center [decidable_eq M] [fintype M] : decidable_pred (∈ center M) :=
-λ _, decidable_of_iff' _ mem_center_iff
+instance decidableMemCenter [DecidableEq M] [Fintype M] : DecidablePred (· ∈ center M) := fun _ =>
+  decidableOfIff' _ mem_center_iff
 
 /-- The center of a monoid is commutative. -/
-instance : comm_monoid (center M) :=
-{ mul_comm := λ a b, subtype.ext $ b.prop _,
-  .. (center M).to_monoid }
+instance : CommMonoidₓ (center M) :=
+  { (center M).toMonoid with mul_comm := fun a b => Subtype.ext <| b.Prop _ }
 
 end
 
 section
-variables (M) [comm_monoid M]
 
-@[simp] lemma center_eq_top : center M = ⊤ :=
-set_like.coe_injective (set.center_eq_univ M)
+variable (M) [CommMonoidₓ M]
+
+@[simp]
+theorem center_eq_top : center M = ⊤ :=
+  SetLike.coe_injective (Set.center_eq_univ M)
 
 end
 
-end submonoid
+end Submonoid
+

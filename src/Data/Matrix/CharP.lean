@@ -3,19 +3,25 @@ Copyright (c) 2020 Aaron Anderson. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Aaron Anderson
 -/
-import data.matrix.basic
-import algebra.char_p.basic
+import Mathbin.Data.Matrix.Basic
+import Mathbin.Algebra.CharP.Basic
+
 /-!
 # Matrices in prime characteristic
 -/
 
-open matrix
-variables {n : Type*} [fintype n] {R : Type*} [ring R]
 
-instance matrix.char_p [decidable_eq n] [nonempty n] (p : ℕ) [char_p R p] :
-  char_p (matrix n n R) p :=
-⟨begin
-  intro k,
-  rw [← char_p.cast_eq_zero_iff R p k, ← nat.cast_zero, ← map_nat_cast $ scalar n],
-  convert scalar_inj, {simp}, {assumption}
- end⟩
+open Matrix
+
+variable {n : Type _} [Fintype n] {R : Type _} [Ringₓ R]
+
+instance Matrix.char_p [DecidableEq n] [Nonempty n] (p : ℕ) [CharP R p] : CharP (Matrix n n R) p :=
+  ⟨by
+    intro k
+    rw [← CharP.cast_eq_zero_iff R p k, ← Nat.cast_zeroₓ, ← map_nat_cast <| scalar n]
+    convert scalar_inj
+    · simp
+      
+    · assumption
+      ⟩
+

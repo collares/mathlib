@@ -3,8 +3,7 @@ Copyright (c) 2021 Shing Tak Lam. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Shing Tak Lam
 -/
-
-import topology.homotopy.basic
+import Mathbin.Topology.Homotopy.Basic
 
 /-!
 
@@ -25,141 +24,154 @@ locale.
 
 -/
 
-universes u v w
 
-variables {X : Type u} {Y : Type v} {Z : Type w}
-variables [topological_space X] [topological_space Y] [topological_space Z]
+universe u v w
 
-namespace continuous_map
+variable {X : Type u} {Y : Type v} {Z : Type w}
 
-/--
-A homotopy equivalence between topological spaces `X` and `Y` are a pair of functions
+variable [TopologicalSpace X] [TopologicalSpace Y] [TopologicalSpace Z]
+
+namespace ContinuousMap
+
+/-- A homotopy equivalence between topological spaces `X` and `Y` are a pair of functions
 `to_fun : C(X, Y)` and `inv_fun : C(Y, X)` such that `to_fun.comp inv_fun` and `inv_fun.comp to_fun`
 are both homotopic to `id`.
 -/
 @[ext]
-structure homotopy_equiv (X : Type u) (Y : Type v) [topological_space X] [topological_space Y] :=
-(to_fun : C(X, Y))
-(inv_fun : C(Y, X))
-(left_inv : (inv_fun.comp to_fun).homotopic (continuous_map.id X))
-(right_inv : (to_fun.comp inv_fun).homotopic (continuous_map.id Y))
+structure HomotopyEquiv (X : Type u) (Y : Type v) [TopologicalSpace X] [TopologicalSpace Y] where
+  toFun : C(X, Y)
+  invFun : C(Y, X)
+  left_inv : (inv_fun.comp to_fun).Homotopic (ContinuousMap.id X)
+  right_inv : (to_fun.comp inv_fun).Homotopic (ContinuousMap.id Y)
 
-localized "infix ` ≃ₕ `:25 := continuous_map.homotopy_equiv" in continuous_map
+-- mathport name: «expr ≃ₕ »
+localized [ContinuousMap] infixl:25 " ≃ₕ " => ContinuousMap.HomotopyEquiv
 
-namespace homotopy_equiv
+namespace HomotopyEquiv
 
-instance : has_coe_to_fun (homotopy_equiv X Y) (λ _, X → Y) := ⟨λ h, h.to_fun⟩
+instance : CoeFun (HomotopyEquiv X Y) fun _ => X → Y :=
+  ⟨fun h => h.toFun⟩
 
 @[simp]
-lemma to_fun_eq_coe (h : homotopy_equiv X Y) : (h.to_fun : X → Y) = h := rfl
+theorem to_fun_eq_coe (h : HomotopyEquiv X Y) : (h.toFun : X → Y) = h :=
+  rfl
 
 @[continuity]
-lemma continuous (h : homotopy_equiv X Y) : continuous h := h.to_fun.continuous
+theorem continuous (h : HomotopyEquiv X Y) : Continuous h :=
+  h.toFun.Continuous
 
-end homotopy_equiv
+end HomotopyEquiv
 
-end continuous_map
+end ContinuousMap
 
-open_locale continuous_map
+open_locale ContinuousMap
 
-namespace homeomorph
+namespace Homeomorph
 
-/--
-Any homeomorphism is a homotopy equivalence.
+/-- Any homeomorphism is a homotopy equivalence.
 -/
-def to_homotopy_equiv (h : X ≃ₜ Y) : X ≃ₕ Y :=
-{ to_fun := ⟨h⟩,
-  inv_fun := ⟨h.symm⟩,
-  left_inv := by { convert continuous_map.homotopic.refl _, ext, simp },
-  right_inv := by { convert continuous_map.homotopic.refl _, ext, simp } }
+def toHomotopyEquiv (h : X ≃ₜ Y) : X ≃ₕ Y where
+  toFun := ⟨h⟩
+  invFun := ⟨h.symm⟩
+  left_inv := by
+    convert ContinuousMap.Homotopic.refl _
+    ext
+    simp
+  right_inv := by
+    convert ContinuousMap.Homotopic.refl _
+    ext
+    simp
 
 @[simp]
-lemma coe_to_homotopy_equiv (h : X ≃ₜ Y) : ⇑(h.to_homotopy_equiv) = h := rfl
+theorem coe_to_homotopy_equiv (h : X ≃ₜ Y) : ⇑h.toHomotopyEquiv = h :=
+  rfl
 
-end homeomorph
+end Homeomorph
 
-namespace continuous_map
+namespace ContinuousMap
 
-namespace homotopy_equiv
+namespace HomotopyEquiv
 
-/--
-If `X` is homotopy equivalent to `Y`, then `Y` is homotopy equivalent to `X`.
+/-- If `X` is homotopy equivalent to `Y`, then `Y` is homotopy equivalent to `X`.
 -/
-def symm (h : X ≃ₕ Y) : Y ≃ₕ X :=
-{ to_fun := h.inv_fun,
-  inv_fun := h.to_fun,
-  left_inv := h.right_inv,
-  right_inv := h.left_inv }
+def symm (h : X ≃ₕ Y) : Y ≃ₕ X where
+  toFun := h.invFun
+  invFun := h.toFun
+  left_inv := h.right_inv
+  right_inv := h.left_inv
 
 @[simp]
-lemma coe_inv_fun (h : homotopy_equiv X Y) : (⇑h.inv_fun : Y → X) = ⇑h.symm := rfl
+theorem coe_inv_fun (h : HomotopyEquiv X Y) : (⇑h.invFun : Y → X) = ⇑h.symm :=
+  rfl
 
 /-- See Note [custom simps projection]. We need to specify this projection explicitly in this case,
 because it is a composition of multiple projections. -/
-def simps.apply (h : X ≃ₕ Y) : X → Y := h
+def Simps.apply (h : X ≃ₕ Y) : X → Y :=
+  h
+
 /-- See Note [custom simps projection]. We need to specify this projection explicitly in this case,
 because it is a composition of multiple projections. -/
-def simps.symm_apply (h : X ≃ₕ Y) : Y → X := h.symm
+def Simps.symmApply (h : X ≃ₕ Y) : Y → X :=
+  h.symm
 
-initialize_simps_projections homotopy_equiv (to_fun_to_fun -> apply,
-  inv_fun_to_fun -> symm_apply, -to_fun, -inv_fun)
+initialize_simps_projections HomotopyEquiv (to_fun_to_fun → apply, inv_fun_to_fun → symmApply, -toFun, -invFun)
 
-/--
-Any topological space is homotopy equivalent to itself.
+/-- Any topological space is homotopy equivalent to itself.
 -/
 @[simps]
-def refl (X : Type u) [topological_space X] : X ≃ₕ X :=
-(homeomorph.refl X).to_homotopy_equiv
+def refl (X : Type u) [TopologicalSpace X] : X ≃ₕ X :=
+  (Homeomorph.refl X).toHomotopyEquiv
 
-instance : inhabited (homotopy_equiv unit unit) := ⟨refl unit⟩
+instance : Inhabited (HomotopyEquiv Unit Unit) :=
+  ⟨refl Unit⟩
 
-/--
-If `X` is homotopy equivalent to `Y`, and `Y` is homotopy equivalent to `Z`, then `X` is homotopy
+/-- If `X` is homotopy equivalent to `Y`, and `Y` is homotopy equivalent to `Z`, then `X` is homotopy
 equivalent to `Z`.
 -/
 @[simps]
-def trans (h₁ : X ≃ₕ Y) (h₂ : Y ≃ₕ Z) : X ≃ₕ Z :=
-{ to_fun := h₂.to_fun.comp h₁.to_fun,
-  inv_fun := h₁.inv_fun.comp h₂.inv_fun,
-  left_inv := begin
-    refine homotopic.trans _ h₁.left_inv,
-    change ((h₁.inv_fun.comp h₂.inv_fun).comp (h₂.to_fun.comp h₁.to_fun)) with
-      h₁.inv_fun.comp ((h₂.inv_fun.comp h₂.to_fun).comp h₁.to_fun),
-    refine homotopic.hcomp _ (homotopic.refl _),
-    refine homotopic.trans ((homotopic.refl _).hcomp h₂.left_inv) _,
+def trans (h₁ : X ≃ₕ Y) (h₂ : Y ≃ₕ Z) : X ≃ₕ Z where
+  toFun := h₂.toFun.comp h₁.toFun
+  invFun := h₁.invFun.comp h₂.invFun
+  left_inv := by
+    refine' homotopic.trans _ h₁.left_inv
+    change (h₁.inv_fun.comp h₂.inv_fun).comp (h₂.to_fun.comp h₁.to_fun) with
+      h₁.inv_fun.comp ((h₂.inv_fun.comp h₂.to_fun).comp h₁.to_fun)
+    refine' homotopic.hcomp _ (homotopic.refl _)
+    refine' homotopic.trans ((homotopic.refl _).hcomp h₂.left_inv) _
     -- simp,
-    rw continuous_map.id_comp,
-  end,
-  right_inv := begin
-    refine homotopic.trans _ h₂.right_inv,
-    change ((h₂.to_fun.comp h₁.to_fun).comp (h₁.inv_fun.comp h₂.inv_fun)) with
-      h₂.to_fun.comp ((h₁.to_fun.comp h₁.inv_fun).comp h₂.inv_fun),
-    refine homotopic.hcomp _ (homotopic.refl _),
-    refine homotopic.trans ((homotopic.refl _).hcomp h₁.right_inv) _,
-    rw id_comp,
-  end }
+    rw [ContinuousMap.id_comp]
+  right_inv := by
+    refine' homotopic.trans _ h₂.right_inv
+    change (h₂.to_fun.comp h₁.to_fun).comp (h₁.inv_fun.comp h₂.inv_fun) with
+      h₂.to_fun.comp ((h₁.to_fun.comp h₁.inv_fun).comp h₂.inv_fun)
+    refine' homotopic.hcomp _ (homotopic.refl _)
+    refine' homotopic.trans ((homotopic.refl _).hcomp h₁.right_inv) _
+    rw [id_comp]
 
-lemma symm_trans (h₁ : X ≃ₕ Y) (h₂ : Y ≃ₕ Z) :
-  (h₁.trans h₂).symm = h₂.symm.trans h₁.symm := by ext; refl
+theorem symm_trans (h₁ : X ≃ₕ Y) (h₂ : Y ≃ₕ Z) : (h₁.trans h₂).symm = h₂.symm.trans h₁.symm := by
+  ext <;> rfl
 
-end homotopy_equiv
+end HomotopyEquiv
 
-end continuous_map
+end ContinuousMap
 
-open continuous_map
+open ContinuousMap
 
-namespace homeomorph
+namespace Homeomorph
 
 @[simp]
-lemma refl_to_homotopy_equiv (X : Type u) [topological_space X] :
-  (homeomorph.refl X).to_homotopy_equiv = homotopy_equiv.refl X := rfl
+theorem refl_to_homotopy_equiv (X : Type u) [TopologicalSpace X] :
+    (Homeomorph.refl X).toHomotopyEquiv = HomotopyEquiv.refl X :=
+  rfl
 
 @[simp]
-lemma symm_to_homotopy_equiv (h : X ≃ₜ Y) :
-  h.symm.to_homotopy_equiv = h.to_homotopy_equiv.symm := rfl
+theorem symm_to_homotopy_equiv (h : X ≃ₜ Y) : h.symm.toHomotopyEquiv = h.toHomotopyEquiv.symm :=
+  rfl
 
 @[simp]
-lemma trans_to_homotopy_equiv (h₀ : X ≃ₜ Y) (h₁ : Y ≃ₜ Z) :
-  (h₀.trans h₁).to_homotopy_equiv = h₀.to_homotopy_equiv.trans h₁.to_homotopy_equiv := rfl
+theorem trans_to_homotopy_equiv (h₀ : X ≃ₜ Y) (h₁ : Y ≃ₜ Z) :
+    (h₀.trans h₁).toHomotopyEquiv = h₀.toHomotopyEquiv.trans h₁.toHomotopyEquiv :=
+  rfl
 
-end homeomorph
+end Homeomorph
+

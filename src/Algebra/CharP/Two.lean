@@ -3,7 +3,7 @@ Copyright (c) 2021 Eric Wieser. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Eric Wieser
 -/
-import algebra.char_p.basic
+import Mathbin.Algebra.CharP.Basic
 
 /-!
 # Lemmas about rings of characteristic two
@@ -14,97 +14,99 @@ The lemmas in this file with a `_sq` suffix are just special cases of the `_pow_
 elsewhere, with a shorter name for ease of discovery, and no need for a `[fact (prime 2)]` argument.
 -/
 
-variables {R ι : Type*}
 
-namespace char_two
+variable {R ι : Type _}
 
-section semiring
-variables [semiring R] [char_p R 2]
+namespace CharTwo
 
-lemma two_eq_zero : (2 : R) = 0 :=
-by rw [← nat.cast_two, char_p.cast_eq_zero]
+section Semiringₓ
 
-lemma add_self_eq_zero (x : R) : x + x = 0 :=
-by rw [←two_smul R x, two_eq_zero, zero_smul]
+variable [Semiringₓ R] [CharP R 2]
 
-lemma bit0_eq_zero (x : R) : (bit0 x : R) = 0 :=
-add_self_eq_zero x
+theorem two_eq_zero : (2 : R) = 0 := by
+  rw [← Nat.cast_two, CharP.cast_eq_zero]
 
-lemma bit1_eq_one (x : R) : (bit1 x : R) = 1 :=
-by rw [bit1, bit0_eq_zero, zero_add]
+theorem add_self_eq_zero (x : R) : x + x = 0 := by
+  rw [← two_smul R x, two_eq_zero, zero_smul]
 
-end semiring
+theorem bit0_eq_zero (x : R) : (bit0 x : R) = 0 :=
+  add_self_eq_zero x
 
-section ring
-variables [ring R] [char_p R 2]
+theorem bit1_eq_one (x : R) : (bit1 x : R) = 1 := by
+  rw [bit1, bit0_eq_zero, zero_addₓ]
 
-lemma neg_eq (x : R) : -x = x :=
-by rw [neg_eq_iff_add_eq_zero, ←two_smul R x, two_eq_zero, zero_smul]
+end Semiringₓ
 
-lemma neg_eq' : has_neg.neg = (id : R → R) :=
-funext neg_eq
+section Ringₓ
 
-lemma sub_eq_add (x y : R) : x - y = x + y :=
-by rw [sub_eq_add_neg, neg_eq]
+variable [Ringₓ R] [CharP R 2]
 
-lemma sub_eq_add' : has_sub.sub = ((+) : R → R → R) :=
-funext $ λ x, funext $ λ y, sub_eq_add x y
+theorem neg_eq (x : R) : -x = x := by
+  rw [neg_eq_iff_add_eq_zero, ← two_smul R x, two_eq_zero, zero_smul]
 
-end ring
+theorem neg_eq' : Neg.neg = (id : R → R) :=
+  funext neg_eq
 
-section comm_semiring
-variables [comm_semiring R] [char_p R 2]
+theorem sub_eq_add (x y : R) : x - y = x + y := by
+  rw [sub_eq_add_neg, neg_eq]
 
-lemma add_sq (x y : R) : (x + y) ^ 2 = x ^ 2 + y ^ 2 :=
-add_pow_char _ _ _
+theorem sub_eq_add' : Sub.sub = ((· + ·) : R → R → R) :=
+  funext fun x => funext fun y => sub_eq_add x y
 
-lemma add_mul_self (x y : R) : (x + y) * (x + y) = x * x + y * y :=
-by rw [←pow_two, ←pow_two, ←pow_two, add_sq]
+end Ringₓ
 
-open_locale big_operators
+section CommSemiringₓ
 
-lemma list_sum_sq (l : list R) : l.sum ^ 2 = (l.map (^ 2)).sum :=
-list_sum_pow_char _ _
+variable [CommSemiringₓ R] [CharP R 2]
 
-lemma list_sum_mul_self (l : list R) : l.sum * l.sum = (list.map (λ x, x * x) l).sum :=
-by simp_rw [←pow_two, list_sum_sq]
+theorem add_sq (x y : R) : (x + y) ^ 2 = x ^ 2 + y ^ 2 :=
+  add_pow_char _ _ _
 
-lemma multiset_sum_sq (l : multiset R) : l.sum ^ 2 = (l.map (^ 2)).sum :=
-multiset_sum_pow_char _ _
+theorem add_mul_self (x y : R) : (x + y) * (x + y) = x * x + y * y := by
+  rw [← pow_two, ← pow_two, ← pow_two, add_sq]
 
-lemma multiset_sum_mul_self (l : multiset R) : l.sum * l.sum = (multiset.map (λ x, x * x) l).sum :=
-by simp_rw [←pow_two, multiset_sum_sq]
+open_locale BigOperators
 
-lemma sum_sq (s : finset ι) (f : ι → R) :
-  (∑ i in s, f i) ^ 2 = ∑ i in s, f i ^ 2 :=
-sum_pow_char _ _ _
+theorem list_sum_sq (l : List R) : l.Sum ^ 2 = (l.map (· ^ 2)).Sum :=
+  list_sum_pow_char _ _
 
-lemma sum_mul_self (s : finset ι) (f : ι → R) :
-  (∑ i in s, f i) * (∑ i in s, f i) = ∑ i in s, f i * f i :=
-by simp_rw [←pow_two, sum_sq]
+theorem list_sum_mul_self (l : List R) : l.Sum * l.Sum = (List.map (fun x => x * x) l).Sum := by
+  simp_rw [← pow_two, list_sum_sq]
 
-end comm_semiring
+theorem multiset_sum_sq (l : Multiset R) : l.Sum ^ 2 = (l.map (· ^ 2)).Sum :=
+  multiset_sum_pow_char _ _
 
-end char_two
+theorem multiset_sum_mul_self (l : Multiset R) : l.Sum * l.Sum = (Multiset.map (fun x => x * x) l).Sum := by
+  simp_rw [← pow_two, multiset_sum_sq]
 
-section ring_char
-variables [ring R]
+theorem sum_sq (s : Finset ι) (f : ι → R) : (∑ i in s, f i) ^ 2 = ∑ i in s, f i ^ 2 :=
+  sum_pow_char _ _ _
 
-lemma neg_one_eq_one_iff [nontrivial R]: (-1 : R) = 1 ↔ ring_char R = 2 :=
-begin
-  refine ⟨λ h, _, λ h, @@char_two.neg_eq _ (ring_char.of_eq h) 1⟩,
-  rw [eq_comm, ←sub_eq_zero, sub_neg_eq_add, ← nat.cast_one, ← nat.cast_add] at h,
-  exact ((nat.dvd_prime nat.prime_two).mp (ring_char.dvd h)).resolve_left char_p.ring_char_ne_one
-end
+theorem sum_mul_self (s : Finset ι) (f : ι → R) : ((∑ i in s, f i) * ∑ i in s, f i) = ∑ i in s, f i * f i := by
+  simp_rw [← pow_two, sum_sq]
 
-@[simp] lemma order_of_neg_one [nontrivial R] :
-  order_of (-1 : R) = if ring_char R = 2 then 1 else 2 :=
-begin
-  split_ifs,
-  { rw [neg_one_eq_one_iff.2 h, order_of_one] },
-  apply order_of_eq_prime,
-  { simp },
+end CommSemiringₓ
+
+end CharTwo
+
+section ringChar
+
+variable [Ringₓ R]
+
+theorem neg_one_eq_one_iff [Nontrivial R] : (-1 : R) = 1 ↔ ringChar R = 2 := by
+  refine' ⟨fun h => _, fun h => @CharTwo.neg_eq _ (ringChar.of_eq h) 1⟩
+  rw [eq_comm, ← sub_eq_zero, sub_neg_eq_add, ← Nat.cast_oneₓ, ← Nat.cast_addₓ] at h
+  exact ((Nat.dvd_prime Nat.prime_two).mp (ringChar.dvd h)).resolve_left CharP.ring_char_ne_one
+
+@[simp]
+theorem order_of_neg_one [Nontrivial R] : orderOf (-1 : R) = if ringChar R = 2 then 1 else 2 := by
+  split_ifs
+  · rw [neg_one_eq_one_iff.2 h, order_of_one]
+    
+  apply order_of_eq_prime
+  · simp
+    
   simpa [neg_one_eq_one_iff] using h
-end
 
-end ring_char
+end ringChar
+

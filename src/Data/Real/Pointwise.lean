@@ -3,9 +3,9 @@ Copyright (c) 2021 Yaël Dillies. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yaël Dillies, Eric Wieser
 -/
-import algebra.order.module
-import algebra.pointwise
-import data.real.basic
+import Mathbin.Algebra.Order.Module
+import Mathbin.Algebra.Pointwise
+import Mathbin.Data.Real.Basic
 
 /-!
 # Pointwise operations on sets of reals
@@ -21,117 +21,123 @@ This is true more generally for conditionally complete linear order whose defaul
 don't have those yet.
 -/
 
-open set
-open_locale pointwise
 
-variables {ι : Sort*} {α : Type*} [linear_ordered_field α]
+open Set
 
-section mul_action_with_zero
-variables [mul_action_with_zero α ℝ] [ordered_smul α ℝ] {a : α}
+open_locale Pointwise
 
-lemma real.Inf_smul_of_nonneg (ha : 0 ≤ a) (s : set ℝ) : Inf (a • s) = a • Inf s :=
-begin
-  obtain rfl | hs := s.eq_empty_or_nonempty,
-  { rw [smul_set_empty, real.Inf_empty, smul_zero'] },
-  obtain rfl | ha' := ha.eq_or_lt,
-  { rw [zero_smul_set hs, zero_smul],
-    exact cInf_singleton 0 },
-  by_cases bdd_below s,
-  { exact ((order_iso.smul_left ℝ ha').map_cInf' hs h).symm },
-  { rw [real.Inf_of_not_bdd_below (mt (bdd_below_smul_iff_of_pos ha').1 h),
-      real.Inf_of_not_bdd_below h, smul_zero'] }
-end
+variable {ι : Sort _} {α : Type _} [LinearOrderedField α]
 
-lemma real.smul_infi_of_nonneg (ha : 0 ≤ a) (f : ι → ℝ) :
-  a • (⨅ i, f i) = ⨅ i, a • f i :=
-(real.Inf_smul_of_nonneg ha _).symm.trans $ congr_arg Inf $ (range_comp _ _).symm
+section MulActionWithZero
 
-lemma real.Sup_smul_of_nonneg (ha : 0 ≤ a) (s : set ℝ) : Sup (a • s) = a • Sup s :=
-begin
-  obtain rfl | hs := s.eq_empty_or_nonempty,
-  { rw [smul_set_empty, real.Sup_empty, smul_zero'] },
-  obtain rfl | ha' := ha.eq_or_lt,
-  { rw [zero_smul_set hs, zero_smul],
-    exact cSup_singleton 0 },
-  by_cases bdd_above s,
-  { exact ((order_iso.smul_left ℝ ha').map_cSup' hs h).symm },
-  { rw [real.Sup_of_not_bdd_above (mt (bdd_above_smul_iff_of_pos ha').1 h),
-      real.Sup_of_not_bdd_above h, smul_zero'] }
-end
+variable [MulActionWithZero α ℝ] [OrderedSmul α ℝ] {a : α}
 
-lemma real.smul_supr_of_nonneg (ha : 0 ≤ a) (f : ι → ℝ) :
-  a • (⨆ i, f i) = ⨆ i, a • f i :=
-(real.Sup_smul_of_nonneg ha _).symm.trans $ congr_arg Sup $ (range_comp _ _).symm
+theorem Real.Inf_smul_of_nonneg (ha : 0 ≤ a) (s : Set ℝ) : inf (a • s) = a • inf s := by
+  obtain rfl | hs := s.eq_empty_or_nonempty
+  · rw [smul_set_empty, Real.Inf_empty, smul_zero']
+    
+  obtain rfl | ha' := ha.eq_or_lt
+  · rw [zero_smul_set hs, zero_smul]
+    exact cInf_singleton 0
+    
+  by_cases' BddBelow s
+  · exact ((OrderIso.smulLeft ℝ ha').map_cInf' hs h).symm
+    
+  · rw [Real.Inf_of_not_bdd_below (mt (bdd_below_smul_iff_of_pos ha').1 h), Real.Inf_of_not_bdd_below h, smul_zero']
+    
 
-end mul_action_with_zero
+theorem Real.smul_infi_of_nonneg (ha : 0 ≤ a) (f : ι → ℝ) : (a • ⨅ i, f i) = ⨅ i, a • f i :=
+  (Real.Inf_smul_of_nonneg ha _).symm.trans <| congr_argₓ inf <| (range_comp _ _).symm
 
-section module
-variables [module α ℝ] [ordered_smul α ℝ] {a : α}
+theorem Real.Sup_smul_of_nonneg (ha : 0 ≤ a) (s : Set ℝ) : sup (a • s) = a • sup s := by
+  obtain rfl | hs := s.eq_empty_or_nonempty
+  · rw [smul_set_empty, Real.Sup_empty, smul_zero']
+    
+  obtain rfl | ha' := ha.eq_or_lt
+  · rw [zero_smul_set hs, zero_smul]
+    exact cSup_singleton 0
+    
+  by_cases' BddAbove s
+  · exact ((OrderIso.smulLeft ℝ ha').map_cSup' hs h).symm
+    
+  · rw [Real.Sup_of_not_bdd_above (mt (bdd_above_smul_iff_of_pos ha').1 h), Real.Sup_of_not_bdd_above h, smul_zero']
+    
 
-lemma real.Inf_smul_of_nonpos (ha : a ≤ 0) (s : set ℝ) : Inf (a • s) = a • Sup s :=
-begin
-  obtain rfl | hs := s.eq_empty_or_nonempty,
-  { rw [smul_set_empty, real.Inf_empty, real.Sup_empty, smul_zero'] },
-  obtain rfl | ha' := ha.eq_or_lt,
-  { rw [zero_smul_set hs, zero_smul],
-    exact cInf_singleton 0 },
-  by_cases bdd_above s,
-  { exact ((order_iso.smul_left_dual ℝ ha').map_cSup' hs h).symm },
-  { rw [real.Inf_of_not_bdd_below (mt (bdd_below_smul_iff_of_neg ha').1 h),
-      real.Sup_of_not_bdd_above h, smul_zero'] }
-end
+theorem Real.smul_supr_of_nonneg (ha : 0 ≤ a) (f : ι → ℝ) : (a • ⨆ i, f i) = ⨆ i, a • f i :=
+  (Real.Sup_smul_of_nonneg ha _).symm.trans <| congr_argₓ sup <| (range_comp _ _).symm
 
-lemma real.smul_supr_of_nonpos (ha : a ≤ 0) (f : ι → ℝ) :
-  a • (⨆ i, f i) = ⨅ i, a • f i :=
-(real.Inf_smul_of_nonpos ha _).symm.trans $ congr_arg Inf $ (range_comp _ _).symm
+end MulActionWithZero
 
-lemma real.Sup_smul_of_nonpos (ha : a ≤ 0) (s : set ℝ) : Sup (a • s) = a • Inf s :=
-begin
-  obtain rfl | hs := s.eq_empty_or_nonempty,
-  { rw [smul_set_empty, real.Sup_empty, real.Inf_empty, smul_zero] },
-  obtain rfl | ha' := ha.eq_or_lt,
-  { rw [zero_smul_set hs, zero_smul],
-    exact cSup_singleton 0 },
-  by_cases bdd_below s,
-  { exact ((order_iso.smul_left_dual ℝ ha').map_cInf' hs h).symm },
-  { rw [real.Sup_of_not_bdd_above (mt (bdd_above_smul_iff_of_neg ha').1 h),
-      real.Inf_of_not_bdd_below h, smul_zero] }
-end
+section Module
 
-lemma real.smul_infi_of_nonpos (ha : a ≤ 0) (f : ι → ℝ) :
-  a • (⨅ i, f i) = ⨆ i, a • f i :=
-(real.Sup_smul_of_nonpos ha _).symm.trans $ congr_arg Sup $ (range_comp _ _).symm
+variable [Module α ℝ] [OrderedSmul α ℝ] {a : α}
 
-end module
+theorem Real.Inf_smul_of_nonpos (ha : a ≤ 0) (s : Set ℝ) : inf (a • s) = a • sup s := by
+  obtain rfl | hs := s.eq_empty_or_nonempty
+  · rw [smul_set_empty, Real.Inf_empty, Real.Sup_empty, smul_zero']
+    
+  obtain rfl | ha' := ha.eq_or_lt
+  · rw [zero_smul_set hs, zero_smul]
+    exact cInf_singleton 0
+    
+  by_cases' BddAbove s
+  · exact ((OrderIso.smulLeftDual ℝ ha').map_cSup' hs h).symm
+    
+  · rw [Real.Inf_of_not_bdd_below (mt (bdd_below_smul_iff_of_neg ha').1 h), Real.Sup_of_not_bdd_above h, smul_zero']
+    
+
+theorem Real.smul_supr_of_nonpos (ha : a ≤ 0) (f : ι → ℝ) : (a • ⨆ i, f i) = ⨅ i, a • f i :=
+  (Real.Inf_smul_of_nonpos ha _).symm.trans <| congr_argₓ inf <| (range_comp _ _).symm
+
+theorem Real.Sup_smul_of_nonpos (ha : a ≤ 0) (s : Set ℝ) : sup (a • s) = a • inf s := by
+  obtain rfl | hs := s.eq_empty_or_nonempty
+  · rw [smul_set_empty, Real.Sup_empty, Real.Inf_empty, smul_zero]
+    
+  obtain rfl | ha' := ha.eq_or_lt
+  · rw [zero_smul_set hs, zero_smul]
+    exact cSup_singleton 0
+    
+  by_cases' BddBelow s
+  · exact ((OrderIso.smulLeftDual ℝ ha').map_cInf' hs h).symm
+    
+  · rw [Real.Sup_of_not_bdd_above (mt (bdd_above_smul_iff_of_neg ha').1 h), Real.Inf_of_not_bdd_below h, smul_zero]
+    
+
+theorem Real.smul_infi_of_nonpos (ha : a ≤ 0) (f : ι → ℝ) : (a • ⨅ i, f i) = ⨆ i, a • f i :=
+  (Real.Sup_smul_of_nonpos ha _).symm.trans <| congr_argₓ sup <| (range_comp _ _).symm
+
+end Module
 
 /-! ## Special cases for real multiplication -/
 
-section mul
 
-variables {r : ℝ}
+section Mul
 
-lemma real.mul_infi_of_nonneg (ha : 0 ≤ r) (f : ι → ℝ) : r * (⨅ i, f i) = ⨅ i, r * f i :=
-real.smul_infi_of_nonneg ha f
+variable {r : ℝ}
 
-lemma real.mul_supr_of_nonneg (ha : 0 ≤ r) (f : ι → ℝ) : r * (⨆ i, f i) = ⨆ i, r * f i :=
-real.smul_supr_of_nonneg ha f
+theorem Real.mul_infi_of_nonneg (ha : 0 ≤ r) (f : ι → ℝ) : (r * ⨅ i, f i) = ⨅ i, r * f i :=
+  Real.smul_infi_of_nonneg ha f
 
-lemma real.mul_infi_of_nonpos (ha : r ≤ 0) (f : ι → ℝ) : r * (⨅ i, f i) = ⨆ i, r * f i :=
-real.smul_infi_of_nonpos ha f
+theorem Real.mul_supr_of_nonneg (ha : 0 ≤ r) (f : ι → ℝ) : (r * ⨆ i, f i) = ⨆ i, r * f i :=
+  Real.smul_supr_of_nonneg ha f
 
-lemma real.mul_supr_of_nonpos (ha : r ≤ 0) (f : ι → ℝ) : r * (⨆ i, f i) = ⨅ i, r * f i :=
-real.smul_supr_of_nonpos ha f
+theorem Real.mul_infi_of_nonpos (ha : r ≤ 0) (f : ι → ℝ) : (r * ⨅ i, f i) = ⨆ i, r * f i :=
+  Real.smul_infi_of_nonpos ha f
 
-lemma real.infi_mul_of_nonneg (ha : 0 ≤ r) (f : ι → ℝ) : (⨅ i, f i) * r = ⨅ i, f i * r :=
-by simp only [real.mul_infi_of_nonneg ha, mul_comm]
+theorem Real.mul_supr_of_nonpos (ha : r ≤ 0) (f : ι → ℝ) : (r * ⨆ i, f i) = ⨅ i, r * f i :=
+  Real.smul_supr_of_nonpos ha f
 
-lemma real.supr_mul_of_nonneg (ha : 0 ≤ r) (f : ι → ℝ) : (⨆ i, f i) * r = ⨆ i, f i * r :=
-by simp only [real.mul_supr_of_nonneg ha, mul_comm]
+theorem Real.infi_mul_of_nonneg (ha : 0 ≤ r) (f : ι → ℝ) : (⨅ i, f i) * r = ⨅ i, f i * r := by
+  simp only [Real.mul_infi_of_nonneg ha, mul_comm]
 
-lemma real.infi_mul_of_nonpos (ha : r ≤ 0) (f : ι → ℝ) : (⨅ i, f i) * r = ⨆ i, f i * r :=
-by simp only [real.mul_infi_of_nonpos ha, mul_comm]
+theorem Real.supr_mul_of_nonneg (ha : 0 ≤ r) (f : ι → ℝ) : (⨆ i, f i) * r = ⨆ i, f i * r := by
+  simp only [Real.mul_supr_of_nonneg ha, mul_comm]
 
-lemma real.supr_mul_of_nonpos (ha : r ≤ 0) (f : ι → ℝ) : (⨆ i, f i) * r = ⨅ i, f i * r :=
-by simp only [real.mul_supr_of_nonpos ha, mul_comm]
+theorem Real.infi_mul_of_nonpos (ha : r ≤ 0) (f : ι → ℝ) : (⨅ i, f i) * r = ⨆ i, f i * r := by
+  simp only [Real.mul_infi_of_nonpos ha, mul_comm]
 
-end mul
+theorem Real.supr_mul_of_nonpos (ha : r ≤ 0) (f : ι → ℝ) : (⨆ i, f i) * r = ⨅ i, f i * r := by
+  simp only [Real.mul_supr_of_nonpos ha, mul_comm]
+
+end Mul
+

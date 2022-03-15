@@ -3,7 +3,8 @@ Copyright (c) 2018 Mario Carneiro. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Mario Carneiro
 -/
-import tactic.doc_commands
+import Mathbin.Tactic.DocCommands
+
 /-!
 # Instance cache tactics
 
@@ -13,10 +14,10 @@ helps to force such updates.
 
 -/
 
-open tactic.interactive
 
-/--
-For performance reasons, Lean does not automatically update its database
+open Tactic.Interactive
+
+/-- For performance reasons, Lean does not automatically update its database
 of class instances during a proof. The group of tactics described below
 helps to force such updates. For a simple (but very artificial) example,
 consider the function `default` from the core library. It has type
@@ -55,8 +56,7 @@ by its variant `haveI` described below.
   variables in the context for typeclass inference.
 -/
 add_tactic_doc
-{ name        := "Instance cache tactics",
-  category    := doc_category.tactic,
-  decl_names  := [``resetI, ``unfreezingI, ``casesI, ``substI, ``introI, ``introsI, ``haveI, ``letI,
-                  ``exactI],
-  tags        := ["type class", "context management"] }
+  { Name := "Instance cache tactics", category := DocCategory.tactic,
+    declNames := [`` resetI, `` unfreezingI, `` casesI, `` substI, `` introI, `` introsI, `` haveI, `` letI, `` exactI],
+    tags := ["type class", "context management"] }
+

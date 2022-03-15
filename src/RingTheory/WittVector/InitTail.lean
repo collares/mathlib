@@ -3,9 +3,8 @@ Copyright (c) 2020 Johan Commelin, Robert Y. Lewis. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johan Commelin, Robert Y. Lewis
 -/
-
-import ring_theory.witt_vector.basic
-import ring_theory.witt_vector.is_poly
+import Mathbin.RingTheory.WittVector.Basic
+import Mathbin.RingTheory.WittVector.IsPoly
 
 /-!
 
@@ -34,44 +33,44 @@ and shows how that polynomial interacts with `mv_polynomial.bind₁`.
 
 -/
 
-variables {p : ℕ} [hp : fact p.prime] (n : ℕ) {R : Type*} [comm_ring R]
 
-local notation `𝕎` := witt_vector p -- type as `\bbW`
+variable {p : ℕ} [hp : Fact p.Prime] (n : ℕ) {R : Type _} [CommRingₓ R]
 
-namespace tactic
-namespace interactive
+-- mathport name: «expr𝕎»
+local notation "𝕎" => WittVector p
+
+-- type as `\bbW`
+namespace Tactic
+
+namespace Interactive
+
 setup_tactic_parser
 
-/--
-`init_ring` is an auxiliary tactic that discharges goals factoring `init` over ring operations.
+-- ././Mathport/Syntax/Translate/Basic.lean:915:4: warning: unsupported (TODO): `[tacs]
+-- ././Mathport/Syntax/Translate/Basic.lean:915:4: warning: unsupported (TODO): `[tacs]
+-- ././Mathport/Syntax/Translate/Basic.lean:915:4: warning: unsupported (TODO): `[tacs]
+/-- `init_ring` is an auxiliary tactic that discharges goals factoring `init` over ring operations.
 -/
-meta def init_ring (assert : parse (tk "using" *> parser.pexpr)?) : tactic unit := do
-`[rw ext_iff,
-  intros i,
-  simp only [init, select, coeff_mk],
-  split_ifs with hi; try {refl}],
-match assert with
-| none := skip
-| some e := do
-  `[simp only [add_coeff, mul_coeff, neg_coeff, sub_coeff, nsmul_coeff, zsmul_coeff, pow_coeff],
-    apply eval₂_hom_congr' (ring_hom.ext_int _ _) _ rfl,
-    rintro ⟨b, k⟩ h -],
-  tactic.replace `h ```(%%e p _ h),
-  `[simp only [finset.mem_range, finset.mem_product, true_and, finset.mem_univ] at h,
-    have hk : k < n, by linarith,
-    fin_cases b;
-    simp only [function.uncurry, matrix.cons_val_zero, matrix.head_cons, coeff_mk,
-      matrix.cons_val_one, coeff_mk, hk, if_true]]
-end
+unsafe def init_ring (assert : parse (tk "using" *> parser.pexpr)?) : tactic Unit := do
+  sorry
+  match assert with
+    | none => skip
+    | some e => do
+      sorry
+      tactic.replace `h (ppquote.1 ((%%ₓe) p _ h))
+      sorry
 
-end interactive
-end tactic
+end Interactive
 
-namespace witt_vector
-open mv_polynomial
+end Tactic
 
-open_locale classical
-noncomputable theory
+namespace WittVector
+
+open MvPolynomial
+
+open_locale Classical
+
+noncomputable section
 
 section
 
@@ -79,142 +78,148 @@ section
 whose `n`-th coefficient is `x.coeff n` if `P n` is true, and `0` otherwise.
 -/
 def select (P : ℕ → Prop) (x : 𝕎 R) : 𝕎 R :=
-mk p (λ n, if P n then x.coeff n else 0)
+  mk p fun n => if P n then x.coeff n else 0
 
-section select
-variables (P : ℕ → Prop)
+section Select
+
+variable (P : ℕ → Prop)
 
 /-- The polynomial that witnesses that `witt_vector.select` is a polynomial function.
 `select_poly n` is `X n` if `P n` holds, and `0` otherwise. -/
-def select_poly (n : ℕ) : mv_polynomial ℕ ℤ := if P n then X n else 0
+def selectPoly (n : ℕ) : MvPolynomial ℕ ℤ :=
+  if P n then x n else 0
 
-lemma coeff_select (x : 𝕎 R) (n : ℕ) :
-  (select P x).coeff n = aeval x.coeff (select_poly P n) :=
-begin
-  dsimp [select, select_poly],
-  split_ifs with hi,
-  { rw aeval_X },
-  { rw alg_hom.map_zero }
-end
+theorem coeff_select (x : 𝕎 R) (n : ℕ) : (select P x).coeff n = aeval x.coeff (selectPoly P n) := by
+  dsimp [select, select_poly]
+  split_ifs with hi
+  · rw [aeval_X]
+    
+  · rw [AlgHom.map_zero]
+    
 
-@[is_poly] lemma select_is_poly (P : ℕ → Prop) :
-  is_poly p (λ R _Rcr x, by exactI select P x) :=
-begin
-  use (select_poly P),
-  rintro R _Rcr x,
-  funext i,
+@[is_poly]
+theorem select_is_poly (P : ℕ → Prop) : IsPoly p fun R _Rcr x => select P x := by
+  use select_poly P
+  rintro R _Rcr x
+  funext i
   apply coeff_select
-end
 
 include hp
 
-lemma select_add_select_not :
-  ∀ (x : 𝕎 R), select P x + select (λ i, ¬ P i) x = x :=
-begin
-  ghost_calc _,
-  intro n,
-  simp only [ring_hom.map_add],
-  suffices : (bind₁ (select_poly P)) (witt_polynomial p ℤ n) +
-             (bind₁ (select_poly (λ i, ¬P i))) (witt_polynomial p ℤ n) = witt_polynomial p ℤ n,
-  { apply_fun (aeval x.coeff) at this,
-    simpa only [alg_hom.map_add, aeval_bind₁, ← coeff_select] },
-  simp only [witt_polynomial_eq_sum_C_mul_X_pow, select_poly, alg_hom.map_sum, alg_hom.map_pow,
-    alg_hom.map_mul, bind₁_X_right, bind₁_C_right, ← finset.sum_add_distrib, ← mul_add],
-  apply finset.sum_congr rfl,
-  refine λ m hm, mul_eq_mul_left_iff.mpr (or.inl _),
-  rw [ite_pow, ite_pow, zero_pow (pow_pos hp.out.pos _)],
-  by_cases Pm : P m,
-  { rw [if_pos Pm, if_neg _, add_zero],
-    exact not_not.mpr Pm },
-  { rwa [if_neg Pm, if_pos, zero_add] }
-end
+theorem select_add_select_not : ∀ x : 𝕎 R, select P x + select (fun i => ¬P i) x = x := by
+  ghost_calc _
+  intro n
+  simp only [RingHom.map_add]
+  suffices
+    (bind₁ (select_poly P)) (wittPolynomial p ℤ n) + (bind₁ (select_poly fun i => ¬P i)) (wittPolynomial p ℤ n) =
+      wittPolynomial p ℤ n
+    by
+    apply_fun aeval x.coeff  at this
+    simpa only [AlgHom.map_add, aeval_bind₁, ← coeff_select]
+  simp only [witt_polynomial_eq_sum_C_mul_X_pow, select_poly, AlgHom.map_sum, AlgHom.map_pow, AlgHom.map_mul,
+    bind₁_X_right, bind₁_C_right, ← Finset.sum_add_distrib, ← mul_addₓ]
+  apply Finset.sum_congr rfl
+  refine' fun m hm => mul_eq_mul_left_iff.mpr (Or.inl _)
+  rw [ite_pow, ite_pow, zero_pow (pow_pos hp.out.pos _)]
+  by_cases' Pm : P m
+  · rw [if_pos Pm, if_neg _, add_zeroₓ]
+    exact not_not.mpr Pm
+    
+  · rwa [if_neg Pm, if_pos, zero_addₓ]
+    
 
-lemma coeff_add_of_disjoint (x y : 𝕎 R) (h : ∀ n, x.coeff n = 0 ∨ y.coeff n = 0) :
-  (x + y).coeff n = x.coeff n + y.coeff n :=
-begin
-  let P : ℕ → Prop := λ n, y.coeff n = 0,
-  haveI : decidable_pred P := classical.dec_pred P,
-  set z := mk p (λ n, if P n then x.coeff n else y.coeff n) with hz,
-  have hx : select P z = x,
-  { ext1 n, rw [select, coeff_mk, coeff_mk],
-    split_ifs with hn, { refl }, { rw (h n).resolve_right hn } },
-  have hy : select (λ i, ¬ P i) z = y,
-  { ext1 n, rw [select, coeff_mk, coeff_mk],
-    split_ifs with hn, { exact hn.symm }, { refl } },
-  calc (x + y).coeff n = z.coeff n : by rw [← hx, ← hy, select_add_select_not P z]
-  ... = x.coeff n + y.coeff n : _,
-  dsimp [z],
-  split_ifs with hn,
-  { dsimp [P] at hn, rw [hn, add_zero] },
-  { rw [(h n).resolve_right hn, zero_add] }
-end
+theorem coeff_add_of_disjoint (x y : 𝕎 R) (h : ∀ n, x.coeff n = 0 ∨ y.coeff n = 0) :
+    (x + y).coeff n = x.coeff n + y.coeff n := by
+  let P : ℕ → Prop := fun n => y.coeff n = 0
+  have : DecidablePred P := Classical.decPred P
+  set z := mk p fun n => if P n then x.coeff n else y.coeff n with hz
+  have hx : select P z = x := by
+    ext1 n
+    rw [select, coeff_mk, coeff_mk]
+    split_ifs with hn
+    · rfl
+      
+    · rw [(h n).resolve_right hn]
+      
+  have hy : select (fun i => ¬P i) z = y := by
+    ext1 n
+    rw [select, coeff_mk, coeff_mk]
+    split_ifs with hn
+    · exact hn.symm
+      
+    · rfl
+      
+  calc (x + y).coeff n = z.coeff n := by
+      rw [← hx, ← hy, select_add_select_not P z]_ = x.coeff n + y.coeff n := _
+  dsimp [z]
+  split_ifs with hn
+  · dsimp [P]  at hn
+    rw [hn, add_zeroₓ]
+    
+  · rw [(h n).resolve_right hn, zero_addₓ]
+    
 
-end select
+end Select
 
 /-- `witt_vector.init n x` is the Witt vector of which the first `n` coefficients are those from `x`
 and all other coefficients are `0`.
 See `witt_vector.tail` for the complementary part.
 -/
-def init (n : ℕ) : 𝕎 R → 𝕎 R := select (λ i, i < n)
+def init (n : ℕ) : 𝕎 R → 𝕎 R :=
+  select fun i => i < n
 
 /-- `witt_vector.tail n x` is the Witt vector of which the first `n` coefficients are `0`
 and all other coefficients are those from `x`.
 See `witt_vector.init` for the complementary part. -/
-def tail (n : ℕ) : 𝕎 R → 𝕎 R := select (λ i, n ≤ i)
+def tail (n : ℕ) : 𝕎 R → 𝕎 R :=
+  select fun i => n ≤ i
 
 include hp
 
-@[simp] lemma init_add_tail (x : 𝕎 R) (n : ℕ) :
-  init n x + tail n x = x :=
-by simp only [init, tail, ← not_lt, select_add_select_not]
+@[simp]
+theorem init_add_tail (x : 𝕎 R) (n : ℕ) : init n x + tail n x = x := by
+  simp only [init, tail, ← not_ltₓ, select_add_select_not]
 
 end
 
 @[simp]
-lemma init_init (x : 𝕎 R) (n : ℕ) :
-  init n (init n x) = init n x :=
-by init_ring
+theorem init_init (x : 𝕎 R) (n : ℕ) : init n (init n x) = init n x := by
+  init_ring
 
 include hp
 
-lemma init_add (x y : 𝕎 R) (n : ℕ) :
-  init n (x + y) = init n (init n x + init n y) :=
-by init_ring using witt_add_vars
+theorem init_add (x y : 𝕎 R) (n : ℕ) : init n (x + y) = init n (init n x + init n y) := by
+  init_ring using witt_add_vars
 
-lemma init_mul (x y : 𝕎 R) (n : ℕ) :
-  init n (x * y) = init n (init n x * init n y) :=
-by init_ring using witt_mul_vars
+theorem init_mul (x y : 𝕎 R) (n : ℕ) : init n (x * y) = init n (init n x * init n y) := by
+  init_ring using witt_mul_vars
 
-lemma init_neg (x : 𝕎 R) (n : ℕ) :
-  init n (-x) = init n (-init n x) :=
-by init_ring using witt_neg_vars
+theorem init_neg (x : 𝕎 R) (n : ℕ) : init n (-x) = init n (-init n x) := by
+  init_ring using witt_neg_vars
 
-lemma init_sub (x y : 𝕎 R) (n : ℕ) :
-  init n (x - y) = init n (init n x - init n y) :=
-by init_ring using witt_sub_vars
+theorem init_sub (x y : 𝕎 R) (n : ℕ) : init n (x - y) = init n (init n x - init n y) := by
+  init_ring using witt_sub_vars
 
-lemma init_nsmul (m : ℕ) (x : 𝕎 R) (n : ℕ) :
-  init n (m • x) = init n (m • init n x) :=
-by init_ring using (λ p [fact (nat.prime p)] n, by exactI witt_nsmul_vars p m n)
+theorem init_nsmul (m : ℕ) (x : 𝕎 R) (n : ℕ) : init n (m • x) = init n (m • init n x) := by
+  init_ring using fun n => witt_nsmul_vars p m n
 
-lemma init_zsmul (m : ℤ) (x : 𝕎 R) (n : ℕ) :
-  init n (m • x) = init n (m • init n x) :=
-by init_ring using (λ p [fact (nat.prime p)] n, by exactI witt_zsmul_vars p m n)
+theorem init_zsmul (m : ℤ) (x : 𝕎 R) (n : ℕ) : init n (m • x) = init n (m • init n x) := by
+  init_ring using fun n => witt_zsmul_vars p m n
 
-lemma init_pow (m : ℕ) (x : 𝕎 R) (n : ℕ) :
-  init n (x ^ m) = init n (init n x ^ m) :=
-by init_ring using (λ p [fact (nat.prime p)] n, by exactI witt_pow_vars p m n)
+theorem init_pow (m : ℕ) (x : 𝕎 R) (n : ℕ) : init n (x ^ m) = init n (init n x ^ m) := by
+  init_ring using fun n => witt_pow_vars p m n
 
 section
 
-variables (p)
+variable (p)
 
 omit hp
 
 /-- `witt_vector.init n x` is polynomial in the coefficients of `x`. -/
-lemma init_is_poly (n : ℕ) : is_poly p (λ R _Rcr, by exactI init n) :=
-select_is_poly (λ i, i < n)
+theorem init_is_poly (n : ℕ) : IsPoly p fun R _Rcr => init n :=
+  select_is_poly fun i => i < n
 
 end
 
-end witt_vector
+end WittVector
+

@@ -3,126 +3,128 @@ Copyright (c) 2018 Simon Hudon. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Mario Carneiro, Johannes Hölzl, Simon Hudon, Kenny Lau
 -/
-import data.multiset.bind
-import control.traversable.lemmas
-import control.traversable.instances
+import Mathbin.Data.Multiset.Bind
+import Mathbin.Control.Traversable.Lemmas
+import Mathbin.Control.Traversable.Instances
 
 /-!
 # Functoriality of `multiset`.
 -/
 
-universes u
 
-namespace multiset
+universe u
 
-open list
+namespace Multiset
 
-instance : functor multiset :=
-{ map := @map }
+open List
 
-@[simp] lemma fmap_def {α' β'} {s : multiset α'} (f : α' → β') : f <$> s = s.map f := rfl
-
-instance : is_lawful_functor multiset :=
-by refine { .. }; intros; simp
-
-open is_lawful_traversable is_comm_applicative
-
-variables {F : Type u → Type u} [applicative F] [is_comm_applicative F]
-variables {α' β' : Type u} (f : α' → F β')
-
-def traverse : multiset α' → F (multiset β') :=
-quotient.lift (functor.map coe ∘ traversable.traverse f)
-begin
-  introv p, unfold function.comp,
-  induction p,
-  case perm.nil { refl },
-  case perm.cons
-  { have : multiset.cons <$> f p_x <*> (coe <$> traverse f p_l₁) =
-      multiset.cons <$> f p_x <*> (coe <$> traverse f p_l₂),
-    { rw [p_ih] },
-    simpa with functor_norm },
-  case perm.swap
-  { have : (λa b (l:list β'), (↑(a :: b :: l) : multiset β')) <$> f p_y <*> f p_x =
-      (λa b l, ↑(a :: b :: l)) <$> f p_x <*> f p_y,
-    { rw [is_comm_applicative.commutative_map],
-      congr, funext a b l, simpa [flip] using perm.swap b a l },
-    simp [(∘), this] with functor_norm },
-  case perm.trans { simp [*] }
-end
-
-instance : monad multiset :=
-{ pure := λ α x, {x},
-  bind := @bind,
-  .. multiset.functor }
-
-@[simp] lemma pure_def {α} : (pure : α → multiset α) = singleton := rfl
-@[simp] lemma bind_def {α β} : (>>=) = @bind α β := rfl
-
-instance : is_lawful_monad multiset :=
-{ bind_pure_comp_eq_map := λ α β f s, multiset.induction_on s rfl $ λ a s ih, by simp,
-  pure_bind := λ α β x f, by simp [pure],
-  bind_assoc := @bind_assoc }
-
-open functor
-open traversable is_lawful_traversable
+instance : Functor Multiset where
+  map := @map
 
 @[simp]
-lemma lift_coe {α β : Type*} (x : list α) (f : list α → β)
-  (h : ∀ a b : list α, a ≈ b → f a = f b) :
-  quotient.lift f h (x : multiset α) = f x :=
-quotient.lift_mk _ _ _
+theorem fmap_def {α' β'} {s : Multiset α'} (f : α' → β') : f <$> s = s.map f :=
+  rfl
+
+instance : IsLawfulFunctor Multiset := by
+  refine' { .. } <;> intros <;> simp
+
+open IsLawfulTraversable IsCommApplicative
+
+variable {F : Type u → Type u} [Applicativeₓ F] [IsCommApplicative F]
+
+variable {α' β' : Type u} (f : α' → F β')
+
+def traverse : Multiset α' → F (Multiset β') :=
+  Quotientₓ.lift (Functor.map coe ∘ Traversable.traverse f)
+    (by
+      introv p
+      unfold Function.comp
+      induction p
+      case perm.nil =>
+        rfl
+      case perm.cons =>
+        have :
+          Multiset.cons <$> f p_x <*> coe <$> traverse f p_l₁ = Multiset.cons <$> f p_x <*> coe <$> traverse f p_l₂ :=
+          by
+          rw [p_ih]
+        simpa with functor_norm
+      case perm.swap =>
+        have :
+          (fun l : List β' => (↑(a :: b :: l) : Multiset β')) <$> f p_y <*> f p_x =
+            (fun a b l => ↑(a :: b :: l)) <$> f p_x <*> f p_y :=
+          by
+          rw [IsCommApplicative.commutative_map]
+          congr
+          funext a b l
+          simpa [flip] using perm.swap b a l
+        simp' [(· ∘ ·), this] with functor_norm
+      case perm.trans =>
+        simp [*])
+
+instance : Monadₓ Multiset :=
+  { Multiset.functor with pure := fun α x => {x}, bind := @bind }
 
 @[simp]
-lemma map_comp_coe {α β} (h : α → β) :
-  functor.map h ∘ coe = (coe ∘ functor.map h : list α → multiset β) :=
-by funext; simp [functor.map]
+theorem pure_def {α} : (pure : α → Multiset α) = singleton :=
+  rfl
 
-lemma id_traverse {α : Type*} (x : multiset α) :
-  traverse id.mk x = x :=
-quotient.induction_on x begin intro, simp [traverse], refl end
+@[simp]
+theorem bind_def {α β} : (· >>= ·) = @bind α β :=
+  rfl
 
-lemma comp_traverse {G H : Type* → Type*}
-               [applicative G] [applicative H]
-               [is_comm_applicative G] [is_comm_applicative H]
-               {α β γ : Type*}
-               (g : α → G β) (h : β → H γ) (x : multiset α) :
-  traverse (comp.mk ∘ functor.map h ∘ g) x =
-  comp.mk (functor.map (traverse h) (traverse g x)) :=
-quotient.induction_on x
-(by intro;
-    simp [traverse,comp_traverse] with functor_norm;
-    simp [(<$>),(∘)] with functor_norm)
+instance : IsLawfulMonad Multiset where
+  bind_pure_comp_eq_map := fun α β f s =>
+    (Multiset.induction_on s rfl) fun a s ih => by
+      simp
+  pure_bind := fun α β x f => by
+    simp [pure]
+  bind_assoc := @bind_assoc
 
-lemma map_traverse {G : Type* → Type*}
-               [applicative G] [is_comm_applicative G]
-               {α β γ : Type*}
-               (g : α → G β) (h : β → γ)
-               (x : multiset α) :
-  functor.map (functor.map h) (traverse g x) =
-  traverse (functor.map h ∘ g) x :=
-quotient.induction_on x
-(by intro; simp [traverse] with functor_norm;
-    rw [is_lawful_functor.comp_map, map_traverse])
+open Functor
 
-lemma traverse_map {G : Type* → Type*}
-               [applicative G] [is_comm_applicative G]
-               {α β γ : Type*}
-               (g : α → β) (h : β → G γ)
-               (x : multiset α) :
-  traverse h (map g x) =
-  traverse (h ∘ g) x :=
-quotient.induction_on x
-(by intro; simp [traverse];
-    rw [← traversable.traverse_map h g];
-    [ refl, apply_instance ])
+open Traversable IsLawfulTraversable
 
-lemma naturality {G H : Type* → Type*}
-                [applicative G] [applicative H]
-                [is_comm_applicative G] [is_comm_applicative H]
-                (eta : applicative_transformation G H)
-                {α β : Type*} (f : α → G β) (x : multiset α) :
-  eta (traverse f x) = traverse (@eta _ ∘ f) x :=
-quotient.induction_on x
-(by intro; simp [traverse,is_lawful_traversable.naturality] with functor_norm)
+@[simp]
+theorem lift_coe {α β : Type _} (x : List α) (f : List α → β) (h : ∀ a b : List α, a ≈ b → f a = f b) :
+    Quotientₓ.lift f h (x : Multiset α) = f x :=
+  Quotientₓ.lift_mk _ _ _
 
-end multiset
+@[simp]
+theorem map_comp_coe {α β} (h : α → β) : Functor.map h ∘ coe = (coe ∘ Functor.map h : List α → Multiset β) := by
+  funext <;> simp [Functor.map]
+
+theorem id_traverse {α : Type _} (x : Multiset α) : traverse id.mk x = x :=
+  Quotientₓ.induction_on x
+    (by
+      intro
+      simp [traverse]
+      rfl)
+
+theorem comp_traverse {G H : Type _ → Type _} [Applicativeₓ G] [Applicativeₓ H] [IsCommApplicative G]
+    [IsCommApplicative H] {α β γ : Type _} (g : α → G β) (h : β → H γ) (x : Multiset α) :
+    traverse (comp.mk ∘ Functor.map h ∘ g) x = Comp.mk (Functor.map (traverse h) (traverse g x)) :=
+  Quotientₓ.induction_on x
+    (by
+      intro <;> simp' [traverse, comp_traverse] with functor_norm <;> simp' [(· <$> ·), (· ∘ ·)] with functor_norm)
+
+theorem map_traverse {G : Type _ → Type _} [Applicativeₓ G] [IsCommApplicative G] {α β γ : Type _} (g : α → G β)
+    (h : β → γ) (x : Multiset α) : Functor.map (Functor.map h) (traverse g x) = traverse (Functor.map h ∘ g) x :=
+  Quotientₓ.induction_on x
+    (by
+      intro <;> simp' [traverse] with functor_norm <;> rw [IsLawfulFunctor.comp_map, map_traverse])
+
+theorem traverse_map {G : Type _ → Type _} [Applicativeₓ G] [IsCommApplicative G] {α β γ : Type _} (g : α → β)
+    (h : β → G γ) (x : Multiset α) : traverse h (map g x) = traverse (h ∘ g) x :=
+  Quotientₓ.induction_on x
+    (by
+      intro <;> simp [traverse] <;> rw [← Traversable.traverse_map h g] <;> [rfl, infer_instance])
+
+theorem naturality {G H : Type _ → Type _} [Applicativeₓ G] [Applicativeₓ H] [IsCommApplicative G] [IsCommApplicative H]
+    (eta : ApplicativeTransformation G H) {α β : Type _} (f : α → G β) (x : Multiset α) :
+    eta (traverse f x) = traverse (@eta _ ∘ f) x :=
+  Quotientₓ.induction_on x
+    (by
+      intro <;> simp' [traverse, IsLawfulTraversable.naturality] with functor_norm)
+
+end Multiset
+

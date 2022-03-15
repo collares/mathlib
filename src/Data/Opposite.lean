@@ -3,7 +3,7 @@ Copyright (c) 2018 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison, Reid Barton, Simon Hudon, Kenny Lau
 -/
-import data.equiv.basic
+import Mathbin.Data.Equiv.Basic
 
 /-!
 # Opposites
@@ -13,8 +13,10 @@ identity map, `op : α → αᵒᵖ` and `unop : αᵒᵖ → α`. If `α` is a 
 category, with all arrows reversed.
 -/
 
-universes v u -- morphism levels before object levels. See note [category_theory universes].
 
+universe v u
+
+-- morphism levels before object levels. See note [category_theory universes].
 variable (α : Sort u)
 
 /-- The type of objects of the opposite of `α`; used to define the opposite category.
@@ -39,89 +41,110 @@ variable (α : Sort u)
   (If Lean supported definitional eta equality for records, we could
   achieve the same goals using a structure with one field.)
 -/
-def opposite : Sort u := α
+def Opposite : Sort u :=
+  α
 
--- Use a high right binding power (like that of postfix ⁻¹) so that, for example,
--- `presheaf Cᵒᵖ` parses as `presheaf (Cᵒᵖ)` and not `(presheaf C)ᵒᵖ`.
-notation α `ᵒᵖ`:std.prec.max_plus := opposite α
+-- mathport name: «expr ᵒᵖ»
+notation:max α
+  "ᵒᵖ" =>-- Use a high right binding power (like that of postfix ⁻¹) so that, for example,
+    -- `presheaf Cᵒᵖ` parses as `presheaf (Cᵒᵖ)` and not `(presheaf C)ᵒᵖ`.
+    Opposite
+    α
 
-namespace opposite
+namespace Opposite
 
-variables {α}
+variable {α}
+
 /-- The canonical map `α → αᵒᵖ`. -/
 @[pp_nodot]
-def op : α → αᵒᵖ := id
+def op : α → αᵒᵖ :=
+  id
+
 /-- The canonical map `αᵒᵖ → α`. -/
 @[pp_nodot]
-def unop : αᵒᵖ → α := id
+def unop : αᵒᵖ → α :=
+  id
 
-lemma op_injective : function.injective (op : α → αᵒᵖ) := λ _ _, id
-lemma unop_injective : function.injective (unop : αᵒᵖ → α) := λ _ _, id
+theorem op_injective : Function.Injective (op : α → αᵒᵖ) := fun _ _ => id
 
-@[simp] lemma op_inj_iff (x y : α) : op x = op y ↔ x = y := iff.rfl
-@[simp] lemma unop_inj_iff (x y : αᵒᵖ) : unop x = unop y ↔ x = y := iff.rfl
+theorem unop_injective : Function.Injective (unop : αᵒᵖ → α) := fun _ _ => id
 
-@[simp] lemma op_unop (x : αᵒᵖ) : op (unop x) = x := rfl
-@[simp] lemma unop_op (x : α) : unop (op x) = x := rfl
+@[simp]
+theorem op_inj_iff (x y : α) : op x = op y ↔ x = y :=
+  Iff.rfl
 
-attribute [irreducible] opposite
+@[simp]
+theorem unop_inj_iff (x y : αᵒᵖ) : unop x = unop y ↔ x = y :=
+  Iff.rfl
+
+@[simp]
+theorem op_unop (x : αᵒᵖ) : op (unop x) = x :=
+  rfl
+
+@[simp]
+theorem unop_op (x : α) : unop (op x) = x :=
+  rfl
 
 /-- The type-level equivalence between a type and its opposite. -/
-def equiv_to_opposite : α ≃ αᵒᵖ :=
-{ to_fun := op,
-  inv_fun := unop,
-  left_inv := unop_op,
-  right_inv := op_unop }
+def equivToOpposite : α ≃ αᵒᵖ where
+  toFun := op
+  invFun := unop
+  left_inv := unop_op
+  right_inv := op_unop
 
 @[simp]
-lemma equiv_to_opposite_coe : (equiv_to_opposite : α → αᵒᵖ) = op := rfl
+theorem equiv_to_opposite_coe : (equivToOpposite : α → αᵒᵖ) = op :=
+  rfl
+
 @[simp]
-lemma equiv_to_opposite_symm_coe : (equiv_to_opposite.symm : αᵒᵖ → α) = unop := rfl
+theorem equiv_to_opposite_symm_coe : (equivToOpposite.symm : αᵒᵖ → α) = unop :=
+  rfl
 
-lemma op_eq_iff_eq_unop {x : α} {y} : op x = y ↔ x = unop y :=
-equiv_to_opposite.apply_eq_iff_eq_symm_apply
+theorem op_eq_iff_eq_unop {x : α} {y} : op x = y ↔ x = unop y :=
+  equivToOpposite.apply_eq_iff_eq_symm_apply
 
-lemma unop_eq_iff_eq_op {x} {y : α} : unop x = y ↔ x = op y :=
-equiv_to_opposite.symm.apply_eq_iff_eq_symm_apply
+theorem unop_eq_iff_eq_op {x} {y : α} : unop x = y ↔ x = op y :=
+  equivToOpposite.symm.apply_eq_iff_eq_symm_apply
 
-instance [inhabited α] : inhabited αᵒᵖ := ⟨op default⟩
+instance [Inhabited α] : Inhabited αᵒᵖ :=
+  ⟨op default⟩
 
 /-- A recursor for `opposite`. Use as `induction x using opposite.rec`. -/
 @[simp]
-protected def rec {F : Π (X : αᵒᵖ), Sort v} (h : Π X, F (op X)) : Π X, F X :=
-λ X, h (unop X)
+protected def rec {F : ∀ X : αᵒᵖ, Sort v} (h : ∀ X, F (op X)) : ∀ X, F X := fun X => h (unop X)
 
-end opposite
+end Opposite
 
-namespace tactic
+namespace Tactic
 
-open opposite
+open Opposite
 
-namespace op_induction
+namespace OpInduction
 
 /-- Test if `e : expr` is of type `opposite α` for some `α`. -/
-meta def is_opposite (e : expr) : tactic bool :=
-do t ← infer_type e,
-   `(opposite _) ← whnf t | return ff,
-   return tt
+unsafe def is_opposite (e : expr) : tactic Bool := do
+  let t ← infer_type e
+  let quote.1 (Opposite _) ← whnf t | return false
+  return tt
 
 /-- Find the first hypothesis of type `opposite _`. Fail if no such hypothesis exist in the local
 context. -/
-meta def find_opposite_hyp : tactic name :=
-do lc ← local_context,
-   h :: _ ← lc.mfilter $ is_opposite | fail "No hypotheses of the form Xᵒᵖ",
-   return h.local_pp_name
+unsafe def find_opposite_hyp : tactic Name := do
+  let lc ← local_context
+  let h :: _ ← lc.mfilter <| is_opposite | fail "No hypotheses of the form Xᵒᵖ"
+  return h
 
-end op_induction
+end OpInduction
 
-open op_induction
+open OpInduction
 
 /-- A version of `induction x using opposite.rec` which finds the appropriate hypothesis
 automatically, for use with `local attribute [tidy] op_induction'`. This is necessary because
 `induction x` is not able to deduce that `opposite.rec` should be used. -/
-meta def op_induction' : tactic unit :=
-do h ← find_opposite_hyp,
-   h' ← tactic.get_local h,
-   tactic.induction' h' [] `opposite.rec
+unsafe def op_induction' : tactic Unit := do
+  let h ← find_opposite_hyp
+  let h' ← tactic.get_local h
+  tactic.induction' h' [] `opposite.rec
 
-end tactic
+end Tactic
+

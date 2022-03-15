@@ -3,8 +3,8 @@ Copyright (c) 2021 Anne Baanen. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Anne Baanen
 -/
-import algebra.order.absolute_value
-import algebra.euclidean_domain
+import Mathbin.Algebra.Order.AbsoluteValue
+import Mathbin.Algebra.EuclideanDomain
 
 /-!
 # Euclidean absolute values
@@ -19,49 +19,54 @@ absolute value is compatible with the Euclidean domain structure on its domain.
  * `absolute_value.abs_is_euclidean` shows the "standard" absolute value on `ℤ`,
    mapping negative `x` to `-x`, is euclidean.
 -/
-local infix ` ≺ `:50 := euclidean_domain.r
 
-namespace absolute_value
 
-section ordered_semiring
+-- mathport name: «expr ≺ »
+local infixl:50 " ≺ " => EuclideanDomain.R
 
-variables {R S : Type*} [euclidean_domain R] [ordered_semiring S]
-variables (abv : absolute_value R S)
+namespace AbsoluteValue
+
+section OrderedSemiring
+
+variable {R S : Type _} [EuclideanDomain R] [OrderedSemiring S]
+
+variable (abv : AbsoluteValue R S)
 
 /-- An absolute value `abv : R → S` is Euclidean if it is compatible with the
 `euclidean_domain` structure on `R`, namely `abv` is strictly monotone with respect to the well
 founded relation `≺` on `R`. -/
-structure is_euclidean : Prop :=
-(map_lt_map_iff' : ∀ {x y}, abv x < abv y ↔ x ≺ y)
+structure IsEuclidean : Prop where
+  map_lt_map_iff' : ∀ {x y}, abv x < abv y ↔ x ≺ y
 
-namespace is_euclidean
+namespace IsEuclidean
 
-variables {abv}
+variable {abv}
 
 -- Rearrange the parameters to `map_lt_map_iff'` so it elaborates better.
-lemma map_lt_map_iff {x y : R} (h : abv.is_euclidean) : abv x < abv y ↔ x ≺ y :=
-map_lt_map_iff' h
+theorem map_lt_map_iff {x y : R} (h : abv.IsEuclidean) : abv x < abv y ↔ x ≺ y :=
+  map_lt_map_iff' h
 
 attribute [simp] map_lt_map_iff
 
-lemma sub_mod_lt (h : abv.is_euclidean) (a : R) {b : R} (hb : b ≠ 0) :
-  abv (a % b) < abv b :=
-h.map_lt_map_iff.mpr (euclidean_domain.mod_lt a hb)
+theorem sub_mod_lt (h : abv.IsEuclidean) (a : R) {b : R} (hb : b ≠ 0) : abv (a % b) < abv b :=
+  h.map_lt_map_iff.mpr (EuclideanDomain.mod_lt a hb)
 
-end is_euclidean
+end IsEuclidean
 
-end ordered_semiring
+end OrderedSemiring
 
-section int
+section Int
 
-open int
+open Int
 
--- TODO: generalize to `linear_ordered_euclidean_domain`s if we ever get a definition of those
 /-- `abs : ℤ → ℤ` is a Euclidean absolute value -/
-protected lemma abs_is_euclidean : is_euclidean (absolute_value.abs : absolute_value ℤ ℤ) :=
-{ map_lt_map_iff' := λ x y, show abs x < abs y ↔ nat_abs x < nat_abs y,
-    by rw [abs_eq_nat_abs, abs_eq_nat_abs, coe_nat_lt] }
+-- TODO: generalize to `linear_ordered_euclidean_domain`s if we ever get a definition of those
+protected theorem abs_is_euclidean : IsEuclidean (AbsoluteValue.abs : AbsoluteValue ℤ ℤ) :=
+  { map_lt_map_iff' := fun x y =>
+      show abs x < abs y ↔ natAbs x < natAbs y by
+        rw [abs_eq_nat_abs, abs_eq_nat_abs, coe_nat_lt] }
 
-end int
+end Int
 
-end absolute_value
+end AbsoluteValue
+

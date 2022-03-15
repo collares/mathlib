@@ -3,7 +3,7 @@ Copyright (c) 2021 Yury G. Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury G. Kudryashov, Alex Kontorovich
 -/
-import order.filter.bases
+import Mathbin.Order.Filter.Bases
 
 /-!
 # (Co)product of a family of filters
@@ -19,183 +19,181 @@ In this file we define two filters on `Π i, α i` and prove some basic properti
   of `comap (eval i) (f i)`.
 -/
 
-open set function
-open_locale classical filter
 
-namespace filter
+open Set Function
 
-variables {ι : Type*} {α : ι → Type*} {f f₁ f₂ : Π i, filter (α i)} {s : Π i, set (α i)}
+open_locale Classical Filter
 
-section pi
+namespace Filter
+
+variable {ι : Type _} {α : ι → Type _} {f f₁ f₂ : ∀ i, Filter (α i)} {s : ∀ i, Set (α i)}
+
+section Pi
 
 /-- The product of an indexed family of filters. -/
-def pi (f : Π i, filter (α i)) : filter (Π i, α i) := ⨅ i, comap (eval i) (f i)
+def pi (f : ∀ i, Filter (α i)) : Filter (∀ i, α i) :=
+  ⨅ i, comap (eval i) (f i)
 
-lemma tendsto_eval_pi (f : Π i, filter (α i)) (i : ι) :
-  tendsto (eval i) (pi f) (f i) :=
-tendsto_infi' i tendsto_comap
+theorem tendsto_eval_pi (f : ∀ i, Filter (α i)) (i : ι) : Tendsto (eval i) (pi f) (f i) :=
+  tendsto_infi' i tendsto_comap
 
-lemma tendsto_pi {β : Type*} {m : β → Π i, α i} {l : filter β} :
-  tendsto m l (pi f) ↔ ∀ i, tendsto (λ x, m x i) l (f i) :=
-by simp only [pi, tendsto_infi, tendsto_comap_iff]
+theorem tendsto_pi {β : Type _} {m : β → ∀ i, α i} {l : Filter β} :
+    Tendsto m l (pi f) ↔ ∀ i, Tendsto (fun x => m x i) l (f i) := by
+  simp only [pi, tendsto_infi, tendsto_comap_iff]
 
-lemma le_pi {g : filter (Π i, α i)} : g ≤ pi f ↔ ∀ i, tendsto (eval i) g (f i) := tendsto_pi
+theorem le_pi {g : Filter (∀ i, α i)} : g ≤ pi f ↔ ∀ i, Tendsto (eval i) g (f i) :=
+  tendsto_pi
 
-@[mono] lemma pi_mono (h : ∀ i, f₁ i ≤ f₂ i) : pi f₁ ≤ pi f₂ :=
-infi_le_infi $ λ i, comap_mono $ h i
+@[mono]
+theorem pi_mono (h : ∀ i, f₁ i ≤ f₂ i) : pi f₁ ≤ pi f₂ :=
+  infi_le_infi fun i => comap_mono <| h i
 
-lemma mem_pi_of_mem (i : ι) {s : set (α i)} (hs : s ∈ f i) :
-  eval i ⁻¹' s ∈ pi f :=
-mem_infi_of_mem i $ preimage_mem_comap hs
+theorem mem_pi_of_mem (i : ι) {s : Set (α i)} (hs : s ∈ f i) : eval i ⁻¹' s ∈ pi f :=
+  mem_infi_of_mem i <| preimage_mem_comap hs
 
-lemma pi_mem_pi {I : set ι} (hI : finite I) (h : ∀ i ∈ I, s i ∈ f i) :
-  I.pi s ∈ pi f :=
-begin
-  rw [pi_def, bInter_eq_Inter],
-  refine mem_infi_of_Inter hI (λ i, _) subset.rfl,
+theorem pi_mem_pi {I : Set ι} (hI : Finite I) (h : ∀, ∀ i ∈ I, ∀, s i ∈ f i) : I.pi s ∈ pi f := by
+  rw [pi_def, bInter_eq_Inter]
+  refine' mem_infi_of_Inter hI (fun i => _) subset.rfl
   exact preimage_mem_comap (h i i.2)
-end
 
-lemma mem_pi {s : set (Π i, α i)} : s ∈ pi f ↔
-  ∃ (I : set ι), finite I ∧ ∃ t : Π i, set (α i), (∀ i, t i ∈ f i) ∧ I.pi t ⊆ s :=
-begin
-  split,
-  { simp only [pi, mem_infi', mem_comap, pi_def],
-    rintro ⟨I, If, V, hVf, hVI, rfl, -⟩, choose t htf htV using hVf,
-    exact ⟨I, If, t, htf, Inter₂_mono (λ i _, htV i)⟩ },
-  { rintro ⟨I, If, t, htf, hts⟩,
-    exact mem_of_superset (pi_mem_pi If $ λ i _, htf i) hts }
-end
+theorem mem_pi {s : Set (∀ i, α i)} :
+    s ∈ pi f ↔ ∃ I : Set ι, Finite I ∧ ∃ t : ∀ i, Set (α i), (∀ i, t i ∈ f i) ∧ I.pi t ⊆ s := by
+  constructor
+  · simp only [pi, mem_infi', mem_comap, pi_def]
+    rintro ⟨I, If, V, hVf, hVI, rfl, -⟩
+    choose t htf htV using hVf
+    exact ⟨I, If, t, htf, Inter₂_mono fun i _ => htV i⟩
+    
+  · rintro ⟨I, If, t, htf, hts⟩
+    exact mem_of_superset ((pi_mem_pi If) fun i _ => htf i) hts
+    
 
-lemma mem_pi' {s : set (Π i, α i)} : s ∈ pi f ↔
-  ∃ (I : finset ι), ∃ t : Π i, set (α i), (∀ i, t i ∈ f i) ∧ set.pi ↑I t ⊆ s :=
-mem_pi.trans exists_finite_iff_finset
+theorem mem_pi' {s : Set (∀ i, α i)} :
+    s ∈ pi f ↔ ∃ I : Finset ι, ∃ t : ∀ i, Set (α i), (∀ i, t i ∈ f i) ∧ Set.Pi (↑I) t ⊆ s :=
+  mem_pi.trans exists_finite_iff_finset
 
-lemma mem_of_pi_mem_pi [∀ i, ne_bot (f i)] {I : set ι} (h : I.pi s ∈ pi f) {i : ι} (hi : i ∈ I) :
-  s i ∈ f i :=
-begin
-  rcases mem_pi.1 h with ⟨I', I'f, t, htf, hts⟩,
-  refine mem_of_superset (htf i) (λ x hx, _),
-  have : ∀ i, (t i).nonempty, from λ i, nonempty_of_mem (htf i),
-  choose g hg,
-  have : update g i x ∈ I'.pi t,
-  { intros j hj, rcases eq_or_ne j i with (rfl|hne); simp * },
+theorem mem_of_pi_mem_pi [∀ i, NeBot (f i)] {I : Set ι} (h : I.pi s ∈ pi f) {i : ι} (hi : i ∈ I) : s i ∈ f i := by
+  rcases mem_pi.1 h with ⟨I', I'f, t, htf, hts⟩
+  refine' mem_of_superset (htf i) fun x hx => _
+  have : ∀ i, (t i).Nonempty := fun i => nonempty_of_mem (htf i)
+  choose g hg
+  have : update g i x ∈ I'.pi t := by
+    intro j hj
+    rcases eq_or_ne j i with (rfl | hne) <;> simp [*]
   simpa using hts this i hi
-end
 
-@[simp] lemma pi_mem_pi_iff [∀ i, ne_bot (f i)] {I : set ι} (hI : finite I) :
-  I.pi s ∈ pi f ↔ ∀ i ∈ I, s i ∈ f i :=
-⟨λ h i hi, mem_of_pi_mem_pi h hi, pi_mem_pi hI⟩
+@[simp]
+theorem pi_mem_pi_iff [∀ i, NeBot (f i)] {I : Set ι} (hI : Finite I) : I.pi s ∈ pi f ↔ ∀, ∀ i ∈ I, ∀, s i ∈ f i :=
+  ⟨fun h i hi => mem_of_pi_mem_pi h hi, pi_mem_pi hI⟩
 
-lemma has_basis_pi {ι' : ι → Type} {s : Π i, ι' i → set (α i)} {p : Π i, ι' i → Prop}
-  (h : ∀ i, (f i).has_basis (p i) (s i)) :
-  (pi f).has_basis (λ If : set ι × Π i, ι' i, finite If.1 ∧ ∀ i ∈ If.1, p i (If.2 i))
-    (λ If : set ι × Π i, ι' i, If.1.pi (λ i, s i $ If.2 i)) :=
-begin
-  have : (pi f).has_basis _ _ := has_basis_infi (λ i, (h i).comap (eval i : (Π j, α j) → α i)),
-  convert this,
-  ext,
+theorem has_basis_pi {ι' : ι → Type} {s : ∀ i, ι' i → Set (α i)} {p : ∀ i, ι' i → Prop}
+    (h : ∀ i, (f i).HasBasis (p i) (s i)) :
+    (pi f).HasBasis (fun If : Set ι × ∀ i, ι' i => Finite If.1 ∧ ∀, ∀ i ∈ If.1, ∀, p i (If.2 i))
+      fun If : Set ι × ∀ i, ι' i => If.1.pi fun i => s i <| If.2 i :=
+  by
+  have : (pi f).HasBasis _ _ := has_basis_infi fun i => (h i).comap (eval i : (∀ j, α j) → α i)
+  convert this
+  ext
   simp
-end
 
-@[simp] lemma pi_inf_principal_univ_pi_eq_bot :
-  pi f ⊓ 𝓟 (set.pi univ s) = ⊥ ↔ ∃ i, f i ⊓ 𝓟 (s i) = ⊥ :=
-begin
-  split,
-  { simp only [inf_principal_eq_bot, mem_pi], contrapose!,
-    rintros (hsf : ∀ i, ∃ᶠ x in f i, x ∈ s i) I If t htf hts,
-    have : ∀ i, (s i ∩ t i).nonempty, from λ i, ((hsf i).and_eventually (htf i)).exists,
-    choose x hxs hxt,
-    exact hts (λ i hi, hxt i) (mem_univ_pi.2 hxs) },
-  { simp only [inf_principal_eq_bot],
-    rintro ⟨i, hi⟩,
-    filter_upwards [mem_pi_of_mem i hi] with x using mt (λ h, h i trivial), },
-end
+@[simp]
+theorem pi_inf_principal_univ_pi_eq_bot : pi f⊓𝓟 (Set.Pi Univ s) = ⊥ ↔ ∃ i, f i⊓𝓟 (s i) = ⊥ := by
+  constructor
+  · simp only [inf_principal_eq_bot, mem_pi]
+    contrapose!
+    rintro (hsf : ∀ i, ∃ᶠ x in f i, x ∈ s i) I If t htf hts
+    have : ∀ i, (s i ∩ t i).Nonempty := fun i => ((hsf i).and_eventually (htf i)).exists
+    choose x hxs hxt
+    exact hts (fun i hi => hxt i) (mem_univ_pi.2 hxs)
+    
+  · simp only [inf_principal_eq_bot]
+    rintro ⟨i, hi⟩
+    filter_upwards [mem_pi_of_mem i hi] with x using mt fun h => h i trivialₓ
+    
 
-@[simp] lemma pi_inf_principal_pi_eq_bot [Π i, ne_bot (f i)] {I : set ι} :
-  pi f ⊓ 𝓟 (set.pi I s) = ⊥ ↔ ∃ i ∈ I, f i ⊓ 𝓟 (s i) = ⊥ :=
-begin
-  rw [← univ_pi_piecewise I, pi_inf_principal_univ_pi_eq_bot],
-  refine exists_congr (λ i, _),
-  by_cases hi : i ∈ I; simp [hi, (‹Π i, ne_bot (f i)› i).ne]
-end
+@[simp]
+theorem pi_inf_principal_pi_eq_bot [∀ i, NeBot (f i)] {I : Set ι} :
+    pi f⊓𝓟 (Set.Pi I s) = ⊥ ↔ ∃ i ∈ I, f i⊓𝓟 (s i) = ⊥ := by
+  rw [← univ_pi_piecewise I, pi_inf_principal_univ_pi_eq_bot]
+  refine' exists_congr fun i => _
+  by_cases' hi : i ∈ I <;> simp [hi, (‹∀ i, ne_bot (f i)› i).Ne]
 
-@[simp] lemma pi_inf_principal_univ_pi_ne_bot :
-  ne_bot (pi f ⊓ 𝓟 (set.pi univ s)) ↔ ∀ i, ne_bot (f i ⊓ 𝓟 (s i)) :=
-by simp [ne_bot_iff]
+@[simp]
+theorem pi_inf_principal_univ_pi_ne_bot : NeBot (pi f⊓𝓟 (Set.Pi Univ s)) ↔ ∀ i, NeBot (f i⊓𝓟 (s i)) := by
+  simp [ne_bot_iff]
 
-@[simp] lemma pi_inf_principal_pi_ne_bot [Π i, ne_bot (f i)] {I : set ι} :
-  ne_bot (pi f ⊓ 𝓟 (I.pi s)) ↔ ∀ i ∈ I, ne_bot (f i ⊓ 𝓟 (s i)) :=
-by simp [ne_bot_iff]
+@[simp]
+theorem pi_inf_principal_pi_ne_bot [∀ i, NeBot (f i)] {I : Set ι} :
+    NeBot (pi f⊓𝓟 (I.pi s)) ↔ ∀, ∀ i ∈ I, ∀, NeBot (f i⊓𝓟 (s i)) := by
+  simp [ne_bot_iff]
 
-instance pi_inf_principal_pi.ne_bot [h : ∀ i, ne_bot (f i ⊓ 𝓟 (s i))] {I : set ι} :
-  ne_bot (pi f ⊓ 𝓟 (I.pi s)) :=
-(pi_inf_principal_univ_pi_ne_bot.2 ‹_›).mono $ inf_le_inf_left _ $ principal_mono.2 $
-  λ x hx i hi, hx i trivial
+instance PiInfPrincipalPi.ne_bot [h : ∀ i, NeBot (f i⊓𝓟 (s i))] {I : Set ι} : NeBot (pi f⊓𝓟 (I.pi s)) :=
+  (pi_inf_principal_univ_pi_ne_bot.2 ‹_›).mono <| inf_le_inf_left _ <| principal_mono.2 fun x hx i hi => hx i trivialₓ
 
-@[simp] lemma pi_eq_bot : pi f = ⊥ ↔ ∃ i, f i = ⊥ :=
-by simpa using @pi_inf_principal_univ_pi_eq_bot ι α f (λ _, univ)
+@[simp]
+theorem pi_eq_bot : pi f = ⊥ ↔ ∃ i, f i = ⊥ := by
+  simpa using @pi_inf_principal_univ_pi_eq_bot ι α f fun _ => univ
 
-@[simp] lemma pi_ne_bot : ne_bot (pi f) ↔ ∀ i, ne_bot (f i) := by simp [ne_bot_iff]
+@[simp]
+theorem pi_ne_bot : NeBot (pi f) ↔ ∀ i, NeBot (f i) := by
+  simp [ne_bot_iff]
 
-instance [∀ i, ne_bot (f i)] : ne_bot (pi f) := pi_ne_bot.2 ‹_›
+instance [∀ i, NeBot (f i)] : NeBot (pi f) :=
+  pi_ne_bot.2 ‹_›
 
-end pi
+end Pi
 
 /-! ### `n`-ary coproducts of filters -/
+
 
 section Coprod
 
 /-- Coproduct of filters. -/
-protected def Coprod (f : Π i, filter (α i)) : filter (Π i, α i) :=
-⨆ i : ι, comap (eval i) (f i)
+protected def coprodₓ (f : ∀ i, Filter (α i)) : Filter (∀ i, α i) :=
+  ⨆ i : ι, comap (eval i) (f i)
 
-lemma mem_Coprod_iff {s : set (Π i, α i)} :
-  (s ∈ filter.Coprod f) ↔ (∀ i : ι, (∃ t₁ ∈ f i, eval i ⁻¹' t₁ ⊆ s)) :=
-by simp [filter.Coprod]
+theorem mem_Coprod_iff {s : Set (∀ i, α i)} : s ∈ Filter.coprodₓ f ↔ ∀ i : ι, ∃ t₁ ∈ f i, eval i ⁻¹' t₁ ⊆ s := by
+  simp [Filter.coprodₓ]
 
-lemma compl_mem_Coprod_iff {s : set (Π i, α i)} :
-  sᶜ ∈ filter.Coprod f ↔ ∃ t : Π i, set (α i), (∀ i, (t i)ᶜ ∈ f i) ∧ s ⊆ set.pi univ (λ i, t i) :=
-begin
-  rw [(surjective_pi_map (λ i, @compl_surjective (set (α i)) _)).exists],
-  simp_rw [mem_Coprod_iff, classical.skolem, exists_prop, @subset_compl_comm _ _ s,
-    ← preimage_compl, ← subset_Inter_iff, ← univ_pi_eq_Inter, compl_compl]
-end
+theorem compl_mem_Coprod_iff {s : Set (∀ i, α i)} :
+    sᶜ ∈ Filter.coprodₓ f ↔ ∃ t : ∀ i, Set (α i), (∀ i, t iᶜ ∈ f i) ∧ s ⊆ Set.Pi Univ fun i => t i := by
+  rw [(surjective_pi_map fun i => @compl_surjective (Set (α i)) _).exists]
+  simp_rw [mem_Coprod_iff, Classical.skolem, exists_prop, @subset_compl_comm _ _ s, ← preimage_compl, ←
+    subset_Inter_iff, ← univ_pi_eq_Inter, compl_compl]
 
-lemma Coprod_ne_bot_iff' :
-  ne_bot (filter.Coprod f) ↔ (∀ i, nonempty (α i)) ∧ ∃ d, ne_bot (f d) :=
-by simp only [filter.Coprod, supr_ne_bot, ← exists_and_distrib_left, ← comap_eval_ne_bot_iff']
+theorem Coprod_ne_bot_iff' : NeBot (Filter.coprodₓ f) ↔ (∀ i, Nonempty (α i)) ∧ ∃ d, NeBot (f d) := by
+  simp only [Filter.coprodₓ, supr_ne_bot, ← exists_and_distrib_left, ← comap_eval_ne_bot_iff']
 
-@[simp] lemma Coprod_ne_bot_iff [∀ i, nonempty (α i)] :
-  ne_bot (filter.Coprod f) ↔ ∃ d, ne_bot (f d) :=
-by simp [Coprod_ne_bot_iff', *]
+@[simp]
+theorem Coprod_ne_bot_iff [∀ i, Nonempty (α i)] : NeBot (Filter.coprodₓ f) ↔ ∃ d, NeBot (f d) := by
+  simp [Coprod_ne_bot_iff', *]
 
-lemma ne_bot.Coprod [∀ i, nonempty (α i)] {i : ι} (h : ne_bot (f i)) :
-  ne_bot (filter.Coprod f) :=
-Coprod_ne_bot_iff.2 ⟨i, h⟩
+theorem NeBot.Coprod [∀ i, Nonempty (α i)] {i : ι} (h : NeBot (f i)) : NeBot (Filter.coprodₓ f) :=
+  Coprod_ne_bot_iff.2 ⟨i, h⟩
 
-@[instance] lemma Coprod_ne_bot [∀ i, nonempty (α i)] [nonempty ι] (f : Π i, filter (α i))
-  [H : ∀ i, ne_bot (f i)] : ne_bot (filter.Coprod f) :=
-(H (classical.arbitrary ι)).Coprod
+@[instance]
+theorem Coprod_ne_bot [∀ i, Nonempty (α i)] [Nonempty ι] (f : ∀ i, Filter (α i)) [H : ∀ i, NeBot (f i)] :
+    NeBot (Filter.coprodₓ f) :=
+  (H (Classical.arbitrary ι)).coprod
 
-@[mono] lemma Coprod_mono (hf : ∀ i, f₁ i ≤ f₂ i) : filter.Coprod f₁ ≤ filter.Coprod f₂ :=
-supr_le_supr $ λ i, comap_mono (hf i)
+@[mono]
+theorem Coprod_mono (hf : ∀ i, f₁ i ≤ f₂ i) : Filter.coprodₓ f₁ ≤ Filter.coprodₓ f₂ :=
+  supr_le_supr fun i => comap_mono (hf i)
 
-variables {β : ι → Type*} {m : Π i, α i → β i}
+variable {β : ι → Type _} {m : ∀ i, α i → β i}
 
-lemma map_pi_map_Coprod_le :
-  map (λ (k : Π i, α i), λ i, m i (k i)) (filter.Coprod f) ≤ filter.Coprod (λ i, map (m i) (f i)) :=
-begin
-  simp only [le_def, mem_map, mem_Coprod_iff],
-  intros s h i,
-  obtain ⟨t, H, hH⟩ := h i,
-  exact ⟨{x : α i | m i x ∈ t}, H, λ x hx, hH hx⟩
-end
+theorem map_pi_map_Coprod_le :
+    map (fun k : ∀ i, α i => fun i => m i (k i)) (Filter.coprodₓ f) ≤ Filter.coprodₓ fun i => map (m i) (f i) := by
+  simp only [le_def, mem_map, mem_Coprod_iff]
+  intro s h i
+  obtain ⟨t, H, hH⟩ := h i
+  exact ⟨{ x : α i | m i x ∈ t }, H, fun x hx => hH hx⟩
 
-lemma tendsto.pi_map_Coprod {g : Π i, filter (β i)} (h : ∀ i, tendsto (m i) (f i) (g i)) :
-  tendsto (λ (k : Π i, α i), λ i, m i (k i)) (filter.Coprod f) (filter.Coprod g) :=
-map_pi_map_Coprod_le.trans (Coprod_mono h)
+theorem Tendsto.pi_map_Coprod {g : ∀ i, Filter (β i)} (h : ∀ i, Tendsto (m i) (f i) (g i)) :
+    Tendsto (fun k : ∀ i, α i => fun i => m i (k i)) (Filter.coprodₓ f) (Filter.coprodₓ g) :=
+  map_pi_map_Coprod_le.trans (Coprod_mono h)
 
 end Coprod
 
-end filter
+end Filter
+

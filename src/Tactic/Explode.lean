@@ -3,8 +3,9 @@ Copyright (c) 2018 Mario Carneiro. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Mario Carneiro, Minchao Wu
 -/
-import meta.rb_map
-import tactic.core
+import Mathbin.Meta.RbMap
+import Mathbin.Tactic.Core
+
 /-!
 # `#explode` command
 
@@ -12,152 +13,166 @@ Displays a proof term in a line by line format somewhat akin to a Fitch style
 proof or the Metamath proof style.
 -/
 
-open expr tactic
 
-namespace tactic
-namespace explode
+open Expr Tactic
 
-@[derive inhabited]
-inductive status : Type | reg | intro | lam | sintro
+namespace Tactic
 
-/--
-A type to distinguish introduction or elimination rules represented as
+namespace Explode
+
+inductive Status : Type
+  | reg
+  | intro
+  | lam
+  | sintro
+  deriving Inhabited
+
+/-- A type to distinguish introduction or elimination rules represented as
 strings from theorems referred to by their names.
 -/
-meta inductive thm : Type
-| expr (e : expr)
-| name (n : name)
-| string (s : string)
+unsafe inductive thm : Type
+  | expr (e : expr)
+  | Name (n : Name)
+  | Stringₓ (s : Stringₓ)
 
-/--
-Turn a thm into a string.
+/-- Turn a thm into a string.
 -/
-meta def thm.to_string : thm → string
-| (thm.expr e) := e.to_string
-| (thm.name n) := n.to_string
-| (thm.string s) := s
+unsafe def thm.to_string : thm → Stringₓ
+  | thm.expr e => e.toString
+  | thm.name n => n.toString
+  | thm.string s => s
 
-meta structure entry : Type :=
-(expr : expr)
-(line : nat)
-(depth : nat)
-(status : status)
-(thm : thm)
-(deps : list nat)
+unsafe structure entry : Type where
+  expr : expr
+  line : Nat
+  depth : Nat
+  Status : Status
+  thm : thm
+  deps : List Nat
 
-meta def pad_right (l : list string) : list string :=
-let n := l.foldl (λ r (s:string), max r s.length) 0 in
-l.map $ λ s, nat.iterate (λ s, s.push ' ') (n - s.length) s
+unsafe def pad_right (l : List Stringₓ) : List Stringₓ :=
+  let n := l.foldl (fun s : Stringₓ => max r s.length) 0
+  l.map fun s => Nat.iterate (fun s => s.push ' ') (n - s.length) s
 
-@[derive inhabited]
-meta structure entries : Type := mk' ::
-(s : expr_map entry)
-(l : list entry)
+unsafe structure entries : Type where mk' ::
+  s : expr_map entry
+  l : List entry
+  deriving Inhabited
 
-meta def entries.find (es : entries) (e : expr) : option entry := es.s.find e
-meta def entries.size (es : entries) : ℕ := es.s.size
+unsafe def entries.find (es : entries) (e : expr) : Option entry :=
+  es.s.find e
 
-meta def entries.add : entries → entry → entries
-| es@⟨s, l⟩ e := if s.contains e.expr then es else ⟨s.insert e.expr e, e :: l⟩
+unsafe def entries.size (es : entries) : ℕ :=
+  es.s.size
 
-meta def entries.head (es : entries) : option entry := es.l.head'
+unsafe def entries.add : entries → entry → entries
+  | es@⟨s, l⟩, e => if s.contains e.expr then es else ⟨s.insert e.expr e, e :: l⟩
 
-meta def format_aux : list string → list string → list string → list entry → tactic format
-| (line :: lines) (dep :: deps) (thm :: thms) (en :: es) := do
-  fmt ← do
-  { let margin := string.join (list.repeat " │" en.depth),
-    let margin := match en.status with
-      | status.sintro := " ├" ++ margin
-      | status.intro := " │" ++ margin ++ " ┌"
-      | status.reg := " │" ++ margin ++ ""
-      | status.lam := " │" ++ margin ++ ""
-      end,
-    p ← infer_type en.expr >>= pp,
-    let lhs :=  line ++ "│" ++ dep ++ "│ " ++ thm ++ margin ++ " ",
-    return $ format.of_string lhs ++ (p.nest lhs.length).group ++ format.line },
-  (++ fmt) <$> format_aux lines deps thms es
-| _ _ _ _ := return format.nil
+unsafe def entries.head (es : entries) : Option entry :=
+  es.l.head'
 
-meta instance : has_to_tactic_format entries :=
-⟨λ es : entries,
-  let lines := pad_right $ es.l.map (λ en, to_string en.line),
-      deps  := pad_right $ es.l.map (λ en, string.intercalate "," (en.deps.map to_string)),
-      thms  := pad_right $ es.l.map (λ en, (entry.thm en).to_string) in
-  format_aux lines deps thms es.l⟩
+unsafe def format_aux : List Stringₓ → List Stringₓ → List Stringₓ → List entry → tactic format
+  | line :: lines, dep :: deps, thm :: thms, en :: es => do
+    let fmt ←
+      do
+        let margin := Stringₓ.join (List.repeat " │" en.depth)
+        let margin :=
+          match en.Status with
+          | status.sintro => " ├" ++ margin
+          | status.intro => " │" ++ margin ++ " ┌"
+          | status.reg => " │" ++ margin ++ ""
+          | status.lam => " │" ++ margin ++ ""
+        let p ← infer_type en.expr >>= pp
+        let lhs := line ++ "│" ++ dep ++ "│ " ++ thm ++ margin ++ " "
+        return <| format.of_string lhs ++ (p lhs).group ++ format.line
+    (· ++ fmt) <$> format_aux lines deps thms es
+  | _, _, _, _ => return format.nil
 
-meta def append_dep (filter : expr → tactic unit)
- (es : entries) (e : expr) (deps : list nat) : tactic (list nat) :=
-do { ei ← es.find e,
-  filter ei.expr,
-  return (ei.line :: deps) }
-<|> return deps
+unsafe instance : has_to_tactic_format entries :=
+  ⟨fun es : entries =>
+    let lines := pad_right <| es.l.map fun en => toString en.line
+    let deps := pad_right <| es.l.map fun en => Stringₓ.intercalate "," (en.deps.map toString)
+    let thms := pad_right <| es.l.map fun en => (entry.thm en).toString
+    format_aux lines deps thms es.l⟩
 
-meta def may_be_proof (e : expr) : tactic bool :=
-do expr.sort u ← infer_type e >>= infer_type,
-   return $ bnot u.nonzero
+unsafe def append_dep (filter : expr → tactic Unit) (es : entries) (e : expr) (deps : List Nat) : tactic (List Nat) :=
+  (do
+      let ei ← es.find e
+      filter ei
+      return (ei :: deps)) <|>
+    return deps
 
-end explode
-open explode
+unsafe def may_be_proof (e : expr) : tactic Bool := do
+  let expr.sort u ← infer_type e >>= infer_type
+  return <| bnot u
 
-meta mutual def explode.core, explode.args (filter : expr → tactic unit)
-with explode.core : expr → bool → nat → entries → tactic entries
-| e@(lam n bi d b) si depth es := do
-  m ← mk_fresh_name,
-  let l := local_const m n bi d,
-  let b' := instantiate_var b l,
-  if si then
-    let en : entry := ⟨l, es.size, depth, status.sintro, thm.name n, []⟩ in do
-    es' ← explode.core b' si depth (es.add en),
-    return $ es'.add ⟨e, es'.size, depth, status.lam, thm.string "∀I", [es.size, es'.size - 1]⟩
-  else do
-    let en : entry := ⟨l, es.size, depth, status.intro, thm.name n, []⟩,
-    es' ← explode.core b' si (depth + 1) (es.add en),
-    -- in case of a "have" clause, the b' here has an annotation
-    deps' ← explode.append_dep filter es' b'.erase_annotations [],
-    deps' ← explode.append_dep filter es' l deps',
-    return $ es'.add ⟨e, es'.size, depth, status.lam, thm.string "∀I", deps'⟩
-| e@(elet n t a b) si depth es := explode.core (reduce_lets e) si depth es
-| e@(macro n l) si depth es := explode.core l.head si depth es
-| e si depth es := filter e >>
-  match get_app_fn_args e with
-  | (nm@(const n _), args) :=
-    explode.args e args depth es (thm.expr nm) []
-  | (fn, []) := do
-    let en : entry := ⟨fn, es.size, depth, status.reg, thm.expr fn, []⟩,
-    return (es.add en)
-  | (fn, args) := do
-    es' ← explode.core fn ff depth es,
-    -- in case of a "have" clause, the fn here has an annotation
-    deps ← explode.append_dep filter es' fn.erase_annotations [],
-    explode.args e args depth es' (thm.string "∀E") deps
-  end
-with explode.args : expr → list expr → nat → entries → thm → list nat → tactic entries
-| e (arg :: args) depth es thm deps := do
-  es' ← explode.core arg ff depth es <|> return es,
-  deps' ← explode.append_dep filter es' arg deps,
-  explode.args e args depth es' thm deps'
-| e [] depth es thm deps :=
-  return (es.add ⟨e, es.size, depth, status.reg, thm, deps.reverse⟩)
+end Explode
 
-meta def explode_expr (e : expr) (hide_non_prop := tt) : tactic entries :=
-let filter := if hide_non_prop then λ e, may_be_proof e >>= guardb else λ _, skip in
-tactic.explode.core filter e tt 0 default
+open Explode
 
-meta def explode (n : name) : tactic unit :=
-do const n _ ← resolve_name n | fail "cannot resolve name",
-  d ← get_decl n,
-  v ← match d with
-  | (declaration.defn _ _ _ v _ _) := return v
-  | (declaration.thm _ _ _ v)      := return v.get
-  | _                  := fail "not a definition"
-  end,
-  t ← pp d.type,
+mutual
+  unsafe def explode.core (filter : expr → tactic Unit) : expr → Bool → Nat → entries → tactic entries
+    | e@(lam n bi d b), si, depth, es => do
+      let m ← mk_fresh_name
+      let l := local_const m n bi d
+      let b' := instantiate_var b l
+      if si then
+          let en : entry := ⟨l, es, depth, status.sintro, thm.name n, []⟩
+          do
+          let es' ← explode.core b' si depth (es en)
+          return <| es' ⟨e, es', depth, status.lam, thm.string "∀I", [es, es' - 1]⟩
+        else do
+          let en : entry := ⟨l, es, depth, status.intro, thm.name n, []⟩
+          let es' ← explode.core b' si (depth + 1) (es en)
+          let deps'
+            ←-- in case of a "have" clause, the b' here has an annotation
+                explode.append_dep
+                filter es' b' []
+          let deps' ← explode.append_dep filter es' l deps'
+          return <| es' ⟨e, es', depth, status.lam, thm.string "∀I", deps'⟩
+    | e@(elet n t a b), si, depth, es => explode.core (reduce_lets e) si depth es
+    | e@(macro n l), si, depth, es => explode.core l.head si depth es
+    | e, si, depth, es =>
+      filter e >>
+        match get_app_fn_args e with
+        | (nm@(const n _), args) => explode.args e args depth es (thm.expr nm) []
+        | (fn, []) => do
+          let en : entry := ⟨fn, es.size, depth, Status.reg, thm.expr fn, []⟩
+          return (es en)
+        | (fn, args) => do
+          let es' ← explode.core fn false depth es
+          let deps
+            ←-- in case of a "have" clause, the fn here has an annotation
+                explode.append_dep
+                filter es' fn.erase_annotations []
+          explode.args e args depth es' (thm.string "∀E") deps
+  unsafe def explode.args (filter : expr → tactic Unit) :
+      expr → List expr → Nat → entries → thm → List Nat → tactic entries
+    | e, arg :: args, depth, es, thm, deps => do
+      let es' ← explode.core arg false depth es <|> return es
+      let deps' ← explode.append_dep filter es' arg deps
+      explode.args e args depth es' thm deps'
+    | e, [], depth, es, thm, deps => return (es.add ⟨e, es.size, depth, Status.reg, thm, deps.reverse⟩)
+end
+
+unsafe def explode_expr (e : expr) (hide_non_prop := true) : tactic entries :=
+  let filter := if hide_non_prop then fun e => may_be_proof e >>= guardb else fun _ => skip
+  tactic.explode.core filter e true 0 default
+
+unsafe def explode (n : Name) : tactic Unit := do
+  let const n _ ← resolve_name n | fail "cannot resolve name"
+  let d ← get_decl n
+  let v ←
+    match d with
+      | declaration.defn _ _ _ v _ _ => return v
+      | declaration.thm _ _ _ v => return v.get
+      | _ => fail "not a definition"
+  let t ← pp d.type
   explode_expr v <* trace (to_fmt n ++ " : " ++ t) >>= trace
 
 setup_tactic_parser
 
-/--
-`#explode decl_name` displays a proof term in a line-by-line format somewhat akin to a Fitch-style
+/-- `#explode decl_name` displays a proof term in a line-by-line format somewhat akin to a Fitch-style
 proof or the Metamath proof style.
 `#explode_widget decl_name` renders a widget that displays an `#explode` proof.
 
@@ -214,16 +229,14 @@ brackets are only needed in order to delimit the scope of assumptions, and these
 have global scope anyway so detailed tracking is not necessary.)
 -/
 @[user_command]
-meta def explode_cmd (_ : parse $ tk "#explode") : parser unit :=
-do n ← ident,
+unsafe def explode_cmd (_ : parse <| tk "#explode") : parser Unit := do
+  let n ← ident
   explode n
-.
 
 add_tactic_doc
-{ name       := "#explode / #explode_widget",
-  category   := doc_category.cmd,
-  decl_names := [`tactic.explode_cmd, `tactic.explode_widget_cmd],
-  inherit_description_from := `tactic.explode_cmd,
-  tags       := ["proof display", "widgets"] }
+  { Name := "#explode / #explode_widget", category := DocCategory.cmd,
+    declNames := [`tactic.explode_cmd, `tactic.explode_widget_cmd], inheritDescriptionFrom := `tactic.explode_cmd,
+    tags := ["proof display", "widgets"] }
 
-end tactic
+end Tactic
+

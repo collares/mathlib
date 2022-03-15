@@ -1,1 +1,2 @@
-import algebra.group_power.lemmas
+import Mathbin.Algebra.GroupPower.Lemmas
+

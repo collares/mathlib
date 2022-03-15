@@ -3,8 +3,8 @@ Copyright (c) 2018 Andreas Swerdlow. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Andreas Swerdlow, Kenny Lau
 -/
-import data.equiv.ring
-import algebra.ring.opposite
+import Mathbin.Data.Equiv.Ring
+import Mathbin.Algebra.Ring.Opposite
 
 /-!
 # Ring involutions
@@ -25,54 +25,58 @@ We provide a coercion to a function `R → Rᵐᵒᵖ`.
 Ring involution
 -/
 
-variables (R : Type*)
+
+variable (R : Type _)
 
 /-- A ring involution -/
-structure ring_invo [semiring R] extends R ≃+* Rᵐᵒᵖ :=
-(involution' : ∀ x, (to_fun (to_fun x).unop).unop = x)
+structure RingInvo [Semiringₓ R] extends R ≃+* Rᵐᵒᵖ where
+  involution' : ∀ x, (to_fun (to_fun x).unop).unop = x
 
-namespace ring_invo
-variables {R} [semiring R]
+namespace RingInvo
+
+variable {R} [Semiringₓ R]
 
 /-- Construct a ring involution from a ring homomorphism. -/
-def mk' (f : R →+* Rᵐᵒᵖ) (involution : ∀ r, (f (f r).unop).unop = r) :
-  ring_invo R :=
-{ inv_fun := λ r, (f r.unop).unop,
-  left_inv := λ r, involution r,
-  right_inv := λ r, mul_opposite.unop_injective $ involution _,
-  involution' := involution,
-  .. f }
+def mk' (f : R →+* Rᵐᵒᵖ) (involution : ∀ r, (f (f r).unop).unop = r) : RingInvo R :=
+  { f with invFun := fun r => (f r.unop).unop, left_inv := fun r => involution r,
+    right_inv := fun r => MulOpposite.unop_injective <| involution _, involution' := involution }
 
-instance : has_coe_to_fun (ring_invo R) (λ _, R → Rᵐᵒᵖ) := ⟨λ f, f.to_ring_equiv.to_fun⟩
+instance : CoeFun (RingInvo R) fun _ => R → Rᵐᵒᵖ :=
+  ⟨fun f => f.toRingEquiv.toFun⟩
 
 @[simp]
-lemma to_fun_eq_coe (f : ring_invo R) : f.to_fun = f := rfl
+theorem to_fun_eq_coe (f : RingInvo R) : f.toFun = f :=
+  rfl
 
 @[simp]
-lemma involution (f : ring_invo R) (x : R) : (f (f x).unop).unop = x :=
-f.involution' x
+theorem involution (f : RingInvo R) (x : R) : (f (f x).unop).unop = x :=
+  f.involution' x
 
-instance has_coe_to_ring_equiv : has_coe (ring_invo R) (R ≃+* Rᵐᵒᵖ) :=
-⟨ring_invo.to_ring_equiv⟩
+instance hasCoeToRingEquiv : Coe (RingInvo R) (R ≃+* Rᵐᵒᵖ) :=
+  ⟨RingInvo.toRingEquiv⟩
 
-@[norm_cast] lemma coe_ring_equiv (f : ring_invo R) (a : R) :
-  (f : R ≃+* Rᵐᵒᵖ) a = f a := rfl
+@[norm_cast]
+theorem coe_ring_equiv (f : RingInvo R) (a : R) : (f : R ≃+* Rᵐᵒᵖ) a = f a :=
+  rfl
 
-@[simp] lemma map_eq_zero_iff (f : ring_invo R) {x : R} : f x = 0 ↔ x = 0 :=
-f.to_ring_equiv.map_eq_zero_iff
+@[simp]
+theorem map_eq_zero_iff (f : RingInvo R) {x : R} : f x = 0 ↔ x = 0 :=
+  f.toRingEquiv.map_eq_zero_iff
 
-end ring_invo
+end RingInvo
 
-open ring_invo
+open RingInvo
 
-section comm_ring
-variables [comm_ring R]
+section CommRingₓ
+
+variable [CommRingₓ R]
 
 /-- The identity function of a `comm_ring` is a ring involution. -/
-protected def ring_invo.id : ring_invo R :=
-{ involution' := λ r, rfl,
-  ..(ring_equiv.to_opposite R) }
+protected def RingInvo.id : RingInvo R :=
+  { RingEquiv.toOpposite R with involution' := fun r => rfl }
 
-instance : inhabited (ring_invo R) := ⟨ring_invo.id _⟩
+instance : Inhabited (RingInvo R) :=
+  ⟨RingInvo.id _⟩
 
-end comm_ring
+end CommRingₓ
+

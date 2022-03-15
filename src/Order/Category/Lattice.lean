@@ -3,8 +3,8 @@ Copyright (c) 2022 Yaël Dillies. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yaël Dillies
 -/
-import order.category.PartialOrder
-import order.hom.lattice
+import Mathbin.Order.Category.PartialOrder
+import Mathbin.Order.Hom.Lattice
 
 /-!
 # The category of lattices
@@ -20,57 +20,77 @@ corresponds to `BoundedLattice` (not yet in mathlib).
 The free functor from `Lattice` to `BoundedLattice` is `X → with_top (with_bot X)`.
 -/
 
-universes u
 
-open category_theory
+universe u
+
+open CategoryTheory
 
 /-- The category of lattices. -/
-def Lattice := bundled lattice
+def Latticeₓ :=
+  Bundled Lattice
 
-namespace Lattice
+namespace Latticeₓ
 
-instance : has_coe_to_sort Lattice Type* := bundled.has_coe_to_sort
-instance (X : Lattice) : lattice X := X.str
+instance : CoeSort Latticeₓ (Type _) :=
+  bundled.has_coe_to_sort
+
+instance (X : Latticeₓ) : Lattice X :=
+  X.str
 
 /-- Construct a bundled `Lattice` from a `lattice`. -/
-def of (α : Type*) [lattice α] : Lattice := bundled.of α
+def of (α : Type _) [Lattice α] : Latticeₓ :=
+  Bundled.of α
 
-@[simp] lemma coe_of (α : Type*) [lattice α] : ↥(of α) = α := rfl
+@[simp]
+theorem coe_of (α : Type _) [Lattice α] : ↥(of α) = α :=
+  rfl
 
-instance : inhabited Lattice := ⟨of bool⟩
+instance : Inhabited Latticeₓ :=
+  ⟨of Bool⟩
 
-instance : bundled_hom @lattice_hom :=
-{ to_fun := λ _ _ _ _, coe_fn,
-  id := @lattice_hom.id,
-  comp := @lattice_hom.comp,
-  hom_ext := λ X Y _ _, by exactI fun_like.coe_injective }
+instance : BundledHom @LatticeHom where
+  toFun := fun _ _ _ _ => coeFn
+  id := @LatticeHom.id
+  comp := @LatticeHom.comp
+  hom_ext := fun X Y _ _ => FunLike.coe_injective
 
-instance : large_category.{u} Lattice := bundled_hom.category lattice_hom
-instance : concrete_category Lattice := bundled_hom.concrete_category lattice_hom
+instance : LargeCategory.{u} Latticeₓ :=
+  BundledHom.category LatticeHom
 
-instance has_forget_to_PartialOrder : has_forget₂ Lattice PartialOrder :=
-{ forget₂ := { obj := λ X, ⟨X⟩, map := λ X Y f, f },
-  forget_comp := rfl }
+instance : ConcreteCategory Latticeₓ :=
+  BundledHom.concreteCategory LatticeHom
+
+instance hasForgetToPartialOrder : HasForget₂ Latticeₓ PartialOrderₓₓ where
+  forget₂ := { obj := fun X => ⟨X⟩, map := fun X Y f => f }
+  forget_comp := rfl
 
 /-- Constructs an isomorphism of lattices from an order isomorphism between them. -/
-@[simps] def iso.mk {α β : Lattice.{u}} (e : α ≃o β) : α ≅ β :=
-{ hom := e,
-  inv := e.symm,
-  hom_inv_id' := by { ext, exact e.symm_apply_apply _ },
-  inv_hom_id' := by { ext, exact e.apply_symm_apply _ } }
+@[simps]
+def Iso.mk {α β : Latticeₓ.{u}} (e : α ≃o β) : α ≅ β where
+  Hom := e
+  inv := e.symm
+  hom_inv_id' := by
+    ext
+    exact e.symm_apply_apply _
+  inv_hom_id' := by
+    ext
+    exact e.apply_symm_apply _
 
 /-- `order_dual` as a functor. -/
-@[simps] def dual : Lattice ⥤ Lattice :=
-{ obj := λ X, of (order_dual X), map := λ X Y, lattice_hom.dual }
+@[simps]
+def dual : Latticeₓ ⥤ Latticeₓ where
+  obj := fun X => of (OrderDual X)
+  map := fun X Y => LatticeHom.dual
 
 /-- The equivalence between `Lattice` and itself induced by `order_dual` both ways. -/
-@[simps functor inverse] def dual_equiv : Lattice ≌ Lattice :=
-equivalence.mk dual dual
-  (nat_iso.of_components (λ X, iso.mk $ order_iso.dual_dual X) $ λ X Y f, rfl)
-  (nat_iso.of_components (λ X, iso.mk $ order_iso.dual_dual X) $ λ X Y f, rfl)
+@[simps Functor inverse]
+def dualEquiv : Latticeₓ ≌ Latticeₓ :=
+  Equivalence.mk dual dual ((NatIso.ofComponents fun X => iso.mk <| OrderIso.dualDual X) fun X Y f => rfl)
+    ((NatIso.ofComponents fun X => iso.mk <| OrderIso.dualDual X) fun X Y f => rfl)
 
-end Lattice
+end Latticeₓ
 
-lemma Lattice_dual_comp_forget_to_PartialOrder :
-  Lattice.dual ⋙ forget₂ Lattice PartialOrder =
-    forget₂ Lattice PartialOrder ⋙ PartialOrder.dual := rfl
+theorem Lattice_dual_comp_forget_to_PartialOrder :
+    Latticeₓ.dual ⋙ forget₂ Latticeₓ PartialOrderₓₓ = forget₂ Latticeₓ PartialOrderₓₓ ⋙ PartialOrderₓₓ.dual :=
+  rfl
+

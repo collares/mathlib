@@ -3,11 +3,11 @@ Copyright (c) 2021 Julian Kuelshammer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Julian Kuelshammer
 -/
-import data.zmod.basic
-import data.nat.basic
-import tactic.interval_cases
-import group_theory.specific_groups.dihedral
-import group_theory.specific_groups.cyclic
+import Mathbin.Data.Zmod.Basic
+import Mathbin.Data.Nat.Basic
+import Mathbin.Tactic.IntervalCases
+import Mathbin.GroupTheory.SpecificGroups.Dihedral
+import Mathbin.GroupTheory.SpecificGroups.Cyclic
 
 /-!
 # Quaternion Groups
@@ -43,247 +43,259 @@ Show that `quaternion_group 2 ≃* (quaternion ℤ)ˣ`.
 
 -/
 
-/--
-The (generalised) quaternion group `quaternion_group n` of order `4n`. It can be defined by the
+
+/-- The (generalised) quaternion group `quaternion_group n` of order `4n`. It can be defined by the
 presentation $\langle a, x | a^{2n} = 1, x^2 = a^n, x^{-1}ax=a^{-1}\rangle$. We write `a i` for
 $a^i$ and `xa i` for $x * a^i$.
 -/
-@[derive decidable_eq]
-inductive quaternion_group (n : ℕ) : Type
-| a : zmod (2 * n) → quaternion_group
-| xa : zmod (2 * n) → quaternion_group
+inductive QuaternionGroup (n : ℕ) : Type
+  | a : Zmod (2 * n) → QuaternionGroup
+  | xa : Zmod (2 * n) → QuaternionGroup
+  deriving DecidableEq
 
-namespace quaternion_group
+namespace QuaternionGroup
 
-variables {n : ℕ}
+variable {n : ℕ}
 
-/--
-Multiplication of the dihedral group.
+/-- Multiplication of the dihedral group.
 -/
-private def mul : quaternion_group n → quaternion_group n → quaternion_group n
-| (a i) (a j) := a (i + j)
-| (a i) (xa j) := xa (j - i)
-| (xa i) (a j) := xa (i + j)
-| (xa i) (xa j) := a (n + j - i)
+private def mul : QuaternionGroup n → QuaternionGroup n → QuaternionGroup n
+  | a i, a j => a (i + j)
+  | a i, xa j => xa (j - i)
+  | xa i, a j => xa (i + j)
+  | xa i, xa j => a (n + j - i)
 
-/--
-The identity `1` is given by `aⁱ`.
+/-- The identity `1` is given by `aⁱ`.
 -/
-private def one : quaternion_group n := a 0
+private def one : QuaternionGroup n :=
+  a 0
 
-instance : inhabited (quaternion_group n) := ⟨one⟩
+instance : Inhabited (QuaternionGroup n) :=
+  ⟨one⟩
 
-/--
-The inverse of an element of the quaternion group.
+/-- The inverse of an element of the quaternion group.
 -/
-private def inv : quaternion_group n → quaternion_group n
-| (a i) := a (-i)
-| (xa i) := xa (n + i)
+private def inv : QuaternionGroup n → QuaternionGroup n
+  | a i => a (-i)
+  | xa i => xa (n + i)
 
-/--
-The group structure on `quaternion_group n`.
+/-- The group structure on `quaternion_group n`.
 -/
-instance : group (quaternion_group n) :=
-{ mul := mul,
-  mul_assoc :=
-    begin
-      rintros (i | i) (j | j) (k | k);
-      simp only [mul];
-      abel,
-      simp only [neg_mul, one_mul, int.cast_one, zsmul_eq_mul, int.cast_neg,
-                 add_right_inj],
-      calc -(n : zmod (2 * n)) = 0 - n : by rw zero_sub
-        ... = 2 * n - n : by { norm_cast, simp, }
-        ... = n : by ring
-    end,
-  one := one,
-  one_mul :=
-    begin
-      rintros (i | i),
-      { exact congr_arg a (zero_add i) },
-      { exact congr_arg xa (sub_zero i) },
-    end,
-  mul_one := begin
-      rintros (i | i),
-      { exact congr_arg a (add_zero i) },
-      { exact congr_arg xa (add_zero i) },
-    end,
-  inv := inv,
-  mul_left_inv := begin
-      rintros (i | i),
-      { exact congr_arg a (neg_add_self i) },
-      { exact congr_arg a (sub_self (n + i)) },
-    end }
+instance : Groupₓ (QuaternionGroup n) where
+  mul := mul
+  mul_assoc := by
+    rintro (i | i) (j | j) (k | k) <;> simp only [mul] <;> abel
+    simp only [neg_mul, one_mulₓ, Int.cast_oneₓ, zsmul_eq_mul, Int.cast_neg, add_right_injₓ]
+    calc -(n : Zmod (2 * n)) = 0 - n := by
+        rw [zero_sub]_ = 2 * n - n := by
+        norm_cast
+        simp _ = n := by
+        ring
+  one := one
+  one_mul := by
+    rintro (i | i)
+    · exact congr_argₓ a (zero_addₓ i)
+      
+    · exact congr_argₓ xa (sub_zero i)
+      
+  mul_one := by
+    rintro (i | i)
+    · exact congr_argₓ a (add_zeroₓ i)
+      
+    · exact congr_argₓ xa (add_zeroₓ i)
+      
+  inv := inv
+  mul_left_inv := by
+    rintro (i | i)
+    · exact congr_argₓ a (neg_add_selfₓ i)
+      
+    · exact congr_argₓ a (sub_self (n + i))
+      
 
 variable {n}
 
-@[simp] lemma a_mul_a (i j : zmod (2 * n)) : a i * a j = a (i + j) := rfl
-@[simp] lemma a_mul_xa (i j : zmod (2 * n)) : a i * xa j = xa (j - i) := rfl
-@[simp] lemma xa_mul_a (i j : zmod (2 * n)) : xa i * a j = xa (i + j) := rfl
-@[simp] lemma xa_mul_xa (i j : zmod (2 * n)) : xa i * xa j = a (n + j - i) := rfl
+@[simp]
+theorem a_mul_a (i j : Zmod (2 * n)) : a i * a j = a (i + j) :=
+  rfl
 
-lemma one_def : (1 : quaternion_group n) = a 0 := rfl
+@[simp]
+theorem a_mul_xa (i j : Zmod (2 * n)) : a i * xa j = xa (j - i) :=
+  rfl
 
-private def fintype_helper : (zmod (2 * n) ⊕ zmod (2 * n)) ≃ quaternion_group n :=
-{ inv_fun := λ i, match i with
-                 | (a j) := sum.inl j
-                 | (xa j) := sum.inr j
-                 end,
-  to_fun := λ i, match i with
-                 | (sum.inl j) := a j
-                 | (sum.inr j) := xa j
-                 end,
-  left_inv := by rintro (x | x); refl,
-  right_inv := by rintro (x | x); refl }
+@[simp]
+theorem xa_mul_a (i j : Zmod (2 * n)) : xa i * a j = xa (i + j) :=
+  rfl
+
+@[simp]
+theorem xa_mul_xa (i j : Zmod (2 * n)) : xa i * xa j = a (n + j - i) :=
+  rfl
+
+theorem one_def : (1 : QuaternionGroup n) = a 0 :=
+  rfl
+
+private def fintype_helper : Sum (Zmod (2 * n)) (Zmod (2 * n)) ≃ QuaternionGroup n where
+  invFun := fun i =>
+    match i with
+    | a j => Sum.inl j
+    | xa j => Sum.inr j
+  toFun := fun i =>
+    match i with
+    | Sum.inl j => a j
+    | Sum.inr j => xa j
+  left_inv := by
+    rintro (x | x) <;> rfl
+  right_inv := by
+    rintro (x | x) <;> rfl
 
 /-- The special case that more or less by definition `quaternion_group 0` is isomorphic to the
 infinite dihedral group. -/
-def quaternion_group_zero_equiv_dihedral_group_zero : quaternion_group 0 ≃* dihedral_group 0 :=
-{ to_fun := λ i, quaternion_group.rec_on i dihedral_group.r dihedral_group.sr,
-  inv_fun := λ i, match i with
-                | (dihedral_group.r j) := a j
-                | (dihedral_group.sr j) := xa j
-                end,
-  left_inv := by rintro (k | k); refl,
-  right_inv := by rintro (k | k); refl,
-  map_mul' := by { rintros (k | k) (l | l); { dsimp, simp, }, } }
+def quaternionGroupZeroEquivDihedralGroupZero : QuaternionGroup 0 ≃* DihedralGroup 0 where
+  toFun := fun i => QuaternionGroup.recOn i DihedralGroup.r DihedralGroup.sr
+  invFun := fun i =>
+    match i with
+    | DihedralGroup.r j => a j
+    | DihedralGroup.sr j => xa j
+  left_inv := by
+    rintro (k | k) <;> rfl
+  right_inv := by
+    rintro (k | k) <;> rfl
+  map_mul' := by
+    rintro (k | k) (l | l) <;>
+      · dsimp
+        simp
+        
 
 /-- Some of the lemmas on `zmod m` require that `m` is positive, as `m = 2 * n` is the case relevant
 in this file but we don't want to write `[fact (0 < 2 * n)]` we make this lemma a local instance. -/
-private lemma succ_mul_pos_fact {m : ℕ} [hn : fact (0 < n)] : fact (0 < (nat.succ m) * n) :=
-⟨nat.succ_mul_pos m hn.1⟩
+private theorem succ_mul_pos_fact {m : ℕ} [hn : Fact (0 < n)] : Fact (0 < Nat.succ m * n) :=
+  ⟨Nat.succ_mul_pos m hn.1⟩
 
-local attribute [instance] succ_mul_pos_fact
+attribute [local instance] succ_mul_pos_fact
 
-/--
-If `0 < n`, then `quaternion_group n` is a finite group.
+/-- If `0 < n`, then `quaternion_group n` is a finite group.
 -/
-instance [fact (0 < n)] : fintype (quaternion_group n) := fintype.of_equiv _ fintype_helper
+instance [Fact (0 < n)] : Fintype (QuaternionGroup n) :=
+  Fintype.ofEquiv _ fintypeHelper
 
-instance : nontrivial (quaternion_group n) := ⟨⟨a 0, xa 0, dec_trivial⟩⟩
+instance : Nontrivial (QuaternionGroup n) :=
+  ⟨⟨a 0, xa 0, by
+      decide⟩⟩
 
-/--
-If `0 < n`, then `quaternion_group n` has `4n` elements.
+/-- If `0 < n`, then `quaternion_group n` has `4n` elements.
 -/
-lemma card [fact (0 < n)] : fintype.card (quaternion_group n) = 4 * n :=
-begin
-  rw [← fintype.card_eq.mpr ⟨fintype_helper⟩, fintype.card_sum, zmod.card, two_mul],
+theorem card [Fact (0 < n)] : Fintype.card (QuaternionGroup n) = 4 * n := by
+  rw [← fintype.card_eq.mpr ⟨fintype_helper⟩, Fintype.card_sum, Zmod.card, two_mul]
   ring
-end
 
-@[simp] lemma a_one_pow (k : ℕ) : (a 1 : quaternion_group n) ^ k = a k :=
-begin
-  induction k with k IH,
-  { refl },
-  { rw [pow_succ, IH, a_mul_a],
-    congr' 1,
-    norm_cast,
-    rw nat.one_add }
-end
+@[simp]
+theorem a_one_pow (k : ℕ) : (a 1 : QuaternionGroup n) ^ k = a k := by
+  induction' k with k IH
+  · rfl
+    
+  · rw [pow_succₓ, IH, a_mul_a]
+    congr 1
+    norm_cast
+    rw [Nat.one_add]
+    
 
-@[simp] lemma a_one_pow_n : (a 1 : quaternion_group n)^(2 * n) = 1 :=
-begin
-  cases n,
-  { simp_rw [mul_zero, pow_zero] },
-  { rw [a_one_pow, one_def],
-    congr' 1,
-    exact zmod.nat_cast_self _ }
-end
+@[simp]
+theorem a_one_pow_n : (a 1 : QuaternionGroup n) ^ (2 * n) = 1 := by
+  cases n
+  · simp_rw [mul_zero, pow_zeroₓ]
+    
+  · rw [a_one_pow, one_def]
+    congr 1
+    exact Zmod.nat_cast_self _
+    
 
-@[simp] lemma xa_sq (i : zmod (2 * n)) : xa i ^ 2 = a n :=
-begin
+@[simp]
+theorem xa_sq (i : Zmod (2 * n)) : xa i ^ 2 = a n := by
   simp [sq]
-end
 
-@[simp] lemma xa_pow_four (i : zmod (2 * n)) : xa i ^ 4 = 1 :=
-begin
-  simp only [pow_succ, sq, xa_mul_xa, xa_mul_a, add_sub_cancel, add_sub_assoc, add_sub_cancel',
-             sub_self, add_zero],
-  norm_cast,
-  rw ← two_mul,
-  simp [one_def],
-end
+@[simp]
+theorem xa_pow_four (i : Zmod (2 * n)) : xa i ^ 4 = 1 := by
+  simp only [pow_succₓ, sq, xa_mul_xa, xa_mul_a, add_sub_cancel, add_sub_assoc, add_sub_cancel', sub_self, add_zeroₓ]
+  norm_cast
+  rw [← two_mul]
+  simp [one_def]
 
-/--
-If `0 < n`, then `xa i` has order 4.
+/-- If `0 < n`, then `xa i` has order 4.
 -/
-@[simp] lemma order_of_xa [hpos : fact (0 < n)] (i : zmod (2 * n)) : order_of (xa i) = 4 :=
-begin
-  change _ = 2^2,
-  haveI : fact(nat.prime 2) := fact.mk (nat.prime_two),
-  apply order_of_eq_prime_pow,
-  { intro h,
-    simp only [pow_one, xa_sq] at h,
-    injection h with h',
-    apply_fun zmod.val at h',
-    apply_fun ( / n) at h',
-    simp only [zmod.val_nat_cast, zmod.val_zero, nat.zero_div, nat.mod_mul_left_div_self,
-             nat.div_self hpos.1] at h',
-    norm_num at h' },
-  { norm_num }
-end
+@[simp]
+theorem order_of_xa [hpos : Fact (0 < n)] (i : Zmod (2 * n)) : orderOf (xa i) = 4 := by
+  change _ = 2 ^ 2
+  have : Fact (Nat.Prime 2) := Fact.mk Nat.prime_two
+  apply order_of_eq_prime_pow
+  · intro h
+    simp only [pow_oneₓ, xa_sq] at h
+    injection h with h'
+    apply_fun Zmod.val  at h'
+    apply_fun (· / n)  at h'
+    simp only [Zmod.val_nat_cast, Zmod.val_zero, Nat.zero_divₓ, Nat.mod_mul_left_div_self, Nat.div_selfₓ hpos.1] at h'
+    norm_num  at h'
+    
+  · norm_num
+    
 
 /-- In the special case `n = 1`, `quaternion 1` is a cyclic group (of order `4`). -/
-lemma quaternion_group_one_is_cyclic : is_cyclic (quaternion_group 1) :=
-begin
-  apply is_cyclic_of_order_of_eq_card,
-  rw [card, mul_one],
+theorem quaternion_group_one_is_cyclic : IsCyclic (QuaternionGroup 1) := by
+  apply is_cyclic_of_order_of_eq_card
+  rw [card, mul_oneₓ]
   exact order_of_xa 0
-end
 
-/--
-If `0 < n`, then `a 1` has order `2 * n`.
+/-- If `0 < n`, then `a 1` has order `2 * n`.
 -/
-@[simp] lemma order_of_a_one : order_of (a 1 : quaternion_group n) = 2 * n :=
-begin
-  rcases n.eq_zero_or_pos with rfl | hn,
-  { simp_rw [mul_zero, order_of_eq_zero_iff'],
-    intros n hn,
-    rw [one_def, a_one_pow],
-    apply mt a.inj,
-    simpa using hn.ne' },
-  haveI := fact.mk hn,
-  apply (nat.le_of_dvd (nat.succ_mul_pos _ hn)
-                       (order_of_dvd_of_pow_eq_one (@a_one_pow_n n))).lt_or_eq.resolve_left,
-  intro h,
-  have h1 : (a 1 : quaternion_group n)^(order_of (a 1)) = 1 := pow_order_of_eq_one _,
-  rw a_one_pow at h1,
-  injection h1 with h2,
-  rw [← zmod.val_eq_zero, zmod.val_nat_cast, nat.mod_eq_of_lt h] at h2,
-  exact absurd h2.symm (order_of_pos _).ne
-end
+@[simp]
+theorem order_of_a_one : orderOf (a 1 : QuaternionGroup n) = 2 * n := by
+  rcases n.eq_zero_or_pos with (rfl | hn)
+  · simp_rw [mul_zero, order_of_eq_zero_iff']
+    intro n hn
+    rw [one_def, a_one_pow]
+    apply mt a.inj
+    simpa using hn.ne'
+    
+  have := Fact.mk hn
+  apply (Nat.le_of_dvdₓ (Nat.succ_mul_pos _ hn) (order_of_dvd_of_pow_eq_one (@a_one_pow_n n))).lt_or_eq.resolve_left
+  intro h
+  have h1 : (a 1 : QuaternionGroup n) ^ orderOf (a 1) = 1 := pow_order_of_eq_one _
+  rw [a_one_pow] at h1
+  injection h1 with h2
+  rw [← Zmod.val_eq_zero, Zmod.val_nat_cast, Nat.mod_eq_of_ltₓ h] at h2
+  exact absurd h2.symm (order_of_pos _).Ne
 
-/--
-If `0 < n`, then `a i` has order `(2 * n) / gcd (2 * n) i`.
+/-- If `0 < n`, then `a i` has order `(2 * n) / gcd (2 * n) i`.
 -/
-lemma order_of_a [fact (0 < n)] (i : zmod (2 * n)) :
-  order_of (a i) = (2 * n) / nat.gcd (2 * n) i.val :=
-begin
-  conv_lhs { rw ← zmod.nat_cast_zmod_val i },
+theorem order_of_a [Fact (0 < n)] (i : Zmod (2 * n)) : orderOf (a i) = 2 * n / Nat.gcdₓ (2 * n) i.val := by
+  conv_lhs => rw [← Zmod.nat_cast_zmod_val i]
   rw [← a_one_pow, order_of_pow, order_of_a_one]
-end
 
-lemma exponent : monoid.exponent (quaternion_group n) = 2 * lcm n 2 :=
-begin
-  rw [←normalize_eq 2, ←lcm_mul_left, normalize_eq],
-  norm_num,
-  rcases n.eq_zero_or_pos with rfl | hn,
-  { simp only [lcm_zero_left, mul_zero],
-    exact monoid.exponent_eq_zero_of_order_zero order_of_a_one },
-  haveI := fact.mk hn,
-  apply nat.dvd_antisymm,
-  { apply monoid.exponent_dvd_of_forall_pow_eq_one,
-    rintro (m | m),
-    { rw [←order_of_dvd_iff_pow_eq_one, order_of_a],
-      refine nat.dvd_trans ⟨gcd (2 * n) m.val, _⟩ (dvd_lcm_left (2 * n) 4),
-      exact (nat.div_mul_cancel (nat.gcd_dvd_left (2 * n) (m.val))).symm },
-    { rw [←order_of_dvd_iff_pow_eq_one, order_of_xa],
-      exact dvd_lcm_right (2 * n) 4 } },
-  { apply lcm_dvd,
-    { convert monoid.order_dvd_exponent (a 1),
-      exact order_of_a_one.symm },
-    { convert monoid.order_dvd_exponent (xa 0),
-      exact (order_of_xa 0).symm } }
-end
+theorem exponent : Monoidₓ.exponent (QuaternionGroup n) = 2 * lcm n 2 := by
+  rw [← normalize_eq 2, ← lcm_mul_left, normalize_eq]
+  norm_num
+  rcases n.eq_zero_or_pos with (rfl | hn)
+  · simp only [lcm_zero_left, mul_zero]
+    exact Monoidₓ.exponent_eq_zero_of_order_zero order_of_a_one
+    
+  have := Fact.mk hn
+  apply Nat.dvd_antisymm
+  · apply Monoidₓ.exponent_dvd_of_forall_pow_eq_one
+    rintro (m | m)
+    · rw [← order_of_dvd_iff_pow_eq_one, order_of_a]
+      refine' Nat.dvd_trans ⟨gcd (2 * n) m.val, _⟩ (dvd_lcm_left (2 * n) 4)
+      exact (Nat.div_mul_cancelₓ (Nat.gcd_dvd_leftₓ (2 * n) m.val)).symm
+      
+    · rw [← order_of_dvd_iff_pow_eq_one, order_of_xa]
+      exact dvd_lcm_right (2 * n) 4
+      
+    
+  · apply lcm_dvd
+    · convert Monoidₓ.order_dvd_exponent (a 1)
+      exact order_of_a_one.symm
+      
+    · convert Monoidₓ.order_dvd_exponent (xa 0)
+      exact (order_of_xa 0).symm
+      
+    
 
-end quaternion_group
+end QuaternionGroup
+

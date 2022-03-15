@@ -3,8 +3,8 @@ Copyright (c) 2021 Eric Rodriguez. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Eric Rodriguez
 -/
-import algebra.algebra.basic
-import algebra.char_p.basic
+import Mathbin.Algebra.Algebra.Basic
+import Mathbin.Algebra.CharP.Basic
 
 /-!
 # `ne_zero` typeclass
@@ -17,70 +17,89 @@ We create a typeclass `ne_zero n` which carries around the fact that `(n : R) �
 
 -/
 
+
 /-- A type-class version of `n ≠ 0`.  -/
-class ne_zero {R} [has_zero R] (n : R) : Prop := (out : n ≠ 0)
+class NeZero {R} [Zero R] (n : R) : Prop where
+  out : n ≠ 0
 
-lemma ne_zero.ne {R} [has_zero R] (n : R) [h : ne_zero n] : n ≠ 0 := h.out
+theorem NeZero.ne {R} [Zero R] (n : R) [h : NeZero n] : n ≠ 0 :=
+  h.out
 
-lemma ne_zero.ne' (n : ℕ) (R) [has_zero R] [has_one R] [has_add R] [h : ne_zero (n : R)] :
-  (n : R) ≠ 0 := h.out
+theorem NeZero.ne' (n : ℕ) R [Zero R] [One R] [Add R] [h : NeZero (n : R)] : (n : R) ≠ 0 :=
+  h.out
 
-lemma ne_zero_iff {R : Type*} [has_zero R] {n : R} : ne_zero n ↔ n ≠ 0 :=
-⟨λ h, h.out, ne_zero.mk⟩
+theorem ne_zero_iff {R : Type _} [Zero R] {n : R} : NeZero n ↔ n ≠ 0 :=
+  ⟨fun h => h.out, NeZero.mk⟩
 
-lemma not_ne_zero {R : Type*} [has_zero R] {n : R} : ¬ ne_zero n ↔ n = 0 :=
-by simp [ne_zero_iff]
+theorem not_ne_zero {R : Type _} [Zero R] {n : R} : ¬NeZero n ↔ n = 0 := by
+  simp [ne_zero_iff]
 
-namespace ne_zero
+namespace NeZero
 
-variables {R S M F : Type*} {r : R} {x y : M} {n p : ℕ} {a : ℕ+}
+variable {R S M F : Type _} {r : R} {x y : M} {n p : ℕ} {a : ℕ+}
 
-instance pnat : ne_zero (a : ℕ) := ⟨a.ne_zero⟩
-instance succ : ne_zero (n + 1) := ⟨n.succ_ne_zero⟩
+instance pnat : NeZero (a : ℕ) :=
+  ⟨a.ne_zero⟩
 
-lemma of_pos [preorder M] [has_zero M] (h : 0 < x) : ne_zero x := ⟨h.ne'⟩
-lemma of_gt  [canonically_ordered_add_monoid M] (h : x < y) : ne_zero y := of_pos $ pos_of_gt h
+instance succ : NeZero (n + 1) :=
+  ⟨n.succ_ne_zero⟩
 
-instance char_zero [ne_zero n] [add_monoid M] [has_one M] [char_zero M] : ne_zero (n : M) :=
-⟨nat.cast_ne_zero.mpr $ ne_zero.ne n⟩
+theorem of_pos [Preorderₓ M] [Zero M] (h : 0 < x) : NeZero x :=
+  ⟨h.ne'⟩
 
-@[priority 100] instance invertible [monoid_with_zero M] [nontrivial M] [invertible x] :
-  ne_zero x := ⟨nonzero_of_invertible x⟩
+theorem of_gt [CanonicallyOrderedAddMonoid M] (h : x < y) : NeZero y :=
+  of_pos <| pos_of_gt h
 
-instance coe_trans {r : R} [has_zero M] [has_coe R S] [has_coe_t S M] [h : ne_zero (r : M)] :
-  ne_zero ((r : S) : M) := ⟨h.out⟩
+instance char_zero [NeZero n] [AddMonoidₓ M] [One M] [CharZero M] : NeZero (n : M) :=
+  ⟨Nat.cast_ne_zero.mpr <| NeZero.ne n⟩
 
-lemma trans {r : R} [has_zero M] [has_coe R S] [has_coe_t S M] (h : ne_zero ((r : S) : M)) :
-  ne_zero (r : M) := ⟨h.out⟩
+instance (priority := 100) invertible [MonoidWithZeroₓ M] [Nontrivial M] [Invertible x] : NeZero x :=
+  ⟨nonzero_of_invertible x⟩
 
-lemma of_map [has_zero R] [has_zero M] [zero_hom_class F R M] (f : F) [ne_zero (f r)] :
-  ne_zero r := ⟨λ h, ne (f r) $ by convert map_zero f⟩
+instance coe_trans {r : R} [Zero M] [Coe R S] [CoeTₓ S M] [h : NeZero (r : M)] : NeZero ((r : S) : M) :=
+  ⟨h.out⟩
 
-lemma of_injective {r : R} [has_zero R] [h : ne_zero r] [has_zero M] [zero_hom_class F R M]
-  {f : F} (hf : function.injective f) : ne_zero (f r) :=
-⟨by { rw ←map_zero f, exact hf.ne (ne r) }⟩
+theorem trans {r : R} [Zero M] [Coe R S] [CoeTₓ S M] (h : NeZero ((r : S) : M)) : NeZero (r : M) :=
+  ⟨h.out⟩
 
-lemma nat_of_injective [non_assoc_semiring M] [non_assoc_semiring R] [h : ne_zero (n : R)]
-  [ring_hom_class F R M] {f : F} (hf : function.injective f) : ne_zero (n : M) :=
- ⟨λ h, (ne_zero.ne' n R) $ hf $ by simpa⟩
+theorem of_map [Zero R] [Zero M] [ZeroHomClass F R M] (f : F) [NeZero (f r)] : NeZero r :=
+  ⟨fun h =>
+    ne (f r) <| by
+      convert map_zero f⟩
 
-variables (R M)
+theorem of_injective {r : R} [Zero R] [h : NeZero r] [Zero M] [ZeroHomClass F R M] {f : F} (hf : Function.Injective f) :
+    NeZero (f r) :=
+  ⟨by
+    rw [← map_zero f]
+    exact hf.ne (Ne r)⟩
 
-lemma of_not_dvd [add_monoid M] [has_one M] [char_p M p] (h : ¬ p ∣ n) : ne_zero (n : M) :=
-⟨(not_iff_not.mpr $ char_p.cast_eq_zero_iff M p n).mpr h⟩
+theorem nat_of_injective [NonAssocSemiringₓ M] [NonAssocSemiringₓ R] [h : NeZero (n : R)] [RingHomClass F R M] {f : F}
+    (hf : Function.Injective f) : NeZero (n : M) :=
+  ⟨fun h =>
+    NeZero.ne' n R <|
+      hf <| by
+        simpa⟩
 
-lemma of_no_zero_smul_divisors (n : ℕ) [comm_ring R] [ne_zero (n : R)] [ring M] [nontrivial M]
-  [algebra R M] [no_zero_smul_divisors R M] : ne_zero (n : M) :=
-nat_of_injective $ no_zero_smul_divisors.algebra_map_injective R M
+variable (R M)
 
-lemma of_ne_zero_coe [has_zero R] [has_one R] [has_add R] [h : ne_zero (n : R)] : ne_zero n :=
-⟨by {casesI h, rintro rfl, contradiction}⟩
+theorem of_not_dvd [AddMonoidₓ M] [One M] [CharP M p] (h : ¬p ∣ n) : NeZero (n : M) :=
+  ⟨(not_iff_not.mpr <| CharP.cast_eq_zero_iff M p n).mpr h⟩
 
-lemma not_char_dvd [add_monoid R] [has_one R] (p : ℕ) [char_p R p] (k : ℕ) [h : ne_zero (k : R)] :
-  ¬ p ∣ k :=
-by rwa [←not_iff_not.mpr $ char_p.cast_eq_zero_iff R p k, ←ne.def, ←ne_zero_iff]
+theorem of_no_zero_smul_divisors (n : ℕ) [CommRingₓ R] [NeZero (n : R)] [Ringₓ M] [Nontrivial M] [Algebra R M]
+    [NoZeroSmulDivisors R M] : NeZero (n : M) :=
+  nat_of_injective <| NoZeroSmulDivisors.algebra_map_injective R M
 
-lemma pos_of_ne_zero_coe [has_zero R] [has_one R] [has_add R] [ne_zero (n : R)] : 0 < n :=
-(ne_zero.of_ne_zero_coe R).out.bot_lt
+theorem of_ne_zero_coe [Zero R] [One R] [Add R] [h : NeZero (n : R)] : NeZero n :=
+  ⟨by
+    cases' h
+    rintro rfl
+    contradiction⟩
 
-end ne_zero
+theorem not_char_dvd [AddMonoidₓ R] [One R] (p : ℕ) [CharP R p] (k : ℕ) [h : NeZero (k : R)] : ¬p ∣ k := by
+  rwa [← not_iff_not.mpr <| CharP.cast_eq_zero_iff R p k, ← Ne.def, ← ne_zero_iff]
+
+theorem pos_of_ne_zero_coe [Zero R] [One R] [Add R] [NeZero (n : R)] : 0 < n :=
+  (NeZero.of_ne_zero_coe R).out.bot_lt
+
+end NeZero
+

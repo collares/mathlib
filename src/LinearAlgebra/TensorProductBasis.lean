@@ -3,8 +3,8 @@ Copyright (c) 2021 Jakob von Raumer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jakob von Raumer
 -/
-import linear_algebra.direct_sum.finsupp
-import linear_algebra.finsupp_vector_space
+import Mathbin.LinearAlgebra.DirectSum.Finsupp
+import Mathbin.LinearAlgebra.FinsuppVectorSpace
 
 /-!
 # Bases and dimensionality of tensor products of modules
@@ -13,31 +13,36 @@ These can not go into `linear_algebra.tensor_product` since they depend on
 `linear_algebra.finsupp_vector_space` which in turn imports `linear_algebra.tensor_product`.
 
 -/
-noncomputable theory
-open set linear_map submodule
 
-section comm_ring
-variables {R : Type*} {M : Type*} {N : Type*} {ι : Type*} {κ : Type*}
-variables [comm_ring R] [add_comm_group M] [module R M] [add_comm_group N] [module R N]
+
+noncomputable section
+
+open Set LinearMap Submodule
+
+section CommRingₓ
+
+variable {R : Type _} {M : Type _} {N : Type _} {ι : Type _} {κ : Type _}
+
+variable [CommRingₓ R] [AddCommGroupₓ M] [Module R M] [AddCommGroupₓ N] [Module R N]
 
 /-- If b : ι → M and c : κ → N are bases then so is λ i, b i.1 ⊗ₜ c i.2 : ι × κ → M ⊗ N. -/
-def basis.tensor_product (b : basis ι R M) (c : basis κ R N) :
-  basis (ι × κ) R (tensor_product R M N) :=
-finsupp.basis_single_one.map
-  ((tensor_product.congr b.repr c.repr).trans $
-    (finsupp_tensor_finsupp R _ _ _ _).trans $
-    finsupp.lcongr (equiv.refl _) (tensor_product.lid R R)).symm
+def Basis.tensorProduct (b : Basis ι R M) (c : Basis κ R N) : Basis (ι × κ) R (TensorProduct R M N) :=
+  Finsupp.basisSingleOne.map
+    ((TensorProduct.congr b.repr c.repr).trans <|
+        (finsuppTensorFinsupp R _ _ _ _).trans <| Finsupp.lcongr (Equivₓ.refl _) (TensorProduct.lid R R)).symm
 
-end comm_ring
+end CommRingₓ
 
-section field
-variables {K : Type*} (V W : Type*)
-variables [field K] [add_comm_group V] [module K V] [add_comm_group W] [module K W]
+section Field
+
+variable {K : Type _} (V W : Type _)
+
+variable [Field K] [AddCommGroupₓ V] [Module K V] [AddCommGroupₓ W] [Module K W]
 
 /-- If `V` and `W` are finite dimensional `K` vector spaces, so is `V ⊗ W`. -/
-instance finite_dimensional_tensor_product [finite_dimensional K V] [finite_dimensional K W] :
-  finite_dimensional K (tensor_product K V W) :=
-finite_dimensional.of_fintype_basis
-  (basis.tensor_product (basis.of_vector_space K V) (basis.of_vector_space K W))
+instance finite_dimensional_tensor_product [FiniteDimensional K V] [FiniteDimensional K W] :
+    FiniteDimensional K (TensorProduct K V W) :=
+  FiniteDimensional.of_fintype_basis (Basis.tensorProduct (Basis.ofVectorSpace K V) (Basis.ofVectorSpace K W))
 
-end field
+end Field
+

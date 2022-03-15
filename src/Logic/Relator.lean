@@ -5,11 +5,11 @@ Authors: Johannes Hölzl
 
 Relator for functions, pairs, sums, and lists.
 -/
+import Mathbin.Logic.Basic
 
-import logic.basic
+namespace Relator
 
-namespace relator
-universes u₁ u₂ v₁ v₂
+universe u₁ u₂ v₁ v₂
 
 /- TODO(johoelzl):
  * should we introduce relators of datatypes as recursive function or as inductive
@@ -18,83 +18,92 @@ predicate? For now we stick to the recursor approach.
  * proof composition and identity laws
  * implement method to derive relators from datatype
 -/
-
 section
-variables {α : Sort u₁} {β : Sort u₂} {γ : Sort v₁} {δ : Sort v₂}
-variables (R : α → β → Prop) (S : γ → δ → Prop)
 
-def lift_fun (f : α → γ) (g : β → δ) : Prop :=
-∀⦃a b⦄, R a b → S (f a) (g b)
+variable {α : Sort u₁} {β : Sort u₂} {γ : Sort v₁} {δ : Sort v₂}
 
-infixr ⇒ := lift_fun
+variable (R : α → β → Prop) (S : γ → δ → Prop)
+
+def LiftFun (f : α → γ) (g : β → δ) : Prop :=
+  ∀ ⦃a b⦄, R a b → S (f a) (g b)
+
+-- mathport name: «expr ⇒ »
+infixr:40 "⇒" => LiftFun
 
 end
 
 section
-variables {α : Type u₁} {β : Type u₂} (R : α → β → Prop)
 
-def right_total : Prop := ∀ b, ∃ a, R a b
-def left_total : Prop := ∀ a, ∃ b, R a b
-def bi_total : Prop := left_total R ∧ right_total R
+variable {α : Type u₁} {β : Type u₂} (R : α → β → Prop)
 
-def left_unique : Prop := ∀ ⦃a b c⦄, R a c → R b c → a = b
-def right_unique : Prop := ∀ ⦃a b c⦄, R a b → R a c → b = c
-def bi_unique : Prop := left_unique R ∧ right_unique R
+def RightTotal : Prop :=
+  ∀ b, ∃ a, R a b
+
+def LeftTotal : Prop :=
+  ∀ a, ∃ b, R a b
+
+def BiTotal : Prop :=
+  LeftTotal R ∧ RightTotal R
+
+def LeftUnique : Prop :=
+  ∀ ⦃a b c⦄, R a c → R b c → a = b
+
+def RightUnique : Prop :=
+  ∀ ⦃a b c⦄, R a b → R a c → b = c
+
+def BiUnique : Prop :=
+  LeftUnique R ∧ RightUnique R
 
 variable {R}
 
-lemma right_total.rel_forall (h : right_total R) :
-  ((R ⇒ implies) ⇒ implies) (λp, ∀i, p i) (λq, ∀i, q i) :=
-assume p q Hrel H b, exists.elim (h b) (assume a Rab, Hrel Rab (H _))
+theorem RightTotal.rel_forall (h : RightTotal R) : ((R⇒Implies)⇒Implies) (fun p => ∀ i, p i) fun q => ∀ i, q i :=
+  fun p q Hrel H b => Exists.elim (h b) fun a Rab => Hrel Rab (H _)
 
-lemma left_total.rel_exists (h : left_total R) :
-  ((R ⇒ implies) ⇒ implies) (λp, ∃i, p i) (λq, ∃i, q i) :=
-assume p q Hrel ⟨a, pa⟩, (h a).imp $ λ b Rab, Hrel Rab pa
+theorem LeftTotal.rel_exists (h : LeftTotal R) : ((R⇒Implies)⇒Implies) (fun p => ∃ i, p i) fun q => ∃ i, q i :=
+  fun p q Hrel ⟨a, pa⟩ => (h a).imp fun b Rab => Hrel Rab pa
 
-lemma bi_total.rel_forall (h : bi_total R) :
-  ((R ⇒ iff) ⇒ iff) (λp, ∀i, p i) (λq, ∀i, q i) :=
-assume p q Hrel,
-  ⟨assume H b, exists.elim (h.right b) (assume a Rab, (Hrel Rab).mp (H _)),
-    assume H a, exists.elim (h.left a) (assume b Rab, (Hrel Rab).mpr (H _))⟩
+theorem BiTotal.rel_forall (h : BiTotal R) : ((R⇒Iff)⇒Iff) (fun p => ∀ i, p i) fun q => ∀ i, q i := fun p q Hrel =>
+  ⟨fun H b => Exists.elim (h.right b) fun a Rab => (Hrel Rab).mp (H _), fun H a =>
+    Exists.elim (h.left a) fun b Rab => (Hrel Rab).mpr (H _)⟩
 
-lemma bi_total.rel_exists (h : bi_total R) : ((R ⇒ iff) ⇒ iff) (λp, ∃i, p i) (λq, ∃i, q i) :=
-assume p q Hrel,
-  ⟨assume ⟨a, pa⟩, (h.left a).imp $ λ b Rab, (Hrel Rab).1 pa,
-    assume ⟨b, qb⟩, (h.right b).imp $ λ a Rab, (Hrel Rab).2 qb⟩
+theorem BiTotal.rel_exists (h : BiTotal R) : ((R⇒Iff)⇒Iff) (fun p => ∃ i, p i) fun q => ∃ i, q i := fun p q Hrel =>
+  ⟨fun ⟨a, pa⟩ => (h.left a).imp fun b Rab => (Hrel Rab).1 pa, fun ⟨b, qb⟩ =>
+    (h.right b).imp fun a Rab => (Hrel Rab).2 qb⟩
 
-lemma left_unique_of_rel_eq {eq' : β → β → Prop} (he : (R ⇒ (R ⇒ iff)) eq eq') : left_unique R :=
-λ a b c (ac : R a c) (bc : R b c), (he ac bc).mpr ((he bc bc).mp rfl)
+theorem left_unique_of_rel_eq {eq' : β → β → Prop} (he : (R⇒R⇒Iff) Eq eq') : LeftUnique R := fun bc : R b c =>
+  (he ac bc).mpr ((he bc bc).mp rfl)
 
 end
 
-lemma rel_imp : (iff ⇒ (iff  ⇒ iff)) implies implies :=
-assume p q h r s l, imp_congr h l
+theorem rel_imp : (Iff⇒Iff⇒Iff) Implies Implies := fun p q h r s l => imp_congr h l
 
-lemma rel_not : (iff ⇒ iff) not not :=
-assume p q h, not_congr h
+theorem rel_not : (Iff⇒Iff) Not Not := fun p q h => not_congr h
 
-lemma bi_total_eq {α : Type u₁} : relator.bi_total (@eq α) :=
-{ left := λ a, ⟨a, rfl⟩, right := λ a, ⟨a, rfl⟩ }
+theorem bi_total_eq {α : Type u₁} : Relator.BiTotal (@Eq α) :=
+  { left := fun a => ⟨a, rfl⟩, right := fun a => ⟨a, rfl⟩ }
 
-variables {α : Type*} {β : Type*} {γ : Type*} {δ : Type*}
-variables {r : α → β → Prop} {p : β → γ → Prop} {q : γ → δ → Prop}
+variable {α : Type _} {β : Type _} {γ : Type _} {δ : Type _}
 
-lemma left_unique.flip (h : left_unique r) : right_unique (flip r) :=
-λ a b c h₁ h₂, h h₁ h₂
+variable {r : α → β → Prop} {p : β → γ → Prop} {q : γ → δ → Prop}
 
-lemma rel_and : ((↔) ⇒ (↔) ⇒ (↔)) (∧) (∧) :=
-assume a b h₁ c d h₂, and_congr h₁ h₂
+theorem LeftUnique.flip (h : LeftUnique r) : RightUnique (flip r) := fun a b c h₁ h₂ => h h₁ h₂
 
-lemma rel_or : ((↔) ⇒ (↔) ⇒ (↔)) (∨) (∨) :=
-assume a b h₁ c d h₂, or_congr h₁ h₂
+theorem rel_and : ((· ↔ ·)⇒(· ↔ ·)⇒(· ↔ ·)) (· ∧ ·) (· ∧ ·) := fun a b h₁ c d h₂ => and_congr h₁ h₂
 
-lemma rel_iff : ((↔) ⇒ (↔) ⇒ (↔)) (↔) (↔) :=
-assume a b h₁ c d h₂, iff_congr h₁ h₂
+theorem rel_or : ((· ↔ ·)⇒(· ↔ ·)⇒(· ↔ ·)) (· ∨ ·) (· ∨ ·) := fun a b h₁ c d h₂ => or_congr h₁ h₂
 
-lemma rel_eq {r : α → β → Prop} (hr : bi_unique r) : (r ⇒ r ⇒ (↔)) (=) (=) :=
-assume a b h₁ c d h₂,
-iff.intro
-  begin intro h, subst h, exact hr.right h₁ h₂ end
-  begin intro h, subst h, exact hr.left h₁ h₂ end
+theorem rel_iff : ((· ↔ ·)⇒(· ↔ ·)⇒(· ↔ ·)) (· ↔ ·) (· ↔ ·) := fun a b h₁ c d h₂ => iff_congr h₁ h₂
 
-end relator
+theorem rel_eq {r : α → β → Prop} (hr : BiUnique r) : (r⇒r⇒(· ↔ ·)) (· = ·) (· = ·) := fun a b h₁ c d h₂ =>
+  Iff.intro
+    (by
+      intro h
+      subst h
+      exact hr.right h₁ h₂)
+    (by
+      intro h
+      subst h
+      exact hr.left h₁ h₂)
+
+end Relator
+

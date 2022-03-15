@@ -3,8 +3,8 @@ Copyright (c) 2020 Floris van Doorn. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Floris van Doorn
 -/
-import tactic.lint
-import tactic.ext
+import Mathbin.Tactic.Lint.Default
+import Mathbin.Tactic.Ext
 
 /-!
 # Congruence and related tactics
@@ -25,60 +25,62 @@ Other tactics in this file:
 * `ac_change`: like `convert_to`, but uses `ac_refl` to discharge the goals.
 -/
 
-open tactic
+
+open Tactic
+
 setup_tactic_parser
 
-namespace tactic
+namespace Tactic
 
 /-- Apply the constant `iff_of_eq` to the goal. -/
-meta def apply_iff_congr_core : tactic unit :=
-applyc ``iff_of_eq
+unsafe def apply_iff_congr_core : tactic Unit :=
+  applyc `` iff_of_eq
 
 /-- The main part of the body for the loop in `congr'`. This will try to replace a goal `f x = f y`
  with `x = y`. Also has support for `==` and `↔`. -/
-meta def congr_core' : tactic unit :=
-do tgt ← target,
-   apply_eq_congr_core tgt
-   <|> apply_heq_congr_core
-   <|> apply_iff_congr_core
-   <|> fail "congr tactic failed"
+unsafe def congr_core' : tactic Unit := do
+  let tgt ← target
+  apply_eq_congr_core tgt <|> apply_heq_congr_core <|> apply_iff_congr_core <|> fail "congr tactic failed"
 
 /-- The main function in `convert_to`. Changes the goal to `r` and a proof obligation that the goal
   is equal to `r`. -/
-meta def convert_to_core (r : pexpr) : tactic unit :=
-do tgt ← target,
-   h   ← to_expr ``(_ : %%tgt = %%r),
-   rewrite_target h,
-   swap
+unsafe def convert_to_core (r : pexpr) : tactic Unit := do
+  let tgt ← target
+  let h ← to_expr (pquote.1 (_ : (%%ₓtgt) = %%ₓr))
+  rewrite_target h
+  swap
 
+-- ././Mathport/Syntax/Translate/Basic.lean:915:4: warning: unsupported (TODO): `[tacs]
+-- ././Mathport/Syntax/Translate/Basic.lean:915:4: warning: unsupported (TODO): `[tacs]
 /-- Attempts to prove the goal by proof irrelevance, but avoids unifying universe metavariables
 to do so. -/
-meta def by_proof_irrel : tactic unit :=
-do tgt ← target,
-  @expr.const tt n [level.zero] ← pure tgt.get_app_fn,
-  if n = ``eq then `[apply proof_irrel] else
-  if n = ``heq then `[apply proof_irrel_heq] else
-  failed
+unsafe def by_proof_irrel : tactic Unit := do
+  let tgt ← target
+  let @expr.const tt n [level.zero] ← pure tgt.get_app_fn
+  if n = `` Eq then sorry else if n = `` HEq then sorry else failed
 
-/--
-Same as the `congr` tactic, but takes an optional argument which gives
+/-- Same as the `congr` tactic, but takes an optional argument which gives
 the depth of recursive applications.
 * This is useful when `congr` is too aggressive in breaking down the goal.
 * For example, given `⊢ f (g (x + y)) = f (g (y + x))`, `congr'` produces the goals `⊢ x = y`
   and `⊢ y = x`, while `congr' 2` produces the intended `⊢ x + y = y + x`.
 * If, at any point, a subgoal matches a hypothesis then the subgoal will be closed.
 -/
-meta def congr' : option ℕ → tactic unit
-| o := focus1 $
-  assumption <|> reflexivity transparency.none <|> by_proof_irrel <|>
-  (guard (o ≠ some 0) >> congr_core' >>
-    all_goals' (try (congr' (nat.pred <$> o)))) <|>
-  reflexivity
+unsafe def congr' : Option ℕ → tactic Unit
+  | o =>
+    focus1 <|
+      assumption <|>
+        reflexivity Transparency.none <|>
+          by_proof_irrel <|>
+            (guardₓ (o ≠ some 0) >> congr_core') >> all_goals' (try (congr' (Nat.pred <$> o))) <|> reflexivity
 
-namespace interactive
+namespace Interactive
 
-/--
-Same as the `congr` tactic, but takes an optional argument which gives
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr ?»
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr ?»
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr *»
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr ?»
+/-- Same as the `congr` tactic, but takes an optional argument which gives
 the depth of recursive applications.
 * This is useful when `congr` is too aggressive in breaking down the goal.
 * For example, given `⊢ f (g (x + y)) = f (g (y + x))`, `congr'` produces the goals `⊢ x = y`
@@ -88,14 +90,14 @@ the depth of recursive applications.
   For example, if the goal is `⊢ f '' s = g '' s` then `congr' with x` generates the goal
   `x : α ⊢ f x = g x`.
 -/
-meta def congr' (n : parse (with_desc "n" small_nat)?) :
-  parse (tk "with" *> prod.mk <$> rcases_patt_parse_hi* <*> (tk ":" *> small_nat)?)? →
-  tactic unit
-| none         := tactic.congr' n
-| (some ⟨p, m⟩) := focus1 (tactic.congr' n >> all_goals' (tactic.ext p m $> ()))
+unsafe def congr' (n : parse («expr ?» (with_desc "n" small_nat))) :
+    parse («expr ?» (tk "with" *> Prod.mk <$> «expr *» rcases_patt_parse_hi <*> «expr ?» (tk ":" *> small_nat))) →
+      tactic Unit
+  | none => tactic.congr' n
+  | some ⟨p, m⟩ => focus1 (tactic.congr' n >> all_goals' (tactic.ext p m $> ()))
 
-/--
-Repeatedly and apply `congr'` and `ext`, using the given patterns as arguments for `ext`.
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr *»
+/-- Repeatedly and apply `congr'` and `ext`, using the given patterns as arguments for `ext`.
 
 There are two ways this tactic stops:
 * `congr'` fails (makes no progress), after having already applied `ext`.
@@ -121,23 +123,27 @@ and `congr' with x` (or `congr', ext x`) would produce
 x : α ⊢ f x + 3 = g x + 3
 ```
 -/
-meta def rcongr : parse rcases_patt_parse_hi* → tactic unit
-| ps := do
-  t ← target,
-  qs ← try_core (tactic.ext ps none),
-  some () ← try_core (tactic.congr' none >>
-    (done <|> do s ← target, guard $ ¬ s =ₐ t)) | skip,
-  done <|> rcongr (qs.lhoare ps)
+unsafe def rcongr : parse («expr *» rcases_patt_parse_hi) → tactic Unit
+  | ps => do
+    let t ← target
+    let qs ← try_core (tactic.ext ps none)
+    let some () ←
+      try_core
+          (tactic.congr' none >>
+            (done <|> do
+              let s ← target
+              guardₓ <| ¬expr.alpha_eqv s t)) |
+      skip
+    done <|> rcongr (qs ps)
 
 add_tactic_doc
-{ name       := "congr'",
-  category   := doc_category.tactic,
-  decl_names := [`tactic.interactive.congr', `tactic.interactive.congr, `tactic.interactive.rcongr],
-  tags       := ["congruence"],
-  inherit_description_from := `tactic.interactive.congr' }
+  { Name := "congr'", category := DocCategory.tactic,
+    declNames := [`tactic.interactive.congr', `tactic.interactive.congr, `tactic.interactive.rcongr],
+    tags := ["congruence"], inheritDescriptionFrom := `tactic.interactive.congr' }
 
-/--
-The `exact e` and `refine e` tactics require a term `e` whose type is
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr ?»
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr ?»
+/-- The `exact e` and `refine e` tactics require a term `e` whose type is
 definitionally equal to the goal. `convert e` is similar to `refine e`,
 but the type of `e` is not required to exactly match the
 goal. Instead, new goals are created for differences between the type
@@ -177,29 +183,30 @@ the goal equals the type of `e`, then simplifying it using
 depth of matching (like `congr' n`). In the example, `convert e using
 1` would produce a new goal `⊢ n + n + 1 = 2 * n + 1`.
 -/
-meta def convert (sym : parse (with_desc "←" (tk "<-")?)) (r : parse texpr)
-  (n : parse (tk "using" *> small_nat)?) : tactic unit :=
-do tgt ← target,
-  u ← infer_type tgt,
-  r ← i_to_expr ``(%%r : (_ : %%u)),
-  src ← infer_type r,
-  src ← simp_lemmas.mk.dsimplify [] src {fail_if_unchanged := ff},
-  v ← to_expr (if sym.is_some then ``(%%src = %%tgt) else ``(%%tgt = %%src)) tt ff >>= mk_meta_var,
-  (if sym.is_some then mk_eq_mp v r else mk_eq_mpr v r) >>= tactic.exact,
-  gs ← get_goals,
-  set_goals [v],
-  try (tactic.congr' n),
-  gs' ← get_goals,
-  set_goals $ gs' ++ gs
+unsafe def convert (sym : parse (with_desc "←" («expr ?» (tk "<-")))) (r : parse texpr)
+    (n : parse («expr ?» (tk "using" *> small_nat))) : tactic Unit := do
+  let tgt ← target
+  let u ← infer_type tgt
+  let r ← i_to_expr (pquote.1 (%%ₓr : (_ : %%ₓu)))
+  let src ← infer_type r
+  let src ← simp_lemmas.mk.dsimplify [] src { failIfUnchanged := false }
+  let v ←
+    to_expr (if sym.isSome then pquote.1 ((%%ₓsrc) = %%ₓtgt) else pquote.1 ((%%ₓtgt) = %%ₓsrc)) true false >>=
+        mk_meta_var
+  (if sym then mk_eq_mp v r else mk_eq_mpr v r) >>= tactic.exact
+  let gs ← get_goals
+  set_goals [v]
+  try (tactic.congr' n)
+  let gs' ← get_goals
+  set_goals <| gs' ++ gs
 
 add_tactic_doc
-{ name       := "convert",
-  category   := doc_category.tactic,
-  decl_names := [`tactic.interactive.convert],
-  tags       := ["congruence"] }
+  { Name := "convert", category := DocCategory.tactic, declNames := [`tactic.interactive.convert],
+    tags := ["congruence"] }
 
-/--
-`convert_to g using n` attempts to change the current goal to `g`, but unlike `change`,
+-- ././Mathport/Syntax/Translate/Basic.lean:915:4: warning: unsupported (TODO): `[tacs]
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr ?»
+/-- `convert_to g using n` attempts to change the current goal to `g`, but unlike `change`,
 it will generate equality proof obligations using `congr' n` to resolve discrepancies.
 `convert_to g` defaults to using `congr' 1`.
 
@@ -207,15 +214,14 @@ it will generate equality proof obligations using `congr' n` to resolve discrepa
 `convert` takes a proof term.
 That is, `convert_to g using n` is equivalent to `convert (_ : g) using n`.
 -/
-meta def convert_to (r : parse texpr) (n : parse (tk "using" *> small_nat)?) : tactic unit :=
-match n with
-  | none     := convert_to_core r >> `[congr' 1]
-  | (some 0) := convert_to_core r
-  | (some o) := convert_to_core r >> tactic.congr' o
-end
+unsafe def convert_to (r : parse texpr) (n : parse («expr ?» (tk "using" *> small_nat))) : tactic Unit :=
+  match n with
+  | none => convert_to_core r >> sorry
+  | some 0 => convert_to_core r
+  | some o => convert_to_core r >> tactic.congr' o
 
-/--
-`ac_change g using n` is `convert_to g using n` followed by `ac_refl`. It is useful for
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr ?»
+/-- `ac_change g using n` is `convert_to g using n` followed by `ac_refl`. It is useful for
 rearranging/reassociating e.g. sums:
 ```lean
 example (a b c d e f g N : ℕ) : (a + b) + (c + d) + (e + f) + g ≤ N :=
@@ -225,16 +231,15 @@ begin
 end
 ```
 -/
-meta def ac_change (r : parse texpr) (n : parse (tk "using" *> small_nat)?) : tactic unit :=
-convert_to r n; try ac_refl
+unsafe def ac_change (r : parse texpr) (n : parse («expr ?» (tk "using" *> small_nat))) : tactic Unit :=
+  andthen (convert_to r n) (try ac_refl)
 
 add_tactic_doc
-{ name       := "convert_to",
-  category   := doc_category.tactic,
-  decl_names := [`tactic.interactive.convert_to, `tactic.interactive.ac_change],
-  tags       := ["congruence"],
-  inherit_description_from := `tactic.interactive.convert_to }
+  { Name := "convert_to", category := DocCategory.tactic,
+    declNames := [`tactic.interactive.convert_to, `tactic.interactive.ac_change], tags := ["congruence"],
+    inheritDescriptionFrom := `tactic.interactive.convert_to }
 
-end interactive
+end Interactive
 
-end tactic
+end Tactic
+

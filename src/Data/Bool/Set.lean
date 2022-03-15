@@ -3,8 +3,8 @@ Copyright (c) 2021 Yury G. Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury G. Kudryashov
 -/
-import data.bool.basic
-import data.set.basic
+import Mathbin.Data.Bool.Basic
+import Mathbin.Data.Set.Basic
 
 /-!
 # Booleans and set operations
@@ -12,14 +12,18 @@ import data.set.basic
 This file contains two trivial lemmas about `bool`, `set.univ`, and `set.range`.
 -/
 
-open set
 
-namespace bool
+open Set
 
-@[simp] lemma univ_eq : (univ : set bool) = {ff, tt} :=
-(eq_univ_of_forall bool.dichotomy).symm
+namespace Bool
 
-@[simp] lemma range_eq {α : Type*} (f : bool → α) : range f = {f ff, f tt} :=
-by rw [← image_univ, univ_eq, image_pair]
+@[simp]
+theorem univ_eq : (Univ : Set Bool) = {false, true} :=
+  (eq_univ_of_forall Bool.dichotomy).symm
 
-end bool
+@[simp]
+theorem range_eq {α : Type _} (f : Bool → α) : Range f = {f false, f true} := by
+  rw [← image_univ, univ_eq, image_pair]
+
+end Bool
+

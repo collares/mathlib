@@ -3,8 +3,8 @@ Copyright (c) 2020 Zhouhang Zhou. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Zhouhang Zhou, Yury Kudryashov
 -/
-import algebra.indicator_function
-import order.filter.at_top_bot
+import Mathbin.Algebra.IndicatorFunction
+import Mathbin.Order.Filter.AtTopBot
 
 /-!
 # Indicator function and filters
@@ -16,73 +16,81 @@ indicator, characteristic, filter
 -/
 
 
-variables {α β M E : Type*}
+variable {α β M E : Type _}
 
-open set filter classical
-open_locale filter classical
+open Set Filter Classical
 
-section has_zero
-variables [has_zero M] {s t : set α} {f g : α → M} {a : α} {l : filter α}
+open_locale Filter Classical
 
-lemma indicator_eventually_eq (hf : f =ᶠ[l ⊓ 𝓟 s] g) (hs : s =ᶠ[l] t) :
-  indicator s f =ᶠ[l] indicator t g :=
-(eventually_inf_principal.1 hf).mp $ hs.mem_iff.mono $ λ x hst hfg,
-by_cases (λ hxs : x ∈ s, by simp only [*, hst.1 hxs, indicator_of_mem])
-  (λ hxs, by simp only [indicator_of_not_mem hxs, indicator_of_not_mem (mt hst.2 hxs)])
+section Zero
 
-end has_zero
+variable [Zero M] {s t : Set α} {f g : α → M} {a : α} {l : Filter α}
 
-section add_monoid
-variables [add_monoid M] {s t : set α} {f g : α → M} {a : α} {l : filter α}
+theorem indicator_eventually_eq (hf : f =ᶠ[l⊓𝓟 s] g) (hs : s =ᶠ[l] t) : indicator s f =ᶠ[l] indicator t g :=
+  (eventually_inf_principal.1 hf).mp <|
+    hs.mem_iff.mono fun x hst hfg =>
+      by_cases
+        (fun hxs : x ∈ s => by
+          simp only [*, hst.1 hxs, indicator_of_mem])
+        fun hxs => by
+        simp only [indicator_of_not_mem hxs, indicator_of_not_mem (mt hst.2 hxs)]
 
-lemma indicator_union_eventually_eq (h : ∀ᶠ a in l, a ∉ s ∩ t) :
-  indicator (s ∪ t) f =ᶠ[l] indicator s f + indicator t f :=
-h.mono $ λ a ha, indicator_union_of_not_mem_inter ha _
+end Zero
 
-end add_monoid
+section AddMonoidₓ
 
-section order
-variables [has_zero β] [preorder β] {s t : set α} {f g : α → β} {a : α} {l : filter α}
+variable [AddMonoidₓ M] {s t : Set α} {f g : α → M} {a : α} {l : Filter α}
 
-lemma indicator_eventually_le_indicator (h : f ≤ᶠ[l ⊓ 𝓟 s] g) :
-  indicator s f ≤ᶠ[l] indicator s g :=
-(eventually_inf_principal.1 h).mono $ assume a h,
-indicator_rel_indicator le_rfl h
+theorem indicator_union_eventually_eq (h : ∀ᶠ a in l, a ∉ s ∩ t) :
+    indicator (s ∪ t) f =ᶠ[l] indicator s f + indicator t f :=
+  h.mono fun a ha => indicator_union_of_not_mem_inter ha _
 
-end order
+end AddMonoidₓ
 
-lemma monotone.tendsto_indicator {ι} [preorder ι] [has_zero β]
-  (s : ι → set α) (hs : monotone s) (f : α → β) (a : α) :
-  tendsto (λi, indicator (s i) f a) at_top (pure $ indicator (⋃ i, s i) f a) :=
-begin
-  by_cases h : ∃i, a ∈ s i,
-  { rcases h with ⟨i, hi⟩,
-    refine tendsto_pure.2 ((eventually_ge_at_top i).mono $ assume n hn, _),
-    rw [indicator_of_mem (hs hn hi) _, indicator_of_mem ((subset_Union _ _) hi) _] },
-  { rw [not_exists] at h,
-    simp only [indicator_of_not_mem (h _)],
-    convert tendsto_const_pure,
-    apply indicator_of_not_mem, simpa only [not_exists, mem_Union] }
-end
+section Order
 
-lemma antitone.tendsto_indicator {ι} [preorder ι] [has_zero β]
-  (s : ι → set α) (hs : antitone s) (f : α → β) (a : α) :
-  tendsto (λi, indicator (s i) f a) at_top (pure $ indicator (⋂ i, s i) f a) :=
-begin
-  by_cases h : ∃i, a ∉ s i,
-  { rcases h with ⟨i, hi⟩,
-    refine tendsto_pure.2 ((eventually_ge_at_top i).mono $ assume n hn, _),
-    rw [indicator_of_not_mem _ _, indicator_of_not_mem _ _],
-    { simp only [mem_Inter, not_forall], exact ⟨i, hi⟩ },
-    { assume h, have := hs hn h, contradiction } },
-  { push_neg at h,
-    simp only [indicator_of_mem, h, (mem_Inter.2 h), tendsto_const_pure] }
-end
+variable [Zero β] [Preorderₓ β] {s t : Set α} {f g : α → β} {a : α} {l : Filter α}
 
-lemma tendsto_indicator_bUnion_finset {ι} [has_zero β] (s : ι → set α) (f : α → β) (a : α) :
-  tendsto (λ (n : finset ι), indicator (⋃i∈n, s i) f a) at_top (pure $ indicator (Union s) f a) :=
-begin
-  rw Union_eq_Union_finset s,
-  refine monotone.tendsto_indicator (λ n : finset ι, ⋃ i ∈ n, s i) _ f a,
-  exact λ t₁ t₂, bUnion_subset_bUnion_left
-end
+theorem indicator_eventually_le_indicator (h : f ≤ᶠ[l⊓𝓟 s] g) : indicator s f ≤ᶠ[l] indicator s g :=
+  (eventually_inf_principal.1 h).mono fun a h => indicator_rel_indicator le_rfl h
+
+end Order
+
+theorem Monotone.tendsto_indicator {ι} [Preorderₓ ι] [Zero β] (s : ι → Set α) (hs : Monotone s) (f : α → β) (a : α) :
+    Tendsto (fun i => indicator (s i) f a) atTop (pure <| indicator (⋃ i, s i) f a) := by
+  by_cases' h : ∃ i, a ∈ s i
+  · rcases h with ⟨i, hi⟩
+    refine' tendsto_pure.2 ((eventually_ge_at_top i).mono fun n hn => _)
+    rw [indicator_of_mem (hs hn hi) _, indicator_of_mem ((subset_Union _ _) hi) _]
+    
+  · rw [not_exists] at h
+    simp only [indicator_of_not_mem (h _)]
+    convert tendsto_const_pure
+    apply indicator_of_not_mem
+    simpa only [not_exists, mem_Union]
+    
+
+theorem Antitone.tendsto_indicator {ι} [Preorderₓ ι] [Zero β] (s : ι → Set α) (hs : Antitone s) (f : α → β) (a : α) :
+    Tendsto (fun i => indicator (s i) f a) atTop (pure <| indicator (⋂ i, s i) f a) := by
+  by_cases' h : ∃ i, a ∉ s i
+  · rcases h with ⟨i, hi⟩
+    refine' tendsto_pure.2 ((eventually_ge_at_top i).mono fun n hn => _)
+    rw [indicator_of_not_mem _ _, indicator_of_not_mem _ _]
+    · simp only [mem_Inter, not_forall]
+      exact ⟨i, hi⟩
+      
+    · intro h
+      have := hs hn h
+      contradiction
+      
+    
+  · push_neg  at h
+    simp only [indicator_of_mem, h, mem_Inter.2 h, tendsto_const_pure]
+    
+
+theorem tendsto_indicator_bUnion_finset {ι} [Zero β] (s : ι → Set α) (f : α → β) (a : α) :
+    Tendsto (fun n : Finset ι => indicator (⋃ i ∈ n, s i) f a) atTop (pure <| indicator (Unionₓ s) f a) := by
+  rw [Union_eq_Union_finset s]
+  refine' Monotone.tendsto_indicator (fun n : Finset ι => ⋃ i ∈ n, s i) _ f a
+  exact fun t₁ t₂ => bUnion_subset_bUnion_left
+

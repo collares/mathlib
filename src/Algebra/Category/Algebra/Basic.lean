@@ -3,10 +3,10 @@ Copyright (c) 2020 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import algebra.algebra.subalgebra.basic
-import algebra.free_algebra
-import algebra.category.CommRing.basic
-import algebra.category.Module.basic
+import Mathbin.Algebra.Algebra.Subalgebra.Basic
+import Mathbin.Algebra.FreeAlgebra
+import Mathbin.Algebra.Category.CommRing.Basic
+import Mathbin.Algebra.Category.Module.Basic
 
 /-!
 # Category instance for algebras over a commutative ring
@@ -16,147 +16,172 @@ with the forgetful functors to `Ring` and `Module`. We furthermore show that the
 to a type the free `R`-algebra on that type is left adjoint to the forgetful functor.
 -/
 
-open category_theory
-open category_theory.limits
 
-universes v u
+open CategoryTheory
 
-variables (R : Type u) [comm_ring R]
+open CategoryTheory.Limits
+
+universe v u
+
+variable (R : Type u) [CommRingₓ R]
 
 /-- The category of R-algebras and their morphisms. -/
-structure Algebra :=
-(carrier : Type v)
-[is_ring : ring carrier]
-[is_algebra : algebra R carrier]
+structure AlgebraCat where
+  Carrier : Type v
+  [isRing : Ringₓ carrier]
+  [isAlgebra : Algebra R carrier]
 
-attribute [instance] Algebra.is_ring Algebra.is_algebra
+attribute [instance] AlgebraCat.isRing AlgebraCat.isAlgebra
 
-namespace Algebra
+namespace AlgebraCat
 
-instance : has_coe_to_sort (Algebra R) (Type v) := ⟨Algebra.carrier⟩
+instance : CoeSort (AlgebraCat R) (Type v) :=
+  ⟨AlgebraCat.Carrier⟩
 
-instance : category (Algebra.{v} R) :=
-{ hom   := λ A B, A →ₐ[R] B,
-  id    := λ A, alg_hom.id R A,
-  comp  := λ A B C f g, g.comp f }
+instance : Category (AlgebraCat.{v} R) where
+  hom := fun A B => A →ₐ[R] B
+  id := fun A => AlgHom.id R A
+  comp := fun A B C f g => g.comp f
 
-instance : concrete_category.{v} (Algebra.{v} R) :=
-{ forget := { obj := λ R, R, map := λ R S f, (f : R → S) },
-  forget_faithful := { } }
+instance : ConcreteCategory.{v} (AlgebraCat.{v} R) where
+  forget := { obj := fun R => R, map := fun R S f => (f : R → S) }
+  forget_faithful := {  }
 
-instance has_forget_to_Ring : has_forget₂ (Algebra.{v} R) Ring.{v} :=
-{ forget₂ :=
-  { obj := λ A, Ring.of A,
-    map := λ A₁ A₂ f, alg_hom.to_ring_hom f, } }
+instance hasForgetToRing : HasForget₂ (AlgebraCat.{v} R) Ringₓₓ.{v} where
+  forget₂ := { obj := fun A => Ringₓₓ.of A, map := fun A₁ A₂ f => AlgHom.toRingHom f }
 
-instance has_forget_to_Module : has_forget₂ (Algebra.{v} R) (Module.{v} R) :=
-{ forget₂ :=
-  { obj := λ M, Module.of R M,
-    map := λ M₁ M₂ f, alg_hom.to_linear_map f, } }
+instance hasForgetToModule : HasForget₂ (AlgebraCat.{v} R) (ModuleCat.{v} R) where
+  forget₂ := { obj := fun M => ModuleCat.of R M, map := fun M₁ M₂ f => AlgHom.toLinearMap f }
 
 /-- The object in the category of R-algebras associated to a type equipped with the appropriate
 typeclasses. -/
-def of (X : Type v) [ring X] [algebra R X] : Algebra.{v} R := ⟨X⟩
+def of (X : Type v) [Ringₓ X] [Algebra R X] : AlgebraCat.{v} R :=
+  ⟨X⟩
 
 /-- Typecheck a `alg_hom` as a morphism in `Algebra R`. -/
-def of_hom {R : Type u} [comm_ring R] {X Y : Type v} [ring X] [algebra R X] [ring Y] [algebra R Y]
-  (f : X →ₐ[R] Y) : of R X ⟶ of R Y := f
+def ofHom {R : Type u} [CommRingₓ R] {X Y : Type v} [Ringₓ X] [Algebra R X] [Ringₓ Y] [Algebra R Y] (f : X →ₐ[R] Y) :
+    of R X ⟶ of R Y :=
+  f
 
-instance : inhabited (Algebra R) := ⟨of R R⟩
+instance : Inhabited (AlgebraCat R) :=
+  ⟨of R R⟩
 
 @[simp]
-lemma coe_of (X : Type u) [ring X] [algebra R X] : (of R X : Type u) = X := rfl
+theorem coe_of (X : Type u) [Ringₓ X] [Algebra R X] : (of R X : Type u) = X :=
+  rfl
 
-variables {R}
+variable {R}
 
 /-- Forgetting to the underlying type and then building the bundled object returns the original
 algebra. -/
 @[simps]
-def of_self_iso (M : Algebra.{v} R) : Algebra.of R M ≅ M :=
-{ hom := 𝟙 M, inv := 𝟙 M }
+def ofSelfIso (M : AlgebraCat.{v} R) : AlgebraCat.of R M ≅ M where
+  hom := 𝟙 M
+  inv := 𝟙 M
 
-variables {R} {M N U : Module.{v} R}
+variable {R} {M N U : ModuleCat.{v} R}
 
-@[simp] lemma id_apply (m : M) : (𝟙 M : M → M) m = m := rfl
+@[simp]
+theorem id_apply (m : M) : (𝟙 M : M → M) m = m :=
+  rfl
 
-@[simp] lemma coe_comp (f : M ⟶ N) (g : N ⟶ U) :
-  ((f ≫ g) : M → U) = g ∘ f := rfl
+@[simp]
+theorem coe_comp (f : M ⟶ N) (g : N ⟶ U) : (f ≫ g : M → U) = g ∘ f :=
+  rfl
 
-variables (R)
+variable (R)
+
 /-- The "free algebra" functor, sending a type `S` to the free algebra on `S`. -/
 @[simps]
-def free : Type u ⥤ Algebra.{u} R :=
-{ obj := λ S,
-  { carrier := free_algebra R S,
-    is_ring := algebra.semiring_to_ring R },
-  map := λ S T f, free_algebra.lift _ $ (free_algebra.ι _) ∘ f,
+def free : Type u ⥤ AlgebraCat.{u} R where
+  obj := fun S => { Carrier := FreeAlgebra R S, isRing := Algebra.semiringToRing R }
+  map := fun S T f => FreeAlgebra.lift _ <| FreeAlgebra.ι _ ∘ f
   -- obviously can fill the next two goals, but it is slow
-  map_id' := by { intros X, ext1, simp only [free_algebra.ι_comp_lift], refl },
-  map_comp' := by { intros, ext1, simp only [free_algebra.ι_comp_lift], ext1,
-    simp only [free_algebra.lift_ι_apply, category_theory.coe_comp, function.comp_app,
-      types_comp_apply] } }
+  map_id' := by
+    intro X
+    ext1
+    simp only [FreeAlgebra.ι_comp_lift]
+    rfl
+  map_comp' := by
+    intros
+    ext1
+    simp only [FreeAlgebra.ι_comp_lift]
+    ext1
+    simp only [FreeAlgebra.lift_ι_apply, CategoryTheory.coe_comp, Function.comp_app, types_comp_apply]
 
 /-- The free/forget adjunction for `R`-algebras. -/
-def adj : free.{u} R ⊣ forget (Algebra.{u} R) :=
-adjunction.mk_of_hom_equiv
-{ hom_equiv := λ X A, (free_algebra.lift _).symm,
-  -- Relying on `obviously` to fill out these proofs is very slow :(
-  hom_equiv_naturality_left_symm' := by { intros, ext,
-    simp only [free_map, equiv.symm_symm, free_algebra.lift_ι_apply, category_theory.coe_comp,
-      function.comp_app, types_comp_apply] },
-  hom_equiv_naturality_right' := by { intros, ext,
-    simp only [forget_map_eq_coe, category_theory.coe_comp, function.comp_app,
-      free_algebra.lift_symm_apply, types_comp_apply] } }
+def adj : free.{u} R ⊣ forget (AlgebraCat.{u} R) :=
+  Adjunction.mkOfHomEquiv
+    { homEquiv := fun X A =>
+        (FreeAlgebra.lift _).symm,-- Relying on `obviously` to fill out these proofs is very slow :(
+      hom_equiv_naturality_left_symm' := by
+        intros
+        ext
+        simp only [free_map, Equivₓ.symm_symm, FreeAlgebra.lift_ι_apply, CategoryTheory.coe_comp, Function.comp_app,
+          types_comp_apply],
+      hom_equiv_naturality_right' := by
+        intros
+        ext
+        simp only [forget_map_eq_coe, CategoryTheory.coe_comp, Function.comp_app, FreeAlgebra.lift_symm_apply,
+          types_comp_apply] }
 
-instance : is_right_adjoint (forget (Algebra.{u} R)) := ⟨_, adj R⟩
+instance : IsRightAdjoint (forget (AlgebraCat.{u} R)) :=
+  ⟨_, adj R⟩
 
-end Algebra
+end AlgebraCat
 
-variables {R}
-variables {X₁ X₂ : Type u}
+variable {R}
+
+variable {X₁ X₂ : Type u}
 
 /-- Build an isomorphism in the category `Algebra R` from a `alg_equiv` between `algebra`s. -/
 @[simps]
-def alg_equiv.to_Algebra_iso
-  {g₁ : ring X₁} {g₂ : ring X₂} {m₁ : algebra R X₁} {m₂ : algebra R X₂} (e : X₁ ≃ₐ[R] X₂) :
-  Algebra.of R X₁ ≅ Algebra.of R X₂ :=
-{ hom := (e : X₁ →ₐ[R] X₂),
-  inv := (e.symm : X₂ →ₐ[R] X₁),
-  hom_inv_id' := begin ext, exact e.left_inv x, end,
-  inv_hom_id' := begin ext, exact e.right_inv x, end, }
+def AlgEquiv.toAlgebraIso {g₁ : Ringₓ X₁} {g₂ : Ringₓ X₂} {m₁ : Algebra R X₁} {m₂ : Algebra R X₂} (e : X₁ ≃ₐ[R] X₂) :
+    AlgebraCat.of R X₁ ≅ AlgebraCat.of R X₂ where
+  hom := (e : X₁ →ₐ[R] X₂)
+  inv := (e.symm : X₂ →ₐ[R] X₁)
+  hom_inv_id' := by
+    ext
+    exact e.left_inv x
+  inv_hom_id' := by
+    ext
+    exact e.right_inv x
 
-namespace category_theory.iso
+namespace CategoryTheory.Iso
 
 /-- Build a `alg_equiv` from an isomorphism in the category `Algebra R`. -/
 @[simps]
-def to_alg_equiv {X Y : Algebra R} (i : X ≅ Y) : X ≃ₐ[R] Y :=
-{ to_fun    := i.hom,
-  inv_fun   := i.inv,
-  left_inv  := by tidy,
-  right_inv := by tidy,
-  map_add'  := by tidy,
-  map_mul'  := by tidy,
-  commutes' := by tidy, }.
+def toAlgEquiv {X Y : AlgebraCat R} (i : X ≅ Y) : X ≃ₐ[R] Y where
+  toFun := i.hom
+  invFun := i.inv
+  left_inv := by
+    tidy
+  right_inv := by
+    tidy
+  map_add' := by
+    tidy
+  map_mul' := by
+    tidy
+  commutes' := by
+    tidy
 
-end category_theory.iso
+end CategoryTheory.Iso
 
 /-- Algebra equivalences between `algebras`s are the same as (isomorphic to) isomorphisms in
 `Algebra`. -/
 @[simps]
-def alg_equiv_iso_Algebra_iso {X Y : Type u}
-  [ring X] [ring Y] [algebra R X] [algebra R Y] :
-  (X ≃ₐ[R] Y) ≅ (Algebra.of R X ≅ Algebra.of R Y) :=
-{ hom := λ e, e.to_Algebra_iso,
-  inv := λ i, i.to_alg_equiv, }
+def algEquivIsoAlgebraIso {X Y : Type u} [Ringₓ X] [Ringₓ Y] [Algebra R X] [Algebra R Y] :
+    (X ≃ₐ[R] Y) ≅ AlgebraCat.of R X ≅ AlgebraCat.of R Y where
+  hom := fun e => e.toAlgebraIso
+  inv := fun i => i.toAlgEquiv
 
-instance (X : Type u) [ring X] [algebra R X] : has_coe (subalgebra R X) (Algebra R) :=
-⟨ λ N, Algebra.of R N ⟩
+instance (X : Type u) [Ringₓ X] [Algebra R X] : Coe (Subalgebra R X) (AlgebraCat R) :=
+  ⟨fun N => AlgebraCat.of R N⟩
 
-instance Algebra.forget_reflects_isos : reflects_isomorphisms (forget (Algebra.{u} R)) :=
-{ reflects := λ X Y f _,
-  begin
-    resetI,
-    let i := as_iso ((forget (Algebra.{u} R)).map f),
-    let e : X ≃ₐ[R] Y := { ..f, ..i.to_equiv },
-    exact ⟨(is_iso.of_iso e.to_Algebra_iso).1⟩,
-  end }
+instance AlgebraCat.forget_reflects_isos : ReflectsIsomorphisms (forget (AlgebraCat.{u} R)) where
+  reflects := fun X Y f _ => by
+    skip
+    let i := as_iso ((forget (AlgebraCat.{u} R)).map f)
+    let e : X ≃ₐ[R] Y := { f, i.to_equiv with }
+    exact ⟨(is_iso.of_iso e.to_Algebra_iso).1⟩
+

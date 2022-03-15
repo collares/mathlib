@@ -1,5 +1,6 @@
-import data.polynomial.algebra_map
-import data.polynomial.field_division
-import data.polynomial.derivative
-import data.polynomial.identities
-import data.polynomial.integral_normalization
+import Mathbin.Data.Polynomial.AlgebraMap
+import Mathbin.Data.Polynomial.FieldDivision
+import Mathbin.Data.Polynomial.Derivative
+import Mathbin.Data.Polynomial.Identities
+import Mathbin.Data.Polynomial.IntegralNormalization
+

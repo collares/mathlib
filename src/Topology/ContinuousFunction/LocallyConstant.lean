@@ -3,46 +3,65 @@ Copyright (c) 2021 Oliver Nash. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oliver Nash
 -/
-import topology.locally_constant.algebra
-import topology.continuous_function.basic
-import topology.continuous_function.algebra
+import Mathbin.Topology.LocallyConstant.Algebra
+import Mathbin.Topology.ContinuousFunction.Basic
+import Mathbin.Topology.ContinuousFunction.Algebra
 
 /-!
 # The algebra morphism from locally constant functions to continuous functions.
 
 -/
 
-namespace locally_constant
 
-variables {X Y : Type*} [topological_space X] [topological_space Y] (f : locally_constant X Y)
+namespace LocallyConstant
+
+variable {X Y : Type _} [TopologicalSpace X] [TopologicalSpace Y] (f : LocallyConstant X Y)
 
 /-- The inclusion of locally-constant functions into continuous functions as a multiplicative
 monoid hom. -/
-@[to_additive "The inclusion of locally-constant functions into continuous functions as an
-additive monoid hom.", simps]
-def to_continuous_map_monoid_hom [monoid Y] [has_continuous_mul Y] :
-  locally_constant X Y →* C(X, Y) :=
-{ to_fun    := coe,
-  map_one' := by { ext, simp, },
-  map_mul'  := λ x y, by { ext, simp, }, }
+@[to_additive "The inclusion of locally-constant functions into continuous functions as an\nadditive monoid hom.",
+  simps]
+def toContinuousMapMonoidHom [Monoidₓ Y] [HasContinuousMul Y] : LocallyConstant X Y →* C(X, Y) where
+  toFun := coe
+  map_one' := by
+    ext
+    simp
+  map_mul' := fun x y => by
+    ext
+    simp
 
 /-- The inclusion of locally-constant functions into continuous functions as a linear map. -/
-@[simps] def to_continuous_map_linear_map (R : Type*) [semiring R]
-  [add_comm_monoid Y] [module R Y] [has_continuous_add Y] [has_continuous_const_smul R Y] :
-  locally_constant X Y →ₗ[R] C(X, Y) :=
-{ to_fun    := coe,
-  map_add'  := λ x y, by { ext, simp, },
-  map_smul' := λ x y, by { ext, simp, }, }
+@[simps]
+def toContinuousMapLinearMap (R : Type _) [Semiringₓ R] [AddCommMonoidₓ Y] [Module R Y] [HasContinuousAdd Y]
+    [HasContinuousConstSmul R Y] : LocallyConstant X Y →ₗ[R] C(X, Y) where
+  toFun := coe
+  map_add' := fun x y => by
+    ext
+    simp
+  map_smul' := fun x y => by
+    ext
+    simp
 
 /-- The inclusion of locally-constant functions into continuous functions as an algebra map. -/
-@[simps] def to_continuous_map_alg_hom (R : Type*) [comm_semiring R]
-  [semiring Y] [algebra R Y] [topological_ring Y] [has_continuous_const_smul R Y] :
-  locally_constant X Y →ₐ[R] C(X, Y) :=
-{ to_fun    := coe,
-  map_one'  := by { ext, simp, },
-  map_mul'  := λ x y, by { ext, simp, },
-  map_zero' := by { ext, simp, },
-  map_add'  := λ x y, by { ext, simp, },
-  commutes' := λ r, by { ext x, simp [algebra.smul_def], }, }
+@[simps]
+def toContinuousMapAlgHom (R : Type _) [CommSemiringₓ R] [Semiringₓ Y] [Algebra R Y] [TopologicalRing Y]
+    [HasContinuousConstSmul R Y] : LocallyConstant X Y →ₐ[R] C(X, Y) where
+  toFun := coe
+  map_one' := by
+    ext
+    simp
+  map_mul' := fun x y => by
+    ext
+    simp
+  map_zero' := by
+    ext
+    simp
+  map_add' := fun x y => by
+    ext
+    simp
+  commutes' := fun r => by
+    ext x
+    simp [Algebra.smul_def]
 
-end locally_constant
+end LocallyConstant
+

@@ -3,9 +3,9 @@ Copyright (c) 2018 Simon Hudon. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Simon Hudon, Patrick Massot
 -/
-import tactic.pi_instances
-import algebra.group.pi
-import algebra.ring.basic
+import Mathbin.Tactic.PiInstances
+import Mathbin.Algebra.Group.Pi
+import Mathbin.Algebra.Ring.Basic
 
 /-!
 # Pi instances for ring
@@ -13,114 +13,130 @@ import algebra.ring.basic
 This file defines instances for ring, semiring and related structures on Pi Types
 -/
 
-namespace pi
-universes u v w
-variable {I : Type u}     -- The indexing type
-variable {f : I → Type v} -- The family of types already equipped with instances
-variables (x y : Π i, f i) (i : I)
 
-instance distrib [Π i, distrib $ f i] : distrib (Π i : I, f i) :=
-by refine_struct { add := (+), mul := (*), .. }; tactic.pi_instance_derive_field
+namespace Pi
 
-instance non_unital_non_assoc_semiring [∀ i, non_unital_non_assoc_semiring $ f i] :
-  non_unital_non_assoc_semiring (Π i : I, f i) :=
-by refine_struct { zero := (0 : Π i, f i), add := (+), mul := (*), .. };
-  tactic.pi_instance_derive_field
+universe u v w
 
-instance non_unital_semiring [∀ i, non_unital_semiring $ f i] :
-  non_unital_semiring (Π i : I, f i) :=
-by refine_struct { zero := (0 : Π i, f i), add := (+), mul := (*), .. };
-  tactic.pi_instance_derive_field
+variable {I : Type u}
 
-instance non_assoc_semiring [∀ i, non_assoc_semiring $ f i] :
-  non_assoc_semiring (Π i : I, f i) :=
-by refine_struct { zero := (0 : Π i, f i), one := 1, add := (+), mul := (*), .. };
-  tactic.pi_instance_derive_field
+-- The indexing type
+variable {f : I → Type v}
 
-instance semiring [∀ i, semiring $ f i] : semiring (Π i : I, f i) :=
-by refine_struct { zero := (0 : Π i, f i), one := 1, add := (+), mul := (*),
-  nsmul := add_monoid.nsmul, npow := monoid.npow };
-tactic.pi_instance_derive_field
+-- The family of types already equipped with instances
+variable (x y : ∀ i, f i) (i : I)
 
-instance comm_semiring [∀ i, comm_semiring $ f i] : comm_semiring (Π i : I, f i) :=
-by refine_struct { zero := (0 : Π i, f i), one := 1, add := (+), mul := (*),
-  nsmul := add_monoid.nsmul, npow := monoid.npow };
-tactic.pi_instance_derive_field
+instance distrib [∀ i, Distribₓ <| f i] : Distribₓ (∀ i : I, f i) := by
+  refine_struct { add := (· + ·), mul := (· * ·), .. } <;>
+    run_tac
+      tactic.pi_instance_derive_field
 
-instance non_unital_non_assoc_ring [∀ i, non_unital_non_assoc_ring $ f i] :
-  non_unital_non_assoc_ring (Π i : I, f i) :=
-by refine_struct { zero := (0 : Π i, f i), add := (+), mul := (*),
-  neg := has_neg.neg, nsmul := add_monoid.nsmul, zsmul := sub_neg_monoid.zsmul };
-tactic.pi_instance_derive_field
+instance nonUnitalNonAssocSemiring [∀ i, NonUnitalNonAssocSemiringₓ <| f i] :
+    NonUnitalNonAssocSemiringₓ (∀ i : I, f i) := by
+  refine_struct { zero := (0 : ∀ i, f i), add := (· + ·), mul := (· * ·), .. } <;>
+    run_tac
+      tactic.pi_instance_derive_field
 
-instance non_unital_ring [∀ i, non_unital_ring $ f i] :
-  non_unital_ring (Π i : I, f i) :=
-by refine_struct { zero := (0 : Π i, f i), add := (+), mul := (*),
-  neg := has_neg.neg, nsmul := add_monoid.nsmul, zsmul := sub_neg_monoid.zsmul };
-tactic.pi_instance_derive_field
+instance nonUnitalSemiring [∀ i, NonUnitalSemiringₓ <| f i] : NonUnitalSemiringₓ (∀ i : I, f i) := by
+  refine_struct { zero := (0 : ∀ i, f i), add := (· + ·), mul := (· * ·), .. } <;>
+    run_tac
+      tactic.pi_instance_derive_field
 
-instance non_assoc_ring [∀ i, non_assoc_ring $ f i] :
-  non_assoc_ring (Π i : I, f i) :=
-by refine_struct { zero := (0 : Π i, f i), add := (+), mul := (*),
-  neg := has_neg.neg, nsmul := add_monoid.nsmul, zsmul := sub_neg_monoid.zsmul };
-tactic.pi_instance_derive_field
+instance nonAssocSemiring [∀ i, NonAssocSemiringₓ <| f i] : NonAssocSemiringₓ (∀ i : I, f i) := by
+  refine_struct { zero := (0 : ∀ i, f i), one := 1, add := (· + ·), mul := (· * ·), .. } <;>
+    run_tac
+      tactic.pi_instance_derive_field
 
-instance ring [∀ i, ring $ f i] : ring (Π i : I, f i) :=
-by refine_struct { zero := (0 : Π i, f i), one := 1, add := (+), mul := (*),
-  neg := has_neg.neg, nsmul := add_monoid.nsmul, zsmul := sub_neg_monoid.zsmul,
-  npow := monoid.npow };
-tactic.pi_instance_derive_field
+instance semiring [∀ i, Semiringₓ <| f i] : Semiringₓ (∀ i : I, f i) := by
+  refine_struct
+      { zero := (0 : ∀ i, f i), one := 1, add := (· + ·), mul := (· * ·), nsmul := AddMonoidₓ.nsmul,
+        npow := Monoidₓ.npow } <;>
+    run_tac
+      tactic.pi_instance_derive_field
 
-instance comm_ring [∀ i, comm_ring $ f i] : comm_ring (Π i : I, f i) :=
-by refine_struct { zero := (0 : Π i, f i), one := 1, add := (+), mul := (*),
-  neg := has_neg.neg, nsmul := add_monoid.nsmul, zsmul := sub_neg_monoid.zsmul,
-  npow := monoid.npow };
-tactic.pi_instance_derive_field
+instance commSemiring [∀ i, CommSemiringₓ <| f i] : CommSemiringₓ (∀ i : I, f i) := by
+  refine_struct
+      { zero := (0 : ∀ i, f i), one := 1, add := (· + ·), mul := (· * ·), nsmul := AddMonoidₓ.nsmul,
+        npow := Monoidₓ.npow } <;>
+    run_tac
+      tactic.pi_instance_derive_field
+
+instance nonUnitalNonAssocRing [∀ i, NonUnitalNonAssocRing <| f i] : NonUnitalNonAssocRing (∀ i : I, f i) := by
+  refine_struct
+      { zero := (0 : ∀ i, f i), add := (· + ·), mul := (· * ·), neg := Neg.neg, nsmul := AddMonoidₓ.nsmul,
+        zsmul := SubNegMonoidₓ.zsmul } <;>
+    run_tac
+      tactic.pi_instance_derive_field
+
+instance nonUnitalRing [∀ i, NonUnitalRing <| f i] : NonUnitalRing (∀ i : I, f i) := by
+  refine_struct
+      { zero := (0 : ∀ i, f i), add := (· + ·), mul := (· * ·), neg := Neg.neg, nsmul := AddMonoidₓ.nsmul,
+        zsmul := SubNegMonoidₓ.zsmul } <;>
+    run_tac
+      tactic.pi_instance_derive_field
+
+instance nonAssocRing [∀ i, NonAssocRing <| f i] : NonAssocRing (∀ i : I, f i) := by
+  refine_struct
+      { zero := (0 : ∀ i, f i), add := (· + ·), mul := (· * ·), neg := Neg.neg, nsmul := AddMonoidₓ.nsmul,
+        zsmul := SubNegMonoidₓ.zsmul } <;>
+    run_tac
+      tactic.pi_instance_derive_field
+
+instance ring [∀ i, Ringₓ <| f i] : Ringₓ (∀ i : I, f i) := by
+  refine_struct
+      { zero := (0 : ∀ i, f i), one := 1, add := (· + ·), mul := (· * ·), neg := Neg.neg, nsmul := AddMonoidₓ.nsmul,
+        zsmul := SubNegMonoidₓ.zsmul, npow := Monoidₓ.npow } <;>
+    run_tac
+      tactic.pi_instance_derive_field
+
+instance commRing [∀ i, CommRingₓ <| f i] : CommRingₓ (∀ i : I, f i) := by
+  refine_struct
+      { zero := (0 : ∀ i, f i), one := 1, add := (· + ·), mul := (· * ·), neg := Neg.neg, nsmul := AddMonoidₓ.nsmul,
+        zsmul := SubNegMonoidₓ.zsmul, npow := Monoidₓ.npow } <;>
+    run_tac
+      tactic.pi_instance_derive_field
 
 /-- A family of ring homomorphisms `f a : γ →+* β a` defines a ring homomorphism
 `pi.ring_hom f : γ →+* Π a, β a` given by `pi.ring_hom f x b = f b x`. -/
 @[simps]
-protected def ring_hom {γ : Type w} [Π i, non_assoc_semiring (f i)] [non_assoc_semiring γ]
-  (g : Π i, γ →+* f i) : γ →+* Π i, f i :=
-{ to_fun := λ x b, g b x,
-  map_add' := λ x y, funext $ λ z, (g z).map_add x y,
-  map_mul' := λ x y, funext $ λ z, (g z).map_mul x y,
-  map_one' := funext $ λ z, (g z).map_one,
-  map_zero' := funext $ λ z, (g z).map_zero }
+protected def ringHom {γ : Type w} [∀ i, NonAssocSemiringₓ (f i)] [NonAssocSemiringₓ γ] (g : ∀ i, γ →+* f i) :
+    γ →+* ∀ i, f i where
+  toFun := fun x b => g b x
+  map_add' := fun x y => funext fun z => (g z).map_add x y
+  map_mul' := fun x y => funext fun z => (g z).map_mul x y
+  map_one' := funext fun z => (g z).map_one
+  map_zero' := funext fun z => (g z).map_zero
 
-lemma ring_hom_injective {γ : Type w} [nonempty I] [Π i, non_assoc_semiring (f i)]
-  [non_assoc_semiring γ] (g : Π i, γ →+* f i) (hg : ∀ i, function.injective (g i)) :
-  function.injective (pi.ring_hom g) :=
-λ x y h, let ⟨i⟩ := ‹nonempty I› in hg i ((function.funext_iff.mp h : _) i)
+theorem ring_hom_injective {γ : Type w} [Nonempty I] [∀ i, NonAssocSemiringₓ (f i)] [NonAssocSemiringₓ γ]
+    (g : ∀ i, γ →+* f i) (hg : ∀ i, Function.Injective (g i)) : Function.Injective (Pi.ringHom g) := fun x y h =>
+  let ⟨i⟩ := ‹Nonempty I›
+  hg i ((Function.funext_iffₓ.mp h : _) i)
 
-end pi
+end Pi
 
-section ring_hom
+section RingHom
 
-universes u v
+universe u v
+
 variable {I : Type u}
 
 /-- Evaluation of functions into an indexed collection of monoids at a point is a monoid
 homomorphism. This is `function.eval` as a `ring_hom`. -/
 @[simps]
-def pi.eval_ring_hom (f : I → Type v) [Π i, non_assoc_semiring (f i)] (i : I) :
-  (Π i, f i) →+* f i :=
-{ ..(pi.eval_monoid_hom f i),
-  ..(pi.eval_add_monoid_hom f i) }
+def Pi.evalRingHom (f : I → Type v) [∀ i, NonAssocSemiringₓ (f i)] (i : I) : (∀ i, f i) →+* f i :=
+  { Pi.evalMonoidHom f i, Pi.evalAddMonoidHom f i with }
 
 /-- `function.const` as a `ring_hom`. -/
 @[simps]
-def pi.const_ring_hom (α β : Type*) [non_assoc_semiring β] : β →+* (α → β) :=
-{ to_fun := function.const _,
-  .. pi.ring_hom (λ _, ring_hom.id β) }
+def Pi.constRingHom (α β : Type _) [NonAssocSemiringₓ β] : β →+* α → β :=
+  { Pi.ringHom fun _ => RingHom.id β with toFun := Function.const _ }
 
 /-- Ring homomorphism between the function spaces `I → α` and `I → β`, induced by a ring
 homomorphism `f` between `α` and `β`. -/
-@[simps] protected def ring_hom.comp_left {α β : Type*} [non_assoc_semiring α]
-  [non_assoc_semiring β] (f : α →+* β) (I : Type*) :
-  (I → α) →+* (I → β) :=
-{ to_fun := λ h, f ∘ h,
-  .. f.to_monoid_hom.comp_left I,
-  .. f.to_add_monoid_hom.comp_left I }
+@[simps]
+protected def RingHom.compLeft {α β : Type _} [NonAssocSemiringₓ α] [NonAssocSemiringₓ β] (f : α →+* β) (I : Type _) :
+    (I → α) →+* I → β :=
+  { f.toMonoidHom.compLeft I, f.toAddMonoidHom.compLeft I with toFun := fun h => f ∘ h }
 
-end ring_hom
+end RingHom
+

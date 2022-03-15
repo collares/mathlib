@@ -3,9 +3,8 @@ Copyright (c) 2020 Simon Hudon All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Simon Hudon
 -/
-
-import control.functor.multivariate
-import data.qpf.multivariate.basic
+import Mathbin.Control.Functor.Multivariate
+import Mathbin.Data.Qpf.Multivariate.Basic
 
 /-!
 # Constant functors are QPFs
@@ -17,55 +16,67 @@ that are not actually functorial. For instance `const n nat` makes
 specification.
 -/
 
-universes u
 
-namespace mvqpf
-open_locale mvfunctor
+universe u
 
-variables (n : ℕ)
+namespace Mvqpf
+
+open_locale Mvfunctor
+
+variable (n : ℕ)
 
 /-- Constant multivariate functor -/
 @[nolint unused_arguments]
-def const (A : Type*) (v : typevec.{u} n) : Type* :=
-A
+def Const (A : Type _) (v : Typevec.{u} n) : Type _ :=
+  A
 
-instance const.inhabited {A α} [inhabited A] : inhabited (const n A α) :=
-⟨ (default : A) ⟩
+instance Const.inhabited {A α} [Inhabited A] : Inhabited (Const n A α) :=
+  ⟨(default : A)⟩
 
-namespace const
-open mvfunctor mvpfunctor
-variables {n} {A : Type u} {α β : typevec.{u} n} (f : α ⟹ β)
+namespace Const
+
+open Mvfunctor Mvpfunctor
+
+variable {n} {A : Type u} {α β : Typevec.{u} n} (f : α ⟹ β)
 
 /-- Constructor for constant functor -/
-protected def mk (x : A) : (const n A) α := x
+protected def mk (x : A) : (Const n A) α :=
+  x
 
 /-- Destructor for constant functor -/
-protected def get (x : (const n A) α) : A := x
+protected def get (x : (Const n A) α) : A :=
+  x
 
-@[simp] protected lemma mk_get (x : (const n A) α) : const.mk (const.get x) = x := rfl
+@[simp]
+protected theorem mk_get (x : (Const n A) α) : Const.mk (Const.get x) = x :=
+  rfl
 
-@[simp] protected lemma get_mk (x : A) : const.get (const.mk x : const n A α) = x := rfl
+@[simp]
+protected theorem get_mk (x : A) : Const.get (Const.mk x : Const n A α) = x :=
+  rfl
 
 /-- `map` for constant functor -/
-protected def map : (const n A) α → (const n A) β :=
-λ x, x
+protected def map : (Const n A) α → (Const n A) β := fun x => x
 
-instance : mvfunctor (const n A) :=
-{ map := λ α β f, const.map }
+instance : Mvfunctor (Const n A) where
+  map := fun α β f => Const.map
 
-lemma map_mk (x : A) :
-  f <$$> const.mk x = const.mk x := rfl
+theorem map_mk (x : A) : f <$$> Const.mk x = Const.mk x :=
+  rfl
 
-lemma get_map (x : (const n A) α) :
-  const.get (f <$$> x) = const.get x := rfl
+theorem get_map (x : (Const n A) α) : Const.get (f <$$> x) = Const.get x :=
+  rfl
 
-instance mvqpf : @mvqpf _ (const n A) (mvqpf.const.mvfunctor) :=
-{ P         := mvpfunctor.const n A,
-  abs       := λ α x, mvpfunctor.const.get x,
-  repr      := λ α x, mvpfunctor.const.mk n x,
-  abs_repr  := by intros; simp,
-  abs_map   := by intros; simp; refl, }
+instance mvqpf : @Mvqpf _ (Const n A) Mvqpf.Const.mvfunctor where
+  p := Mvpfunctor.const n A
+  abs := fun α x => Mvpfunctor.const.get x
+  repr := fun α x => Mvpfunctor.const.mk n x
+  abs_repr := by
+    intros <;> simp
+  abs_map := by
+    intros <;> simp <;> rfl
 
-end const
+end Const
 
-end mvqpf
+end Mvqpf
+

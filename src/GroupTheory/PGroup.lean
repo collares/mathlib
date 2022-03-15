@@ -3,12 +3,11 @@ Copyright (c) 2018 . All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chris Hughes, Thomas Browning
 -/
-
-import data.zmod.basic
-import group_theory.index
-import group_theory.group_action.conj_act
-import group_theory.perm.cycle_type
-import group_theory.quotient_group
+import Mathbin.Data.Zmod.Basic
+import Mathbin.GroupTheory.Index
+import Mathbin.GroupTheory.GroupAction.ConjAct
+import Mathbin.GroupTheory.Perm.CycleType
+import Mathbin.GroupTheory.QuotientGroup
 
 /-!
 # p-groups
@@ -18,265 +17,259 @@ then the number of fixed points of the action is congruent mod `p` to the cardin
 It also contains proofs of some corollaries of this lemma about existence of fixed points.
 -/
 
-open_locale big_operators
 
-open fintype mul_action
+open_locale BigOperators
 
-variables (p : ℕ) (G : Type*) [group G]
+open Fintype MulAction
+
+variable (p : ℕ) (G : Type _) [Groupₓ G]
 
 /-- A p-group is a group in which every element has prime power order -/
-def is_p_group : Prop := ∀ g : G, ∃ k : ℕ, g ^ (p ^ k) = 1
+def IsPGroup : Prop :=
+  ∀ g : G, ∃ k : ℕ, g ^ p ^ k = 1
 
-variables {p} {G}
+variable {p} {G}
 
-namespace is_p_group
+namespace IsPGroup
 
-lemma iff_order_of [hp : fact p.prime] :
-  is_p_group p G ↔ ∀ g : G, ∃ k : ℕ, order_of g = p ^ k :=
-forall_congr (λ g, ⟨λ ⟨k, hk⟩, exists_imp_exists (by exact λ j, Exists.snd)
-  ((nat.dvd_prime_pow hp.out).mp (order_of_dvd_of_pow_eq_one hk)),
-  exists_imp_exists (λ k hk, by rw [←hk, pow_order_of_eq_one])⟩)
+theorem iff_order_of [hp : Fact p.Prime] : IsPGroup p G ↔ ∀ g : G, ∃ k : ℕ, orderOf g = p ^ k :=
+  forall_congrₓ fun g =>
+    ⟨fun ⟨k, hk⟩ =>
+      exists_imp_exists (fun j => Exists.snd) ((Nat.dvd_prime_pow hp.out).mp (order_of_dvd_of_pow_eq_one hk)),
+      exists_imp_exists fun k hk => by
+        rw [← hk, pow_order_of_eq_one]⟩
 
-lemma of_card [fintype G] {n : ℕ} (hG : card G = p ^ n) : is_p_group p G :=
-λ g, ⟨n, by rw [←hG, pow_card_eq_one]⟩
+theorem of_card [Fintype G] {n : ℕ} (hG : card G = p ^ n) : IsPGroup p G := fun g =>
+  ⟨n, by
+    rw [← hG, pow_card_eq_one]⟩
 
-lemma of_bot : is_p_group p (⊥ : subgroup G) :=
-of_card (subgroup.card_bot.trans (pow_zero p).symm)
+theorem of_bot : IsPGroup p (⊥ : Subgroup G) :=
+  of_card (Subgroup.card_bot.trans (pow_zeroₓ p).symm)
 
-lemma iff_card [fact p.prime] [fintype G] :
-  is_p_group p G ↔ ∃ n : ℕ, card G = p ^ n :=
-begin
-  have hG : card G ≠ 0 := card_ne_zero,
-  refine ⟨λ h, _, λ ⟨n, hn⟩, of_card hn⟩,
-  suffices : ∀ q ∈ nat.factors (card G), q = p,
-  { use (card G).factors.length,
-    rw [←list.prod_repeat, ←list.eq_repeat_of_mem this, nat.prod_factors hG] },
-  intros q hq,
-  obtain ⟨hq1, hq2⟩ := (nat.mem_factors hG).mp hq,
-  haveI : fact q.prime := ⟨hq1⟩,
-  obtain ⟨g, hg⟩ := equiv.perm.exists_prime_order_of_dvd_card q hq2,
-  obtain ⟨k, hk⟩ := (iff_order_of.mp h) g,
-  exact (hq1.pow_eq_iff.mp (hg.symm.trans hk).symm).1.symm,
-end
+theorem iff_card [Fact p.Prime] [Fintype G] : IsPGroup p G ↔ ∃ n : ℕ, card G = p ^ n := by
+  have hG : card G ≠ 0 := card_ne_zero
+  refine' ⟨fun h => _, fun ⟨n, hn⟩ => of_card hn⟩
+  suffices ∀, ∀ q ∈ Nat.factors (card G), ∀, q = p by
+    use (card G).factors.length
+    rw [← List.prod_repeat, ← List.eq_repeat_of_mem this, Nat.prod_factors hG]
+  intro q hq
+  obtain ⟨hq1, hq2⟩ := (Nat.mem_factors hG).mp hq
+  have : Fact q.prime := ⟨hq1⟩
+  obtain ⟨g, hg⟩ := Equivₓ.Perm.exists_prime_order_of_dvd_card q hq2
+  obtain ⟨k, hk⟩ := (iff_order_of.mp h) g
+  exact (hq1.pow_eq_iff.mp (hg.symm.trans hk).symm).1.symm
 
-section G_is_p_group
+section GIsPGroup
 
-variables (hG : is_p_group p G)
+variable (hG : IsPGroup p G)
 
 include hG
 
-lemma of_injective {H : Type*} [group H] (ϕ : H →* G) (hϕ : function.injective ϕ) :
-  is_p_group p H :=
-begin
-  simp_rw [is_p_group, ←hϕ.eq_iff, ϕ.map_pow, ϕ.map_one],
-  exact λ h, hG (ϕ h),
-end
+theorem of_injective {H : Type _} [Groupₓ H] (ϕ : H →* G) (hϕ : Function.Injective ϕ) : IsPGroup p H := by
+  simp_rw [IsPGroup, ← hϕ.eq_iff, ϕ.map_pow, ϕ.map_one]
+  exact fun h => hG (ϕ h)
 
-lemma to_subgroup (H : subgroup G) : is_p_group p H :=
-hG.of_injective H.subtype subtype.coe_injective
+theorem to_subgroup (H : Subgroup G) : IsPGroup p H :=
+  hG.ofInjective H.Subtype Subtype.coe_injective
 
-lemma of_surjective {H : Type*} [group H] (ϕ : G →* H) (hϕ : function.surjective ϕ) :
-  is_p_group p H :=
-begin
-  refine λ h, exists.elim (hϕ h) (λ g hg, exists_imp_exists (λ k hk, _) (hG g)),
-  rw [←hg, ←ϕ.map_pow, hk, ϕ.map_one],
-end
+theorem of_surjective {H : Type _} [Groupₓ H] (ϕ : G →* H) (hϕ : Function.Surjective ϕ) : IsPGroup p H := by
+  refine' fun h => Exists.elim (hϕ h) fun g hg => exists_imp_exists (fun k hk => _) (hG g)
+  rw [← hg, ← ϕ.map_pow, hk, ϕ.map_one]
 
-lemma to_quotient (H : subgroup G) [H.normal] :
-  is_p_group p (G ⧸ H) :=
-hG.of_surjective (quotient_group.mk' H) quotient.surjective_quotient_mk'
+theorem to_quotient (H : Subgroup G) [H.Normal] : IsPGroup p (G ⧸ H) :=
+  hG.ofSurjective (QuotientGroup.mk' H) Quotientₓ.surjective_quotient_mk'
 
-lemma of_equiv {H : Type*} [group H] (ϕ : G ≃* H) : is_p_group p H :=
-hG.of_surjective ϕ.to_monoid_hom ϕ.surjective
+theorem of_equiv {H : Type _} [Groupₓ H] (ϕ : G ≃* H) : IsPGroup p H :=
+  hG.ofSurjective ϕ.toMonoidHom ϕ.Surjective
 
-variables [hp : fact p.prime]
+variable [hp : Fact p.Prime]
 
 include hp
 
-lemma index (H : subgroup G) [fintype (G ⧸ H)] :
-  ∃ n : ℕ, H.index = p ^ n :=
-begin
-  obtain ⟨n, hn⟩ := iff_card.mp (hG.to_quotient H.normal_core),
-  obtain ⟨k, hk1, hk2⟩ := (nat.dvd_prime_pow hp.out).mp ((congr_arg _
-    (H.normal_core.index_eq_card.trans hn)).mp (subgroup.index_dvd_of_le H.normal_core_le)),
-  exact ⟨k, hk2⟩,
-end
+theorem index (H : Subgroup G) [Fintype (G ⧸ H)] : ∃ n : ℕ, H.index = p ^ n := by
+  obtain ⟨n, hn⟩ := iff_card.mp (hG.to_quotient H.normal_core)
+  obtain ⟨k, hk1, hk2⟩ :=
+    (Nat.dvd_prime_pow hp.out).mp
+      ((congr_argₓ _ (H.normal_core.index_eq_card.trans hn)).mp (Subgroup.index_dvd_of_le H.normal_core_le))
+  exact ⟨k, hk2⟩
 
-variables {α : Type*} [mul_action G α]
+variable {α : Type _} [MulAction G α]
 
-lemma card_orbit (a : α) [fintype (orbit G a)] :
-  ∃ n : ℕ, card (orbit G a) = p ^ n :=
-begin
-  let ϕ := orbit_equiv_quotient_stabilizer G a,
-  haveI := fintype.of_equiv (orbit G a) ϕ,
-  rw [card_congr ϕ, ←subgroup.index_eq_card],
-  exact hG.index (stabilizer G a),
-end
+theorem card_orbit (a : α) [Fintype (Orbit G a)] : ∃ n : ℕ, card (Orbit G a) = p ^ n := by
+  let ϕ := orbit_equiv_quotient_stabilizer G a
+  have := Fintype.ofEquiv (orbit G a) ϕ
+  rw [card_congr ϕ, ← Subgroup.index_eq_card]
+  exact hG.index (stabilizer G a)
 
-variables (α) [fintype α] [fintype (fixed_points G α)]
+variable (α) [Fintype α] [Fintype (FixedPoints G α)]
 
 /-- If `G` is a `p`-group acting on a finite set `α`, then the number of fixed points
   of the action is congruent mod `p` to the cardinality of `α` -/
-lemma card_modeq_card_fixed_points : card α ≡ card (fixed_points G α) [MOD p] :=
-begin
-  classical,
-  calc card α = card (Σ y : quotient (orbit_rel G α), {x // quotient.mk' x = y}) :
-    card_congr (equiv.sigma_preimage_equiv (@quotient.mk' _ (orbit_rel G α))).symm
-  ... = ∑ a : quotient (orbit_rel G α), card {x // quotient.mk' x = a} : card_sigma _
-  ... ≡ ∑ a : fixed_points G α, 1 [MOD p] : _
-  ... = _ : by simp; refl,
-  rw [←zmod.eq_iff_modeq_nat p, nat.cast_sum, nat.cast_sum],
-  have key : ∀ x, card {y // (quotient.mk' y : quotient (orbit_rel G α)) = quotient.mk' x} =
-    card (orbit G x) := λ x, by simp only [quotient.eq']; congr,
-  refine eq.symm (finset.sum_bij_ne_zero (λ a _ _, quotient.mk' a.1) (λ _ _ _, finset.mem_univ _)
-    (λ a₁ a₂ _ _ _ _ h, subtype.eq ((mem_fixed_points' α).mp a₂.2 a₁.1 (quotient.exact' h)))
-      (λ b, quotient.induction_on' b (λ b _ hb, _)) (λ a ha _, by
-      { rw [key, mem_fixed_points_iff_card_orbit_eq_one.mp a.2] })),
-  obtain ⟨k, hk⟩ := hG.card_orbit b,
-  have : k = 0 := nat.le_zero_iff.1 (nat.le_of_lt_succ (lt_of_not_ge (mt (pow_dvd_pow p)
-    (by rwa [pow_one, ←hk, ←nat.modeq_zero_iff_dvd, ←zmod.eq_iff_modeq_nat, ←key])))),
-  exact ⟨⟨b, mem_fixed_points_iff_card_orbit_eq_one.2 $ by rw [hk, this, pow_zero]⟩,
-    finset.mem_univ _, (ne_of_eq_of_ne nat.cast_one one_ne_zero), rfl⟩,
-end
+theorem card_modeq_card_fixed_points : card α ≡ card (FixedPoints G α) [MOD p] := by
+  classical
+  calc card α = card (Σy : Quotientₓ (orbit_rel G α), { x // Quotientₓ.mk' x = y }) :=
+      card_congr
+        (Equivₓ.sigmaPreimageEquiv
+            (@Quotientₓ.mk' _
+              (orbit_rel G α))).symm _ = ∑ a : Quotientₓ (orbit_rel G α), card { x // Quotientₓ.mk' x = a } :=
+      card_sigma _ _ ≡ ∑ a : fixed_points G α, 1 [MOD p] := _ _ = _ := by
+      simp <;> rfl
+  rw [← Zmod.eq_iff_modeq_nat p, Nat.cast_sum, Nat.cast_sum]
+  have key : ∀ x, card { y // (Quotientₓ.mk' y : Quotientₓ (orbit_rel G α)) = Quotientₓ.mk' x } = card (orbit G x) :=
+    fun x => by
+    simp only [Quotientₓ.eq'] <;> congr
+  refine'
+    Eq.symm
+      (Finset.sum_bij_ne_zero (fun a _ _ => Quotientₓ.mk' a.1) (fun _ _ _ => Finset.mem_univ _)
+        (fun a₁ a₂ _ _ _ _ h => Subtype.eq ((mem_fixed_points' α).mp a₂.2 a₁.1 (Quotientₓ.exact' h)))
+        (fun b => Quotientₓ.induction_on' b fun b _ hb => _) fun a ha _ => by
+        rw [key, mem_fixed_points_iff_card_orbit_eq_one.mp a.2])
+  obtain ⟨k, hk⟩ := hG.card_orbit b
+  have : k = 0 :=
+    Nat.le_zero_iffₓ.1
+      (Nat.le_of_lt_succₓ
+        (lt_of_not_geₓ
+          (mt (pow_dvd_pow p)
+            (by
+              rwa [pow_oneₓ, ← hk, ← Nat.modeq_zero_iff_dvd, ← Zmod.eq_iff_modeq_nat, ← key]))))
+  exact
+    ⟨⟨b,
+        mem_fixed_points_iff_card_orbit_eq_one.2 <| by
+          rw [hk, this, pow_zeroₓ]⟩,
+      Finset.mem_univ _, ne_of_eq_of_ne Nat.cast_oneₓ one_ne_zero, rfl⟩
 
 /-- If a p-group acts on `α` and the cardinality of `α` is not a multiple
   of `p` then the action has a fixed point. -/
-lemma nonempty_fixed_point_of_prime_not_dvd_card (hpα : ¬ p ∣ card α) :
-  (fixed_points G α).nonempty :=
-@set.nonempty_of_nonempty_subtype _ _ begin
-rw [←card_pos_iff, pos_iff_ne_zero],
-  contrapose! hpα,
-  rw [←nat.modeq_zero_iff_dvd, ←hpα],
-  exact hG.card_modeq_card_fixed_points α,
-end
+theorem nonempty_fixed_point_of_prime_not_dvd_card (hpα : ¬p ∣ card α) : (FixedPoints G α).Nonempty :=
+  @Set.nonempty_of_nonempty_subtype _ _
+    (by
+      rw [← card_pos_iff, pos_iff_ne_zero]
+      contrapose! hpα
+      rw [← Nat.modeq_zero_iff_dvd, ← hpα]
+      exact hG.card_modeq_card_fixed_points α)
 
 /-- If a p-group acts on `α` and the cardinality of `α` is a multiple
   of `p`, and the action has one fixed point, then it has another fixed point. -/
-lemma exists_fixed_point_of_prime_dvd_card_of_fixed_point
-  (hpα : p ∣ card α) {a : α} (ha : a ∈ fixed_points G α) :
-  ∃ b, b ∈ fixed_points G α ∧ a ≠ b :=
-have hpf : p ∣ card (fixed_points G α) :=
-  nat.modeq_zero_iff_dvd.mp ((hG.card_modeq_card_fixed_points α).symm.trans hpα.modeq_zero_nat),
-have hα : 1 < card (fixed_points G α) :=
-  (fact.out p.prime).one_lt.trans_le (nat.le_of_dvd (card_pos_iff.2 ⟨⟨a, ha⟩⟩) hpf),
-let ⟨⟨b, hb⟩, hba⟩ := exists_ne_of_one_lt_card hα ⟨a, ha⟩ in
-⟨b, hb, λ hab, hba (by simp_rw [hab])⟩
+theorem exists_fixed_point_of_prime_dvd_card_of_fixed_point (hpα : p ∣ card α) {a : α} (ha : a ∈ FixedPoints G α) :
+    ∃ b, b ∈ FixedPoints G α ∧ a ≠ b :=
+  have hpf : p ∣ card (FixedPoints G α) :=
+    Nat.modeq_zero_iff_dvd.mp ((hG.card_modeq_card_fixed_points α).symm.trans hpα.modeq_zero_nat)
+  have hα : 1 < card (FixedPoints G α) :=
+    (Fact.out p.Prime).one_lt.trans_le (Nat.le_of_dvdₓ (card_pos_iff.2 ⟨⟨a, ha⟩⟩) hpf)
+  let ⟨⟨b, hb⟩, hba⟩ := exists_ne_of_one_lt_card hα ⟨a, ha⟩
+  ⟨b, hb, fun hab =>
+    hba
+      (by
+        simp_rw [hab])⟩
 
-lemma center_nontrivial [nontrivial G] [fintype G] : nontrivial (subgroup.center G) :=
-begin
-  classical,
-  have := (hG.of_equiv conj_act.to_conj_act).exists_fixed_point_of_prime_dvd_card_of_fixed_point G,
-  rw conj_act.fixed_points_eq_center at this,
-  obtain ⟨g, hg⟩ := this _ (subgroup.center G).one_mem,
-  { exact ⟨⟨1, ⟨g, hg.1⟩, mt subtype.ext_iff.mp hg.2⟩⟩ },
-  { obtain ⟨n, hn⟩ := is_p_group.iff_card.mp hG,
-    rw hn,
-    apply dvd_pow_self,
-    rintro rfl,
-    exact (fintype.one_lt_card).ne' hn },
-end
+theorem center_nontrivial [Nontrivial G] [Fintype G] : Nontrivial (Subgroup.center G) := by
+  classical
+  have := (hG.of_equiv ConjAct.toConjAct).exists_fixed_point_of_prime_dvd_card_of_fixed_point G
+  rw [ConjAct.fixed_points_eq_center] at this
+  obtain ⟨g, hg⟩ := this _ (Subgroup.center G).one_mem
+  · exact ⟨⟨1, ⟨g, hg.1⟩, mt subtype.ext_iff.mp hg.2⟩⟩
+    
+  · obtain ⟨n, hn⟩ := is_p_group.iff_card.mp hG
+    rw [hn]
+    apply dvd_pow_self
+    rintro rfl
+    exact Fintype.one_lt_card.ne' hn
+    
 
-lemma bot_lt_center [nontrivial G] [fintype G] : ⊥ < subgroup.center G :=
-begin
-  haveI := center_nontrivial hG,
-  classical,
-  exact bot_lt_iff_ne_bot.mpr ((subgroup.center G).one_lt_card_iff_ne_bot.mp fintype.one_lt_card),
-end
+theorem bot_lt_center [Nontrivial G] [Fintype G] : ⊥ < Subgroup.center G := by
+  have := center_nontrivial hG
+  classical
+  exact bot_lt_iff_ne_bot.mpr ((Subgroup.center G).one_lt_card_iff_ne_bot.mp Fintype.one_lt_card)
 
-end G_is_p_group
+end GIsPGroup
 
-lemma to_le {H K : subgroup G} (hK : is_p_group p K) (hHK : H ≤ K) : is_p_group p H :=
-hK.of_injective (subgroup.inclusion hHK) (λ a b h, subtype.ext (show _, from subtype.ext_iff.mp h))
+theorem to_le {H K : Subgroup G} (hK : IsPGroup p K) (hHK : H ≤ K) : IsPGroup p H :=
+  hK.ofInjective (Subgroup.inclusion hHK) fun a b h => Subtype.ext (show _ from Subtype.ext_iff.mp h)
 
-lemma to_inf_left {H K : subgroup G} (hH : is_p_group p H) : is_p_group p (H ⊓ K : subgroup G) :=
-hH.to_le inf_le_left
+theorem to_inf_left {H K : Subgroup G} (hH : IsPGroup p H) : IsPGroup p (H⊓K : Subgroup G) :=
+  hH.to_le inf_le_left
 
-lemma to_inf_right {H K : subgroup G} (hK : is_p_group p K) : is_p_group p (H ⊓ K : subgroup G) :=
-hK.to_le inf_le_right
+theorem to_inf_right {H K : Subgroup G} (hK : IsPGroup p K) : IsPGroup p (H⊓K : Subgroup G) :=
+  hK.to_le inf_le_right
 
-lemma map {H : subgroup G} (hH : is_p_group p H) {K : Type*} [group K]
-  (ϕ : G →* K) : is_p_group p (H.map ϕ) :=
-begin
-  rw [←H.subtype_range, monoid_hom.map_range],
-  exact hH.of_surjective (ϕ.restrict H).range_restrict (ϕ.restrict H).range_restrict_surjective,
-end
+theorem map {H : Subgroup G} (hH : IsPGroup p H) {K : Type _} [Groupₓ K] (ϕ : G →* K) : IsPGroup p (H.map ϕ) := by
+  rw [← H.subtype_range, MonoidHom.map_range]
+  exact hH.of_surjective (ϕ.restrict H).range_restrict (ϕ.restrict H).range_restrict_surjective
 
-lemma comap_of_ker_is_p_group {H : subgroup G} (hH : is_p_group p H) {K : Type*} [group K]
-  (ϕ : K →* G) (hϕ : is_p_group p ϕ.ker) : is_p_group p (H.comap ϕ) :=
-begin
-  intro g,
-  obtain ⟨j, hj⟩ := hH ⟨ϕ g.1, g.2⟩,
-  rw [subtype.ext_iff, H.coe_pow, subtype.coe_mk, ←ϕ.map_pow] at hj,
-  obtain ⟨k, hk⟩ := hϕ ⟨g.1 ^ p ^ j, hj⟩,
-  rwa [subtype.ext_iff, ϕ.ker.coe_pow, subtype.coe_mk, ←pow_mul, ←pow_add] at hk,
-  exact ⟨j + k, by rwa [subtype.ext_iff, (H.comap ϕ).coe_pow]⟩,
-end
+theorem comap_of_ker_is_p_group {H : Subgroup G} (hH : IsPGroup p H) {K : Type _} [Groupₓ K] (ϕ : K →* G)
+    (hϕ : IsPGroup p ϕ.ker) : IsPGroup p (H.comap ϕ) := by
+  intro g
+  obtain ⟨j, hj⟩ := hH ⟨ϕ g.1, g.2⟩
+  rw [Subtype.ext_iff, H.coe_pow, Subtype.coe_mk, ← ϕ.map_pow] at hj
+  obtain ⟨k, hk⟩ := hϕ ⟨g.1 ^ p ^ j, hj⟩
+  rwa [Subtype.ext_iff, ϕ.ker.coe_pow, Subtype.coe_mk, ← pow_mulₓ, ← pow_addₓ] at hk
+  exact
+    ⟨j + k, by
+      rwa [Subtype.ext_iff, (H.comap ϕ).coe_pow]⟩
 
-lemma ker_is_p_group_of_injective {K : Type*} [group K] {ϕ : K →* G} (hϕ : function.injective ϕ) :
-  is_p_group p ϕ.ker :=
-(congr_arg (λ Q : subgroup K, is_p_group p Q) (ϕ.ker_eq_bot_iff.mpr hϕ)).mpr is_p_group.of_bot
+theorem ker_is_p_group_of_injective {K : Type _} [Groupₓ K] {ϕ : K →* G} (hϕ : Function.Injective ϕ) :
+    IsPGroup p ϕ.ker :=
+  (congr_argₓ (fun Q : Subgroup K => IsPGroup p Q) (ϕ.ker_eq_bot_iff.mpr hϕ)).mpr IsPGroup.of_bot
 
-lemma comap_of_injective {H : subgroup G} (hH : is_p_group p H) {K : Type*} [group K]
-  (ϕ : K →* G) (hϕ : function.injective ϕ) : is_p_group p (H.comap ϕ) :=
-hH.comap_of_ker_is_p_group ϕ (ker_is_p_group_of_injective hϕ)
+theorem comap_of_injective {H : Subgroup G} (hH : IsPGroup p H) {K : Type _} [Groupₓ K] (ϕ : K →* G)
+    (hϕ : Function.Injective ϕ) : IsPGroup p (H.comap ϕ) :=
+  hH.comap_of_ker_is_p_group ϕ (ker_is_p_group_of_injective hϕ)
 
-lemma comap_subtype {H : subgroup G} (hH : is_p_group p H) {K : subgroup G} :
-  is_p_group p (H.comap K.subtype) :=
-hH.comap_of_injective K.subtype subtype.coe_injective
+theorem comap_subtype {H : Subgroup G} (hH : IsPGroup p H) {K : Subgroup G} : IsPGroup p (H.comap K.Subtype) :=
+  hH.comap_of_injective K.Subtype Subtype.coe_injective
 
-lemma to_sup_of_normal_right {H K : subgroup G} (hH : is_p_group p H) (hK : is_p_group p K)
-  [K.normal] : is_p_group p (H ⊔ K : subgroup G) :=
-begin
-  rw [←quotient_group.ker_mk K, ←subgroup.comap_map_eq],
-  apply (hH.map (quotient_group.mk' K)).comap_of_ker_is_p_group,
-  rwa quotient_group.ker_mk,
-end
+theorem to_sup_of_normal_right {H K : Subgroup G} (hH : IsPGroup p H) (hK : IsPGroup p K) [K.Normal] :
+    IsPGroup p (H⊔K : Subgroup G) := by
+  rw [← QuotientGroup.ker_mk K, ← Subgroup.comap_map_eq]
+  apply (hH.map (QuotientGroup.mk' K)).comap_of_ker_is_p_group
+  rwa [QuotientGroup.ker_mk]
 
-lemma to_sup_of_normal_left {H K : subgroup G} (hH : is_p_group p H) (hK : is_p_group p K)
-  [H.normal] : is_p_group p (H ⊔ K : subgroup G) :=
-(congr_arg (λ H : subgroup G, is_p_group p H) sup_comm).mp (to_sup_of_normal_right hK hH)
+theorem to_sup_of_normal_left {H K : Subgroup G} (hH : IsPGroup p H) (hK : IsPGroup p K) [H.Normal] :
+    IsPGroup p (H⊔K : Subgroup G) :=
+  (congr_argₓ (fun H : Subgroup G => IsPGroup p H) sup_comm).mp (to_sup_of_normal_right hK hH)
 
-lemma to_sup_of_normal_right' {H K : subgroup G} (hH : is_p_group p H) (hK : is_p_group p K)
-  (hHK : H ≤ K.normalizer) : is_p_group p (H ⊔ K : subgroup G) :=
-let hHK' := to_sup_of_normal_right (hH.of_equiv (subgroup.comap_subtype_equiv_of_le hHK).symm)
-  (hK.of_equiv (subgroup.comap_subtype_equiv_of_le subgroup.le_normalizer).symm) in
-((congr_arg (λ H : subgroup K.normalizer, is_p_group p H)
-  (subgroup.sup_subgroup_of_eq hHK subgroup.le_normalizer)).mp hHK').of_equiv
-  (subgroup.comap_subtype_equiv_of_le (sup_le hHK subgroup.le_normalizer))
+theorem to_sup_of_normal_right' {H K : Subgroup G} (hH : IsPGroup p H) (hK : IsPGroup p K) (hHK : H ≤ K.normalizer) :
+    IsPGroup p (H⊔K : Subgroup G) :=
+  let hHK' :=
+    to_sup_of_normal_right (hH.ofEquiv (Subgroup.comapSubtypeEquivOfLe hHK).symm)
+      (hK.ofEquiv (Subgroup.comapSubtypeEquivOfLe Subgroup.le_normalizer).symm)
+  ((congr_argₓ (fun H : Subgroup K.normalizer => IsPGroup p H)
+            (Subgroup.sup_subgroup_of_eq hHK Subgroup.le_normalizer)).mp
+        hHK').ofEquiv
+    (Subgroup.comapSubtypeEquivOfLe (sup_le hHK Subgroup.le_normalizer))
 
-lemma to_sup_of_normal_left' {H K : subgroup G} (hH : is_p_group p H) (hK : is_p_group p K)
-  (hHK : K ≤ H.normalizer) : is_p_group p (H ⊔ K : subgroup G) :=
-(congr_arg (λ H : subgroup G, is_p_group p H) sup_comm).mp (to_sup_of_normal_right' hK hH hHK)
+theorem to_sup_of_normal_left' {H K : Subgroup G} (hH : IsPGroup p H) (hK : IsPGroup p K) (hHK : K ≤ H.normalizer) :
+    IsPGroup p (H⊔K : Subgroup G) :=
+  (congr_argₓ (fun H : Subgroup G => IsPGroup p H) sup_comm).mp (to_sup_of_normal_right' hK hH hHK)
 
 /-- finite p-groups with different p have coprime orders -/
-lemma coprime_card_of_ne {G₂ : Type*} [group G₂]
-  (p₁ p₂ : ℕ) [hp₁ : fact p₁.prime] [hp₂ : fact p₂.prime] (hne : p₁ ≠ p₂)
-  (H₁ : subgroup G) (H₂ : subgroup G₂) [fintype H₁] [fintype H₂]
-  (hH₁ : is_p_group p₁ H₁) (hH₂ : is_p_group p₂ H₂) :
-  nat.coprime (fintype.card H₁) (fintype.card H₂) :=
-begin
-  obtain ⟨n₁, heq₁⟩ := iff_card.mp hH₁, rw heq₁, clear heq₁,
-  obtain ⟨n₂, heq₂⟩ := iff_card.mp hH₂, rw heq₂, clear heq₂,
-  exact nat.coprime_pow_primes _ _ (hp₁.elim) (hp₂.elim) hne,
-end
+theorem coprime_card_of_ne {G₂ : Type _} [Groupₓ G₂] (p₁ p₂ : ℕ) [hp₁ : Fact p₁.Prime] [hp₂ : Fact p₂.Prime]
+    (hne : p₁ ≠ p₂) (H₁ : Subgroup G) (H₂ : Subgroup G₂) [Fintype H₁] [Fintype H₂] (hH₁ : IsPGroup p₁ H₁)
+    (hH₂ : IsPGroup p₂ H₂) : Nat.Coprime (Fintype.card H₁) (Fintype.card H₂) := by
+  obtain ⟨n₁, heq₁⟩ := iff_card.mp hH₁
+  rw [heq₁]
+  clear heq₁
+  obtain ⟨n₂, heq₂⟩ := iff_card.mp hH₂
+  rw [heq₂]
+  clear heq₂
+  exact Nat.coprime_pow_primes _ _ hp₁.elim hp₂.elim hne
 
 /-- p-groups with different p are disjoint -/
-lemma disjoint_of_ne (p₁ p₂ : ℕ) [hp₁ : fact p₁.prime] [hp₂ : fact p₂.prime] (hne : p₁ ≠ p₂)
-  (H₁ H₂ : subgroup G) (hH₁ : is_p_group p₁ H₁) (hH₂ : is_p_group p₂ H₂) :
-  disjoint H₁ H₂ :=
-begin
-  rintro x ⟨hx₁, hx₂⟩,
-  rw subgroup.mem_bot,
-  obtain ⟨n₁, hn₁⟩ := iff_order_of.mp hH₁ ⟨x, hx₁⟩,
-  obtain ⟨n₂, hn₂⟩ := iff_order_of.mp hH₂ ⟨x, hx₂⟩,
-  rw [← order_of_subgroup, subgroup.coe_mk] at hn₁ hn₂,
-  have : p₁ ^ n₁ = p₂ ^ n₂, by rw [← hn₁, ← hn₂],
-  have : n₁ = 0,
-  { contrapose! hne with h,
-    rw ← associated_iff_eq at this ⊢,
-    exact associated.of_pow_associated_of_prime
-      (nat.prime_iff.mp hp₁.elim) (nat.prime_iff.mp hp₂.elim) (ne.bot_lt h) this },
-  simpa [this] using hn₁,
-end
+theorem disjoint_of_ne (p₁ p₂ : ℕ) [hp₁ : Fact p₁.Prime] [hp₂ : Fact p₂.Prime] (hne : p₁ ≠ p₂) (H₁ H₂ : Subgroup G)
+    (hH₁ : IsPGroup p₁ H₁) (hH₂ : IsPGroup p₂ H₂) : Disjoint H₁ H₂ := by
+  rintro x ⟨hx₁, hx₂⟩
+  rw [Subgroup.mem_bot]
+  obtain ⟨n₁, hn₁⟩ := iff_order_of.mp hH₁ ⟨x, hx₁⟩
+  obtain ⟨n₂, hn₂⟩ := iff_order_of.mp hH₂ ⟨x, hx₂⟩
+  rw [← order_of_subgroup, Subgroup.coe_mk] at hn₁ hn₂
+  have : p₁ ^ n₁ = p₂ ^ n₂ := by
+    rw [← hn₁, ← hn₂]
+  have : n₁ = 0 := by
+    contrapose! hne with h
+    rw [← associated_iff_eq] at this⊢
+    exact
+      Associated.of_pow_associated_of_prime (nat.prime_iff.mp hp₁.elim) (nat.prime_iff.mp hp₂.elim) (Ne.bot_lt h) this
+  simpa [this] using hn₁
 
-end is_p_group
+end IsPGroup
+

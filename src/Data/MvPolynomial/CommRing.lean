@@ -3,8 +3,7 @@ Copyright (c) 2017 Johannes Hölzl. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johannes Hölzl, Johan Commelin, Mario Carneiro
 -/
-
-import data.mv_polynomial.variables
+import Mathbin.Data.MvPolynomial.Variables
 
 /-!
 # Multivariate polynomials over a ring
@@ -33,145 +32,174 @@ This will give rise to a monomial in `mv_polynomial σ R` which mathematicians m
 
 -/
 
-noncomputable theory
 
-open_locale classical big_operators
+noncomputable section
 
-open set function finsupp add_monoid_algebra
-open_locale big_operators
+open_locale Classical BigOperators
 
-universes u v
-variables {R : Type u} {S : Type v}
+open Set Function Finsupp AddMonoidAlgebra
 
-namespace mv_polynomial
-variables {σ : Type*} {a a' a₁ a₂ : R} {e : ℕ} {n m : σ} {s : σ →₀ ℕ}
+open_locale BigOperators
 
-section comm_ring
-variable [comm_ring R]
-variables {p q : mv_polynomial σ R}
+universe u v
 
-instance : comm_ring (mv_polynomial σ R) := add_monoid_algebra.comm_ring
+variable {R : Type u} {S : Type v}
 
-variables (σ a a')
+namespace MvPolynomial
 
-@[simp] lemma C_sub : (C (a - a') : mv_polynomial σ R) = C a - C a' := ring_hom.map_sub _ _ _
+variable {σ : Type _} {a a' a₁ a₂ : R} {e : ℕ} {n m : σ} {s : σ →₀ ℕ}
 
-@[simp] lemma C_neg : (C (-a) : mv_polynomial σ R) = -C a := ring_hom.map_neg _ _
+section CommRingₓ
 
-@[simp] lemma coeff_neg (m : σ →₀ ℕ) (p : mv_polynomial σ R) :
-  coeff m (-p) = -coeff m p := finsupp.neg_apply _ _
+variable [CommRingₓ R]
 
-@[simp] lemma coeff_sub (m : σ →₀ ℕ) (p q : mv_polynomial σ R) :
-  coeff m (p - q) = coeff m p - coeff m q := finsupp.sub_apply _ _ _
+variable {p q : MvPolynomial σ R}
 
-@[simp] lemma support_neg : (- p).support = p.support :=
-finsupp.support_neg p
+instance : CommRingₓ (MvPolynomial σ R) :=
+  AddMonoidAlgebra.commRing
 
-lemma support_sub (p q : mv_polynomial σ R) : (p - q).support ⊆ p.support ∪ q.support :=
-finsupp.support_sub
-
-variables {σ} (p)
-
-section degrees
-
-lemma degrees_neg (p : mv_polynomial σ R) : (- p).degrees = p.degrees :=
-by rw [degrees, support_neg]; refl
-
-lemma degrees_sub (p q : mv_polynomial σ R) :
-  (p - q).degrees ≤ p.degrees ⊔ q.degrees :=
-by simpa only [sub_eq_add_neg] using le_trans (degrees_add p (-q)) (by rw degrees_neg)
-
-end degrees
-
-section vars
-
-variables (p q)
-
-@[simp] lemma vars_neg : (-p).vars = p.vars :=
-by simp [vars, degrees_neg]
-
-lemma vars_sub_subset : (p - q).vars ⊆ p.vars ∪ q.vars :=
-by convert vars_add_subset p (-q) using 2; simp [sub_eq_add_neg]
-
-variables {p q}
+variable (σ a a')
 
 @[simp]
-lemma vars_sub_of_disjoint (hpq : disjoint p.vars q.vars) : (p - q).vars = p.vars ∪ q.vars :=
-begin
-  rw ←vars_neg q at hpq,
-  convert vars_add_of_disjoint hpq using 2;
-    simp [sub_eq_add_neg]
-end
+theorem C_sub : (c (a - a') : MvPolynomial σ R) = c a - c a' :=
+  RingHom.map_sub _ _ _
 
-end vars
+@[simp]
+theorem C_neg : (c (-a) : MvPolynomial σ R) = -c a :=
+  RingHom.map_neg _ _
 
-section eval₂
+@[simp]
+theorem coeff_neg (m : σ →₀ ℕ) (p : MvPolynomial σ R) : coeff m (-p) = -coeff m p :=
+  Finsupp.neg_apply _ _
 
-variables [comm_ring S]
-variables (f : R →+* S) (g : σ → S)
+@[simp]
+theorem coeff_sub (m : σ →₀ ℕ) (p q : MvPolynomial σ R) : coeff m (p - q) = coeff m p - coeff m q :=
+  Finsupp.sub_apply _ _ _
 
-@[simp] lemma eval₂_sub : (p - q).eval₂ f g = p.eval₂ f g - q.eval₂ f g :=
-(eval₂_hom f g).map_sub _ _
+@[simp]
+theorem support_neg : (-p).support = p.support :=
+  Finsupp.support_neg p
 
-@[simp] lemma eval₂_neg : (-p).eval₂ f g = -(p.eval₂ f g) := (eval₂_hom f g).map_neg _
+theorem support_sub (p q : MvPolynomial σ R) : (p - q).support ⊆ p.support ∪ q.support :=
+  Finsupp.support_sub
 
-lemma hom_C (f : mv_polynomial σ ℤ →+* S) (n : ℤ) : f (C n) = (n : S) :=
-(f.comp C).eq_int_cast n
+variable {σ} (p)
+
+section Degrees
+
+theorem degrees_neg (p : MvPolynomial σ R) : (-p).degrees = p.degrees := by
+  rw [degrees, support_neg] <;> rfl
+
+theorem degrees_sub (p q : MvPolynomial σ R) : (p - q).degrees ≤ p.degrees⊔q.degrees := by
+  simpa only [sub_eq_add_neg] using
+    le_transₓ (degrees_add p (-q))
+      (by
+        rw [degrees_neg])
+
+end Degrees
+
+section Vars
+
+variable (p q)
+
+@[simp]
+theorem vars_neg : (-p).vars = p.vars := by
+  simp [vars, degrees_neg]
+
+theorem vars_sub_subset : (p - q).vars ⊆ p.vars ∪ q.vars := by
+  convert vars_add_subset p (-q) using 2 <;> simp [sub_eq_add_neg]
+
+variable {p q}
+
+@[simp]
+theorem vars_sub_of_disjoint (hpq : Disjoint p.vars q.vars) : (p - q).vars = p.vars ∪ q.vars := by
+  rw [← vars_neg q] at hpq
+  convert vars_add_of_disjoint hpq using 2 <;> simp [sub_eq_add_neg]
+
+end Vars
+
+section Eval₂
+
+variable [CommRingₓ S]
+
+variable (f : R →+* S) (g : σ → S)
+
+@[simp]
+theorem eval₂_sub : (p - q).eval₂ f g = p.eval₂ f g - q.eval₂ f g :=
+  (eval₂Hom f g).map_sub _ _
+
+@[simp]
+theorem eval₂_neg : (-p).eval₂ f g = -p.eval₂ f g :=
+  (eval₂Hom f g).map_neg _
+
+theorem hom_C (f : MvPolynomial σ ℤ →+* S) (n : ℤ) : f (c n) = (n : S) :=
+  (f.comp c).eq_int_cast n
 
 /-- A ring homomorphism f : Z[X_1, X_2, ...] → R
 is determined by the evaluations f(X_1), f(X_2), ... -/
-@[simp] lemma eval₂_hom_X {R : Type u} (c : ℤ →+* S)
-  (f : mv_polynomial R ℤ →+* S) (x : mv_polynomial R ℤ) :
-  eval₂ c (f ∘ X) x = f x :=
-mv_polynomial.induction_on x
-(λ n, by { rw [hom_C f, eval₂_C], exact c.eq_int_cast n })
-(λ p q hp hq, by { rw [eval₂_add, hp, hq], exact (f.map_add _ _).symm })
-(λ p n hp, by { rw [eval₂_mul, eval₂_X, hp], exact (f.map_mul _ _).symm })
+@[simp]
+theorem eval₂_hom_X {R : Type u} (c : ℤ →+* S) (f : MvPolynomial R ℤ →+* S) (x : MvPolynomial R ℤ) :
+    eval₂ c (f ∘ X) x = f x :=
+  MvPolynomial.induction_on x
+    (fun n => by
+      rw [hom_C f, eval₂_C]
+      exact c.eq_int_cast n)
+    (fun p q hp hq => by
+      rw [eval₂_add, hp, hq]
+      exact (f.map_add _ _).symm)
+    fun p n hp => by
+    rw [eval₂_mul, eval₂_X, hp]
+    exact (f.map_mul _ _).symm
 
 /-- Ring homomorphisms out of integer polynomials on a type `σ` are the same as
 functions out of the type `σ`, -/
-def hom_equiv : (mv_polynomial σ ℤ →+* S) ≃ (σ → S) :=
-{ to_fun := λ f, ⇑f ∘ X,
-  inv_fun := λ f, eval₂_hom (int.cast_ring_hom S) f,
-  left_inv := λ f, ring_hom.ext  $ eval₂_hom_X _ _,
-  right_inv := λ f, funext $ λ x, by simp only [coe_eval₂_hom, function.comp_app, eval₂_X] }
+def homEquiv : (MvPolynomial σ ℤ →+* S) ≃ (σ → S) where
+  toFun := fun f => ⇑f ∘ X
+  invFun := fun f => eval₂Hom (Int.castRingHom S) f
+  left_inv := fun f => RingHom.ext <| eval₂_hom_X _ _
+  right_inv := fun f =>
+    funext fun x => by
+      simp only [coe_eval₂_hom, Function.comp_app, eval₂_X]
 
-end eval₂
+end Eval₂
 
-section degree_of
+section DegreeOf
 
-lemma degree_of_sub_lt {x : σ} {f g : mv_polynomial σ R} {k : ℕ} (h : 0 < k)
-  (hf : ∀ (m : σ →₀ ℕ), m ∈ f.support → (k ≤ m x) → coeff m f = coeff m g)
-  (hg : ∀ (m : σ →₀ ℕ), m ∈ g.support → (k ≤ m x) → coeff m f = coeff m g) :
-  degree_of x (f - g) < k :=
-begin
-  rw degree_of_lt_iff h,
-  intros m hm,
-  by_contra hc,
-  simp only [not_lt] at hc,
-  have h := support_sub σ f g hm,
-  simp only [mem_support_iff, ne.def, coeff_sub, sub_eq_zero] at hm,
-  cases (finset.mem_union).1 h with cf cg,
-  { exact hm (hf m cf hc), },
-  { exact hm (hg m cg hc), },
-end
+theorem degree_of_sub_lt {x : σ} {f g : MvPolynomial σ R} {k : ℕ} (h : 0 < k)
+    (hf : ∀ m : σ →₀ ℕ, m ∈ f.support → k ≤ m x → coeff m f = coeff m g)
+    (hg : ∀ m : σ →₀ ℕ, m ∈ g.support → k ≤ m x → coeff m f = coeff m g) : degreeOf x (f - g) < k := by
+  rw [degree_of_lt_iff h]
+  intro m hm
+  by_contra hc
+  simp only [not_ltₓ] at hc
+  have h := support_sub σ f g hm
+  simp only [mem_support_iff, Ne.def, coeff_sub, sub_eq_zero] at hm
+  cases' Finset.mem_union.1 h with cf cg
+  · exact hm (hf m cf hc)
+    
+  · exact hm (hg m cg hc)
+    
 
-end degree_of
+end DegreeOf
 
-section total_degree
+section TotalDegree
 
-@[simp] lemma total_degree_neg (a : mv_polynomial σ R) :
-  (-a).total_degree = a.total_degree :=
-by simp only [total_degree, support_neg]
+@[simp]
+theorem total_degree_neg (a : MvPolynomial σ R) : (-a).totalDegree = a.totalDegree := by
+  simp only [total_degree, support_neg]
 
-lemma total_degree_sub (a b : mv_polynomial σ R) :
-  (a - b).total_degree ≤ max a.total_degree b.total_degree :=
-calc (a - b).total_degree = (a + -b).total_degree                : by rw sub_eq_add_neg
-                      ... ≤ max a.total_degree (-b).total_degree : total_degree_add a (-b)
-                      ... = max a.total_degree b.total_degree    : by rw total_degree_neg
+theorem total_degree_sub (a b : MvPolynomial σ R) : (a - b).totalDegree ≤ max a.totalDegree b.totalDegree :=
+  calc
+    (a - b).totalDegree = (a + -b).totalDegree := by
+      rw [sub_eq_add_neg]
+    _ ≤ max a.totalDegree (-b).totalDegree := total_degree_add a (-b)
+    _ = max a.totalDegree b.totalDegree := by
+      rw [total_degree_neg]
+    
 
-end total_degree
+end TotalDegree
 
-end comm_ring
+end CommRingₓ
 
-end mv_polynomial
+end MvPolynomial
+

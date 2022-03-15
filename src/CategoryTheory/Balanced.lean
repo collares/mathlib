@@ -3,7 +3,7 @@ Copyright (c) 2022 Markus Himmel. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Markus Himmel
 -/
-import category_theory.epi_mono
+import Mathbin.CategoryTheory.EpiMono
 
 /-!
 # Balanced categories
@@ -16,33 +16,39 @@ as the category of types.
 
 -/
 
-universes v u
 
-namespace category_theory
-variables {C : Type u} [category.{v} C]
+universe v u
+
+namespace CategoryTheory
+
+variable {C : Type u} [Category.{v} C]
 
 section
-variables (C)
+
+variable (C)
 
 /-- A category is called balanced if any morphism that is both monic and epic is an isomorphism. -/
-class balanced : Prop :=
-(is_iso_of_mono_of_epi : ∀ {X Y : C} (f : X ⟶ Y) [mono f] [epi f], is_iso f)
+class Balanced : Prop where
+  is_iso_of_mono_of_epi : ∀ {X Y : C} f : X ⟶ Y [Mono f] [Epi f], IsIso f
 
 end
 
-lemma is_iso_of_mono_of_epi [balanced C] {X Y : C} (f : X ⟶ Y) [mono f] [epi f] : is_iso f :=
-balanced.is_iso_of_mono_of_epi _
+theorem is_iso_of_mono_of_epi [Balanced C] {X Y : C} (f : X ⟶ Y) [Mono f] [Epi f] : IsIso f :=
+  Balanced.is_iso_of_mono_of_epi _
 
-lemma is_iso_iff_mono_and_epi [balanced C] {X Y : C} (f : X ⟶ Y) : is_iso f ↔ mono f ∧ epi f :=
-⟨λ _, by exactI ⟨infer_instance, infer_instance⟩, λ ⟨_, _⟩, by exactI is_iso_of_mono_of_epi _⟩
+theorem is_iso_iff_mono_and_epi [Balanced C] {X Y : C} (f : X ⟶ Y) : IsIso f ↔ Mono f ∧ Epi f :=
+  ⟨fun _ => ⟨inferInstance, inferInstance⟩, fun ⟨_, _⟩ => is_iso_of_mono_of_epi _⟩
 
 section
-local attribute [instance] is_iso_of_mono_of_epi
 
-lemma balanced_opposite [balanced C] : balanced Cᵒᵖ :=
-{ is_iso_of_mono_of_epi := λ X Y f fmono fepi,
-    by { rw ← quiver.hom.op_unop f, exactI is_iso_of_op _ } }
+attribute [local instance] is_iso_of_mono_of_epi
+
+theorem balanced_opposite [Balanced C] : Balanced Cᵒᵖ :=
+  { is_iso_of_mono_of_epi := fun X Y f fmono fepi => by
+      rw [← Quiver.Hom.op_unop f]
+      exact is_iso_of_op _ }
 
 end
 
-end category_theory
+end CategoryTheory
+

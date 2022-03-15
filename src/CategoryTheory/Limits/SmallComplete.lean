@@ -3,9 +3,8 @@ Copyright (c) 2020 Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bhavik Mehta
 -/
-
-import category_theory.limits.shapes.products
-import set_theory.cardinal
+import Mathbin.CategoryTheory.Limits.Shapes.Products
+import Mathbin.SetTheory.Cardinal
 
 /-!
 # Any small complete category is a preorder
@@ -25,52 +24,58 @@ we instead show that the homsets are subsingleton.
 small complete, preorder, Freyd
 -/
 
-namespace category_theory
 
-open category limits
-open_locale cardinal
+namespace CategoryTheory
+
+open Category Limits
+
+open_locale Cardinal
 
 universe u
 
-variables {C : Type u} [small_category C] [has_products C]
+variable {C : Type u} [SmallCategory C] [HasProducts C]
 
-/--
-A small category with products is a thin category.
+/-- A small category with products is a thin category.
 
 in Lean, a preorder category is one where the morphisms are in Prop, which is weaker than the usual
 notion of a preorder/thin category which says that each homset is subsingleton; we show the latter
 rather than providing a `preorder C` instance.
 -/
-instance {X Y : C} : subsingleton (X ⟶ Y) :=
-⟨λ r s,
-begin
-  classical,
-  by_contra r_ne_s,
-  have z : (2 : cardinal) ≤ #(X ⟶ Y),
-  { rw cardinal.two_le_iff,
-    exact ⟨_, _, r_ne_s⟩ },
-  let md := Σ (Z W : C), Z ⟶ W,
-  let α := #md,
-  apply not_le_of_lt (cardinal.cantor α),
-  let yp : C := ∏ (λ (f : md), Y),
-  transitivity (#(X ⟶ yp)),
-  { apply le_trans (cardinal.power_le_power_right z),
-    rw cardinal.power_def,
-    apply le_of_eq,
-    rw cardinal.eq,
-    refine ⟨⟨pi.lift, λ f k, f ≫ pi.π _ k, _, _⟩⟩,
-    { intros f,
-      ext k,
-      simp },
-    { intros f,
-      ext,
-      simp } },
-  { apply cardinal.mk_le_of_injective _,
-    { intro f,
-      exact ⟨_, _, f⟩ },
-    { rintro f g k,
-      cases k,
-      refl } },
-end⟩
+instance {X Y : C} : Subsingleton (X ⟶ Y) :=
+  ⟨fun r s => by
+    classical
+    by_contra r_ne_s
+    have z : (2 : Cardinal) ≤ # (X ⟶ Y) := by
+      rw [Cardinal.two_le_iff]
+      exact ⟨_, _, r_ne_s⟩
+    let md := ΣZ W : C, Z ⟶ W
+    let α := # md
+    apply not_le_of_lt (Cardinal.cantor α)
+    let yp : C := ∏ fun f : md => Y
+    trans # (X ⟶ yp)
+    · apply le_transₓ (Cardinal.power_le_power_right z)
+      rw [Cardinal.power_def]
+      apply le_of_eqₓ
+      rw [Cardinal.eq]
+      refine' ⟨⟨pi.lift, fun f k => f ≫ pi.π _ k, _, _⟩⟩
+      · intro f
+        ext k
+        simp
+        
+      · intro f
+        ext
+        simp
+        
+      
+    · apply Cardinal.mk_le_of_injective _
+      · intro f
+        exact ⟨_, _, f⟩
+        
+      · rintro f g k
+        cases k
+        rfl
+        
+      ⟩
 
-end category_theory
+end CategoryTheory
+

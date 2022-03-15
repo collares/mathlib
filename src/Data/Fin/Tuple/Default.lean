@@ -1,1 +1,2 @@
-import data.fin.tuple.basic
+import Mathbin.Data.Fin.Tuple.Basic
+

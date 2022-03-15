@@ -3,7 +3,7 @@ Copyright (c) 2019 Neil Strickland. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Neil Strickland, Yury Kudryashov
 -/
-import algebra.group.semiconj
+import Mathbin.Algebra.Group.Semiconj
 
 /-!
 # Commuting pairs of elements in monoids
@@ -24,188 +24,234 @@ This file defines only a few operations (`mul_left`, `inv_right`, etc).  Other o
 Most of the proofs come from the properties of `semiconj_by`.
 -/
 
+
 /-- Two elements commute if `a * b = b * a`. -/
-@[to_additive add_commute "Two elements additively commute if `a + b = b + a`"]
-def commute {S : Type*} [has_mul S] (a b : S) : Prop := semiconj_by a b b
+@[to_additive AddCommute "Two elements additively commute if `a + b = b + a`"]
+def Commute {S : Type _} [Mul S] (a b : S) : Prop :=
+  SemiconjBy a b b
 
-namespace commute
+namespace Commute
 
-section has_mul
+section Mul
 
-variables {S : Type*} [has_mul S]
+variable {S : Type _} [Mul S]
 
 /-- Equality behind `commute a b`; useful for rewriting. -/
 @[to_additive "Equality behind `add_commute a b`; useful for rewriting."]
-protected lemma eq {a b : S} (h : commute a b) : a * b = b * a := h
+protected theorem eq {a b : S} (h : Commute a b) : a * b = b * a :=
+  h
 
 /-- Any element commutes with itself. -/
 @[refl, simp, to_additive "Any element commutes with itself."]
-protected lemma refl (a : S) : commute a a := eq.refl (a * a)
+protected theorem refl (a : S) : Commute a a :=
+  Eq.refl (a * a)
 
 /-- If `a` commutes with `b`, then `b` commutes with `a`. -/
 @[symm, to_additive "If `a` commutes with `b`, then `b` commutes with `a`."]
-protected lemma symm {a b : S} (h : commute a b) : commute b a := eq.symm h
-
-@[to_additive] protected theorem semiconj_by {a b : S} (h : commute a b) : semiconj_by a b b := h
+protected theorem symm {a b : S} (h : Commute a b) : Commute b a :=
+  Eq.symm h
 
 @[to_additive]
-protected theorem symm_iff {a b : S} : commute a b ↔ commute b a :=
-⟨commute.symm, commute.symm⟩
+protected theorem semiconj_by {a b : S} (h : Commute a b) : SemiconjBy a b b :=
+  h
 
-end has_mul
+@[to_additive]
+protected theorem symm_iff {a b : S} : Commute a b ↔ Commute b a :=
+  ⟨Commute.symm, Commute.symm⟩
 
-section semigroup
+end Mul
 
-variables {S : Type*} [semigroup S] {a b c : S}
+section Semigroupₓ
+
+variable {S : Type _} [Semigroupₓ S] {a b c : S}
 
 /-- If `a` commutes with both `b` and `c`, then it commutes with their product. -/
 @[simp, to_additive "If `a` commutes with both `b` and `c`, then it commutes with their sum."]
-lemma mul_right (hab : commute a b) (hac : commute a c) : commute a (b * c) := hab.mul_right hac
+theorem mul_right (hab : Commute a b) (hac : Commute a c) : Commute a (b * c) :=
+  hab.mul_right hac
 
 /-- If both `a` and `b` commute with `c`, then their product commutes with `c`. -/
 @[simp, to_additive "If both `a` and `b` commute with `c`, then their product commutes with `c`."]
-lemma mul_left (hac : commute a c) (hbc : commute b c) : commute (a * b) c := hac.mul_left hbc
-
-@[to_additive] protected lemma right_comm (h : commute b c) (a : S) :
-  a * b * c = a * c * b :=
-by simp only [mul_assoc, h.eq]
-
-@[to_additive] protected lemma left_comm (h : commute a b) (c) :
-  a * (b * c) = b * (a * c) :=
-by simp only [← mul_assoc, h.eq]
-
-end semigroup
+theorem mul_left (hac : Commute a c) (hbc : Commute b c) : Commute (a * b) c :=
+  hac.mul_left hbc
 
 @[to_additive]
-protected theorem all {S : Type*} [comm_semigroup S] (a b : S) : commute a b := mul_comm a b
-
-section mul_one_class
-
-variables {M : Type*} [mul_one_class M]
-
-@[simp, to_additive] theorem one_right (a : M) : commute a 1 := semiconj_by.one_right a
-@[simp, to_additive] theorem one_left (a : M) : commute 1 a := semiconj_by.one_left a
-
-end mul_one_class
-
-section monoid
-
-variables {M : Type*} [monoid M] {a b : M} {u u₁ u₂ : Mˣ}
-
-@[simp, to_additive]
-theorem pow_right (h : commute a b) (n : ℕ) : commute a (b ^ n) := h.pow_right n
-@[simp, to_additive]
-theorem pow_left (h : commute a b) (n : ℕ) : commute (a ^ n) b := (h.symm.pow_right n).symm
-@[simp, to_additive]
-theorem pow_pow (h : commute a b) (m n : ℕ) : commute (a ^ m) (b ^ n) :=
-(h.pow_left m).pow_right n
-
-@[simp, to_additive]
-theorem self_pow (a : M) (n : ℕ) : commute a (a ^ n) := (commute.refl a).pow_right n
-@[simp, to_additive]
-theorem pow_self (a : M) (n : ℕ) : commute (a ^ n) a := (commute.refl a).pow_left n
-@[simp, to_additive]
-theorem pow_pow_self (a : M) (m n : ℕ) : commute (a ^ m) (a ^ n) :=
-(commute.refl a).pow_pow m n
-
-@[to_additive succ_nsmul'] theorem _root_.pow_succ' (a : M) (n : ℕ) : a ^ (n + 1) = a ^ n * a :=
-(pow_succ a n).trans (self_pow _ _)
-
-@[to_additive] theorem units_inv_right : commute a u → commute a ↑u⁻¹ :=
-semiconj_by.units_inv_right
-
-@[simp, to_additive] theorem units_inv_right_iff :
-  commute a ↑u⁻¹ ↔ commute a u :=
-semiconj_by.units_inv_right_iff
-
-@[to_additive] theorem units_inv_left : commute ↑u a → commute ↑u⁻¹ a :=
-semiconj_by.units_inv_symm_left
-
-@[simp, to_additive]
-theorem units_inv_left_iff: commute ↑u⁻¹ a ↔ commute ↑u a :=
-semiconj_by.units_inv_symm_left_iff
+protected theorem right_comm (h : Commute b c) (a : S) : a * b * c = a * c * b := by
+  simp only [mul_assoc, h.eq]
 
 @[to_additive]
-theorem units_coe : commute u₁ u₂ → commute (u₁ : M) u₂ := semiconj_by.units_coe
+protected theorem left_comm (h : Commute a b) c : a * (b * c) = b * (a * c) := by
+  simp only [← mul_assoc, h.eq]
+
+end Semigroupₓ
+
 @[to_additive]
-theorem units_of_coe : commute (u₁ : M) u₂ → commute u₁ u₂ := semiconj_by.units_of_coe
+protected theorem all {S : Type _} [CommSemigroupₓ S] (a b : S) : Commute a b :=
+  mul_comm a b
+
+section MulOneClassₓ
+
+variable {M : Type _} [MulOneClassₓ M]
+
 @[simp, to_additive]
-theorem units_coe_iff : commute (u₁ : M) u₂ ↔ commute u₁ u₂ := semiconj_by.units_coe_iff
+theorem one_right (a : M) : Commute a 1 :=
+  SemiconjBy.one_right a
 
-@[to_additive] lemma is_unit_mul_iff (h : commute a b) :
-  is_unit (a * b) ↔ is_unit a ∧ is_unit b :=
-begin
-  refine ⟨_, λ H, H.1.mul H.2⟩,
-  rintro ⟨u, hu⟩,
-  have : b * ↑u⁻¹ * a = 1,
-  { have : commute a u := hu.symm ▸ (commute.refl _).mul_right h,
-    rw [← this.units_inv_right.right_comm, ← h.eq, ← hu, u.mul_inv] },
-  split,
-  { refine ⟨⟨a, b * ↑u⁻¹, _, this⟩, rfl⟩,
-    rw [← mul_assoc, ← hu, u.mul_inv] },
-  { rw mul_assoc at this,
-    refine ⟨⟨b, ↑u⁻¹ * a, this, _⟩, rfl⟩,
-    rw [mul_assoc, ← hu, u.inv_mul] }
-end
-
-@[simp, to_additive] lemma _root_.is_unit_mul_self_iff :
-  is_unit (a * a) ↔ is_unit a :=
-(commute.refl a).is_unit_mul_iff.trans (and_self _)
-
-end monoid
-
-section group
-
-variables {G : Type*} [group G] {a b : G}
-
-@[to_additive]
-theorem inv_right : commute a b → commute a b⁻¹ := semiconj_by.inv_right
 @[simp, to_additive]
-theorem inv_right_iff : commute a b⁻¹ ↔ commute a b := semiconj_by.inv_right_iff
+theorem one_left (a : M) : Commute 1 a :=
+  SemiconjBy.one_left a
 
-@[to_additive] theorem inv_left :  commute a b → commute a⁻¹ b := semiconj_by.inv_symm_left
+end MulOneClassₓ
+
+section Monoidₓ
+
+variable {M : Type _} [Monoidₓ M] {a b : M} {u u₁ u₂ : Mˣ}
+
 @[simp, to_additive]
-theorem inv_left_iff : commute a⁻¹ b ↔ commute a b := semiconj_by.inv_symm_left_iff
+theorem pow_right (h : Commute a b) (n : ℕ) : Commute a (b ^ n) :=
+  h.pow_right n
 
-@[to_additive]
-theorem inv_inv : commute a b → commute a⁻¹ b⁻¹ := semiconj_by.inv_inv_symm
 @[simp, to_additive]
-theorem inv_inv_iff : commute a⁻¹ b⁻¹ ↔ commute a b := semiconj_by.inv_inv_symm_iff
+theorem pow_left (h : Commute a b) (n : ℕ) : Commute (a ^ n) b :=
+  (h.symm.pow_right n).symm
+
+@[simp, to_additive]
+theorem pow_pow (h : Commute a b) (m n : ℕ) : Commute (a ^ m) (b ^ n) :=
+  (h.pow_left m).pow_right n
+
+@[simp, to_additive]
+theorem self_pow (a : M) (n : ℕ) : Commute a (a ^ n) :=
+  (Commute.refl a).pow_right n
+
+@[simp, to_additive]
+theorem pow_self (a : M) (n : ℕ) : Commute (a ^ n) a :=
+  (Commute.refl a).pow_left n
+
+@[simp, to_additive]
+theorem pow_pow_self (a : M) (m n : ℕ) : Commute (a ^ m) (a ^ n) :=
+  (Commute.refl a).pow_pow m n
+
+@[to_additive succ_nsmul']
+theorem _root_.pow_succ' (a : M) (n : ℕ) : a ^ (n + 1) = a ^ n * a :=
+  (pow_succₓ a n).trans (self_pow _ _)
 
 @[to_additive]
-protected theorem inv_mul_cancel (h : commute a b) : a⁻¹ * b * a = b :=
-by rw [h.inv_left.eq, inv_mul_cancel_right]
+theorem units_inv_right : Commute a u → Commute a ↑u⁻¹ :=
+  SemiconjBy.units_inv_right
+
+@[simp, to_additive]
+theorem units_inv_right_iff : Commute a ↑u⁻¹ ↔ Commute a u :=
+  SemiconjBy.units_inv_right_iff
 
 @[to_additive]
-theorem inv_mul_cancel_assoc (h : commute a b) : a⁻¹ * (b * a) = b :=
-by rw [← mul_assoc, h.inv_mul_cancel]
+theorem units_inv_left : Commute (↑u) a → Commute (↑u⁻¹) a :=
+  SemiconjBy.units_inv_symm_left
+
+@[simp, to_additive]
+theorem units_inv_left_iff : Commute (↑u⁻¹) a ↔ Commute (↑u) a :=
+  SemiconjBy.units_inv_symm_left_iff
 
 @[to_additive]
-protected theorem mul_inv_cancel (h : commute a b) : a * b * a⁻¹ = b :=
-by rw [h.eq, mul_inv_cancel_right]
+theorem units_coe : Commute u₁ u₂ → Commute (u₁ : M) u₂ :=
+  SemiconjBy.units_coe
 
 @[to_additive]
-theorem mul_inv_cancel_assoc (h : commute a b) : a * (b * a⁻¹) = b :=
-by rw [← mul_assoc, h.mul_inv_cancel]
+theorem units_of_coe : Commute (u₁ : M) u₂ → Commute u₁ u₂ :=
+  SemiconjBy.units_of_coe
 
-end group
+@[simp, to_additive]
+theorem units_coe_iff : Commute (u₁ : M) u₂ ↔ Commute u₁ u₂ :=
+  SemiconjBy.units_coe_iff
 
-end commute
+@[to_additive]
+theorem is_unit_mul_iff (h : Commute a b) : IsUnit (a * b) ↔ IsUnit a ∧ IsUnit b := by
+  refine' ⟨_, fun H => H.1.mul H.2⟩
+  rintro ⟨u, hu⟩
+  have : b * ↑u⁻¹ * a = 1 := by
+    have : Commute a u := hu.symm ▸ (Commute.refl _).mul_right h
+    rw [← this.units_inv_right.right_comm, ← h.eq, ← hu, u.mul_inv]
+  constructor
+  · refine' ⟨⟨a, b * ↑u⁻¹, _, this⟩, rfl⟩
+    rw [← mul_assoc, ← hu, u.mul_inv]
+    
+  · rw [mul_assoc] at this
+    refine' ⟨⟨b, ↑u⁻¹ * a, this, _⟩, rfl⟩
+    rw [mul_assoc, ← hu, u.inv_mul]
+    
 
-section comm_group
+@[simp, to_additive]
+theorem _root_.is_unit_mul_self_iff : IsUnit (a * a) ↔ IsUnit a :=
+  (Commute.refl a).is_unit_mul_iff.trans (and_selfₓ _)
 
-variables {G : Type*} [comm_group G] (a b : G)
+end Monoidₓ
 
-@[simp, to_additive] lemma mul_inv_cancel_comm : a * b * a⁻¹ = b :=
-(commute.all a b).mul_inv_cancel
+section Groupₓ
 
-@[simp, to_additive] lemma mul_inv_cancel_comm_assoc : a * (b * a⁻¹) = b :=
-(commute.all a b).mul_inv_cancel_assoc
+variable {G : Type _} [Groupₓ G] {a b : G}
 
-@[simp, to_additive] lemma inv_mul_cancel_comm : a⁻¹ * b * a = b :=
-(commute.all a b).inv_mul_cancel
+@[to_additive]
+theorem inv_right : Commute a b → Commute a b⁻¹ :=
+  SemiconjBy.inv_right
 
-@[simp, to_additive] lemma inv_mul_cancel_comm_assoc : a⁻¹ * (b * a) = b :=
-(commute.all a b).inv_mul_cancel_assoc
+@[simp, to_additive]
+theorem inv_right_iff : Commute a b⁻¹ ↔ Commute a b :=
+  SemiconjBy.inv_right_iff
 
-end comm_group
+@[to_additive]
+theorem inv_left : Commute a b → Commute a⁻¹ b :=
+  SemiconjBy.inv_symm_left
+
+@[simp, to_additive]
+theorem inv_left_iff : Commute a⁻¹ b ↔ Commute a b :=
+  SemiconjBy.inv_symm_left_iff
+
+@[to_additive]
+theorem inv_inv : Commute a b → Commute a⁻¹ b⁻¹ :=
+  SemiconjBy.inv_inv_symm
+
+@[simp, to_additive]
+theorem inv_inv_iff : Commute a⁻¹ b⁻¹ ↔ Commute a b :=
+  SemiconjBy.inv_inv_symm_iff
+
+@[to_additive]
+protected theorem inv_mul_cancel (h : Commute a b) : a⁻¹ * b * a = b := by
+  rw [h.inv_left.eq, inv_mul_cancel_right]
+
+@[to_additive]
+theorem inv_mul_cancel_assoc (h : Commute a b) : a⁻¹ * (b * a) = b := by
+  rw [← mul_assoc, h.inv_mul_cancel]
+
+@[to_additive]
+protected theorem mul_inv_cancel (h : Commute a b) : a * b * a⁻¹ = b := by
+  rw [h.eq, mul_inv_cancel_rightₓ]
+
+@[to_additive]
+theorem mul_inv_cancel_assoc (h : Commute a b) : a * (b * a⁻¹) = b := by
+  rw [← mul_assoc, h.mul_inv_cancel]
+
+end Groupₓ
+
+end Commute
+
+section CommGroupₓ
+
+variable {G : Type _} [CommGroupₓ G] (a b : G)
+
+@[simp, to_additive]
+theorem mul_inv_cancel_comm : a * b * a⁻¹ = b :=
+  (Commute.all a b).mul_inv_cancel
+
+@[simp, to_additive]
+theorem mul_inv_cancel_comm_assoc : a * (b * a⁻¹) = b :=
+  (Commute.all a b).mul_inv_cancel_assoc
+
+@[simp, to_additive]
+theorem inv_mul_cancel_comm : a⁻¹ * b * a = b :=
+  (Commute.all a b).inv_mul_cancel
+
+@[simp, to_additive]
+theorem inv_mul_cancel_comm_assoc : a⁻¹ * (b * a) = b :=
+  (Commute.all a b).inv_mul_cancel_assoc
+
+end CommGroupₓ
+

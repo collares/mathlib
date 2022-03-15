@@ -3,10 +3,9 @@ Copyright (c) 2022 Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bhavik Mehta
 -/
-
-import algebra.is_prime_pow
-import number_theory.arithmetic_function
-import analysis.special_functions.log
+import Mathbin.Algebra.IsPrimePow
+import Mathbin.NumberTheory.ArithmeticFunction
+import Mathbin.Analysis.SpecialFunctions.Log
 
 /-!
 # The von Mangoldt Function
@@ -31,104 +30,119 @@ We use the standard notation `Λ` to represent the von Mangoldt function.
 
 -/
 
-namespace nat
-namespace arithmetic_function
 
-open finset
+namespace Nat
 
-open_locale arithmetic_function
+namespace ArithmeticFunction
+
+open Finset
+
+open_locale ArithmeticFunction
 
 /-- `log` as an arithmetic function `ℕ → ℝ`. Note this is in the `nat.arithmetic_function`
 namespace to indicate that it is bundled as an `arithmetic_function` rather than being the usual
 real logarithm. -/
-noncomputable def log : arithmetic_function ℝ :=
-⟨λ n, real.log n, by simp⟩
+noncomputable def log : ArithmeticFunction ℝ :=
+  ⟨fun n => Real.log n, by
+    simp ⟩
 
-@[simp] lemma log_apply {n : ℕ} : log n = real.log n := rfl
+@[simp]
+theorem log_apply {n : ℕ} : log n = Real.log n :=
+  rfl
 
-/--
-The `von_mangoldt` function is the function on natural numbers that returns `log p` if the input can
+/-- The `von_mangoldt` function is the function on natural numbers that returns `log p` if the input can
 be expressed as `p^k` for a prime `p`.
 In the case when `n` is a prime power, `min_fac` will give the appropriate prime, as it is the
 smallest prime factor.
 
 In the `arithmetic_function` locale, we have the notation `Λ` for this function.
 -/
-noncomputable def von_mangoldt : arithmetic_function ℝ :=
-⟨λ n, if is_prime_pow n then real.log (min_fac n) else 0, if_neg not_is_prime_pow_zero⟩
+noncomputable def vonMangoldt : ArithmeticFunction ℝ :=
+  ⟨fun n => if IsPrimePow n then Real.log (minFac n) else 0, if_neg not_is_prime_pow_zero⟩
 
-localized "notation `Λ` := nat.arithmetic_function.von_mangoldt" in arithmetic_function
+-- mathport name: «exprΛ»
+localized [ArithmeticFunction] notation "Λ" => Nat.ArithmeticFunction.vonMangoldt
 
-lemma von_mangoldt_apply {n : ℕ} :
-  Λ n = if is_prime_pow n then real.log (min_fac n) else 0 := rfl
+theorem von_mangoldt_apply {n : ℕ} : Λ n = if IsPrimePow n then Real.log (minFac n) else 0 :=
+  rfl
 
-@[simp] lemma von_mangoldt_apply_one : Λ 1 = 0 := by simp [von_mangoldt_apply]
+@[simp]
+theorem von_mangoldt_apply_one : Λ 1 = 0 := by
+  simp [von_mangoldt_apply]
 
-@[simp] lemma von_mangoldt_nonneg {n : ℕ} : 0 ≤ Λ n :=
-begin
-  rw [von_mangoldt_apply],
-  split_ifs,
-  { exact real.log_nonneg (one_le_cast.2 (nat.min_fac_pos n)) },
-  refl
-end
+@[simp]
+theorem von_mangoldt_nonneg {n : ℕ} : 0 ≤ Λ n := by
+  rw [von_mangoldt_apply]
+  split_ifs
+  · exact Real.log_nonneg (one_le_cast.2 (Nat.min_fac_pos n))
+    
+  rfl
 
-lemma von_mangoldt_apply_pow {n k : ℕ} (hk : k ≠ 0) : Λ (n ^ k) = Λ n :=
-by simp only [von_mangoldt_apply, is_prime_pow_pow_iff hk, pow_min_fac hk]
+theorem von_mangoldt_apply_pow {n k : ℕ} (hk : k ≠ 0) : Λ (n ^ k) = Λ n := by
+  simp only [von_mangoldt_apply, is_prime_pow_pow_iff hk, pow_min_fac hk]
 
-lemma von_mangoldt_apply_prime {p : ℕ} (hp : p.prime) : Λ p = real.log p :=
-by rw [von_mangoldt_apply, prime.min_fac_eq hp, if_pos (nat.prime_iff.1 hp).is_prime_pow]
+theorem von_mangoldt_apply_prime {p : ℕ} (hp : p.Prime) : Λ p = Real.log p := by
+  rw [von_mangoldt_apply, prime.min_fac_eq hp, if_pos (Nat.prime_iff.1 hp).IsPrimePow]
 
-open_locale big_operators
+open_locale BigOperators
 
-lemma von_mangoldt_sum {n : ℕ} :
-  ∑ i in n.divisors, Λ i = real.log n :=
-begin
-  refine rec_on_prime_coprime _ _ _ n,
-  { simp },
-  { intros p k hp,
-    rw [sum_divisors_prime_pow hp, cast_pow, real.log_pow, finset.sum_range_succ', pow_zero,
-      von_mangoldt_apply_one],
-    simp [von_mangoldt_apply_pow (nat.succ_ne_zero _), von_mangoldt_apply_prime hp] },
-  intros a b ha' hb' hab ha hb,
-  simp only [von_mangoldt_apply, ←sum_filter] at ha hb ⊢,
-  rw [mul_divisors_filter_prime_pow hab, filter_union,
-    sum_union (disjoint_divisors_filter_prime_pow hab), ha, hb, nat.cast_mul,
-    real.log_mul (nat.cast_ne_zero.2 ha'.ne') (nat.cast_ne_zero.2 hb'.ne')],
-end
+theorem von_mangoldt_sum {n : ℕ} : (∑ i in n.divisors, Λ i) = Real.log n := by
+  refine' rec_on_prime_coprime _ _ _ n
+  · simp
+    
+  · intro p k hp
+    rw [sum_divisors_prime_pow hp, cast_pow, Real.log_pow, Finset.sum_range_succ', pow_zeroₓ, von_mangoldt_apply_one]
+    simp [von_mangoldt_apply_pow (Nat.succ_ne_zero _), von_mangoldt_apply_prime hp]
+    
+  intro a b ha' hb' hab ha hb
+  simp only [von_mangoldt_apply, ← sum_filter] at ha hb⊢
+  rw [mul_divisors_filter_prime_pow hab, filter_union, sum_union (disjoint_divisors_filter_prime_pow hab), ha, hb,
+    Nat.cast_mulₓ, Real.log_mul (Nat.cast_ne_zero.2 ha'.ne') (Nat.cast_ne_zero.2 hb'.ne')]
 
-@[simp] lemma von_mangoldt_mul_zeta : Λ * ζ = log :=
-by { ext n, rw [coe_mul_zeta_apply, von_mangoldt_sum], refl }
+@[simp]
+theorem von_mangoldt_mul_zeta : Λ * ζ = log := by
+  ext n
+  rw [coe_mul_zeta_apply, von_mangoldt_sum]
+  rfl
 
-@[simp] lemma zeta_mul_von_mangoldt : (ζ : arithmetic_function ℝ) * Λ = log :=
-by { rw [mul_comm], simp }
+@[simp]
+theorem zeta_mul_von_mangoldt : (ζ : ArithmeticFunction ℝ) * Λ = log := by
+  rw [mul_comm]
+  simp
 
-@[simp] lemma log_mul_moebius_eq_von_mangoldt : log * μ = Λ :=
-by rw [←von_mangoldt_mul_zeta, mul_assoc, coe_zeta_mul_coe_moebius, mul_one]
+@[simp]
+theorem log_mul_moebius_eq_von_mangoldt : log * μ = Λ := by
+  rw [← von_mangoldt_mul_zeta, mul_assoc, coe_zeta_mul_coe_moebius, mul_oneₓ]
 
-@[simp] lemma moebius_mul_log_eq_von_mangoldt : (μ : arithmetic_function ℝ) * log = Λ :=
-by { rw [mul_comm], simp }
+@[simp]
+theorem moebius_mul_log_eq_von_mangoldt : (μ : ArithmeticFunction ℝ) * log = Λ := by
+  rw [mul_comm]
+  simp
 
-lemma sum_moebius_mul_log_eq {n : ℕ} :
-  ∑ d in n.divisors, (μ d : ℝ) * log d = - Λ n :=
-begin
-  simp only [←log_mul_moebius_eq_von_mangoldt, mul_comm log, mul_apply, log_apply, int_coe_apply,
-    ←finset.sum_neg_distrib, neg_mul_eq_mul_neg],
-  rw sum_divisors_antidiagonal (λ i j, (μ i : ℝ) * -real.log j),
-  have : ∑ (i : ℕ) in n.divisors, (μ i : ℝ) * -real.log (n / i : ℕ) =
-         ∑ (i : ℕ) in n.divisors, ((μ i : ℝ) * real.log i - μ i * real.log n),
-  { apply sum_congr rfl,
-    simp only [and_imp, int.cast_eq_zero, mul_eq_mul_left_iff, ne.def, neg_inj, mem_divisors],
-    intros m mn hn,
-    have : (m : ℝ) ≠ 0,
-    { rw [cast_ne_zero],
-      rintro rfl,
-      exact hn (by simpa using mn) },
-    rw [nat.cast_dvd mn this, real.log_div (cast_ne_zero.2 hn) this, neg_sub, mul_sub] },
-  rw [this, sum_sub_distrib, ←sum_mul, ←int.cast_sum, ←coe_mul_zeta_apply, eq_comm, sub_eq_self,
-    moebius_mul_coe_zeta, mul_eq_zero, int.cast_eq_zero],
-  rcases eq_or_ne n 1 with hn | hn;
-  simp [hn],
-end
+theorem sum_moebius_mul_log_eq {n : ℕ} : (∑ d in n.divisors, (μ d : ℝ) * log d) = -Λ n := by
+  simp only [← log_mul_moebius_eq_von_mangoldt, mul_comm log, mul_apply, log_apply, int_coe_apply, ←
+    Finset.sum_neg_distrib, neg_mul_eq_mul_neg]
+  rw [sum_divisors_antidiagonal fun i j => (μ i : ℝ) * -Real.log j]
+  have :
+    (∑ i : ℕ in n.divisors, (μ i : ℝ) * -Real.log (n / i : ℕ)) =
+      ∑ i : ℕ in n.divisors, (μ i : ℝ) * Real.log i - μ i * Real.log n :=
+    by
+    apply sum_congr rfl
+    simp only [and_imp, Int.cast_eq_zero, mul_eq_mul_left_iff, Ne.def, neg_inj, mem_divisors]
+    intro m mn hn
+    have : (m : ℝ) ≠ 0 := by
+      rw [cast_ne_zero]
+      rintro rfl
+      exact
+        hn
+          (by
+            simpa using mn)
+    rw [Nat.cast_dvd mn this, Real.log_div (cast_ne_zero.2 hn) this, neg_sub, mul_sub]
+  rw [this, sum_sub_distrib, ← sum_mul, ← Int.cast_sum, ← coe_mul_zeta_apply, eq_comm, sub_eq_self,
+    moebius_mul_coe_zeta, mul_eq_zero, Int.cast_eq_zero]
+  rcases eq_or_ne n 1 with (hn | hn) <;> simp [hn]
 
-end arithmetic_function
-end nat
+end ArithmeticFunction
+
+end Nat
+

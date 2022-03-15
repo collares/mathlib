@@ -3,126 +3,139 @@ Copyright (c) 2019 Seul Baek. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Seul Baek
 -/
+import Mathbin.Tactic.Omega.Int.Preterm
 
 /-
 Linear integer arithmetic formulas in pre-normalized form.
 -/
+namespace Omega
 
-import tactic.omega.int.preterm
-
-namespace omega
-namespace int
+namespace Int
 
 /-- Intermediate shadow syntax for LNA formulas that includes unreified exprs -/
-meta inductive exprform
-| eq  : exprterm → exprterm → exprform
-| le  : exprterm → exprterm → exprform
-| not : exprform → exprform
-| or  : exprform → exprform → exprform
-| and : exprform → exprform → exprform
+unsafe inductive exprform
+  | Eq : exprterm → exprterm → exprform
+  | le : exprterm → exprterm → exprform
+  | Not : exprform → exprform
+  | Or : exprform → exprform → exprform
+  | And : exprform → exprform → exprform
 
 /-- Intermediate shadow syntax for LIA formulas that includes non-canonical terms -/
-@[derive has_reflect, derive inhabited]
-inductive preform
-| eq  : preterm → preterm → preform
-| le  : preterm → preterm → preform
-| not : preform → preform
-| or  : preform → preform → preform
-| and : preform → preform → preform
+inductive Preform
+  | Eq : Preterm → Preterm → preform
+  | le : Preterm → Preterm → preform
+  | Not : preform → preform
+  | Or : preform → preform → preform
+  | And : preform → preform → preform
+  deriving has_reflect, Inhabited
 
-localized "notation x ` =* ` y := omega.int.preform.eq x y" in omega.int
-localized "notation x ` ≤* ` y := omega.int.preform.le x y" in omega.int
-localized "notation `¬* ` p   := omega.int.preform.not p" in omega.int
-localized "notation p ` ∨* ` q := omega.int.preform.or p q" in omega.int
-localized "notation p ` ∧* ` q := omega.int.preform.and p q" in omega.int
+-- mathport name: «expr =* »
+localized [Omega.Int] notation x " =* " y => Omega.Int.Preform.eq x y
 
-namespace preform
+-- mathport name: «expr ≤* »
+localized [Omega.Int] notation x " ≤* " y => Omega.Int.Preform.le x y
+
+-- mathport name: «expr¬* »
+localized [Omega.Int] notation "¬* " p => Omega.Int.Preform.not p
+
+-- mathport name: «expr ∨* »
+localized [Omega.Int] notation p " ∨* " q => Omega.Int.Preform.or p q
+
+-- mathport name: «expr ∧* »
+localized [Omega.Int] notation p " ∧* " q => Omega.Int.Preform.and p q
+
+namespace Preform
 
 /-- Evaluate a preform into prop using the valuation v. -/
-@[simp] def holds (v : nat → int) : preform → Prop
-| (t =* s) := t.val v = s.val v
-| (t ≤* s) := t.val v ≤ s.val v
-| (¬* p)   := ¬ p.holds
-| (p ∨* q) := p.holds ∨ q.holds
-| (p ∧* q) := p.holds ∧ q.holds
+@[simp]
+def Holds (v : Nat → Int) : Preform → Prop
+  | t =* s => t.val v = s.val v
+  | t ≤* s => t.val v ≤ s.val v
+  | ¬* p => ¬p.Holds
+  | p ∨* q => p.Holds ∨ q.Holds
+  | p ∧* q => p.Holds ∧ q.Holds
 
-end preform
+end Preform
 
 /-- univ_close p n := p closed by prepending n universal quantifiers -/
-@[simp] def univ_close (p : preform) : (nat → int) → nat → Prop
-| v 0     := p.holds v
-| v (k+1) := ∀ i : int, univ_close (update_zero i v) k
+@[simp]
+def UnivClose (p : Preform) : (Nat → Int) → Nat → Prop
+  | v, 0 => p.Holds v
+  | v, k + 1 => ∀ i : Int, univ_close (updateZero i v) k
 
-namespace preform
+namespace Preform
 
 /-- Fresh de Brujin index not used by any variable in argument -/
-def fresh_index : preform → nat
-| (t =* s) := max t.fresh_index s.fresh_index
-| (t ≤* s) := max t.fresh_index s.fresh_index
-| (¬* p)   := p.fresh_index
-| (p ∨* q) := max p.fresh_index q.fresh_index
-| (p ∧* q) := max p.fresh_index q.fresh_index
+def freshIndex : Preform → Nat
+  | t =* s => max t.freshIndex s.freshIndex
+  | t ≤* s => max t.freshIndex s.freshIndex
+  | ¬* p => p.freshIndex
+  | p ∨* q => max p.freshIndex q.freshIndex
+  | p ∧* q => max p.freshIndex q.freshIndex
 
 /-- All valuations satisfy argument -/
-def valid (p : preform) : Prop :=
-∀ v, holds v p
+def Valid (p : Preform) : Prop :=
+  ∀ v, Holds v p
 
 /-- There exists some valuation that satisfies argument -/
-def sat (p : preform) : Prop :=
-∃ v, holds v p
+def Sat (p : Preform) : Prop :=
+  ∃ v, Holds v p
 
 /-- implies p q := under any valuation, q holds if p holds -/
-def implies (p q : preform) : Prop :=
-∀ v, (holds v p → holds v q)
+def Implies (p q : Preform) : Prop :=
+  ∀ v, Holds v p → Holds v q
 
 /-- equiv p q := under any valuation, p holds iff q holds -/
-def equiv (p q : preform) : Prop :=
-∀ v, (holds v p ↔ holds v q)
+def Equiv (p q : Preform) : Prop :=
+  ∀ v, Holds v p ↔ Holds v q
 
-lemma sat_of_implies_of_sat {p q : preform} :
-  implies p q → sat p → sat q :=
-begin intros h1 h2, apply exists_imp_exists h1 h2 end
+theorem sat_of_implies_of_sat {p q : Preform} : Implies p q → Sat p → Sat q := by
+  intro h1 h2
+  apply exists_imp_exists h1 h2
 
-lemma sat_or {p q : preform} :
-  sat (p ∨* q) ↔ sat p ∨ sat q :=
-begin
-  constructor; intro h1,
-  { cases h1 with v h1, cases h1 with h1 h1;
-    [left,right]; refine ⟨v,_⟩; assumption },
-  { cases h1 with h1 h1; cases h1 with v h1;
-    refine ⟨v,_⟩; [left,right]; assumption }
-end
+theorem sat_or {p q : Preform} : Sat (p ∨* q) ↔ Sat p ∨ Sat q := by
+  constructor <;> intro h1
+  · cases' h1 with v h1
+    cases' h1 with h1 h1 <;> [left, right] <;> refine' ⟨v, _⟩ <;> assumption
+    
+  · cases' h1 with h1 h1 <;> cases' h1 with v h1 <;> refine' ⟨v, _⟩ <;> [left, right] <;> assumption
+    
 
 /-- There does not exist any valuation that satisfies argument -/
-def unsat (p : preform) : Prop := ¬ sat p
+def Unsat (p : Preform) : Prop :=
+  ¬Sat p
 
-def repr : preform → string
-| (t =* s) := "(" ++ t.repr ++ " = " ++ s.repr ++ ")"
-| (t ≤* s) := "(" ++ t.repr ++ " ≤ " ++ s.repr ++ ")"
-| (¬* p)   := "¬" ++ p.repr
-| (p ∨* q) := "(" ++ p.repr ++ " ∨ " ++ q.repr ++ ")"
-| (p ∧* q) := "(" ++ p.repr ++ " ∧ " ++ q.repr ++ ")"
+def repr : Preform → Stringₓ
+  | t =* s => "(" ++ t.repr ++ " = " ++ s.repr ++ ")"
+  | t ≤* s => "(" ++ t.repr ++ " ≤ " ++ s.repr ++ ")"
+  | ¬* p => "¬" ++ p.repr
+  | p ∨* q => "(" ++ p.repr ++ " ∨ " ++ q.repr ++ ")"
+  | p ∧* q => "(" ++ p.repr ++ " ∧ " ++ q.repr ++ ")"
 
-instance has_repr : has_repr preform := ⟨repr⟩
-meta instance has_to_format : has_to_format preform := ⟨λ x, x.repr⟩
+instance hasRepr : HasRepr Preform :=
+  ⟨repr⟩
 
-end preform
+unsafe instance has_to_format : has_to_format Preform :=
+  ⟨fun x => x.repr⟩
 
-lemma univ_close_of_valid {p : preform} :
-  ∀ {m v}, p.valid → univ_close p v m
-| 0 v h1     := h1 _
-| (m+1) v h1 := λ i, univ_close_of_valid h1
+end Preform
 
-lemma valid_of_unsat_not {p : preform} : (¬*p).unsat → p.valid :=
-begin
-  simp only [preform.sat, preform.unsat, preform.valid, preform.holds],
-  rw not_exists_not, intro h, assumption
-end
+theorem univ_close_of_valid {p : Preform} : ∀ {m v}, p.valid → UnivClose p v m
+  | 0, v, h1 => h1 _
+  | m + 1, v, h1 => fun i => univ_close_of_valid h1
 
+theorem valid_of_unsat_not {p : Preform} : (¬* p).Unsat → p.valid := by
+  simp only [preform.sat, preform.unsat, preform.valid, preform.holds]
+  rw [not_exists_not]
+  intro h
+  assumption
+
+-- ././Mathport/Syntax/Translate/Basic.lean:915:4: warning: unsupported (TODO): `[tacs]
 /-- Tactic for setting up proof by induction over preforms. -/
-meta def preform.induce (t : tactic unit := tactic.skip) : tactic unit :=
-`[ intro p, induction p with t s t s p ih p q ihp ihq p q ihp ihq; t]
+unsafe def preform.induce (t : tactic Unit := tactic.skip) : tactic Unit :=
+  sorry
 
-end int
+end Int
 
-end omega
+end Omega
+

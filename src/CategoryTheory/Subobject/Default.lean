@@ -1,5 +1,6 @@
-import category_theory.subobject.mono_over
-import category_theory.subobject.basic
-import category_theory.subobject.factor_thru
-import category_theory.subobject.well_powered
-import category_theory.subobject.lattice
+import Mathbin.CategoryTheory.Subobject.MonoOver
+import Mathbin.CategoryTheory.Subobject.Basic
+import Mathbin.CategoryTheory.Subobject.FactorThru
+import Mathbin.CategoryTheory.Subobject.WellPowered
+import Mathbin.CategoryTheory.Subobject.Lattice
+

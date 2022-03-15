@@ -3,9 +3,9 @@ Copyright (c) 2021 Eric Wieser. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Eric Wieser
 -/
-import algebra.star.basic
-import algebra.ring.pi
-import algebra.module.pi
+import Mathbin.Algebra.Star.Basic
+import Mathbin.Algebra.Ring.Pi
+import Mathbin.Algebra.Module.Pi
 
 /-!
 # `star` on pi types
@@ -14,34 +14,42 @@ We put a `has_star` structure on pi types that operates elementwise, such that i
 complex conjugation of vectors.
 -/
 
-universes u v w
-variable {I : Type u}     -- The indexing type
-variable {f : I → Type v} -- The family of types already equipped with instances
 
-namespace pi
+universe u v w
 
-instance [Π i, has_star (f i)] : has_star (Π i, f i) :=
-{ star := λ x i, star (x i) }
+variable {I : Type u}
 
-@[simp] lemma star_apply [Π i, has_star (f i)] (x : Π i, f i) (i : I) : star x i = star (x i) := rfl
+-- The indexing type
+variable {f : I → Type v}
 
-lemma star_def [Π i, has_star (f i)] (x : Π i, f i) : star x = λ i, star (x i) := rfl
+-- The family of types already equipped with instances
+namespace Pi
 
-instance [Π i, has_involutive_star (f i)] : has_involutive_star (Π i, f i) :=
-{ star_involutive := λ _, funext $ λ _, star_star _ }
+instance [∀ i, HasStar (f i)] : HasStar (∀ i, f i) where
+  star := fun x i => star (x i)
 
-instance [Π i, semigroup (f i)] [Π i, star_semigroup (f i)] : star_semigroup (Π i, f i) :=
-{ star_mul := λ _ _, funext $ λ _, star_mul _ _ }
+@[simp]
+theorem star_apply [∀ i, HasStar (f i)] (x : ∀ i, f i) (i : I) : star x i = star (x i) :=
+  rfl
 
-instance [Π i, add_monoid (f i)] [Π i, star_add_monoid (f i)] : star_add_monoid (Π i, f i) :=
-{ star_add := λ _ _, funext $ λ _, star_add _ _ }
+theorem star_def [∀ i, HasStar (f i)] (x : ∀ i, f i) : star x = fun i => star (x i) :=
+  rfl
 
-instance [Π i, non_unital_semiring (f i)] [Π i, star_ring (f i)] : star_ring (Π i, f i) :=
-{ ..pi.star_add_monoid, ..(pi.star_semigroup : star_semigroup (Π i, f i)) }
+instance [∀ i, HasInvolutiveStar (f i)] : HasInvolutiveStar (∀ i, f i) where
+  star_involutive := fun _ => funext fun _ => star_star _
 
-instance {R : Type w}
-  [Π i, has_scalar R (f i)] [has_star R] [Π i, has_star (f i)] [Π i, star_module R (f i)] :
-  star_module R (Π i, f i) :=
-{ star_smul := λ r x, funext $ λ i, star_smul r (x i) }
+instance [∀ i, Semigroupₓ (f i)] [∀ i, StarSemigroup (f i)] : StarSemigroup (∀ i, f i) where
+  star_mul := fun _ _ => funext fun _ => star_mul _ _
 
-end pi
+instance [∀ i, AddMonoidₓ (f i)] [∀ i, StarAddMonoid (f i)] : StarAddMonoid (∀ i, f i) where
+  star_add := fun _ _ => funext fun _ => star_add _ _
+
+instance [∀ i, NonUnitalSemiringₓ (f i)] [∀ i, StarRing (f i)] : StarRing (∀ i, f i) :=
+  { Pi.starAddMonoid, (Pi.starSemigroup : StarSemigroup (∀ i, f i)) with }
+
+instance {R : Type w} [∀ i, HasScalar R (f i)] [HasStar R] [∀ i, HasStar (f i)] [∀ i, StarModule R (f i)] :
+    StarModule R (∀ i, f i) where
+  star_smul := fun r x => funext fun i => star_smul r (x i)
+
+end Pi
+

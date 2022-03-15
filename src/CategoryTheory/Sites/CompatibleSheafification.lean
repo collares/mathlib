@@ -3,7 +3,7 @@ Copyright (c) 2021 Adam Topaz. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Adam Topaz
 -/
-import category_theory.sites.compatible_plus
+import Mathbin.CategoryTheory.Sites.CompatiblePlus
 
 /-!
 
@@ -12,30 +12,40 @@ preserve the correct limits and colimits.
 
 -/
 
-namespace category_theory.grothendieck_topology
 
-open category_theory
-open category_theory.limits
-open opposite
+namespace CategoryTheory.GrothendieckTopology
 
-universes w₁ w₂ v u
-variables {C : Type u} [category.{v} C] (J : grothendieck_topology C)
-variables {D : Type w₁} [category.{max v u} D]
-variables {E : Type w₂} [category.{max v u} E]
-variables (F : D ⥤ E)
+open CategoryTheory
 
-noncomputable theory
+open CategoryTheory.Limits
 
-variables [∀ (α β : Type (max v u)) (fst snd : β → α),
-  has_limits_of_shape (walking_multicospan fst snd) D]
-variables [∀ (α β : Type (max v u)) (fst snd : β → α),
-  has_limits_of_shape (walking_multicospan fst snd) E]
-variables [∀ (X : C), has_colimits_of_shape (J.cover X)ᵒᵖ D]
-variables [∀ (X : C), has_colimits_of_shape (J.cover X)ᵒᵖ E]
-variables [∀ (X : C), preserves_colimits_of_shape (J.cover X)ᵒᵖ F]
-variables [∀ (X : C) (W : J.cover X) (P : Cᵒᵖ ⥤ D), preserves_limit (W.index P).multicospan F]
+open Opposite
 
-variables (P : Cᵒᵖ ⥤ D)
+universe w₁ w₂ v u
+
+variable {C : Type u} [Category.{v} C] (J : GrothendieckTopology C)
+
+variable {D : Type w₁} [Category.{max v u} D]
+
+variable {E : Type w₂} [Category.{max v u} E]
+
+variable (F : D ⥤ E)
+
+noncomputable section
+
+variable [∀ α β : Type max v u fst snd : β → α, HasLimitsOfShape (WalkingMulticospan fst snd) D]
+
+variable [∀ α β : Type max v u fst snd : β → α, HasLimitsOfShape (WalkingMulticospan fst snd) E]
+
+variable [∀ X : C, HasColimitsOfShape (J.cover X)ᵒᵖ D]
+
+variable [∀ X : C, HasColimitsOfShape (J.cover X)ᵒᵖ E]
+
+variable [∀ X : C, PreservesColimitsOfShape (J.cover X)ᵒᵖ F]
+
+variable [∀ X : C W : J.cover X P : Cᵒᵖ ⥤ D, PreservesLimit (W.index P).multicospan F]
+
+variable (P : Cᵒᵖ ⥤ D)
 
 /-- The isomorphism between the sheafification of `P` composed with `F` and
 the sheafification of `P ⋙ F`.
@@ -44,112 +54,89 @@ Use the lemmas `whisker_right_to_sheafify_sheafify_comp_iso_hom`,
 `to_sheafify_comp_sheafify_comp_iso_inv` and `sheafify_comp_iso_inv_eq_sheafify_lift` to reduce
 the components of this isomorphisms to a state that can be handled using the universal property
 of sheafification. -/
-def sheafify_comp_iso : J.sheafify P ⋙ F ≅ J.sheafify (P ⋙ F) :=
-J.plus_comp_iso _ _ ≪≫ (J.plus_functor _).map_iso (J.plus_comp_iso _ _)
+def sheafifyCompIso : J.sheafify P ⋙ F ≅ J.sheafify (P ⋙ F) :=
+  J.plusCompIso _ _ ≪≫ (J.plusFunctor _).mapIso (J.plusCompIso _ _)
 
 /-- The isomorphism between the sheafification of `P` composed with `F` and
 the sheafification of `P ⋙ F`, functorially in `F`. -/
-def sheafification_whisker_left_iso (P : Cᵒᵖ ⥤ D)
-  [∀ (F : D ⥤ E) (X : C), preserves_colimits_of_shape (J.cover X)ᵒᵖ F]
-  [∀ (F : D ⥤ E) (X : C) (W : J.cover X) (P : Cᵒᵖ ⥤ D),
-    preserves_limit (W.index P).multicospan F] :
-  (whiskering_left _ _ E).obj (J.sheafify P) ≅
-  (whiskering_left _ _ _).obj P ⋙ J.sheafification E :=
-begin
-  refine J.plus_functor_whisker_left_iso _ ≪≫ _ ≪≫ functor.associator _ _ _,
-  refine iso_whisker_right _ _,
-  refine J.plus_functor_whisker_left_iso _,
-end
+def sheafificationWhiskerLeftIso (P : Cᵒᵖ ⥤ D) [∀ F : D ⥤ E X : C, PreservesColimitsOfShape (J.cover X)ᵒᵖ F]
+    [∀ F : D ⥤ E X : C W : J.cover X P : Cᵒᵖ ⥤ D, PreservesLimit (W.index P).multicospan F] :
+    (whiskeringLeft _ _ E).obj (J.sheafify P) ≅ (whiskeringLeft _ _ _).obj P ⋙ J.sheafification E := by
+  refine' J.plus_functor_whisker_left_iso _ ≪≫ _ ≪≫ functor.associator _ _ _
+  refine' iso_whisker_right _ _
+  refine' J.plus_functor_whisker_left_iso _
 
 @[simp]
-lemma sheafification_whisker_left_iso_hom_app (P : Cᵒᵖ ⥤ D) (F : D ⥤ E)
-  [∀ (F : D ⥤ E) (X : C), preserves_colimits_of_shape (J.cover X)ᵒᵖ F]
-  [∀ (F : D ⥤ E) (X : C) (W : J.cover X) (P : Cᵒᵖ ⥤ D),
-    preserves_limit (W.index P).multicospan F] :
-  (sheafification_whisker_left_iso J P).hom.app F = (J.sheafify_comp_iso F P).hom :=
-begin
-  dsimp [sheafification_whisker_left_iso, sheafify_comp_iso],
-  rw category.comp_id,
-end
+theorem sheafification_whisker_left_iso_hom_app (P : Cᵒᵖ ⥤ D) (F : D ⥤ E)
+    [∀ F : D ⥤ E X : C, PreservesColimitsOfShape (J.cover X)ᵒᵖ F]
+    [∀ F : D ⥤ E X : C W : J.cover X P : Cᵒᵖ ⥤ D, PreservesLimit (W.index P).multicospan F] :
+    (sheafificationWhiskerLeftIso J P).Hom.app F = (J.sheafifyCompIso F P).Hom := by
+  dsimp [sheafification_whisker_left_iso, sheafify_comp_iso]
+  rw [category.comp_id]
 
 @[simp]
-lemma sheafification_whisker_left_iso_inv_app (P : Cᵒᵖ ⥤ D) (F : D ⥤ E)
-  [∀ (F : D ⥤ E) (X : C), preserves_colimits_of_shape (J.cover X)ᵒᵖ F]
-  [∀ (F : D ⥤ E) (X : C) (W : J.cover X) (P : Cᵒᵖ ⥤ D),
-    preserves_limit (W.index P).multicospan F] :
-  (sheafification_whisker_left_iso J P).inv.app F = (J.sheafify_comp_iso F P).inv :=
-begin
-  dsimp [sheafification_whisker_left_iso, sheafify_comp_iso],
-  erw category.id_comp,
-end
+theorem sheafification_whisker_left_iso_inv_app (P : Cᵒᵖ ⥤ D) (F : D ⥤ E)
+    [∀ F : D ⥤ E X : C, PreservesColimitsOfShape (J.cover X)ᵒᵖ F]
+    [∀ F : D ⥤ E X : C W : J.cover X P : Cᵒᵖ ⥤ D, PreservesLimit (W.index P).multicospan F] :
+    (sheafificationWhiskerLeftIso J P).inv.app F = (J.sheafifyCompIso F P).inv := by
+  dsimp [sheafification_whisker_left_iso, sheafify_comp_iso]
+  erw [category.id_comp]
 
 /-- The isomorphism between the sheafification of `P` composed with `F` and
 the sheafification of `P ⋙ F`, functorially in `P`. -/
-def sheafification_whisker_right_iso :
-  J.sheafification D ⋙ (whiskering_right _ _ _).obj F ≅
-  (whiskering_right _ _ _).obj F ⋙ J.sheafification E :=
-begin
-  refine functor.associator _ _ _ ≪≫ _,
-  refine iso_whisker_left (J.plus_functor D) (J.plus_functor_whisker_right_iso _) ≪≫ _,
-  refine _ ≪≫ functor.associator _ _ _,
-  refine (functor.associator _ _ _).symm ≪≫ _,
-  exact iso_whisker_right (J.plus_functor_whisker_right_iso _) (J.plus_functor E),
-end
+def sheafificationWhiskerRightIso :
+    J.sheafification D ⋙ (whiskeringRight _ _ _).obj F ≅ (whiskeringRight _ _ _).obj F ⋙ J.sheafification E := by
+  refine' functor.associator _ _ _ ≪≫ _
+  refine' iso_whisker_left (J.plus_functor D) (J.plus_functor_whisker_right_iso _) ≪≫ _
+  refine' _ ≪≫ functor.associator _ _ _
+  refine' (functor.associator _ _ _).symm ≪≫ _
+  exact iso_whisker_right (J.plus_functor_whisker_right_iso _) (J.plus_functor E)
 
 @[simp]
-lemma sheafification_whisker_right_iso_hom_app :
-  (J.sheafification_whisker_right_iso F).hom.app P = (J.sheafify_comp_iso F P).hom :=
-begin
-  dsimp [sheafification_whisker_right_iso, sheafify_comp_iso],
-  simp only [category.id_comp, category.comp_id],
-  erw category.id_comp,
-end
+theorem sheafification_whisker_right_iso_hom_app :
+    (J.sheafificationWhiskerRightIso F).Hom.app P = (J.sheafifyCompIso F P).Hom := by
+  dsimp [sheafification_whisker_right_iso, sheafify_comp_iso]
+  simp only [category.id_comp, category.comp_id]
+  erw [category.id_comp]
 
 @[simp]
-lemma sheafification_whisker_right_iso_inv_app :
-  (J.sheafification_whisker_right_iso F).inv.app P = (J.sheafify_comp_iso F P).inv :=
-begin
-  dsimp [sheafification_whisker_right_iso, sheafify_comp_iso],
-  simp only [category.id_comp, category.comp_id],
-  erw category.id_comp,
-end
+theorem sheafification_whisker_right_iso_inv_app :
+    (J.sheafificationWhiskerRightIso F).inv.app P = (J.sheafifyCompIso F P).inv := by
+  dsimp [sheafification_whisker_right_iso, sheafify_comp_iso]
+  simp only [category.id_comp, category.comp_id]
+  erw [category.id_comp]
 
 @[simp, reassoc]
-lemma whisker_right_to_sheafify_sheafify_comp_iso_hom :
-  whisker_right (J.to_sheafify _) _ ≫ (J.sheafify_comp_iso F P).hom = J.to_sheafify _ :=
-begin
-  dsimp [sheafify_comp_iso],
-  erw [whisker_right_comp, category.assoc],
-  slice_lhs 2 3 { rw plus_comp_iso_whisker_right },
-  rw [category.assoc, ← J.plus_map_comp,
-    whisker_right_to_plus_comp_plus_comp_iso_hom, ← category.assoc,
-    whisker_right_to_plus_comp_plus_comp_iso_hom],
-  refl,
-end
+theorem whisker_right_to_sheafify_sheafify_comp_iso_hom :
+    whiskerRight (J.toSheafify _) _ ≫ (J.sheafifyCompIso F P).Hom = J.toSheafify _ := by
+  dsimp [sheafify_comp_iso]
+  erw [whisker_right_comp, category.assoc]
+  slice_lhs 2 3 => rw [plus_comp_iso_whisker_right]
+  rw [category.assoc, ← J.plus_map_comp, whisker_right_to_plus_comp_plus_comp_iso_hom, ← category.assoc,
+    whisker_right_to_plus_comp_plus_comp_iso_hom]
+  rfl
 
 @[simp, reassoc]
-lemma to_sheafify_comp_sheafify_comp_iso_inv :
-  J.to_sheafify _ ≫ (J.sheafify_comp_iso F P).inv = whisker_right (J.to_sheafify _) _ :=
-by { rw iso.comp_inv_eq, simp }
+theorem to_sheafify_comp_sheafify_comp_iso_inv :
+    J.toSheafify _ ≫ (J.sheafifyCompIso F P).inv = whiskerRight (J.toSheafify _) _ := by
+  rw [iso.comp_inv_eq]
+  simp
 
 section
 
 -- We will sheafify `D`-valued presheaves in this section.
-variables
-  [concrete_category.{max v u} D]
-  [preserves_limits (forget D)]
-  [∀ (X : C), preserves_colimits_of_shape (J.cover X)ᵒᵖ (forget D)]
-  [reflects_isomorphisms (forget D)]
+variable [ConcreteCategory.{max v u} D] [PreservesLimits (forget D)]
+  [∀ X : C, PreservesColimitsOfShape (J.cover X)ᵒᵖ (forget D)] [ReflectsIsomorphisms (forget D)]
 
 @[simp]
-lemma sheafify_comp_iso_inv_eq_sheafify_lift : (J.sheafify_comp_iso F P).inv =
-  J.sheafify_lift (whisker_right (J.to_sheafify _) _) ((J.sheafify_is_sheaf _).comp _) :=
-begin
-  apply J.sheafify_lift_unique,
-  rw iso.comp_inv_eq,
-  simp,
-end
+theorem sheafify_comp_iso_inv_eq_sheafify_lift :
+    (J.sheafifyCompIso F P).inv = J.sheafifyLift (whiskerRight (J.toSheafify _) _) ((J.sheafify_is_sheaf _).comp _) :=
+  by
+  apply J.sheafify_lift_unique
+  rw [iso.comp_inv_eq]
+  simp
 
 end
 
-end category_theory.grothendieck_topology
+end CategoryTheory.GrothendieckTopology
+

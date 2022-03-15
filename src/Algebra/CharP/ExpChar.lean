@@ -3,9 +3,9 @@ Copyright (c) 2021 Jakob Scholbach. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jakob Scholbach
 -/
-import algebra.char_p.basic
-import algebra.char_zero
-import data.nat.prime
+import Mathbin.Algebra.CharP.Basic
+import Mathbin.Algebra.CharZero
+import Mathbin.Data.Nat.Prime
 
 /-!
 # Exponential characteristic
@@ -26,107 +26,113 @@ The definition is stated for a semiring, but the actual results are for nontrivi
 exponential characteristic, characteristic
 -/
 
+
 universe u
-variables (R : Type u)
 
-section semiring
+variable (R : Type u)
 
-variables [semiring R]
+section Semiringₓ
+
+variable [Semiringₓ R]
 
 /-- The definition of the exponential characteristic of a semiring. -/
-class inductive exp_char (R : Type u) [semiring R] : ℕ → Prop
-| zero [char_zero R] : exp_char 1
-| prime {q : ℕ} (hprime : q.prime) [hchar : char_p R q] : exp_char q
+class inductive ExpChar (R : Type u) [Semiringₓ R] : ℕ → Prop
+  | zero [CharZero R] : ExpChar 1
+  | Prime {q : ℕ} (hprime : q.Prime) [hchar : CharP R q] : ExpChar q
 
 /-- The exponential characteristic is one if the characteristic is zero. -/
-lemma exp_char_one_of_char_zero (q : ℕ) [hp : char_p R 0] [hq : exp_char R q] :
-  q = 1 :=
-begin
-  casesI hq with q hq_one hq_prime,
-  { refl },
-  { exact false.elim (lt_irrefl _ ((hp.eq R hq_hchar).symm ▸ hq_prime : (0 : ℕ).prime).pos) }
-end
+theorem exp_char_one_of_char_zero (q : ℕ) [hp : CharP R 0] [hq : ExpChar R q] : q = 1 := by
+  cases' hq with q hq_one hq_prime
+  · rfl
+    
+  · exact False.elim (lt_irreflₓ _ ((hp.eq R hq_hchar).symm ▸ hq_prime : (0 : ℕ).Prime).Pos)
+    
 
 /-- The characteristic equals the exponential characteristic iff the former is prime. -/
-theorem char_eq_exp_char_iff (p q : ℕ) [hp : char_p R p] [hq : exp_char R q] :
-  p = q ↔ p.prime :=
-begin
-  casesI hq with q hq_one hq_prime,
-  { split,
-    { unfreezingI {rintro rfl},
-      exact false.elim (one_ne_zero (hp.eq R (char_p.of_char_zero R))) },
-    { intro pprime,
-      rw (char_p.eq R hp infer_instance : p = 0) at pprime,
-      exact false.elim (nat.not_prime_zero pprime) } },
-  { split,
-    { intro hpq, rw hpq, exact hq_prime, },
-    { intro _,
-      exact char_p.eq R hp hq_hchar } },
-end
+theorem char_eq_exp_char_iff (p q : ℕ) [hp : CharP R p] [hq : ExpChar R q] : p = q ↔ p.Prime := by
+  cases' hq with q hq_one hq_prime
+  · constructor
+    · rintro rfl
+      exact False.elim (one_ne_zero (hp.eq R (CharP.of_char_zero R)))
+      
+    · intro pprime
+      rw [(CharP.eq R hp inferInstance : p = 0)] at pprime
+      exact False.elim (Nat.not_prime_zero pprime)
+      
+    
+  · constructor
+    · intro hpq
+      rw [hpq]
+      exact hq_prime
+      
+    · intro
+      exact CharP.eq R hp hq_hchar
+      
+    
 
-section nontrivial
+section Nontrivial
 
-variables [nontrivial R]
+variable [Nontrivial R]
 
 /-- The exponential characteristic is one if the characteristic is zero. -/
-lemma char_zero_of_exp_char_one (p : ℕ) [hp : char_p R p] [hq : exp_char R 1] :
-  p = 0 :=
-begin
-  casesI hq,
-  { exact char_p.eq R hp infer_instance, },
-  { exact false.elim (char_p.char_ne_one R 1 rfl), }
-end
+theorem char_zero_of_exp_char_one (p : ℕ) [hp : CharP R p] [hq : ExpChar R 1] : p = 0 := by
+  cases' hq
+  · exact CharP.eq R hp inferInstance
+    
+  · exact False.elim (CharP.char_ne_one R 1 rfl)
+    
 
 /-- The characteristic is zero if the exponential characteristic is one. -/
-@[priority 100] -- see Note [lower instance priority]
-instance char_zero_of_exp_char_one' [hq : exp_char R 1] : char_zero R :=
-begin
-  casesI hq,
-  { assumption, },
-  { exact false.elim (char_p.char_ne_one R 1 rfl), }
-end
+-- see Note [lower instance priority]
+instance (priority := 100) char_zero_of_exp_char_one' [hq : ExpChar R 1] : CharZero R := by
+  cases' hq
+  · assumption
+    
+  · exact False.elim (CharP.char_ne_one R 1 rfl)
+    
 
 /-- The exponential characteristic is one iff the characteristic is zero. -/
-theorem exp_char_one_iff_char_zero (p q : ℕ) [char_p R p] [exp_char R q] :
-  q = 1 ↔ p = 0 :=
-begin
-  split,
-  { unfreezingI {rintro rfl},
-    exact char_zero_of_exp_char_one R p, },
-  { unfreezingI {rintro rfl},
-    exact exp_char_one_of_char_zero R q, }
-end
+theorem exp_char_one_iff_char_zero (p q : ℕ) [CharP R p] [ExpChar R q] : q = 1 ↔ p = 0 := by
+  constructor
+  · rintro rfl
+    exact char_zero_of_exp_char_one R p
+    
+  · rintro rfl
+    exact exp_char_one_of_char_zero R q
+    
 
-section no_zero_divisors
+section NoZeroDivisors
 
-variable [no_zero_divisors R]
+variable [NoZeroDivisors R]
 
 /-- A helper lemma: the characteristic is prime if it is non-zero. -/
-lemma char_prime_of_ne_zero {p : ℕ} [hp : char_p R p] (p_ne_zero : p ≠ 0) : nat.prime p :=
-begin
-  cases char_p.char_is_prime_or_zero R p with h h,
-  { exact h, },
-  { contradiction, }
-end
+theorem char_prime_of_ne_zero {p : ℕ} [hp : CharP R p] (p_ne_zero : p ≠ 0) : Nat.Prime p := by
+  cases' CharP.char_is_prime_or_zero R p with h h
+  · exact h
+    
+  · contradiction
+    
 
 /-- The exponential characteristic is a prime number or one. -/
-theorem exp_char_is_prime_or_one (q : ℕ) [hq : exp_char R q] : nat.prime q ∨ q = 1 :=
-or_iff_not_imp_right.mpr $ λ h,
-begin
-  casesI char_p.exists R with p hp,
-  have p_ne_zero : p ≠ 0,
-  { intro p_zero,
-    haveI : char_p R 0, { rwa ←p_zero },
-    have : q = 1 := exp_char_one_of_char_zero R q,
-    contradiction, },
-  have p_eq_q : p = q := (char_eq_exp_char_iff R p q).mpr (char_prime_of_ne_zero R p_ne_zero),
-  cases char_p.char_is_prime_or_zero R p with pprime,
-  { rwa p_eq_q at pprime },
-  { contradiction },
-end
+theorem exp_char_is_prime_or_one (q : ℕ) [hq : ExpChar R q] : Nat.Prime q ∨ q = 1 :=
+  or_iff_not_imp_right.mpr fun h => by
+    cases' CharP.exists R with p hp
+    have p_ne_zero : p ≠ 0 := by
+      intro p_zero
+      have : CharP R 0 := by
+        rwa [← p_zero]
+      have : q = 1 := exp_char_one_of_char_zero R q
+      contradiction
+    have p_eq_q : p = q := (char_eq_exp_char_iff R p q).mpr (char_prime_of_ne_zero R p_ne_zero)
+    cases' CharP.char_is_prime_or_zero R p with pprime
+    · rwa [p_eq_q] at pprime
+      
+    · contradiction
+      
 
-end no_zero_divisors
+end NoZeroDivisors
 
-end nontrivial
+end Nontrivial
 
-end semiring
+end Semiringₓ
+

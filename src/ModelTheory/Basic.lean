@@ -3,7 +3,7 @@ Copyright (c) 2021 Aaron Anderson, Jesse Michael Han, Floris van Doorn. All righ
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Aaron Anderson, Jesse Michael Han, Floris van Doorn
 -/
-import data.fin.tuple.basic
+import Mathbin.Data.Fin.Tuple.Basic
 
 /-!
 # Basics on First-Order Structures
@@ -42,589 +42,701 @@ For the Flypitch project:
 the continuum hypothesis*][flypitch_itp]
 
 -/
-universes u v u' v' w
 
-namespace first_order
+
+universe u v u' v' w
+
+namespace FirstOrder
 
 /-! ### Languages and Structures -/
 
+
 /-- A first-order language consists of a type of functions of every natural-number arity and a
   type of relations of every natural-number arity. -/
-@[nolint check_univs] -- intended to be used with explicit universe parameters
-structure language :=
-(functions : ℕ → Type u) (relations : ℕ → Type v)
+-- intended to be used with explicit universe parameters
+@[nolint check_univs]
+structure Language where
+  Functions : ℕ → Type u
+  Relations : ℕ → Type v
 
-namespace language
+namespace Language
 
 /-- The empty language has no symbols. -/
-protected def empty : language := ⟨λ _, pempty, λ _, pempty⟩
+protected def empty : Language :=
+  ⟨fun _ => Pempty, fun _ => Pempty⟩
 
-instance : inhabited language := ⟨language.empty⟩
+instance : Inhabited Language :=
+  ⟨Language.empty⟩
 
 /-- The sum of two languages consists of the disjoint union of their symbols. -/
-protected def sum (L : language.{u v}) (L' : language.{u' v'}) : language :=
-⟨λn, L.functions n ⊕ L'.functions n, λ n, L.relations n ⊕ L'.relations n⟩
+protected def sum (L : Language.{u, v}) (L' : Language.{u', v'}) : Language :=
+  ⟨fun n => Sum (L.Functions n) (L'.Functions n), fun n => Sum (L.Relations n) (L'.Relations n)⟩
 
-variable (L : language.{u v})
+variable (L : Language.{u, v})
 
 /-- The type of constants in a given language. -/
-@[nolint has_inhabited_instance] protected def «constants» := L.functions 0
+@[nolint has_inhabited_instance]
+protected def Constants :=
+  L.Functions 0
 
 /-- The type of symbols in a given language. -/
-@[nolint has_inhabited_instance] def symbols := (Σl, L.functions l) ⊕ (Σl, L.relations l)
+@[nolint has_inhabited_instance]
+def Symbols :=
+  Sum (Σl, L.Functions l) (Σl, L.Relations l)
 
 /-- A language is relational when it has no function symbols. -/
-class is_relational : Prop :=
-(empty_functions : ∀ n, is_empty (L.functions n))
+class IsRelational : Prop where
+  empty_functions : ∀ n, IsEmpty (L.Functions n)
 
 /-- A language is algebraic when it has no relation symbols. -/
-class is_algebraic : Prop :=
-(empty_relations : ∀ n, is_empty (L.relations n))
+class IsAlgebraic : Prop where
+  empty_relations : ∀ n, IsEmpty (L.Relations n)
 
-variables {L} {L' : language.{u' v'}}
+variable {L} {L' : Language.{u', v'}}
 
-instance [L.is_relational] {n : ℕ} : is_empty (L.functions n) := is_relational.empty_functions n
+instance [L.IsRelational] {n : ℕ} : IsEmpty (L.Functions n) :=
+  IsRelational.empty_functions n
 
-instance [L.is_algebraic] {n : ℕ} : is_empty (L.relations n) := is_algebraic.empty_relations n
+instance [L.IsAlgebraic] {n : ℕ} : IsEmpty (L.Relations n) :=
+  IsAlgebraic.empty_relations n
 
-instance is_relational_of_empty_functions {symb : ℕ → Type*} : is_relational ⟨λ _, pempty, symb⟩ :=
-⟨λ _, pempty.is_empty⟩
+instance is_relational_of_empty_functions {symb : ℕ → Type _} : IsRelational ⟨fun _ => Pempty, symb⟩ :=
+  ⟨fun _ => Pempty.is_empty⟩
 
-instance is_algebraic_of_empty_relations {symb : ℕ → Type*}  : is_algebraic ⟨symb, λ _, pempty⟩ :=
-⟨λ _, pempty.is_empty⟩
+instance is_algebraic_of_empty_relations {symb : ℕ → Type _} : IsAlgebraic ⟨symb, fun _ => Pempty⟩ :=
+  ⟨fun _ => Pempty.is_empty⟩
 
-instance is_relational_empty : is_relational language.empty :=
-language.is_relational_of_empty_functions
+instance is_relational_empty : IsRelational Language.empty :=
+  language.is_relational_of_empty_functions
 
-instance is_algebraic_empty : is_algebraic language.empty :=
-language.is_algebraic_of_empty_relations
+instance is_algebraic_empty : IsAlgebraic Language.empty :=
+  language.is_algebraic_of_empty_relations
 
-instance is_relational_sum [L.is_relational] [L'.is_relational] : is_relational (L.sum L') :=
-⟨λ n, sum.is_empty⟩
+instance is_relational_sum [L.IsRelational] [L'.IsRelational] : IsRelational (L.Sum L') :=
+  ⟨fun n => Sum.is_empty⟩
 
-instance is_algebraic_sum [L.is_algebraic] [L'.is_algebraic] : is_algebraic (L.sum L') :=
-⟨λ n, sum.is_empty⟩
+instance is_algebraic_sum [L.IsAlgebraic] [L'.IsAlgebraic] : IsAlgebraic (L.Sum L') :=
+  ⟨fun n => Sum.is_empty⟩
 
-variables (L) (M : Type w)
+variable (L) (M : Type w)
 
 /-- A first-order structure on a type `M` consists of interpretations of all the symbols in a given
   language. Each function of arity `n` is interpreted as a function sending tuples of length `n`
   (modeled as `(fin n → M)`) to `M`, and a relation of arity `n` is a function from tuples of length
   `n` to `Prop`. -/
-class Structure :=
-(fun_map : ∀{n}, L.functions n → (fin n → M) → M)
-(rel_map : ∀{n}, L.relations n → (fin n → M) → Prop)
+class Structure where
+  funMap : ∀ {n}, L.Functions n → (Finₓ n → M) → M
+  RelMap : ∀ {n}, L.Relations n → (Finₓ n → M) → Prop
 
-variables (N : Type*) [L.Structure M] [L.Structure N]
+variable (N : Type _) [L.Structure M] [L.Structure N]
 
 open Structure
 
 /-! ### Maps -/
 
+
 /-- A homomorphism between first-order structures is a function that commutes with the
   interpretations of functions and maps tuples in one structure where a given relation is true to
   tuples in the second structure where that relation is still true. -/
-structure hom :=
-(to_fun : M → N)
-(map_fun' : ∀{n} (f : L.functions n) x, to_fun (fun_map f x) = fun_map f (to_fun ∘ x) . obviously)
-(map_rel' : ∀{n} (r : L.relations n) x, rel_map r x → rel_map r (to_fun ∘ x) . obviously)
+structure Hom where
+  toFun : M → N
+  map_fun' : ∀ {n} f : L.Functions n x, to_fun (funMap f x) = funMap f (to_fun ∘ x) := by
+    run_tac
+      obviously
+  map_rel' : ∀ {n} r : L.Relations n x, RelMap r x → RelMap r (to_fun ∘ x) := by
+    run_tac
+      obviously
 
-localized "notation A ` →[`:25 L `] ` B := L.hom A B" in first_order
+-- mathport name: «expr →[ ] »
+localized [FirstOrder] notation:25 A " →[" L "] " B => L.Hom A B
 
 /-- An embedding of first-order structures is an embedding that commutes with the
   interpretations of functions and relations. -/
-structure embedding extends M ↪ N :=
-(map_fun' : ∀{n} (f : L.functions n) x, to_fun (fun_map f x) = fun_map f (to_fun ∘ x) . obviously)
-(map_rel' : ∀{n} (r : L.relations n) x, rel_map r (to_fun ∘ x) ↔ rel_map r x . obviously)
+structure Embedding extends M ↪ N where
+  map_fun' : ∀ {n} f : L.Functions n x, to_fun (funMap f x) = funMap f (to_fun ∘ x) := by
+    run_tac
+      obviously
+  map_rel' : ∀ {n} r : L.Relations n x, RelMap r (to_fun ∘ x) ↔ RelMap r x := by
+    run_tac
+      obviously
 
-localized "notation A ` ↪[`:25 L `] ` B := L.embedding A B" in first_order
+-- mathport name: «expr ↪[ ] »
+localized [FirstOrder] notation:25 A " ↪[" L "] " B => L.Embedding A B
 
 /-- An equivalence of first-order structures is an equivalence that commutes with the
   interpretations of functions and relations. -/
-structure equiv extends M ≃ N :=
-(map_fun' : ∀{n} (f : L.functions n) x, to_fun (fun_map f x) = fun_map f (to_fun ∘ x) . obviously)
-(map_rel' : ∀{n} (r : L.relations n) x, rel_map r (to_fun ∘ x) ↔ rel_map r x . obviously)
+structure Equiv extends M ≃ N where
+  map_fun' : ∀ {n} f : L.Functions n x, to_fun (funMap f x) = funMap f (to_fun ∘ x) := by
+    run_tac
+      obviously
+  map_rel' : ∀ {n} r : L.Relations n x, RelMap r (to_fun ∘ x) ↔ RelMap r x := by
+    run_tac
+      obviously
 
-localized "notation A ` ≃[`:25 L `] ` B := L.equiv A B" in first_order
+-- mathport name: «expr ≃[ ] »
+localized [FirstOrder] notation:25 A " ≃[" L "] " B => L.Equiv A B
 
-variables {L M N} {P : Type*} [L.Structure P] {Q : Type*} [L.Structure Q]
+variable {L M N} {P : Type _} [L.Structure P] {Q : Type _} [L.Structure Q]
 
-instance : has_coe_t L.constants M :=
-⟨λ c, fun_map c default⟩
+instance : CoeTₓ L.Constants M :=
+  ⟨fun c => funMap c default⟩
 
-lemma fun_map_eq_coe_constants {c : L.constants} {x : fin 0 → M} :
-  fun_map c x = c := congr rfl (funext fin.elim0)
+theorem fun_map_eq_coe_constants {c : L.Constants} {x : Finₓ 0 → M} : funMap c x = c :=
+  congr rfl (funext Finₓ.elim0)
 
 /-- Given a language with a nonempty type of constants, any structure will be nonempty. This cannot
   be a global instance, because `L` becomes a metavariable. -/
-lemma nonempty_of_nonempty_constants [h : nonempty L.constants] : nonempty M :=
-h.map coe
+theorem nonempty_of_nonempty_constants [h : Nonempty L.Constants] : Nonempty M :=
+  h.map coe
 
-namespace hom
+namespace Hom
 
-instance has_coe_to_fun : has_coe_to_fun (M →[L] N) (λ _, M → N) := ⟨to_fun⟩
+instance hasCoeToFun : CoeFun (M →[L] N) fun _ => M → N :=
+  ⟨toFun⟩
 
-@[simp] lemma to_fun_eq_coe {f : M →[L] N} : f.to_fun = (f : M → N) := rfl
+@[simp]
+theorem to_fun_eq_coe {f : M →[L] N} : f.toFun = (f : M → N) :=
+  rfl
 
-lemma coe_injective : @function.injective (M →[L] N) (M → N) coe_fn
-| f g h := by {cases f, cases g, cases h, refl}
+theorem coe_injective : @Function.Injective (M →[L] N) (M → N) coeFn
+  | f, g, h => by
+    cases f
+    cases g
+    cases h
+    rfl
 
 @[ext]
-lemma ext ⦃f g : M →[L] N⦄ (h : ∀ x, f x = g x) : f = g :=
-coe_injective (funext h)
+theorem ext ⦃f g : M →[L] N⦄ (h : ∀ x, f x = g x) : f = g :=
+  coe_injective (funext h)
 
-lemma ext_iff {f g : M →[L] N} : f = g ↔ ∀ x, f x = g x :=
-⟨λ h x, h ▸ rfl, λ h, ext h⟩
+theorem ext_iff {f g : M →[L] N} : f = g ↔ ∀ x, f x = g x :=
+  ⟨fun h x => h ▸ rfl, fun h => ext h⟩
 
-@[simp] lemma map_fun (φ : M →[L] N) {n : ℕ} (f : L.functions n) (x : fin n → M) :
-  φ (fun_map f x) = fun_map f (φ ∘ x) := φ.map_fun' f x
+@[simp]
+theorem map_fun (φ : M →[L] N) {n : ℕ} (f : L.Functions n) (x : Finₓ n → M) : φ (funMap f x) = funMap f (φ ∘ x) :=
+  φ.map_fun' f x
 
-@[simp] lemma map_constants (φ : M →[L] N) (c : L.constants) : φ c = c :=
-(φ.map_fun c default).trans (congr rfl (funext default))
+@[simp]
+theorem map_constants (φ : M →[L] N) (c : L.Constants) : φ c = c :=
+  (φ.map_fun c default).trans (congr rfl (funext default))
 
-@[simp] lemma map_rel (φ : M →[L] N) {n : ℕ} (r : L.relations n) (x : fin n → M) :
-  rel_map r x → rel_map r (φ ∘ x) := φ.map_rel' r x
+@[simp]
+theorem map_rel (φ : M →[L] N) {n : ℕ} (r : L.Relations n) (x : Finₓ n → M) : RelMap r x → RelMap r (φ ∘ x) :=
+  φ.map_rel' r x
 
-variables (L) (M)
+variable (L) (M)
+
 /-- The identity map from a structure to itself -/
-@[refl] def id : M →[L] M :=
-{ to_fun := id }
+@[refl]
+def id : M →[L] M where
+  toFun := id
 
-variables {L} {M}
+variable {L} {M}
 
-instance : inhabited (M →[L] M) := ⟨id L M⟩
+instance : Inhabited (M →[L] M) :=
+  ⟨id L M⟩
 
-@[simp] lemma id_apply (x : M) :
-  id L M x = x := rfl
+@[simp]
+theorem id_apply (x : M) : id L M x = x :=
+  rfl
 
 /-- Composition of first-order homomorphisms -/
-@[trans] def comp (hnp : N →[L] P) (hmn : M →[L] N) : M →[L] P :=
-{ to_fun := hnp ∘ hmn,
-  map_rel' := λ _ _ _ h, by simp [h] }
+@[trans]
+def comp (hnp : N →[L] P) (hmn : M →[L] N) : M →[L] P where
+  toFun := hnp ∘ hmn
+  map_rel' := fun _ _ _ h => by
+    simp [h]
 
-@[simp] lemma comp_apply (g : N →[L] P) (f : M →[L] N) (x : M) :
-  g.comp f x = g (f x) := rfl
+@[simp]
+theorem comp_apply (g : N →[L] P) (f : M →[L] N) (x : M) : g.comp f x = g (f x) :=
+  rfl
 
 /-- Composition of first-order homomorphisms is associative. -/
-lemma comp_assoc (f : M →[L] N) (g : N →[L] P) (h : P →[L] Q) :
-  (h.comp g).comp f = h.comp (g.comp f) := rfl
+theorem comp_assoc (f : M →[L] N) (g : N →[L] P) (h : P →[L] Q) : (h.comp g).comp f = h.comp (g.comp f) :=
+  rfl
 
-end hom
+end Hom
 
-namespace embedding
+namespace Embedding
 
-instance has_coe_to_fun : has_coe_to_fun (M ↪[L] N) (λ _, M → N) := ⟨λ f, f.to_fun⟩
+instance hasCoeToFun : CoeFun (M ↪[L] N) fun _ => M → N :=
+  ⟨fun f => f.toFun⟩
 
-@[simp] lemma map_fun (φ : M ↪[L] N) {n : ℕ} (f : L.functions n) (x : fin n → M) :
-  φ (fun_map f x) = fun_map f (φ ∘ x) := φ.map_fun' f x
+@[simp]
+theorem map_fun (φ : M ↪[L] N) {n : ℕ} (f : L.Functions n) (x : Finₓ n → M) : φ (funMap f x) = funMap f (φ ∘ x) :=
+  φ.map_fun' f x
 
-@[simp] lemma map_constants (φ : M ↪[L] N) (c : L.constants) : φ c = c :=
-(φ.map_fun c default).trans (congr rfl (funext default))
+@[simp]
+theorem map_constants (φ : M ↪[L] N) (c : L.Constants) : φ c = c :=
+  (φ.map_fun c default).trans (congr rfl (funext default))
 
-@[simp] lemma map_rel (φ : M ↪[L] N) {n : ℕ} (r : L.relations n) (x : fin n → M) :
-  rel_map r (φ ∘ x) ↔ rel_map r x := φ.map_rel' r x
+@[simp]
+theorem map_rel (φ : M ↪[L] N) {n : ℕ} (r : L.Relations n) (x : Finₓ n → M) : RelMap r (φ ∘ x) ↔ RelMap r x :=
+  φ.map_rel' r x
 
 /-- A first-order embedding is also a first-order homomorphism. -/
-def to_hom (f : M ↪[L] N) : M →[L] N :=
-{ to_fun := f }
+def toHom (f : M ↪[L] N) : M →[L] N where
+  toFun := f
 
 @[simp]
-lemma coe_to_hom {f : M ↪[L] N} : (f.to_hom : M → N) = f := rfl
+theorem coe_to_hom {f : M ↪[L] N} : (f.toHom : M → N) = f :=
+  rfl
 
-lemma coe_injective : @function.injective (M ↪[L] N) (M → N) coe_fn
-| f g h :=
-begin
-  cases f,
-  cases g,
-  simp only,
-  ext x,
-  exact function.funext_iff.1 h x,
-end
+theorem coe_injective : @Function.Injective (M ↪[L] N) (M → N) coeFn
+  | f, g, h => by
+    cases f
+    cases g
+    simp only
+    ext x
+    exact Function.funext_iffₓ.1 h x
 
 @[ext]
-lemma ext ⦃f g : M ↪[L] N⦄ (h : ∀ x, f x = g x) : f = g :=
-coe_injective (funext h)
+theorem ext ⦃f g : M ↪[L] N⦄ (h : ∀ x, f x = g x) : f = g :=
+  coe_injective (funext h)
 
-lemma ext_iff {f g : M ↪[L] N} : f = g ↔ ∀ x, f x = g x :=
-⟨λ h x, h ▸ rfl, λ h, ext h⟩
+theorem ext_iff {f g : M ↪[L] N} : f = g ↔ ∀ x, f x = g x :=
+  ⟨fun h x => h ▸ rfl, fun h => ext h⟩
 
-lemma injective (f : M ↪[L] N) : function.injective f := f.to_embedding.injective
+theorem injective (f : M ↪[L] N) : Function.Injective f :=
+  f.toEmbedding.Injective
 
 /-- In an algebraic language, any injective homomorphism is an embedding. -/
-@[simps] def of_injective [L.is_algebraic] {f : M →[L] N} (hf : function.injective f) : M ↪[L] N :=
-{ inj' := hf,
-  map_rel' := λ n, (is_algebraic.empty_relations n).elim,
-  .. f }
+@[simps]
+def ofInjective [L.IsAlgebraic] {f : M →[L] N} (hf : Function.Injective f) : M ↪[L] N :=
+  { f with inj' := hf, map_rel' := fun n => (IsAlgebraic.empty_relations n).elim }
 
-@[simp] lemma coe_fn_of_injective [L.is_algebraic] {f : M →[L] N} (hf : function.injective f) :
-  (of_injective hf : M → N) = f := rfl
+@[simp]
+theorem coe_fn_of_injective [L.IsAlgebraic] {f : M →[L] N} (hf : Function.Injective f) : (ofInjective hf : M → N) = f :=
+  rfl
 
-@[simp] lemma of_injective_to_hom [L.is_algebraic] {f : M →[L] N} (hf : function.injective f) :
-  (of_injective hf).to_hom = f :=
-by { ext, simp }
+@[simp]
+theorem of_injective_to_hom [L.IsAlgebraic] {f : M →[L] N} (hf : Function.Injective f) : (ofInjective hf).toHom = f :=
+  by
+  ext
+  simp
 
-variables (L) (M)
+variable (L) (M)
+
 /-- The identity embedding from a structure to itself -/
-@[refl] def refl : M ↪[L] M :=
-{ to_embedding := function.embedding.refl M }
+@[refl]
+def refl : M ↪[L] M where
+  toEmbedding := Function.Embedding.refl M
 
-variables {L} {M}
+variable {L} {M}
 
-instance : inhabited (M ↪[L] M) := ⟨refl L M⟩
+instance : Inhabited (M ↪[L] M) :=
+  ⟨refl L M⟩
 
-@[simp] lemma refl_apply (x : M) :
-  refl L M x = x := rfl
+@[simp]
+theorem refl_apply (x : M) : refl L M x = x :=
+  rfl
 
 /-- Composition of first-order embeddings -/
-@[trans] def comp (hnp : N ↪[L] P) (hmn : M ↪[L] N) : M ↪[L] P :=
-{ to_fun := hnp ∘ hmn,
-  inj' := hnp.injective.comp hmn.injective }
+@[trans]
+def comp (hnp : N ↪[L] P) (hmn : M ↪[L] N) : M ↪[L] P where
+  toFun := hnp ∘ hmn
+  inj' := hnp.Injective.comp hmn.Injective
 
-@[simp] lemma comp_apply (g : N ↪[L] P) (f : M ↪[L] N) (x : M) :
-  g.comp f x = g (f x) := rfl
+@[simp]
+theorem comp_apply (g : N ↪[L] P) (f : M ↪[L] N) (x : M) : g.comp f x = g (f x) :=
+  rfl
 
 /-- Composition of first-order embeddings is associative. -/
-lemma comp_assoc (f : M ↪[L] N) (g : N ↪[L] P) (h : P ↪[L] Q) :
-  (h.comp g).comp f = h.comp (g.comp f) := rfl
+theorem comp_assoc (f : M ↪[L] N) (g : N ↪[L] P) (h : P ↪[L] Q) : (h.comp g).comp f = h.comp (g.comp f) :=
+  rfl
 
-@[simp] lemma comp_to_hom (hnp : N ↪[L] P) (hmn : M ↪[L] N) :
-  (hnp.comp hmn).to_hom = hnp.to_hom.comp hmn.to_hom :=
-by { ext, simp only [coe_to_hom, comp_apply, hom.comp_apply] }
+@[simp]
+theorem comp_to_hom (hnp : N ↪[L] P) (hmn : M ↪[L] N) : (hnp.comp hmn).toHom = hnp.toHom.comp hmn.toHom := by
+  ext
+  simp only [coe_to_hom, comp_apply, hom.comp_apply]
 
-end embedding
+end Embedding
 
-namespace equiv
+namespace Equivₓ
 
 /-- The inverse of a first-order equivalence is a first-order equivalence. -/
-@[symm] def symm (f : M ≃[L] N) : N ≃[L] M :=
-{ map_fun' := λ n f' x, begin
-    simp only [equiv.to_fun_as_coe],
-    rw [equiv.symm_apply_eq],
-    refine eq.trans _ (f.map_fun' f' (f.to_equiv.symm ∘ x)).symm,
-    rw [← function.comp.assoc, equiv.to_fun_as_coe, equiv.self_comp_symm, function.comp.left_id]
-  end,
-  map_rel' := λ n r x, begin
-    simp only [equiv.to_fun_as_coe],
-    refine (f.map_rel' r (f.to_equiv.symm ∘ x)).symm.trans _,
-    rw [← function.comp.assoc, equiv.to_fun_as_coe, equiv.self_comp_symm, function.comp.left_id]
-  end,
-  .. f.to_equiv.symm }
+@[symm]
+def symm (f : M ≃[L] N) : N ≃[L] M :=
+  { f.toEquiv.symm with
+    map_fun' := fun n f' x => by
+      simp only [Equivₓ.to_fun_as_coe]
+      rw [Equivₓ.symm_apply_eq]
+      refine' Eq.trans _ (f.map_fun' f' (f.to_equiv.symm ∘ x)).symm
+      rw [← Function.comp.assoc, Equivₓ.to_fun_as_coe, Equivₓ.self_comp_symm, Function.comp.left_id],
+    map_rel' := fun n r x => by
+      simp only [Equivₓ.to_fun_as_coe]
+      refine' (f.map_rel' r (f.to_equiv.symm ∘ x)).symm.trans _
+      rw [← Function.comp.assoc, Equivₓ.to_fun_as_coe, Equivₓ.self_comp_symm, Function.comp.left_id] }
 
-instance has_coe_to_fun : has_coe_to_fun (M ≃[L] N) (λ _, M → N) := ⟨λ f, f.to_fun⟩
-
-@[simp]
-lemma apply_symm_apply (f : M ≃[L] N) (a : N) : f (f.symm a) = a := f.to_equiv.apply_symm_apply a
+instance hasCoeToFun : CoeFun (M ≃[L] N) fun _ => M → N :=
+  ⟨fun f => f.toFun⟩
 
 @[simp]
-lemma symm_apply_apply (f : M ≃[L] N) (a : M) : f.symm (f a) = a := f.to_equiv.symm_apply_apply a
+theorem apply_symm_apply (f : M ≃[L] N) (a : N) : f (f.symm a) = a :=
+  f.toEquiv.apply_symm_apply a
 
-@[simp] lemma map_fun (φ : M ≃[L] N) {n : ℕ} (f : L.functions n) (x : fin n → M) :
-  φ (fun_map f x) = fun_map f (φ ∘ x) := φ.map_fun' f x
+@[simp]
+theorem symm_apply_apply (f : M ≃[L] N) (a : M) : f.symm (f a) = a :=
+  f.toEquiv.symm_apply_apply a
 
-@[simp] lemma map_constants (φ : M ≃[L] N) (c : L.constants) : φ c = c :=
-(φ.map_fun c default).trans (congr rfl (funext default))
+@[simp]
+theorem map_fun (φ : M ≃[L] N) {n : ℕ} (f : L.Functions n) (x : Finₓ n → M) : φ (funMap f x) = funMap f (φ ∘ x) :=
+  φ.map_fun' f x
 
-@[simp] lemma map_rel (φ : M ≃[L] N) {n : ℕ} (r : L.relations n) (x : fin n → M) :
-  rel_map r (φ ∘ x) ↔ rel_map r x := φ.map_rel' r x
+@[simp]
+theorem map_constants (φ : M ≃[L] N) (c : L.Constants) : φ c = c :=
+  (φ.map_fun c default).trans (congr rfl (funext default))
+
+@[simp]
+theorem map_rel (φ : M ≃[L] N) {n : ℕ} (r : L.Relations n) (x : Finₓ n → M) : RelMap r (φ ∘ x) ↔ RelMap r x :=
+  φ.map_rel' r x
 
 /-- A first-order equivalence is also a first-order embedding. -/
-def to_embedding (f : M ≃[L] N) : M ↪[L] N :=
-{ to_fun := f,
-  inj' := f.to_equiv.injective }
+def toEmbedding (f : M ≃[L] N) : M ↪[L] N where
+  toFun := f
+  inj' := f.toEquiv.Injective
 
 /-- A first-order equivalence is also a first-order homomorphism. -/
-def to_hom (f : M ≃[L] N) : M →[L] N :=
-{ to_fun := f }
-
-@[simp] lemma to_embedding_to_hom (f : M ≃[L] N) : f.to_embedding.to_hom = f.to_hom := rfl
+def toHom (f : M ≃[L] N) : M →[L] N where
+  toFun := f
 
 @[simp]
-lemma coe_to_hom {f : M ≃[L] N} : (f.to_hom : M → N) = (f : M → N) := rfl
+theorem to_embedding_to_hom (f : M ≃[L] N) : f.toEmbedding.toHom = f.toHom :=
+  rfl
 
-@[simp] lemma coe_to_embedding (f : M ≃[L] N) : (f.to_embedding : M → N) = (f : M → N) := rfl
+@[simp]
+theorem coe_to_hom {f : M ≃[L] N} : (f.toHom : M → N) = (f : M → N) :=
+  rfl
 
-lemma coe_injective : @function.injective (M ≃[L] N) (M → N) coe_fn
-| f g h :=
-begin
-  cases f,
-  cases g,
-  simp only,
-  ext x,
-  exact function.funext_iff.1 h x,
-end
+@[simp]
+theorem coe_to_embedding (f : M ≃[L] N) : (f.toEmbedding : M → N) = (f : M → N) :=
+  rfl
+
+theorem coe_injective : @Function.Injective (M ≃[L] N) (M → N) coeFn
+  | f, g, h => by
+    cases f
+    cases g
+    simp only
+    ext x
+    exact Function.funext_iffₓ.1 h x
 
 @[ext]
-lemma ext ⦃f g : M ≃[L] N⦄ (h : ∀ x, f x = g x) : f = g :=
-coe_injective (funext h)
+theorem ext ⦃f g : M ≃[L] N⦄ (h : ∀ x, f x = g x) : f = g :=
+  coe_injective (funext h)
 
-lemma ext_iff {f g : M ≃[L] N} : f = g ↔ ∀ x, f x = g x :=
-⟨λ h x, h ▸ rfl, λ h, ext h⟩
+theorem ext_iff {f g : M ≃[L] N} : f = g ↔ ∀ x, f x = g x :=
+  ⟨fun h x => h ▸ rfl, fun h => ext h⟩
 
-lemma injective (f : M ≃[L] N) : function.injective f := f.to_embedding.injective
+theorem injective (f : M ≃[L] N) : Function.Injective f :=
+  f.toEmbedding.Injective
 
-variables (L) (M)
+variable (L) (M)
+
 /-- The identity equivalence from a structure to itself -/
-@[refl] def refl : M ≃[L] M :=
-{ to_equiv := equiv.refl M }
+@[refl]
+def refl : M ≃[L] M where
+  toEquiv := Equivₓ.refl M
 
-variables {L} {M}
+variable {L} {M}
 
-instance : inhabited (M ≃[L] M) := ⟨refl L M⟩
+instance : Inhabited (M ≃[L] M) :=
+  ⟨refl L M⟩
 
-@[simp] lemma refl_apply (x : M) :
-  refl L M x = x := rfl
+@[simp]
+theorem refl_apply (x : M) : refl L M x = x :=
+  rfl
 
 /-- Composition of first-order equivalences -/
-@[trans] def comp (hnp : N ≃[L] P) (hmn : M ≃[L] N) : M ≃[L] P :=
-{ to_fun := hnp ∘ hmn,
-  .. (hmn.to_equiv.trans hnp.to_equiv) }
+@[trans]
+def comp (hnp : N ≃[L] P) (hmn : M ≃[L] N) : M ≃[L] P :=
+  { hmn.toEquiv.trans hnp.toEquiv with toFun := hnp ∘ hmn }
 
-@[simp] lemma comp_apply (g : N ≃[L] P) (f : M ≃[L] N) (x : M) :
-  g.comp f x = g (f x) := rfl
+@[simp]
+theorem comp_apply (g : N ≃[L] P) (f : M ≃[L] N) (x : M) : g.comp f x = g (f x) :=
+  rfl
 
 /-- Composition of first-order homomorphisms is associative. -/
-lemma comp_assoc (f : M ≃[L] N) (g : N ≃[L] P) (h : P ≃[L] Q) :
-  (h.comp g).comp f = h.comp (g.comp f) := rfl
+theorem comp_assoc (f : M ≃[L] N) (g : N ≃[L] P) (h : P ≃[L] Q) : (h.comp g).comp f = h.comp (g.comp f) :=
+  rfl
 
-end equiv
+end Equivₓ
 
-section sum_Structure
-variables (L₁ L₂ : language) (S : Type*) [L₁.Structure S] [L₂.Structure S]
+section SumStructure
 
-instance sum_Structure :
-  (L₁.sum L₂).Structure S :=
-{ fun_map := λ n, sum.elim fun_map fun_map,
-  rel_map := λ n, sum.elim rel_map rel_map, }
+variable (L₁ L₂ : Language) (S : Type _) [L₁.Structure S] [L₂.Structure S]
 
-variables {L₁ L₂ S}
+instance sumStructure : (L₁.Sum L₂).Structure S where
+  funMap := fun n => Sum.elim funMap funMap
+  RelMap := fun n => Sum.elim RelMap RelMap
 
-@[simp] lemma fun_map_sum_inl {n : ℕ} (f : L₁.functions n) :
-  @fun_map (L₁.sum L₂) S _ n (sum.inl f) = fun_map f := rfl
+variable {L₁ L₂ S}
 
-@[simp] lemma fun_map_sum_inr {n : ℕ} (f : L₂.functions n) :
-  @fun_map (L₁.sum L₂) S _ n (sum.inr f) = fun_map f := rfl
+@[simp]
+theorem fun_map_sum_inl {n : ℕ} (f : L₁.Functions n) : @funMap (L₁.Sum L₂) S _ n (Sum.inl f) = funMap f :=
+  rfl
 
-@[simp] lemma rel_map_sum_inl {n : ℕ} (R : L₁.relations n) :
-  @rel_map (L₁.sum L₂) S _ n (sum.inl R) = rel_map R := rfl
+@[simp]
+theorem fun_map_sum_inr {n : ℕ} (f : L₂.Functions n) : @funMap (L₁.Sum L₂) S _ n (Sum.inr f) = funMap f :=
+  rfl
 
-@[simp] lemma rel_map_sum_inr {n : ℕ} (R : L₂.relations n) :
-  @rel_map (L₁.sum L₂) S _ n (sum.inr R) = rel_map R := rfl
+@[simp]
+theorem rel_map_sum_inl {n : ℕ} (R : L₁.Relations n) : @RelMap (L₁.Sum L₂) S _ n (Sum.inl R) = RelMap R :=
+  rfl
 
-end sum_Structure
+@[simp]
+theorem rel_map_sum_inr {n : ℕ} (R : L₂.Relations n) : @RelMap (L₁.Sum L₂) S _ n (Sum.inr R) = RelMap R :=
+  rfl
+
+end SumStructure
 
 /-- A language homomorphism maps the symbols of one language to symbols of another. -/
-structure Lhom (L L' : language) :=
-(on_function : ∀{n}, L.functions n → L'.functions n)
-(on_relation : ∀{n}, L.relations n → L'.relations n)
+structure Lhom (L L' : Language) where
+  onFunction : ∀ {n}, L.Functions n → L'.Functions n
+  onRelation : ∀ {n}, L.Relations n → L'.Relations n
 
-infix ` →ᴸ `:10 := Lhom -- \^L
+-- mathport name: «expr →ᴸ »
+infixl:10 " →ᴸ " => Lhom
 
+-- \^L
 namespace Lhom
 
-variables (ϕ : L →ᴸ L')
+variable (ϕ : L →ᴸ L')
 
 /-- The identity language homomorphism. -/
-protected def id (L : language) : L →ᴸ L :=
-⟨λn, id, λ n, id⟩
+protected def id (L : Language) : L →ᴸ L :=
+  ⟨fun n => id, fun n => id⟩
 
-instance : inhabited (L →ᴸ L) := ⟨Lhom.id L⟩
+instance : Inhabited (L →ᴸ L) :=
+  ⟨Lhom.id L⟩
 
 /-- The inclusion of the left factor into the sum of two languages. -/
-protected def sum_inl : L →ᴸ L.sum L' :=
-⟨λn, sum.inl, λ n, sum.inl⟩
+protected def sumInl : L →ᴸ L.Sum L' :=
+  ⟨fun n => Sum.inl, fun n => Sum.inl⟩
 
 /-- The inclusion of the right factor into the sum of two languages. -/
-protected def sum_inr : L' →ᴸ L.sum L' :=
-⟨λn, sum.inr, λ n, sum.inr⟩
+protected def sumInr : L' →ᴸ L.Sum L' :=
+  ⟨fun n => Sum.inr, fun n => Sum.inr⟩
 
-variables (L L')
+variable (L L')
 
 /-- The inclusion of an empty language into any other language. -/
-protected def of_is_empty [L.is_algebraic] [L.is_relational] : L →ᴸ L' :=
-⟨λ n, (is_relational.empty_functions n).elim, λ n, (is_algebraic.empty_relations n).elim⟩
+protected def ofIsEmpty [L.IsAlgebraic] [L.IsRelational] : L →ᴸ L' :=
+  ⟨fun n => (IsRelational.empty_functions n).elim, fun n => (IsAlgebraic.empty_relations n).elim⟩
 
-variables {L L'}
+variable {L L'}
 
 /-- The composition of two language homomorphisms. -/
-@[reducible] def comp {L1} {L2} {L3} (g : L2 →ᴸ L3) (f : L1 →ᴸ L2) : L1 →ᴸ L3 :=
-⟨λ n F, g.1 (f.1 F), λ _ R, g.2 (f.2 R)⟩
+@[reducible]
+def comp {L1} {L2} {L3} (g : L2 →ᴸ L3) (f : L1 →ᴸ L2) : L1 →ᴸ L3 :=
+  ⟨fun n F => g.1 (f.1 F), fun _ R => g.2 (f.2 R)⟩
 
-@[ext] protected lemma funext {L1} {L2} {F G : L1 →ᴸ L2} (h_fun : F.on_function = G.on_function )
-  (h_rel : F.on_relation = G.on_relation ) : F = G :=
-by {cases F with Ff Fr, cases G with Gf Gr, simp only *, exact and.intro h_fun h_rel}
+@[ext]
+protected theorem funext {L1} {L2} {F G : L1 →ᴸ L2} (h_fun : F.onFunction = G.onFunction)
+    (h_rel : F.onRelation = G.onRelation) : F = G := by
+  cases' F with Ff Fr
+  cases' G with Gf Gr
+  simp only [*]
+  exact And.intro h_fun h_rel
 
-local infix ` ∘ `:60 := Lhom.comp
+-- mathport name: «expr ∘ »
+local infixl:60 " ∘ " => Lhom.comp
 
-@[simp] lemma id_comp {L1 L2} {F : L1 →ᴸ L2} : (Lhom.id L2) ∘ F = F :=
-by {cases F, refl}
+@[simp]
+theorem id_comp {L1 L2} {F : L1 →ᴸ L2} : Lhom.id L2 ∘ F = F := by
+  cases F
+  rfl
 
-@[simp] lemma comp_id {L1 L2} {F : L1 →ᴸ L2} : F ∘ (Lhom.id L1) = F :=
-by {cases F, refl}
+@[simp]
+theorem comp_id {L1 L2} {F : L1 →ᴸ L2} : F ∘ Lhom.id L1 = F := by
+  cases F
+  rfl
 
 /-- A language map defined on two factors of a sum. -/
-@[simps] def sum_elim {L'' : language} (ψ : L'' →ᴸ L') : L.sum L'' →ᴸ L' :=
-{ on_function := λ n, sum.elim (λ f, ϕ.on_function f) (λ f, ψ.on_function f),
-  on_relation := λ n, sum.elim (λ f, ϕ.on_relation f) (λ f, ψ.on_relation f) }
+@[simps]
+def sumElim {L'' : Language} (ψ : L'' →ᴸ L') : L.Sum L'' →ᴸ L' where
+  onFunction := fun n => Sum.elim (fun f => ϕ.onFunction f) fun f => ψ.onFunction f
+  onRelation := fun n => Sum.elim (fun f => ϕ.onRelation f) fun f => ψ.onRelation f
 
 /-- The map between two sum-languages induced by maps on the two factors. -/
-@[simps] def sum_map {L₁ L₂ : language} (ψ : L₁ →ᴸ L₂) : L.sum L₁ →ᴸ L'.sum L₂ :=
-{ on_function := λ n, sum.map (λ f, ϕ.on_function f) (λ f, ψ.on_function f),
-  on_relation := λ n, sum.map (λ f, ϕ.on_relation f) (λ f, ψ.on_relation f) }
+@[simps]
+def sumMap {L₁ L₂ : Language} (ψ : L₁ →ᴸ L₂) : L.Sum L₁ →ᴸ L'.Sum L₂ where
+  onFunction := fun n => Sum.map (fun f => ϕ.onFunction f) fun f => ψ.onFunction f
+  onRelation := fun n => Sum.map (fun f => ϕ.onRelation f) fun f => ψ.onRelation f
 
 /-- A language homomorphism is injective when all the maps between symbol types are. -/
-protected structure injective : Prop :=
-(on_function {n} : function.injective (on_function ϕ : L.functions n → L'.functions n))
-(on_relation {n} : function.injective (on_relation ϕ : L.relations n → L'.relations n))
+protected structure Injective : Prop where
+  onFunction {n} : Function.Injective (onFunction ϕ : L.Functions n → L'.Functions n)
+  onRelation {n} : Function.Injective (onRelation ϕ : L.Relations n → L'.Relations n)
 
 /-- A language homomorphism is an expansion on a structure if it commutes with the interpretation of
 all symbols on that structure. -/
-class is_expansion_on (M : Type*) [L.Structure M] [L'.Structure M] : Prop :=
-(map_on_function : ∀ {n} (f : L.functions n) (x : fin n → M),
-  fun_map (ϕ.on_function f) x = fun_map f x)
-(map_on_relation : ∀ {n} (R : L.relations n) (x : fin n → M),
-  rel_map (ϕ.on_relation R) x = rel_map R x)
+class IsExpansionOn (M : Type _) [L.Structure M] [L'.Structure M] : Prop where
+  map_on_function : ∀ {n} f : L.Functions n x : Finₓ n → M, funMap (ϕ.onFunction f) x = funMap f x
+  map_on_relation : ∀ {n} R : L.Relations n x : Finₓ n → M, RelMap (ϕ.onRelation R) x = RelMap R x
 
 attribute [simp] is_expansion_on.map_on_function is_expansion_on.map_on_relation
 
-instance id_is_expansion_on (M : Type*) [L.Structure M] : is_expansion_on (Lhom.id L) M :=
-⟨λ _ _ _, rfl, λ _ _ _, rfl⟩
+instance id_is_expansion_on (M : Type _) [L.Structure M] : IsExpansionOn (Lhom.id L) M :=
+  ⟨fun _ _ _ => rfl, fun _ _ _ => rfl⟩
 
-instance of_is_empty_is_expansion_on (M : Type*) [L.Structure M] [L'.Structure M]
-  [L.is_algebraic] [L.is_relational] :
-  is_expansion_on (Lhom.of_is_empty L L') M :=
-⟨λ n, (is_relational.empty_functions n).elim, λ n, (is_algebraic.empty_relations n).elim⟩
+instance of_is_empty_is_expansion_on (M : Type _) [L.Structure M] [L'.Structure M] [L.IsAlgebraic] [L.IsRelational] :
+    IsExpansionOn (Lhom.ofIsEmpty L L') M :=
+  ⟨fun n => (IsRelational.empty_functions n).elim, fun n => (IsAlgebraic.empty_relations n).elim⟩
 
-instance sum_elim_is_expansion_on {L'' : language} (ψ : L'' →ᴸ L') (M : Type*)
-  [L.Structure M] [L'.Structure M] [L''.Structure M]
-  [ϕ.is_expansion_on M] [ψ.is_expansion_on M] :
-  (ϕ.sum_elim ψ).is_expansion_on M :=
-⟨λ _ f _, sum.cases_on f (by simp) (by simp), λ _ R _, sum.cases_on R (by simp) (by simp)⟩
+instance sum_elim_is_expansion_on {L'' : Language} (ψ : L'' →ᴸ L') (M : Type _) [L.Structure M] [L'.Structure M]
+    [L''.Structure M] [ϕ.IsExpansionOn M] [ψ.IsExpansionOn M] : (ϕ.sum_elim ψ).IsExpansionOn M :=
+  ⟨fun _ f _ =>
+    Sum.casesOn f
+      (by
+        simp )
+      (by
+        simp ),
+    fun _ R _ =>
+    Sum.casesOn R
+      (by
+        simp )
+      (by
+        simp )⟩
 
-instance sum_map_is_expansion_on {L₁ L₂ : language} (ψ : L₁ →ᴸ L₂) (M : Type*)
-  [L.Structure M] [L'.Structure M] [L₁.Structure M] [L₂.Structure M]
-  [ϕ.is_expansion_on M] [ψ.is_expansion_on M] :
-  (ϕ.sum_map ψ).is_expansion_on M :=
-⟨λ _ f _, sum.cases_on f (by simp) (by simp), λ _ R _, sum.cases_on R (by simp) (by simp)⟩
+instance sum_map_is_expansion_on {L₁ L₂ : Language} (ψ : L₁ →ᴸ L₂) (M : Type _) [L.Structure M] [L'.Structure M]
+    [L₁.Structure M] [L₂.Structure M] [ϕ.IsExpansionOn M] [ψ.IsExpansionOn M] : (ϕ.sum_map ψ).IsExpansionOn M :=
+  ⟨fun _ f _ =>
+    Sum.casesOn f
+      (by
+        simp )
+      (by
+        simp ),
+    fun _ R _ =>
+    Sum.casesOn R
+      (by
+        simp )
+      (by
+        simp )⟩
 
 end Lhom
 
-section constants_on
-variables (α : Type u')
+section ConstantsOn
+
+variable (α : Type u')
 
 /-- The function symbols of a language with constants indexed by a type. -/
-def constants_on_functions : ℕ → Type u'
-| 0 := α
-| _ := pempty
+def ConstantsOnFunctions : ℕ → Type u'
+  | 0 => α
+  | _ => Pempty
 
-instance [h : inhabited α] : inhabited (constants_on_functions α 0) := h
+instance [h : Inhabited α] : Inhabited (ConstantsOnFunctions α 0) :=
+  h
 
 /-- A language with constants indexed by a type. -/
-def constants_on : language.{u' 0} := ⟨constants_on_functions α, λ _, pempty⟩
+def constantsOn : Language.{u', 0} :=
+  ⟨ConstantsOnFunctions α, fun _ => Pempty⟩
 
-variables {α}
+variable {α}
 
-@[simp] lemma constants_on_constants : (constants_on α).constants = α := rfl
+@[simp]
+theorem constants_on_constants : (constantsOn α).Constants = α :=
+  rfl
 
-instance is_algebraic_constants_on : is_algebraic (constants_on α) :=
-language.is_algebraic_of_empty_relations
+instance is_algebraic_constants_on : IsAlgebraic (constantsOn α) :=
+  language.is_algebraic_of_empty_relations
 
-instance is_relational_constants_on [ie : is_empty α] : is_relational (constants_on α) :=
-⟨λ n, nat.cases_on n ie (λ _, pempty.is_empty)⟩
+instance is_relational_constants_on [ie : IsEmpty α] : IsRelational (constantsOn α) :=
+  ⟨fun n => Nat.casesOn n ie fun _ => Pempty.is_empty⟩
 
 /-- Gives a `constants_on α` structure to a type by assigning each constant a value. -/
-def constants_on.Structure (f : α → M) : (constants_on α).Structure M :=
-{ fun_map := λ n, nat.cases_on n (λ a _, f a) (λ _, pempty.elim),
-  rel_map := λ _, pempty.elim }
+def constantsOn.structure (f : α → M) : (constantsOn α).Structure M where
+  funMap := fun n => Nat.casesOn n (fun a _ => f a) fun _ => Pempty.elimₓ
+  RelMap := fun _ => Pempty.elimₓ
 
-variables {β : Type v'}
+variable {β : Type v'}
 
 /-- A map between index types induces a map between constant languages. -/
-def Lhom.constants_on_map (f : α → β) : (constants_on α) →ᴸ (constants_on β) :=
-⟨λ n, nat.cases_on n f (λ _, pempty.elim), λ n, pempty.elim⟩
+def Lhom.constantsOnMap (f : α → β) : constantsOn α →ᴸ constantsOn β :=
+  ⟨fun n => Nat.casesOn n f fun _ => Pempty.elimₓ, fun n => Pempty.elimₓ⟩
 
-lemma constants_on_map_is_expansion_on {f : α → β} {fα : α → M} {fβ : β → M}
-  (h : fβ ∘ f = fα) :
-  @Lhom.is_expansion_on _ _ (Lhom.constants_on_map f) M
-    (constants_on.Structure fα) (constants_on.Structure fβ) :=
-begin
-  letI := constants_on.Structure fα,
-  letI := constants_on.Structure fβ,
-  exact ⟨λ n, nat.cases_on n (λ F x, (congr_fun h F : _)) (λ n F, pempty.elim F),
-    λ _ R, pempty.elim R⟩,
-end
+theorem constants_on_map_is_expansion_on {f : α → β} {fα : α → M} {fβ : β → M} (h : fβ ∘ f = fα) :
+    @Lhom.IsExpansionOn _ _ (Lhom.constantsOnMap f) M (constantsOn.structure fα) (constantsOn.structure fβ) := by
+  let this' := constants_on.Structure fα
+  let this' := constants_on.Structure fβ
+  exact ⟨fun n => Nat.casesOn n (fun F x => (congr_funₓ h F : _)) fun n F => Pempty.elimₓ F, fun _ R => Pempty.elimₓ R⟩
 
-end constants_on
+end ConstantsOn
 
-section with_constants
+section WithConstants
 
 variable (L)
 
 section
-variables (α : Type w)
+
+variable (α : Type w)
 
 /-- Extends a language with a constant for each element of a parameter set in `M`. -/
-def with_constants : language.{(max u w) v} := L.sum (constants_on α)
+def withConstants : Language.{max u w, v} :=
+  L.Sum (constantsOn α)
 
-localized "notation L`[[`:95 α`]]`:90 := L.with_constants α" in first_order
+-- mathport name: «expr [[ ]]»
+localized [FirstOrder] notation:95 L "[[" α "]]" => L.withConstants α
 
 /-- The language map adding constants.  -/
-def Lhom_with_constants : L →ᴸ L[[α]] := Lhom.sum_inl
+def lhomWithConstants : L →ᴸ L[[α]] :=
+  Lhom.sum_inl
 
 variable {L}
 
 /-- Adds constants to a language map.  -/
-def Lhom.add_constants {L' : language} (φ : L →ᴸ L') :
-  L[[α]] →ᴸ L'[[α]] := φ.sum_map (Lhom.id _)
+def Lhom.addConstants {L' : Language} (φ : L →ᴸ L') : L[[α]] →ᴸ L'[[α]] :=
+  φ.sum_map (Lhom.id _)
 
-instance params_Structure (A : set α) : (constants_on A).Structure α := constants_on.Structure coe
+instance paramsStructure (A : Set α) : (constantsOn A).Structure α :=
+  constantsOn.structure coe
 
-variables (L) (α)
+variable (L) (α)
 
 /-- The language map removing an empty constant set.  -/
-def Lhom_trim_empty_constants [is_empty α] : L[[α]] →ᴸ L :=
-Lhom.sum_elim (Lhom.id L) (Lhom.of_is_empty (constants_on α) L)
+def lhomTrimEmptyConstants [IsEmpty α] : L[[α]] →ᴸ L :=
+  Lhom.sumElim (Lhom.id L) (Lhom.ofIsEmpty (constantsOn α) L)
 
-variables {α} {β : Type*}
+variable {α} {β : Type _}
 
 /-- The language map extending the constant set.  -/
-def Lhom_with_constants_map (f : α → β) : L[[α]] →ᴸ L[[β]] :=
-Lhom.sum_map (Lhom.id L) (Lhom.constants_on_map f)
+def lhomWithConstantsMap (f : α → β) : L[[α]] →ᴸ L[[β]] :=
+  Lhom.sumMap (Lhom.id L) (Lhom.constantsOnMap f)
 
-@[simp] lemma Lhom.map_constants_comp_with_constants {f : α → β} :
-  (L.Lhom_with_constants_map f).comp (L.Lhom_with_constants α) = L.Lhom_with_constants β :=
-by ext n f R; refl
+@[simp]
+theorem Lhom.map_constants_comp_with_constants {f : α → β} :
+    (L.lhomWithConstantsMap f).comp (L.lhomWithConstants α) = L.lhomWithConstants β := by
+  ext n f R <;> rfl
 
 end
 
-open_locale first_order
-variables (A : set M)
+open_locale FirstOrder
 
-instance with_constants_Structure : L[[A]].Structure M :=
-language.sum_Structure _ _ _
+variable (A : Set M)
 
-instance trim_empty_constants_is_expansion_on :
-  (L.Lhom_trim_empty_constants (∅ : set M)).is_expansion_on M :=
-Lhom.sum_elim_is_expansion_on _ _ _
+instance withConstantsStructure : L[[A]].Structure M :=
+  Language.sumStructure _ _ _
 
-instance with_constants_expansion : (L.Lhom_with_constants A).is_expansion_on M :=
-⟨λ _ _ _, rfl, λ _ _ _, rfl⟩
+instance trim_empty_constants_is_expansion_on : (L.lhomTrimEmptyConstants (∅ : Set M)).IsExpansionOn M :=
+  Lhom.sum_elim_is_expansion_on _ _ _
 
-instance add_constants_expansion {L' : language} [L'.Structure M] (φ : L →ᴸ L')
-  [φ.is_expansion_on M] :
-  (φ.add_constants A).is_expansion_on M :=
-Lhom.sum_map_is_expansion_on _ _ M
+instance with_constants_expansion : (L.lhomWithConstants A).IsExpansionOn M :=
+  ⟨fun _ _ _ => rfl, fun _ _ _ => rfl⟩
 
-variables {A} {B : set M} (h : A ⊆ B)
+instance add_constants_expansion {L' : Language} [L'.Structure M] (φ : L →ᴸ L') [φ.IsExpansionOn M] :
+    (φ.addConstants A).IsExpansionOn M :=
+  Lhom.sum_map_is_expansion_on _ _ M
 
-instance constants_on_map_inclusion_is_expansion_on :
-  (Lhom.constants_on_map (set.inclusion h)).is_expansion_on M :=
-constants_on_map_is_expansion_on rfl
+variable {A} {B : Set M} (h : A ⊆ B)
 
-instance map_constants_inclusion_is_expansion_on :
-  (L.Lhom_with_constants_map (set.inclusion h)).is_expansion_on M :=
-Lhom.sum_map_is_expansion_on _ _ _
+instance constants_on_map_inclusion_is_expansion_on : (Lhom.constantsOnMap (Set.inclusion h)).IsExpansionOn M :=
+  constants_on_map_is_expansion_on rfl
 
-end with_constants
+instance map_constants_inclusion_is_expansion_on : (L.lhomWithConstantsMap (Set.inclusion h)).IsExpansionOn M :=
+  Lhom.sum_map_is_expansion_on _ _ _
 
-end language
-end first_order
+end WithConstants
+
+end Language
+
+end FirstOrder
+

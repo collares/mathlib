@@ -3,8 +3,8 @@ Copyright (c) 2019 Johannes Hölzl. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johannes Hölzl, Patrick Massot, Casper Putz, Anne Baanen
 -/
-import data.matrix.basic
-import linear_algebra.finite_dimensional
+import Mathbin.Data.Matrix.Basic
+import Mathbin.LinearAlgebra.FiniteDimensional
 
 /-!
 # The finite-dimensional space of matrices
@@ -23,27 +23,29 @@ matrix, finite dimensional, findim, finrank
 
 -/
 
-universes u v
 
-namespace matrix
+universe u v
 
-section finite_dimensional
+namespace Matrix
 
-variables {m n : Type*} [fintype m] [fintype n]
-variables {R : Type v} [field R]
+section FiniteDimensional
 
-instance : finite_dimensional R (matrix m n R) :=
-linear_equiv.finite_dimensional (linear_equiv.curry R m n)
+variable {m n : Type _} [Fintype m] [Fintype n]
 
-/--
-The dimension of the space of finite dimensional matrices
+variable {R : Type v} [Field R]
+
+instance : FiniteDimensional R (Matrix m n R) :=
+  LinearEquiv.finite_dimensional (LinearEquiv.curry R m n)
+
+/-- The dimension of the space of finite dimensional matrices
 is the product of the number of rows and columns.
 -/
-@[simp] lemma finrank_matrix :
-  finite_dimensional.finrank R (matrix m n R) = fintype.card m * fintype.card n :=
-by rw [@linear_equiv.finrank_eq R (matrix m n R) _ _ _ _ _ _ (linear_equiv.curry R m n).symm,
-       finite_dimensional.finrank_fintype_fun_eq_card, fintype.card_prod]
+@[simp]
+theorem finrank_matrix : FiniteDimensional.finrank R (Matrix m n R) = Fintype.card m * Fintype.card n := by
+  rw [@LinearEquiv.finrank_eq R (Matrix m n R) _ _ _ _ _ _ (LinearEquiv.curry R m n).symm,
+    FiniteDimensional.finrank_fintype_fun_eq_card, Fintype.card_prod]
 
-end finite_dimensional
+end FiniteDimensional
 
-end matrix
+end Matrix
+

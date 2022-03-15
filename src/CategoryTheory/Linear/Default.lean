@@ -3,11 +3,11 @@ Copyright (c) 2021 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import category_theory.preadditive
-import algebra.module.linear_map
-import algebra.invertible
-import linear_algebra.basic
-import algebra.algebra.basic
+import Mathbin.CategoryTheory.Preadditive.Default
+import Mathbin.Algebra.Module.LinearMap
+import Mathbin.Algebra.Invertible
+import Mathbin.LinearAlgebra.Basic
+import Mathbin.Algebra.Algebra.Basic
 
 /-!
 # Linear categories
@@ -29,109 +29,135 @@ a category enriched in `Module R`.
 
 -/
 
-universes w v u
 
-open category_theory.limits
-open linear_map
+universe w v u
 
-namespace category_theory
+open CategoryTheory.Limits
+
+open LinearMap
+
+namespace CategoryTheory
 
 /-- A category is called `R`-linear if `P ⟶ Q` is an `R`-module such that composition is
     `R`-linear in both variables. -/
-class linear (R : Type w) [semiring R] (C : Type u) [category.{v} C] [preadditive C] :=
-(hom_module : Π X Y : C, module R (X ⟶ Y) . tactic.apply_instance)
-(smul_comp' : ∀ (X Y Z : C) (r : R) (f : X ⟶ Y) (g : Y ⟶ Z),
-  (r • f) ≫ g = r • (f ≫ g) . obviously)
-(comp_smul' : ∀ (X Y Z : C) (f : X ⟶ Y) (r : R) (g : Y ⟶ Z),
-  f ≫ (r • g) = r • (f ≫ g) . obviously)
+class Linear (R : Type w) [Semiringₓ R] (C : Type u) [Category.{v} C] [Preadditive C] where
+  homModule : ∀ X Y : C, Module R (X ⟶ Y) := by
+    run_tac
+      tactic.apply_instance
+  smul_comp' : ∀ X Y Z : C r : R f : X ⟶ Y g : Y ⟶ Z, (r • f) ≫ g = r • f ≫ g := by
+    run_tac
+      obviously
+  comp_smul' : ∀ X Y Z : C f : X ⟶ Y r : R g : Y ⟶ Z, f ≫ (r • g) = r • f ≫ g := by
+    run_tac
+      obviously
 
 attribute [instance] linear.hom_module
+
 restate_axiom linear.smul_comp'
+
 restate_axiom linear.comp_smul'
-attribute [simp,reassoc] linear.smul_comp
-attribute [reassoc, simp] linear.comp_smul -- (the linter doesn't like `simp` on the `_assoc` lemma)
 
-end category_theory
+attribute [simp, reassoc] linear.smul_comp
 
-open category_theory
+attribute [reassoc, simp] linear.comp_smul
 
-namespace category_theory.linear
+-- (the linter doesn't like `simp` on the `_assoc` lemma)
+end CategoryTheory
 
-variables {C : Type u} [category.{v} C] [preadditive C]
+open CategoryTheory
 
-instance preadditive_nat_linear : linear ℕ C :=
-{ smul_comp' := λ X Y Z r f g, (preadditive.right_comp X g).map_nsmul f r,
-  comp_smul' := λ X Y Z f r g, (preadditive.left_comp Z f).map_nsmul g r, }
+namespace CategoryTheory.Linear
 
-instance preadditive_int_linear : linear ℤ C :=
-{ smul_comp' := λ X Y Z r f g, (preadditive.right_comp X g).map_zsmul f r,
-  comp_smul' := λ X Y Z f r g, (preadditive.left_comp Z f).map_zsmul g r, }
+variable {C : Type u} [Category.{v} C] [Preadditive C]
+
+instance preadditiveNatLinear : Linear ℕ C where
+  smul_comp' := fun X Y Z r f g => (Preadditive.rightComp X g).map_nsmul f r
+  comp_smul' := fun X Y Z f r g => (Preadditive.leftComp Z f).map_nsmul g r
+
+instance preadditiveIntLinear : Linear ℤ C where
+  smul_comp' := fun X Y Z r f g => (Preadditive.rightComp X g).map_zsmul f r
+  comp_smul' := fun X Y Z f r g => (Preadditive.leftComp Z f).map_zsmul g r
 
 section End
 
-variables {R : Type w} [comm_ring R] [linear R C]
+variable {R : Type w} [CommRingₓ R] [Linear R C]
 
-instance (X : C) : module R (End X) := by { dsimp [End], apply_instance, }
+instance (X : C) : Module R (End X) := by
+  dsimp [End]
+  infer_instance
 
-instance (X : C) : algebra R (End X) :=
-algebra.of_module (λ r f g, comp_smul _ _ _ _ _ _) (λ r f g, smul_comp _ _ _ _ _ _)
+instance (X : C) : Algebra R (End X) :=
+  Algebra.ofModule (fun r f g => comp_smul _ _ _ _ _ _) fun r f g => smul_comp _ _ _ _ _ _
 
 end End
 
 section
-variables {R : Type w} [semiring R] [linear R C]
 
-section induced_category
-universes u'
-variables {C} {D : Type u'} (F : D → C)
+variable {R : Type w} [Semiringₓ R] [Linear R C]
 
-instance induced_category.category : linear.{w v} R (induced_category C F) :=
-{ hom_module := λ X Y, @linear.hom_module R _ C _ _ _ (F X) (F Y),
-  smul_comp' := λ P Q R f f' g, smul_comp' _ _ _ _ _ _,
-  comp_smul' := λ P Q R f g g', comp_smul' _ _ _ _ _ _, }
+section InducedCategory
 
-end induced_category
+universe u'
 
-variables (R)
+variable {C} {D : Type u'} (F : D → C)
+
+instance InducedCategory.category : Linear.{w, v} R (InducedCategory C F) where
+  homModule := fun X Y => @Linear.homModule R _ C _ _ _ (F X) (F Y)
+  smul_comp' := fun P Q R f f' g => smul_comp' _ _ _ _ _ _
+  comp_smul' := fun P Q R f g g' => comp_smul' _ _ _ _ _ _
+
+end InducedCategory
+
+variable (R)
 
 /-- Composition by a fixed left argument as an `R`-linear map. -/
 @[simps]
-def left_comp {X Y : C} (Z : C) (f : X ⟶ Y) : (Y ⟶ Z) →ₗ[R] (X ⟶ Z) :=
-{ to_fun := λ g, f ≫ g,
-  map_add' := by simp,
-  map_smul' := by simp, }
+def leftComp {X Y : C} (Z : C) (f : X ⟶ Y) : (Y ⟶ Z) →ₗ[R] X ⟶ Z where
+  toFun := fun g => f ≫ g
+  map_add' := by
+    simp
+  map_smul' := by
+    simp
 
 /-- Composition by a fixed right argument as an `R`-linear map. -/
 @[simps]
-def right_comp (X : C) {Y Z : C} (g : Y ⟶ Z) : (X ⟶ Y) →ₗ[R] (X ⟶ Z) :=
-{ to_fun := λ f, f ≫ g,
-  map_add' := by simp,
-  map_smul' := by simp, }
+def rightComp (X : C) {Y Z : C} (g : Y ⟶ Z) : (X ⟶ Y) →ₗ[R] X ⟶ Z where
+  toFun := fun f => f ≫ g
+  map_add' := by
+    simp
+  map_smul' := by
+    simp
 
-instance {X Y : C} (f : X ⟶ Y) [epi f] (r : R) [invertible r] : epi (r • f) :=
-⟨λ R g g' H, begin
-  rw [smul_comp, smul_comp, ←comp_smul, ←comp_smul, cancel_epi] at H,
-  simpa [smul_smul] using congr_arg (λ f, ⅟r • f) H,
-end⟩
+instance {X Y : C} (f : X ⟶ Y) [Epi f] (r : R) [Invertible r] : Epi (r • f) :=
+  ⟨fun R g g' H => by
+    rw [smul_comp, smul_comp, ← comp_smul, ← comp_smul, cancel_epi] at H
+    simpa [smul_smul] using congr_argₓ (fun f => ⅟ r • f) H⟩
 
-instance {X Y : C} (f : X ⟶ Y) [mono f] (r : R) [invertible r] : mono (r • f) :=
-⟨λ R g g' H, begin
-  rw [comp_smul, comp_smul, ←smul_comp, ←smul_comp, cancel_mono] at H,
-  simpa [smul_smul] using congr_arg (λ f, ⅟r • f) H,
-end⟩
+instance {X Y : C} (f : X ⟶ Y) [Mono f] (r : R) [Invertible r] : Mono (r • f) :=
+  ⟨fun R g g' H => by
+    rw [comp_smul, comp_smul, ← smul_comp, ← smul_comp, cancel_mono] at H
+    simpa [smul_smul] using congr_argₓ (fun f => ⅟ r • f) H⟩
 
 end
 
 section
-variables {S : Type w} [comm_semiring S] [linear S C]
+
+variable {S : Type w} [CommSemiringₓ S] [Linear S C]
 
 /-- Composition as a bilinear map. -/
 @[simps]
-def comp (X Y Z : C) : (X ⟶ Y) →ₗ[S] ((Y ⟶ Z) →ₗ[S] (X ⟶ Z)) :=
-{ to_fun := λ f, left_comp S Z f,
-  map_add' := by { intros, ext, simp, },
-  map_smul' := by { intros, ext, simp, }, }
+def comp (X Y Z : C) : (X ⟶ Y) →ₗ[S] (Y ⟶ Z) →ₗ[S] X ⟶ Z where
+  toFun := fun f => leftComp S Z f
+  map_add' := by
+    intros
+    ext
+    simp
+  map_smul' := by
+    intros
+    ext
+    simp
 
 end
 
-end category_theory.linear
+end CategoryTheory.Linear
+

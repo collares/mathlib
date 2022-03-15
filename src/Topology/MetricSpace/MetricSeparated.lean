@@ -3,7 +3,7 @@ Copyright (c) 2021 Yury Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury Kudryashov
 -/
-import topology.metric_space.emetric_space
+import Mathbin.Topology.MetricSpace.EmetricSpace
 
 /-!
 # Metric separated pairs of sets
@@ -15,94 +15,105 @@ bounded from below by a positive constant.
 This notion is useful, e.g., to define metric outer measures.
 -/
 
-open emetric set
-noncomputable theory
 
+open Emetric Set
+
+noncomputable section
+
+-- ././Mathport/Syntax/Translate/Basic.lean:598:2: warning: expanding binder collection (r «expr ≠ » 0)
 /-- Two sets in an (extended) metric space are called *metric separated* if the (extended) distance
 between `x ∈ s` and `y ∈ t` is bounded from below by a positive constant. -/
-def is_metric_separated {X : Type*} [emetric_space X] (s t : set X) :=
-∃ r ≠ 0, ∀ (x ∈ s) (y ∈ t), r ≤ edist x y
+def IsMetricSeparated {X : Type _} [EmetricSpace X] (s t : Set X) :=
+  ∃ (r : _)(_ : r ≠ 0), ∀, ∀ x ∈ s, ∀, ∀ y ∈ t, ∀, r ≤ edist x y
 
-namespace is_metric_separated
+namespace IsMetricSeparated
 
-variables {X : Type*} [emetric_space X] {s t : set X} {x y : X}
+variable {X : Type _} [EmetricSpace X] {s t : Set X} {x y : X}
 
-@[symm] lemma symm (h : is_metric_separated s t) : is_metric_separated t s :=
-let ⟨r, r0, hr⟩ := h in ⟨r, r0, λ y hy x hx, edist_comm x y ▸ hr x hx y hy⟩
+@[symm]
+theorem symm (h : IsMetricSeparated s t) : IsMetricSeparated t s :=
+  let ⟨r, r0, hr⟩ := h
+  ⟨r, r0, fun y hy x hx => edist_comm x y ▸ hr x hx y hy⟩
 
-lemma comm : is_metric_separated s t ↔ is_metric_separated t s := ⟨symm, symm⟩
+theorem comm : IsMetricSeparated s t ↔ IsMetricSeparated t s :=
+  ⟨symm, symm⟩
 
-@[simp] lemma empty_left (s : set X) : is_metric_separated ∅ s :=
-⟨1, ennreal.zero_lt_one.ne', λ x, false.elim⟩
+@[simp]
+theorem empty_left (s : Set X) : IsMetricSeparated ∅ s :=
+  ⟨1, Ennreal.zero_lt_one.ne', fun x => False.elim⟩
 
-@[simp] lemma empty_right (s : set X) : is_metric_separated s ∅ :=
-(empty_left s).symm
+@[simp]
+theorem empty_right (s : Set X) : IsMetricSeparated s ∅ :=
+  (empty_left s).symm
 
-protected lemma disjoint (h : is_metric_separated s t) : disjoint s t :=
-let ⟨r, r0, hr⟩ := h in λ x hx, r0 $ by simpa using hr x hx.1 x hx.2
+protected theorem disjoint (h : IsMetricSeparated s t) : Disjoint s t :=
+  let ⟨r, r0, hr⟩ := h
+  fun x hx =>
+  r0 <| by
+    simpa using hr x hx.1 x hx.2
 
-lemma subset_compl_right (h : is_metric_separated s t) : s ⊆ tᶜ :=
-λ x hs ht, h.disjoint ⟨hs, ht⟩
+theorem subset_compl_right (h : IsMetricSeparated s t) : s ⊆ tᶜ := fun x hs ht => h.Disjoint ⟨hs, ht⟩
 
-@[mono] lemma mono {s' t'} (hs : s ⊆ s') (ht : t ⊆ t') :
-  is_metric_separated s' t' → is_metric_separated s t :=
-λ ⟨r, r0, hr⟩, ⟨r, r0, λ x hx y hy, hr x (hs hx) y (ht hy)⟩
+@[mono]
+theorem mono {s' t'} (hs : s ⊆ s') (ht : t ⊆ t') : IsMetricSeparated s' t' → IsMetricSeparated s t := fun ⟨r, r0, hr⟩ =>
+  ⟨r, r0, fun x hx y hy => hr x (hs hx) y (ht hy)⟩
 
-lemma mono_left {s'} (h' : is_metric_separated s' t) (hs : s ⊆ s') :
-  is_metric_separated s t :=
-h'.mono hs subset.rfl
+theorem mono_left {s'} (h' : IsMetricSeparated s' t) (hs : s ⊆ s') : IsMetricSeparated s t :=
+  h'.mono hs Subset.rfl
 
-lemma mono_right {t'} (h' : is_metric_separated s t') (ht : t ⊆ t') :
-  is_metric_separated s t :=
-h'.mono subset.rfl ht
+theorem mono_right {t'} (h' : IsMetricSeparated s t') (ht : t ⊆ t') : IsMetricSeparated s t :=
+  h'.mono Subset.rfl ht
 
-lemma union_left {s'} (h : is_metric_separated s t) (h' : is_metric_separated s' t) :
-  is_metric_separated (s ∪ s') t :=
-begin
-  rcases ⟨h, h'⟩ with ⟨⟨r, r0, hr⟩, ⟨r', r0', hr'⟩⟩,
-  refine ⟨min r r', _, λ x hx y hy, hx.elim _ _⟩,
-  { rw [← pos_iff_ne_zero] at r0 r0' ⊢,
-    exact lt_min r0 r0' },
-  { exact λ hx, (min_le_left _ _).trans (hr _ hx _ hy) },
-  { exact λ hx, (min_le_right _ _).trans (hr' _ hx _ hy) }
-end
+theorem union_left {s'} (h : IsMetricSeparated s t) (h' : IsMetricSeparated s' t) : IsMetricSeparated (s ∪ s') t := by
+  rcases h, h' with ⟨⟨r, r0, hr⟩, ⟨r', r0', hr'⟩⟩
+  refine' ⟨min r r', _, fun x hx y hy => hx.elim _ _⟩
+  · rw [← pos_iff_ne_zero] at r0 r0'⊢
+    exact lt_minₓ r0 r0'
+    
+  · exact fun hx => (min_le_leftₓ _ _).trans (hr _ hx _ hy)
+    
+  · exact fun hx => (min_le_rightₓ _ _).trans (hr' _ hx _ hy)
+    
 
-@[simp] lemma union_left_iff {s'} :
-  is_metric_separated (s ∪ s') t ↔ is_metric_separated s t ∧ is_metric_separated s' t :=
-⟨λ h, ⟨h.mono_left (subset_union_left _ _), h.mono_left (subset_union_right _ _)⟩,
-  λ h, h.1.union_left h.2⟩
+@[simp]
+theorem union_left_iff {s'} : IsMetricSeparated (s ∪ s') t ↔ IsMetricSeparated s t ∧ IsMetricSeparated s' t :=
+  ⟨fun h => ⟨h.mono_left (subset_union_left _ _), h.mono_left (subset_union_right _ _)⟩, fun h => h.1.union_left h.2⟩
 
-lemma union_right {t'} (h : is_metric_separated s t) (h' : is_metric_separated s t') :
-  is_metric_separated s (t ∪ t') :=
-(h.symm.union_left h'.symm).symm
+theorem union_right {t'} (h : IsMetricSeparated s t) (h' : IsMetricSeparated s t') : IsMetricSeparated s (t ∪ t') :=
+  (h.symm.union_left h'.symm).symm
 
-@[simp] lemma union_right_iff {t'} :
-  is_metric_separated s (t ∪ t') ↔ is_metric_separated s t ∧ is_metric_separated s t' :=
-comm.trans $ union_left_iff.trans $ and_congr comm comm
+@[simp]
+theorem union_right_iff {t'} : IsMetricSeparated s (t ∪ t') ↔ IsMetricSeparated s t ∧ IsMetricSeparated s t' :=
+  comm.trans <| union_left_iff.trans <| and_congr comm comm
 
-lemma finite_Union_left_iff {ι : Type*} {I : set ι} (hI : finite I) {s : ι → set X} {t : set X} :
-  is_metric_separated (⋃ i ∈ I, s i) t ↔ ∀ i ∈ I, is_metric_separated (s i) t :=
-begin
-  refine finite.induction_on hI (by simp) (λ i I hi _ hI, _),
+theorem finite_Union_left_iff {ι : Type _} {I : Set ι} (hI : Finite I) {s : ι → Set X} {t : Set X} :
+    IsMetricSeparated (⋃ i ∈ I, s i) t ↔ ∀, ∀ i ∈ I, ∀, IsMetricSeparated (s i) t := by
+  refine'
+    finite.induction_on hI
+      (by
+        simp )
+      fun i I hi _ hI => _
   rw [bUnion_insert, ball_insert_iff, union_left_iff, hI]
-end
 
-alias finite_Union_left_iff ↔ _ is_metric_separated.finite_Union_left
+alias finite_Union_left_iff ↔ _ IsMetricSeparated.finite_Union_left
 
-lemma finite_Union_right_iff {ι : Type*} {I : set ι} (hI : finite I) {s : set X} {t : ι → set X} :
-  is_metric_separated s (⋃ i ∈ I, t i) ↔ ∀ i ∈ I, is_metric_separated s (t i) :=
-by simpa only [@comm _ _ s] using finite_Union_left_iff hI
+theorem finite_Union_right_iff {ι : Type _} {I : Set ι} (hI : Finite I) {s : Set X} {t : ι → Set X} :
+    IsMetricSeparated s (⋃ i ∈ I, t i) ↔ ∀, ∀ i ∈ I, ∀, IsMetricSeparated s (t i) := by
+  simpa only [@comm _ _ s] using finite_Union_left_iff hI
 
-@[simp] lemma finset_Union_left_iff {ι : Type*} {I : finset ι} {s : ι → set X} {t : set X} :
-  is_metric_separated (⋃ i ∈ I, s i) t ↔ ∀ i ∈ I, is_metric_separated (s i) t :=
-finite_Union_left_iff I.finite_to_set
+@[simp]
+theorem finset_Union_left_iff {ι : Type _} {I : Finset ι} {s : ι → Set X} {t : Set X} :
+    IsMetricSeparated (⋃ i ∈ I, s i) t ↔ ∀, ∀ i ∈ I, ∀, IsMetricSeparated (s i) t :=
+  finite_Union_left_iff I.finite_to_set
 
-alias finset_Union_left_iff ↔ _ is_metric_separated.finset_Union_left
+alias finset_Union_left_iff ↔ _ IsMetricSeparated.finset_Union_left
 
-@[simp] lemma finset_Union_right_iff {ι : Type*} {I : finset ι} {s : set X} {t : ι → set X} :
-  is_metric_separated s (⋃ i ∈ I, t i) ↔ ∀ i ∈ I, is_metric_separated s (t i) :=
-finite_Union_right_iff I.finite_to_set
+@[simp]
+theorem finset_Union_right_iff {ι : Type _} {I : Finset ι} {s : Set X} {t : ι → Set X} :
+    IsMetricSeparated s (⋃ i ∈ I, t i) ↔ ∀, ∀ i ∈ I, ∀, IsMetricSeparated s (t i) :=
+  finite_Union_right_iff I.finite_to_set
 
-alias finset_Union_right_iff ↔ _ is_metric_separated.finset_Union_right
+alias finset_Union_right_iff ↔ _ IsMetricSeparated.finset_Union_right
 
-end is_metric_separated
+end IsMetricSeparated
+

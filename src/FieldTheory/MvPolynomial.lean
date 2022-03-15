@@ -3,8 +3,7 @@ Copyright (c) 2019 Johannes Hölzl. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johannes Hölzl
 -/
-
-import ring_theory.mv_polynomial.basic
+import Mathbin.RingTheory.MvPolynomial.Basic
 
 /-!
 # Multivariate polynomials over fields
@@ -14,40 +13,43 @@ dimension of the space of multivariate polynomials over a field is equal to the 
 finitely supported functions from the indexing set to `ℕ`.
 -/
 
-noncomputable theory
 
-open_locale classical
+noncomputable section
 
-open set linear_map submodule
-open_locale big_operators
+open_locale Classical
 
-namespace mv_polynomial
-universes u v
-variables {σ : Type u} {K : Type v}
-variables (σ K) [field K]
+open Set LinearMap Submodule
 
-lemma quotient_mk_comp_C_injective (I : ideal (mv_polynomial σ K)) (hI : I ≠ ⊤) :
-  function.injective ((ideal.quotient.mk I).comp mv_polynomial.C) :=
-begin
-  refine (ring_hom.injective_iff _).2 (λ x hx, _),
-  rw [ring_hom.comp_apply, ideal.quotient.eq_zero_iff_mem] at hx,
-  refine classical.by_contradiction (λ hx0, absurd (I.eq_top_iff_one.2 _) hI),
-  have := I.mul_mem_left (mv_polynomial.C x⁻¹) hx,
-  rwa [← mv_polynomial.C.map_mul, inv_mul_cancel hx0, mv_polynomial.C_1] at this,
-end
+open_locale BigOperators
 
-end mv_polynomial
+namespace MvPolynomial
 
+universe u v
 
+variable {σ : Type u} {K : Type v}
 
-namespace mv_polynomial
+variable (σ K) [Field K]
+
+theorem quotient_mk_comp_C_injective (I : Ideal (MvPolynomial σ K)) (hI : I ≠ ⊤) :
+    Function.Injective ((Ideal.Quotient.mk I).comp MvPolynomial.c) := by
+  refine' (RingHom.injective_iff _).2 fun x hx => _
+  rw [RingHom.comp_apply, Ideal.Quotient.eq_zero_iff_mem] at hx
+  refine' Classical.by_contradiction fun hx0 => absurd (I.eq_top_iff_one.2 _) hI
+  have := I.mul_mem_left (MvPolynomial.c x⁻¹) hx
+  rwa [← mv_polynomial.C.map_mul, inv_mul_cancel hx0, MvPolynomial.C_1] at this
+
+end MvPolynomial
+
+namespace MvPolynomial
 
 universe u
-variables {σ : Type u} {K : Type u} [field K]
 
-open_locale classical
+variable {σ : Type u} {K : Type u} [Field K]
 
-lemma dim_mv_polynomial : module.rank K (mv_polynomial σ K) = cardinal.mk (σ →₀ ℕ) :=
-by rw [← cardinal.lift_inj, ← (basis_monomials σ K).mk_eq_dim]
+open_locale Classical
 
-end mv_polynomial
+theorem dim_mv_polynomial : Module.rank K (MvPolynomial σ K) = Cardinal.mk (σ →₀ ℕ) := by
+  rw [← Cardinal.lift_inj, ← (basis_monomials σ K).mk_eq_dim]
+
+end MvPolynomial
+

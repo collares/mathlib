@@ -3,9 +3,8 @@ Copyright © 2021 Nicolò Cavalleri. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Nicolò Cavalleri, Heather Macbeth
 -/
-
-import geometry.manifold.smooth_manifold_with_corners
-import analysis.normed_space.units
+import Mathbin.Geometry.Manifold.SmoothManifoldWithCorners
+import Mathbin.Analysis.NormedSpace.Units
 
 /-!
 # Units of a normed algebra
@@ -44,22 +43,28 @@ None of this should be particularly difficult.
 
 -/
 
-noncomputable theory
 
-open_locale manifold
+noncomputable section
 
-namespace units
+open_locale Manifold
 
-variables {R : Type*} [normed_ring R] [complete_space R]
+namespace Units
 
-instance : charted_space R Rˣ := open_embedding_coe.singleton_charted_space
+variable {R : Type _} [NormedRing R] [CompleteSpace R]
 
-lemma chart_at_apply {a : Rˣ} {b : Rˣ} : chart_at R a b = b := rfl
-lemma chart_at_source {a : Rˣ} : (chart_at R a).source = set.univ := rfl
+instance : ChartedSpace R Rˣ :=
+  open_embedding_coe.singletonChartedSpace
 
-variables {𝕜 : Type*} [nondiscrete_normed_field 𝕜] [normed_algebra 𝕜 R]
+theorem chart_at_apply {a : Rˣ} {b : Rˣ} : chartAt R a b = b :=
+  rfl
 
-instance : smooth_manifold_with_corners 𝓘(𝕜, R) Rˣ :=
-open_embedding_coe.singleton_smooth_manifold_with_corners 𝓘(𝕜, R)
+theorem chart_at_source {a : Rˣ} : (chartAt R a).Source = Set.Univ :=
+  rfl
 
-end units
+variable {𝕜 : Type _} [NondiscreteNormedField 𝕜] [NormedAlgebra 𝕜 R]
+
+instance : SmoothManifoldWithCorners 𝓘(𝕜, R) Rˣ :=
+  open_embedding_coe.singleton_smooth_manifold_with_corners 𝓘(𝕜, R)
+
+end Units
+

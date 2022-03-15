@@ -3,7 +3,7 @@ Copyright (c) 2018 Simon Hudon. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Simon Hudon
 -/
-import data.dlist
+import Leanbin.Data.Dlist
 
 /-!
 # Difference list
@@ -18,14 +18,18 @@ This structure supports `O(1)` `append` and `concat` operations on lists, making
 useful for append-heavy uses such as logging and pretty printing.
 -/
 
+
 /-- Concatenates a list of difference lists to form a single difference list. Similar to
 `list.join`. -/
-def dlist.join {α : Type*} : list (dlist α) → dlist α
- | [] := dlist.empty
- | (x :: xs) := x ++ dlist.join xs
+def Dlist.join {α : Type _} : List (Dlist α) → Dlist α
+  | [] => Dlist.empty
+  | x :: xs => x ++ Dlist.join xs
 
-@[simp] lemma dlist_singleton {α : Type*} {a : α} :
-  dlist.singleton a = dlist.lazy_of_list ([a]) := rfl
+@[simp]
+theorem dlist_singleton {α : Type _} {a : α} : Dlist.singleton a = Dlist.lazyOfList [a] :=
+  rfl
 
-@[simp] lemma dlist_lazy {α : Type*} {l : list α} :
-  dlist.lazy_of_list l = dlist.of_list l := rfl
+@[simp]
+theorem dlist_lazy {α : Type _} {l : List α} : Dlist.lazyOfList l = Dlist.ofList l :=
+  rfl
+

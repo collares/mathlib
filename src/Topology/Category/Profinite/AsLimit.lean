@@ -3,8 +3,8 @@ Copyright (c) 2021 Adam Topaz. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Calle Sönne, Adam Topaz
 -/
-import topology.category.Profinite
-import topology.discrete_quotient
+import Mathbin.Topology.Category.Profinite.Default
+import Mathbin.Topology.DiscreteQuotient
 
 /-!
 # Profinite sets as limits of finite sets.
@@ -28,65 +28,64 @@ There are a handful of definitions in this file, given `X : Profinite`:
 
 -/
 
-noncomputable theory
 
-open category_theory
+noncomputable section
+
+open CategoryTheory
 
 namespace Profinite
 
 universe u
 
-variables (X : Profinite.{u})
+variable (X : Profinite.{u})
 
 /-- The functor `discrete_quotient X ⥤ Fintype` whose limit is isomorphic to `X`. -/
-def fintype_diagram : discrete_quotient X ⥤ Fintype :=
-{ obj := λ S, Fintype.of S,
-  map := λ S T f, discrete_quotient.of_le f.le }
+def fintypeDiagram : DiscreteQuotient X ⥤ Fintypeₓ where
+  obj := fun S => Fintypeₓ.of S
+  map := fun S T f => DiscreteQuotient.ofLe f.le
 
 /-- An abbreviation for `X.fintype_diagram ⋙ Fintype_to_Profinite`. -/
-abbreviation diagram : discrete_quotient X ⥤ Profinite :=
-X.fintype_diagram ⋙ Fintype.to_Profinite
+abbrev diagram : DiscreteQuotient X ⥤ Profinite :=
+  X.fintypeDiagram ⋙ Fintypeₓ.toProfinite
 
 /-- A cone over `X.diagram` whose cone point is `X`. -/
-def as_limit_cone : category_theory.limits.cone X.diagram :=
-{ X := X,
-  π := { app := λ S, ⟨S.proj, S.proj_is_locally_constant.continuous⟩ } }
+def asLimitCone : CategoryTheory.Limits.Cone X.diagram :=
+  { x, π := { app := fun S => ⟨S.proj, S.proj_is_locally_constant.Continuous⟩ } }
 
-instance is_iso_as_limit_cone_lift :
-  is_iso ((limit_cone_is_limit X.diagram).lift X.as_limit_cone) :=
-is_iso_of_bijective _
-begin
-  refine ⟨λ a b, _, λ a, _⟩,
-  { intro h,
-    refine discrete_quotient.eq_of_proj_eq (λ S, _),
-    apply_fun (λ f : (limit_cone X.diagram).X, f.val S) at h,
-    exact h },
-  { obtain ⟨b, hb⟩ := discrete_quotient.exists_of_compat
-      (λ S, a.val S) (λ _ _ h, a.prop (hom_of_le h)),
-    refine ⟨b, _⟩,
-    ext S : 3,
-    apply hb },
-end
+instance is_iso_as_limit_cone_lift : IsIso ((limitConeIsLimit X.diagram).lift X.asLimitCone) :=
+  is_iso_of_bijective _
+    (by
+      refine' ⟨fun a b => _, fun a => _⟩
+      · intro h
+        refine' DiscreteQuotient.eq_of_proj_eq fun S => _
+        apply_fun fun f : (limit_cone X.diagram).x => f.val S  at h
+        exact h
+        
+      · obtain ⟨b, hb⟩ := DiscreteQuotient.exists_of_compat (fun S => a.val S) fun _ _ h => a.prop (hom_of_le h)
+        refine' ⟨b, _⟩
+        ext S : 3
+        apply hb
+        )
 
-/--
-The isomorphism between `X` and the explicit limit of `X.diagram`,
+/-- The isomorphism between `X` and the explicit limit of `X.diagram`,
 induced by lifting `X.as_limit_cone`.
 -/
-def iso_as_limit_cone_lift : X ≅ (limit_cone X.diagram).X :=
-as_iso $ (limit_cone_is_limit _).lift X.as_limit_cone
+def isoAsLimitConeLift : X ≅ (limitCone X.diagram).x :=
+  as_iso <| (limitConeIsLimit _).lift X.asLimitCone
 
-/--
-The isomorphism of cones `X.as_limit_cone` and `Profinite.limit_cone X.diagram`.
+/-- The isomorphism of cones `X.as_limit_cone` and `Profinite.limit_cone X.diagram`.
 The underlying isomorphism is defeq to `X.iso_as_limit_cone_lift`.
 -/
-def as_limit_cone_iso : X.as_limit_cone ≅ limit_cone _ :=
-limits.cones.ext (iso_as_limit_cone_lift _) (λ _, rfl)
+def asLimitConeIso : X.asLimitCone ≅ limitCone _ :=
+  Limits.Cones.ext (isoAsLimitConeLift _) fun _ => rfl
 
 /-- `X.as_limit_cone` is indeed a limit cone. -/
-def as_limit : category_theory.limits.is_limit X.as_limit_cone :=
-limits.is_limit.of_iso_limit (limit_cone_is_limit _) X.as_limit_cone_iso.symm
+def asLimit : CategoryTheory.Limits.IsLimit X.asLimitCone :=
+  Limits.IsLimit.ofIsoLimit (limitConeIsLimit _) X.asLimitConeIso.symm
 
 /-- A bundled version of `X.as_limit_cone` and `X.as_limit`. -/
-def lim : limits.limit_cone X.diagram := ⟨X.as_limit_cone, X.as_limit⟩
+def lim : Limits.LimitCone X.diagram :=
+  ⟨X.asLimitCone, X.asLimit⟩
 
 end Profinite
+

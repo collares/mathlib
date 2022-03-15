@@ -3,8 +3,8 @@ Copyright (c) 2021 Adam Topaz. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Adam Topaz
 -/
-import category_theory.adjunction
-import category_theory.whiskering
+import Mathbin.CategoryTheory.Adjunction.Default
+import Mathbin.CategoryTheory.Whiskering
 
 /-!
 
@@ -14,49 +14,72 @@ and the functor categories `E ⥤ C` and `D ⥤ C`.
 
 -/
 
-namespace category_theory.adjunction
 
-open category_theory
+namespace CategoryTheory.Adjunction
 
-variables (C : Type*) {D E : Type*} [category C] [category D] [category E]
-  {F : D ⥤ E} {G : E ⥤ D}
+open CategoryTheory
 
---  `tidy` works for all the proofs in this definition, but it's fairly slow.
+variable (C : Type _) {D E : Type _} [Category C] [Category D] [Category E] {F : D ⥤ E} {G : E ⥤ D}
+
 /-- Given an adjunction `F ⊣ G`, this provides the natural adjunction
   `(whiskering_right C _ _).obj F ⊣ (whiskering_right C _ _).obj G`. -/
+--  `tidy` works for all the proofs in this definition, but it's fairly slow.
 @[simps unit_app_app counit_app_app]
-protected def whisker_right (adj : F ⊣ G) :
-  (whiskering_right C D E).obj F ⊣ (whiskering_right C E D).obj G :=
-mk_of_unit_counit
-{ unit :=
-  { app := λ X, (functor.right_unitor _).inv ≫
-      whisker_left X adj.unit ≫ (functor.associator _ _ _).inv,
-    naturality' := by { intros, ext, dsimp, simp } },
-  counit :=
-  { app := λ X, (functor.associator _ _ _).hom ≫
-      whisker_left X adj.counit ≫ (functor.right_unitor _).hom,
-    naturality' := by { intros, ext, dsimp, simp } },
-  left_triangle' := by { ext, dsimp, simp },
-  right_triangle' := by { ext, dsimp, simp } }
+protected def whiskerRight (adj : F ⊣ G) : (whiskeringRight C D E).obj F ⊣ (whiskeringRight C E D).obj G :=
+  mkOfUnitCounit
+    { Unit :=
+        { app := fun X => (Functor.rightUnitor _).inv ≫ whiskerLeft X adj.Unit ≫ (Functor.associator _ _ _).inv,
+          naturality' := by
+            intros
+            ext
+            dsimp
+            simp },
+      counit :=
+        { app := fun X => (Functor.associator _ _ _).Hom ≫ whiskerLeft X adj.counit ≫ (Functor.rightUnitor _).Hom,
+          naturality' := by
+            intros
+            ext
+            dsimp
+            simp },
+      left_triangle' := by
+        ext
+        dsimp
+        simp ,
+      right_triangle' := by
+        ext
+        dsimp
+        simp }
 
--- `tidy` gets stuck for `left_triangle'` and `right_triangle'`.
 /-- Given an adjunction `F ⊣ G`, this provides the natural adjunction
   `(whiskering_left _ _ C).obj G ⊣ (whiskering_left _ _ C).obj F`. -/
+-- `tidy` gets stuck for `left_triangle'` and `right_triangle'`.
 @[simps unit_app_app counit_app_app]
-protected def whisker_left (adj : F ⊣ G) :
-  (whiskering_left E D C).obj G ⊣ (whiskering_left D E C).obj F :=
-mk_of_unit_counit
-{ unit :=
-  { app := λ X, (functor.left_unitor _).inv ≫
-      whisker_right adj.unit X ≫ (functor.associator _ _ _).hom,
-    naturality' := by { intros, ext, dsimp, simp } },
-  counit :=
-  { app := λ X, (functor.associator _ _ _).inv ≫
-      whisker_right adj.counit X ≫ (functor.left_unitor _).hom,
-    naturality' := by { intros, ext, dsimp, simp } },
-  left_triangle' := by { ext x, dsimp,
-    simp only [category.id_comp, category.comp_id, ← x.map_comp], simp },
-  right_triangle' :=  by { ext x, dsimp,
-    simp only [category.id_comp, category.comp_id, ← x.map_comp], simp } }
+protected def whiskerLeft (adj : F ⊣ G) : (whiskeringLeft E D C).obj G ⊣ (whiskeringLeft D E C).obj F :=
+  mkOfUnitCounit
+    { Unit :=
+        { app := fun X => (Functor.leftUnitor _).inv ≫ whiskerRight adj.Unit X ≫ (Functor.associator _ _ _).Hom,
+          naturality' := by
+            intros
+            ext
+            dsimp
+            simp },
+      counit :=
+        { app := fun X => (Functor.associator _ _ _).inv ≫ whiskerRight adj.counit X ≫ (Functor.leftUnitor _).Hom,
+          naturality' := by
+            intros
+            ext
+            dsimp
+            simp },
+      left_triangle' := by
+        ext x
+        dsimp
+        simp only [category.id_comp, category.comp_id, ← x.map_comp]
+        simp ,
+      right_triangle' := by
+        ext x
+        dsimp
+        simp only [category.id_comp, category.comp_id, ← x.map_comp]
+        simp }
 
-end category_theory.adjunction
+end CategoryTheory.Adjunction
+

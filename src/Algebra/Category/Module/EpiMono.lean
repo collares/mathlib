@@ -3,9 +3,9 @@ Copyright (c) 2021 Scott Morrison All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import linear_algebra.quotient
-import category_theory.epi_mono
-import algebra.category.Module.basic
+import Mathbin.LinearAlgebra.Quotient
+import Mathbin.CategoryTheory.EpiMono
+import Mathbin.Algebra.Category.Module.Basic
 
 /-!
 # Monomorphisms in `Module R`
@@ -14,45 +14,48 @@ This file shows that an `R`-linear map is a monomorphism in the category of `R`-
 if and only if it is injective, and similarly an epimorphism if and only if it is surjective.
 -/
 
-universes v u
 
-open category_theory
-open Module
-open_locale Module
+universe v u
 
-namespace Module
+open CategoryTheory
 
-variables {R : Type u} [ring R] {X Y : Module.{v} R} (f : X ⟶ Y)
-variables {M : Type v} [add_comm_group M] [module R M]
+open ModuleCat
 
-lemma ker_eq_bot_of_mono [mono f] : f.ker = ⊥ :=
-linear_map.ker_eq_bot_of_cancel $ λ u v, (@cancel_mono _ _ _ _ _ f _ ↟u ↟v).1
+open_locale ModuleCat
 
-lemma range_eq_top_of_epi [epi f] : f.range = ⊤ :=
-linear_map.range_eq_top_of_cancel $ λ u v, (@cancel_epi _ _ _ _ _ f _ ↟u ↟v).1
+namespace ModuleCat
 
-lemma mono_iff_ker_eq_bot : mono f ↔ f.ker = ⊥ :=
-⟨λ hf, by exactI ker_eq_bot_of_mono _,
- λ hf, concrete_category.mono_of_injective _ $ linear_map.ker_eq_bot.1 hf⟩
+variable {R : Type u} [Ringₓ R] {X Y : ModuleCat.{v} R} (f : X ⟶ Y)
 
-lemma mono_iff_injective : mono f ↔ function.injective f :=
-by rw [mono_iff_ker_eq_bot, linear_map.ker_eq_bot]
+variable {M : Type v} [AddCommGroupₓ M] [Module R M]
 
-lemma epi_iff_range_eq_top : epi f ↔ f.range = ⊤ :=
-⟨λ hf, by exactI range_eq_top_of_epi _,
- λ hf, concrete_category.epi_of_surjective _ $ linear_map.range_eq_top.1 hf⟩
+theorem ker_eq_bot_of_mono [Mono f] : f.ker = ⊥ :=
+  LinearMap.ker_eq_bot_of_cancel fun u v => (@cancel_mono _ _ _ _ _ f _ (↟u) (↟v)).1
 
-lemma epi_iff_surjective : epi f ↔ function.surjective f :=
-by rw [epi_iff_range_eq_top, linear_map.range_eq_top]
+theorem range_eq_top_of_epi [Epi f] : f.range = ⊤ :=
+  LinearMap.range_eq_top_of_cancel fun u v => (@cancel_epi _ _ _ _ _ f _ (↟u) (↟v)).1
+
+theorem mono_iff_ker_eq_bot : Mono f ↔ f.ker = ⊥ :=
+  ⟨fun hf => ker_eq_bot_of_mono _, fun hf => ConcreteCategory.mono_of_injective _ <| LinearMap.ker_eq_bot.1 hf⟩
+
+theorem mono_iff_injective : Mono f ↔ Function.Injective f := by
+  rw [mono_iff_ker_eq_bot, LinearMap.ker_eq_bot]
+
+theorem epi_iff_range_eq_top : Epi f ↔ f.range = ⊤ :=
+  ⟨fun hf => range_eq_top_of_epi _, fun hf => ConcreteCategory.epi_of_surjective _ <| LinearMap.range_eq_top.1 hf⟩
+
+theorem epi_iff_surjective : Epi f ↔ Function.Surjective f := by
+  rw [epi_iff_range_eq_top, LinearMap.range_eq_top]
 
 /-- If the zero morphism is an epi then the codomain is trivial. -/
-def unique_of_epi_zero (X) [h : epi (0 : X ⟶ of R M)] : unique M :=
-unique_of_surjective_zero X ((Module.epi_iff_surjective _).mp h)
+def uniqueOfEpiZero X [h : Epi (0 : X ⟶ of R M)] : Unique M :=
+  uniqueOfSurjectiveZero X ((ModuleCat.epi_iff_surjective _).mp h)
 
-instance mono_as_hom'_subtype (U : submodule R X) : mono ↾U.subtype :=
-(mono_iff_ker_eq_bot _).mpr (submodule.ker_subtype U)
+instance mono_as_hom'_subtype (U : Submodule R X) : Mono (↾U.Subtype) :=
+  (mono_iff_ker_eq_bot _).mpr (Submodule.ker_subtype U)
 
-instance epi_as_hom''_mkq (U : submodule R X) : epi ↿U.mkq :=
-(epi_iff_range_eq_top _).mpr $ submodule.range_mkq _
+instance epi_as_hom''_mkq (U : Submodule R X) : Epi (↿U.mkq) :=
+  (epi_iff_range_eq_top _).mpr <| Submodule.range_mkq _
 
-end Module
+end ModuleCat
+

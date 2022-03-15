@@ -3,8 +3,8 @@ Copyright (c) 2021 Joseph Myers. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Joseph Myers
 -/
-import linear_algebra.basis
-import linear_algebra.multilinear.basic
+import Mathbin.LinearAlgebra.Basis
+import Mathbin.LinearAlgebra.Multilinear.Basic
 
 /-!
 # Multilinear maps in relation to bases.
@@ -18,41 +18,42 @@ This file proves lemmas about the action of multilinear maps on basis vectors.
 
 -/
 
-open multilinear_map
 
-variables {R : Type*} {ι : Type*} {n : ℕ} {M : fin n → Type*} {M₂ : Type*} {M₃ : Type*}
-variables [comm_semiring R] [add_comm_monoid M₂] [add_comm_monoid M₃] [∀i, add_comm_monoid (M i)]
-variables [∀i, module R (M i)] [module R M₂] [module R M₃]
+open MultilinearMap
+
+variable {R : Type _} {ι : Type _} {n : ℕ} {M : Finₓ n → Type _} {M₂ : Type _} {M₃ : Type _}
+
+variable [CommSemiringₓ R] [AddCommMonoidₓ M₂] [AddCommMonoidₓ M₃] [∀ i, AddCommMonoidₓ (M i)]
+
+variable [∀ i, Module R (M i)] [Module R M₂] [Module R M₃]
 
 /-- Two multilinear maps indexed by `fin n` are equal if they are equal when all arguments are
 basis vectors. -/
-lemma basis.ext_multilinear_fin {f g : multilinear_map R M M₂} {ι₁ : fin n → Type*}
-  (e : Π i, basis (ι₁ i) R (M i)) (h : ∀ (v : Π i, ι₁ i), f (λ i, e i (v i)) = g (λ i, e i (v i))) :
-  f = g :=
-begin
-  unfreezingI { induction n with m hm },
-  { ext x,
-    convert h fin_zero_elim },
-  { apply function.left_inverse.injective uncurry_curry_left,
-    refine basis.ext (e 0) _,
-    intro i,
-    apply hm (fin.tail e),
-    intro j,
-    convert h (fin.cons i j),
-    iterate 2
-    { rw curry_left_apply,
-      congr' 1 with x,
-      refine fin.cases rfl (λ x, _) x,
-      dsimp [fin.tail],
-      rw [fin.cons_succ, fin.cons_succ], } }
-end
+theorem Basis.ext_multilinear_fin {f g : MultilinearMap R M M₂} {ι₁ : Finₓ n → Type _} (e : ∀ i, Basis (ι₁ i) R (M i))
+    (h : ∀ v : ∀ i, ι₁ i, (f fun i => e i (v i)) = g fun i => e i (v i)) : f = g := by
+  induction' n with m hm
+  · ext x
+    convert h finZeroElim
+    
+  · apply Function.LeftInverse.injective uncurry_curry_left
+    refine' Basis.ext (e 0) _
+    intro i
+    apply hm (Finₓ.tail e)
+    intro j
+    convert h (Finₓ.cons i j)
+    iterate 2 
+      rw [curry_left_apply]
+      congr 1 with x
+      refine' Finₓ.cases rfl (fun x => _) x
+      dsimp [Finₓ.tail]
+      rw [Finₓ.cons_succ, Finₓ.cons_succ]
+    
 
 /-- Two multilinear maps indexed by a `fintype` are equal if they are equal when all arguments
 are basis vectors. Unlike `basis.ext_multilinear_fin`, this only uses a single basis; a
 dependently-typed version would still be true, but the proof would need a dependently-typed
 version of `dom_dom_congr`. -/
-lemma basis.ext_multilinear [decidable_eq ι] [fintype ι] {f g : multilinear_map R (λ i : ι, M₂) M₃}
-  {ι₁ : Type*} (e : basis ι₁ R M₂) (h : ∀ v : ι → ι₁, f (λ i, e (v i)) = g (λ i, e (v i))) :
-  f = g :=
-(dom_dom_congr_eq_iff (fintype.equiv_fin ι) f g).mp $
-  basis.ext_multilinear_fin (λ i, e) (λ i, h (i ∘ _))
+theorem Basis.ext_multilinear [DecidableEq ι] [Fintype ι] {f g : MultilinearMap R (fun i : ι => M₂) M₃} {ι₁ : Type _}
+    (e : Basis ι₁ R M₂) (h : ∀ v : ι → ι₁, (f fun i => e (v i)) = g fun i => e (v i)) : f = g :=
+  (dom_dom_congr_eq_iff (Fintype.equivFin ι) f g).mp <| Basis.ext_multilinear_fin (fun i => e) fun i => h (i ∘ _)
+

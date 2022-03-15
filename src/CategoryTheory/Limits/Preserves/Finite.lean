@@ -3,8 +3,8 @@ Copyright (c) 2021 Andrew Yang. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Andrew Yang
 -/
-import category_theory.limits.preserves.basic
-import category_theory.fin_category
+import Mathbin.CategoryTheory.Limits.Preserves.Basic
+import Mathbin.CategoryTheory.FinCategory
 
 /-!
 # Preservation of finite (co)limits.
@@ -21,62 +21,69 @@ involved are abelian, or more generally, finitely (co)complete.
 
 -/
 
-open category_theory
 
-namespace category_theory.limits
+open CategoryTheory
 
-universes v u₁ u₂ u₃ -- declare the `v`'s first; see `category_theory.category` for an explanation
+namespace CategoryTheory.Limits
 
-variables {C : Type u₁} [category.{v} C]
-variables {D : Type u₂} [category.{v} D]
-variables {E : Type u₃} [category.{v} E]
+universe v u₁ u₂ u₃
 
-variables {J : Type v} [small_category J] {K : J ⥤ C}
+-- declare the `v`'s first; see `category_theory.category` for an explanation
+variable {C : Type u₁} [Category.{v} C]
 
-/--
-A functor is said to preserve finite limits, if it preserves all limits of shape `J`, where
+variable {D : Type u₂} [Category.{v} D]
+
+variable {E : Type u₃} [Category.{v} E]
+
+variable {J : Type v} [SmallCategory J] {K : J ⥤ C}
+
+/-- A functor is said to preserve finite limits, if it preserves all limits of shape `J`, where
 `J` is a finite category.
 -/
-class preserves_finite_limits (F : C ⥤ D) :=
-(preserves_finite_limits : Π (J : Type v) [small_category J] [fin_category J],
-  preserves_limits_of_shape J F . tactic.apply_instance)
+class PreservesFiniteLimits (F : C ⥤ D) where
+  PreservesFiniteLimits : ∀ J : Type v [SmallCategory J] [FinCategory J], PreservesLimitsOfShape J F := by
+    run_tac
+      tactic.apply_instance
 
 attribute [instance] preserves_finite_limits.preserves_finite_limits
 
-@[priority 100]
-instance preserves_limits.preserves_finite_limits (F : C ⥤ D) [preserves_limits F] :
-  preserves_finite_limits F := {}
+instance (priority := 100) PreservesLimits.preservesFiniteLimits (F : C ⥤ D) [PreservesLimits F] :
+    PreservesFiniteLimits F :=
+  {  }
 
-instance id_preserves_finite_limits :
-  preserves_finite_limits (𝟭 C) := {}
+instance idPreservesFiniteLimits : PreservesFiniteLimits (𝟭 C) :=
+  {  }
 
 /-- The composition of two left exact functors is left exact. -/
-def comp_preserves_finite_limits (F : C ⥤ D) (G : D ⥤ E)
-  [preserves_finite_limits F] [preserves_finite_limits G] :
-  preserves_finite_limits (F ⋙ G) :=
-⟨λ _ _ _, by { resetI, apply_instance }⟩
+def compPreservesFiniteLimits (F : C ⥤ D) (G : D ⥤ E) [PreservesFiniteLimits F] [PreservesFiniteLimits G] :
+    PreservesFiniteLimits (F ⋙ G) :=
+  ⟨fun _ _ _ => by
+    skip
+    infer_instance⟩
 
-/--
-A functor is said to preserve finite colimits, if it preserves all colimits of shape `J`, where
+/-- A functor is said to preserve finite colimits, if it preserves all colimits of shape `J`, where
 `J` is a finite category.
 -/
-class preserves_finite_colimits (F : C ⥤ D) :=
-(preserves_finite_colimits : Π (J : Type v) [small_category J] [fin_category J],
-  preserves_colimits_of_shape J F . tactic.apply_instance)
+class PreservesFiniteColimits (F : C ⥤ D) where
+  PreservesFiniteColimits : ∀ J : Type v [SmallCategory J] [FinCategory J], PreservesColimitsOfShape J F := by
+    run_tac
+      tactic.apply_instance
 
 attribute [instance] preserves_finite_colimits.preserves_finite_colimits
 
-@[priority 100]
-instance preserves_colimits.preserves_finite_colimits (F : C ⥤ D) [preserves_colimits F] :
-  preserves_finite_colimits F := {}
+instance (priority := 100) PreservesColimits.preservesFiniteColimits (F : C ⥤ D) [PreservesColimits F] :
+    PreservesFiniteColimits F :=
+  {  }
 
-instance id_preserves_finite_colimits :
-  preserves_finite_colimits (𝟭 C) := {}
+instance idPreservesFiniteColimits : PreservesFiniteColimits (𝟭 C) :=
+  {  }
 
 /-- The composition of two right exact functors is right exact. -/
-def comp_preserves_finite_colimits (F : C ⥤ D) (G : D ⥤ E)
-  [preserves_finite_colimits F] [preserves_finite_colimits G] :
-  preserves_finite_colimits (F ⋙ G) :=
-⟨λ _ _ _, by { resetI, apply_instance }⟩
+def compPreservesFiniteColimits (F : C ⥤ D) (G : D ⥤ E) [PreservesFiniteColimits F] [PreservesFiniteColimits G] :
+    PreservesFiniteColimits (F ⋙ G) :=
+  ⟨fun _ _ _ => by
+    skip
+    infer_instance⟩
 
-end category_theory.limits
+end CategoryTheory.Limits
+

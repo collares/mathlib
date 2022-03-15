@@ -3,7 +3,7 @@ Copyright (c) 2019 Jeremy Avigad. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jeremy Avigad
 -/
-import data.equiv.list
+import Mathbin.Data.Equiv.List
 
 /-!
 # W types
@@ -25,98 +25,98 @@ While the name `W_type` is somewhat verbose, it is preferable to putting a singl
 identifier `W` in the root namespace.
 -/
 
-/--
-Given `β : α → Type*`, `W_type β` is the type of finitely branching trees where nodes are labeled by
+
+/-- Given `β : α → Type*`, `W_type β` is the type of finitely branching trees where nodes are labeled by
 elements of `α` and the children of a node labeled `a` are indexed by elements of `β a`.
 -/
-inductive W_type {α : Type*} (β : α → Type*)
-| mk (a : α) (f : β a → W_type) : W_type
+inductive WType {α : Type _} (β : α → Type _)
+  | mk (a : α) (f : β a → WType) : WType
 
-instance : inhabited (W_type (λ (_ : unit), empty)) :=
-⟨W_type.mk unit.star empty.elim⟩
+instance : Inhabited (WType fun _ : Unit => Empty) :=
+  ⟨WType.mk Unit.star Empty.elimₓ⟩
 
-namespace W_type
+namespace WType
 
-variables {α : Type*} {β : α → Type*}
+variable {α : Type _} {β : α → Type _}
 
 /-- The canonical map to the corresponding sigma type, returning the label of a node as an
   element `a` of `α`, and the children of the node as a function `β a → W_type β`. -/
-def to_sigma : W_type β → Σ a : α, β a → W_type β
-| ⟨a, f⟩ := ⟨a, f⟩
+def toSigma : WType β → Σa : α, β a → WType β
+  | ⟨a, f⟩ => ⟨a, f⟩
 
 /-- The canonical map from the sigma type into a `W_type`. Given a node `a : α`, and
   its children as a function `β a → W_type β`, return the corresponding tree. -/
-def of_sigma : (Σ a : α, β a → W_type β) → W_type β
-| ⟨a, f⟩ := W_type.mk a f
+def ofSigma : (Σa : α, β a → WType β) → WType β
+  | ⟨a, f⟩ => WType.mk a f
 
-@[simp] lemma of_sigma_to_sigma : Π (w : W_type β),
-  of_sigma (to_sigma w) = w
-| ⟨a, f⟩ := rfl
+@[simp]
+theorem of_sigma_to_sigma : ∀ w : WType β, ofSigma (toSigma w) = w
+  | ⟨a, f⟩ => rfl
 
-@[simp] lemma to_sigma_of_sigma : Π (s : Σ a : α, β a → W_type β),
-  to_sigma (of_sigma s) = s
-| ⟨a, f⟩ := rfl
+@[simp]
+theorem to_sigma_of_sigma : ∀ s : Σa : α, β a → WType β, toSigma (ofSigma s) = s
+  | ⟨a, f⟩ => rfl
 
 variable (β)
 
 /-- The canonical bijection with the sigma type, showing that `W_type` is a fixed point of
   the polynomial functor `X ↦ Σ a : α, β a → X`. -/
-@[simps] def equiv_sigma : W_type β ≃ Σ a : α, β a → W_type β :=
-{ to_fun := to_sigma,
-  inv_fun := of_sigma,
-  left_inv := of_sigma_to_sigma,
-  right_inv := to_sigma_of_sigma }
+@[simps]
+def equivSigma : WType β ≃ Σa : α, β a → WType β where
+  toFun := toSigma
+  invFun := ofSigma
+  left_inv := of_sigma_to_sigma
+  right_inv := to_sigma_of_sigma
 
 variable {β}
 
 /-- The canonical map from `W_type β` into any type `γ` given a map `(Σ a : α, β a → γ) → γ`. -/
-def elim (γ : Type*) (fγ : (Σ a : α, β a → γ) → γ) : W_type β → γ
-| ⟨a, f⟩ := fγ ⟨a, λ b, elim (f b)⟩
+def elimₓ (γ : Type _) (fγ : (Σa : α, β a → γ) → γ) : WType β → γ
+  | ⟨a, f⟩ => fγ ⟨a, fun b => elim (f b)⟩
 
-lemma elim_injective (γ : Type*) (fγ : (Σ a : α, β a → γ) → γ)
-  (fγ_injective : function.injective fγ) :
-  function.injective (elim γ fγ)
-| ⟨a₁, f₁⟩ ⟨a₂, f₂⟩ h := begin
-  obtain ⟨rfl, h⟩ := sigma.mk.inj (fγ_injective h),
-  congr' with x,
-  exact elim_injective (congr_fun (eq_of_heq h) x : _),
-end
+theorem elim_injective (γ : Type _) (fγ : (Σa : α, β a → γ) → γ) (fγ_injective : Function.Injective fγ) :
+    Function.Injective (elimₓ γ fγ)
+  | ⟨a₁, f₁⟩, ⟨a₂, f₂⟩, h => by
+    obtain ⟨rfl, h⟩ := Sigma.mk.inj (fγ_injective h)
+    congr with x
+    exact elim_injective (congr_funₓ (eq_of_heq h) x : _)
 
-instance [hα : is_empty α] : is_empty (W_type β) :=
-⟨λ w, W_type.rec_on w (is_empty.elim hα)⟩
+instance [hα : IsEmpty α] : IsEmpty (WType β) :=
+  ⟨fun w => WType.recOn w (IsEmpty.elim hα)⟩
 
-lemma infinite_of_nonempty_of_is_empty (a b : α) [ha : nonempty (β a)]
-  [he : is_empty (β b)] : infinite (W_type β) :=
-⟨begin
-  introsI hf,
-  have hba : b ≠ a, from λ h, ha.elim (is_empty.elim' (show is_empty (β a), from h ▸ he)),
-  refine not_injective_infinite_fintype
-    (λ n : ℕ, show W_type β, from nat.rec_on n
-      ⟨b, is_empty.elim' he⟩
-      (λ n ih, ⟨a, λ _, ih⟩)) _,
-  intros n m h,
-  induction n with n ih generalizing m h,
-  { cases m with m; simp * at * },
-  { cases m with m,
-    { simp * at * },
-    { refine congr_arg nat.succ (ih _),
-      simp [function.funext_iff, *] at * } }
-end⟩
+theorem infinite_of_nonempty_of_is_empty (a b : α) [ha : Nonempty (β a)] [he : IsEmpty (β b)] : Infinite (WType β) :=
+  ⟨by
+    intros hf
+    have hba : b ≠ a := fun h => ha.elim (IsEmpty.elim' (show IsEmpty (β a) from h ▸ he))
+    refine'
+      not_injective_infinite_fintype
+        (fun n : ℕ => show WType β from Nat.recOn n ⟨b, IsEmpty.elim' he⟩ fun n ih => ⟨a, fun _ => ih⟩) _
+    intro n m h
+    induction' n with n ih generalizing m h
+    · cases' m with m <;> simp_all
+      
+    · cases' m with m
+      · simp_all
+        
+      · refine' congr_argₓ Nat.succ (ih _)
+        simp_all [Function.funext_iffₓ]
+        
+      ⟩
 
-variables [Π a : α, fintype (β a)]
+variable [∀ a : α, Fintype (β a)]
 
 /-- The depth of a finitely branching tree. -/
-def depth : W_type β → ℕ
-| ⟨a, f⟩ := finset.sup finset.univ (λ n, depth (f n)) + 1
+def depth : WType β → ℕ
+  | ⟨a, f⟩ => (Finset.sup Finset.univ fun n => depth (f n)) + 1
 
-lemma depth_pos (t : W_type β) : 0 < t.depth :=
-by { cases t, apply nat.succ_pos }
+theorem depth_pos (t : WType β) : 0 < t.depth := by
+  cases t
+  apply Nat.succ_posₓ
 
-lemma depth_lt_depth_mk (a : α) (f : β a → W_type β) (i : β a) :
-  depth (f i) < depth ⟨a, f⟩ :=
-nat.lt_succ_of_le (finset.le_sup (finset.mem_univ i))
+theorem depth_lt_depth_mk (a : α) (f : β a → WType β) (i : β a) : depth (f i) < depth ⟨a, f⟩ :=
+  Nat.lt_succ_of_leₓ (Finset.le_sup (Finset.mem_univ i))
 
-end W_type
+end WType
 
 /-
 Show that W types are encodable when `α` is an encodable fintype and for every `a : α`, `β a` is
@@ -126,54 +126,51 @@ We define an auxiliary type `W_type' β n` of trees of depth at most `n`, and th
 induction on `n` that these are all encodable. These auxiliary constructions are not interesting in
 and of themselves, so we mark them as `private`.
 -/
+namespace Encodable
 
-namespace encodable
+@[reducible]
+private def W_type' {α : Type _} (β : α → Type _) [∀ a : α, Fintype (β a)] [∀ a : α, Encodable (β a)] (n : ℕ) :=
+  { t : WType β // t.depth ≤ n }
 
-@[reducible] private def W_type' {α : Type*} (β : α → Type*)
-    [Π a : α, fintype (β a)] [Π a : α, encodable (β a)] (n : ℕ) :=
-{ t : W_type β // t.depth ≤ n}
+variable {α : Type _} {β : α → Type _} [∀ a : α, Fintype (β a)] [∀ a : α, Encodable (β a)]
 
-variables {α : Type*} {β : α → Type*} [Π a : α, fintype (β a)] [Π a : α, encodable (β a)]
+private def encodable_zero : Encodable (WType' β 0) :=
+  let f : WType' β 0 → Empty := fun ⟨x, h⟩ => False.elim <| not_lt_of_geₓ h (WType.depth_pos _)
+  let finv : Empty → WType' β 0 := by
+    intro x
+    cases x
+  have : ∀ x, finv (f x) = x := fun ⟨x, h⟩ => False.elim <| not_lt_of_geₓ h (WType.depth_pos _)
+  Encodable.ofLeftInverse f finv this
 
-private def encodable_zero : encodable (W_type' β 0) :=
-let f    : W_type' β 0 → empty := λ ⟨x, h⟩, false.elim $ not_lt_of_ge h (W_type.depth_pos _),
-    finv : empty → W_type' β 0 := by { intro x, cases x} in
-have ∀ x, finv (f x) = x, from λ ⟨x, h⟩, false.elim $ not_lt_of_ge h (W_type.depth_pos _),
-encodable.of_left_inverse f finv this
+private def f (n : ℕ) : WType' β (n + 1) → Σa : α, β a → WType' β n
+  | ⟨t, h⟩ => by
+    cases' t with a f
+    have h₀ : ∀ i : β a, WType.depth (f i) ≤ n := fun i =>
+      Nat.le_of_lt_succₓ (lt_of_lt_of_leₓ (WType.depth_lt_depth_mk a f i) h)
+    exact ⟨a, fun i : β a => ⟨f i, h₀ i⟩⟩
 
-private def f (n : ℕ) : W_type' β (n + 1) → Σ a : α, β a → W_type' β n
-| ⟨t, h⟩ :=
-  begin
-    cases t with a f,
-    have h₀ : ∀ i : β a, W_type.depth (f i) ≤ n,
-      from λ i, nat.le_of_lt_succ (lt_of_lt_of_le (W_type.depth_lt_depth_mk a f i) h),
-    exact ⟨a, λ i : β a, ⟨f i, h₀ i⟩⟩
-  end
+private def finv (n : ℕ) : (Σa : α, β a → WType' β n) → WType' β (n + 1)
+  | ⟨a, f⟩ =>
+    let f' := fun i : β a => (f i).val
+    have : WType.depth ⟨a, f'⟩ ≤ n + 1 := add_le_add_right (Finset.sup_le fun b h => (f b).2) 1
+    ⟨⟨a, f'⟩, this⟩
 
-private def finv (n : ℕ) :
-  (Σ a : α, β a → W_type' β n) → W_type' β (n + 1)
-| ⟨a, f⟩ :=
-  let f' := λ i : β a, (f i).val in
-  have W_type.depth ⟨a, f'⟩ ≤ n + 1,
-    from add_le_add_right (finset.sup_le (λ b h, (f b).2)) 1,
-  ⟨⟨a, f'⟩, this⟩
+variable [Encodable α]
 
-variables [encodable α]
-
-private def encodable_succ (n : nat) (h : encodable (W_type' β n)) :
-  encodable (W_type' β (n + 1)) :=
-encodable.of_left_inverse (f n) (finv n) (by { rintro ⟨⟨_, _⟩, _⟩, refl })
+private def encodable_succ (n : Nat) (h : Encodable (WType' β n)) : Encodable (WType' β (n + 1)) :=
+  Encodable.ofLeftInverse (f n) (finv n)
+    (by
+      rintro ⟨⟨_, _⟩, _⟩
+      rfl)
 
 /-- `W_type` is encodable when `α` is an encodable fintype and for every `a : α`, `β a` is
 encodable. -/
-instance : encodable (W_type β) :=
-begin
-  haveI h' : Π n, encodable (W_type' β n) :=
-    λ n, nat.rec_on n encodable_zero encodable_succ,
-  let f    : W_type β → Σ n, W_type' β n   := λ t, ⟨t.depth, ⟨t, le_rfl⟩⟩,
-  let finv : (Σ n, W_type' β n) → W_type β := λ p, p.2.1,
-  have : ∀ t, finv (f t) = t, from λ t, rfl,
-  exact encodable.of_left_inverse f finv this
-end
+instance : Encodable (WType β) := by
+  have h' : ∀ n, Encodable (W_type' β n) := fun n => Nat.recOn n encodable_zero encodable_succ
+  let f : WType β → Σn, W_type' β n := fun t => ⟨t.depth, ⟨t, le_rfl⟩⟩
+  let finv : (Σn, W_type' β n) → WType β := fun p => p.2.1
+  have : ∀ t, finv (f t) = t := fun t => rfl
+  exact Encodable.ofLeftInverse f finv this
 
-end encodable
+end Encodable
+

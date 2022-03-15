@@ -3,9 +3,9 @@ Copyright (c) 2022 Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bhavik Mehta
 -/
-import algebra.associated
-import data.nat.factorization
-import number_theory.divisors
+import Mathbin.Algebra.Associated
+import Mathbin.Data.Nat.Factorization
+import Mathbin.NumberTheory.Divisors
 
 /-!
 # Prime powers
@@ -13,218 +13,202 @@ import number_theory.divisors
 This file deals with prime powers: numbers which are positive integer powers of a single prime.
 -/
 
-variables {R : Type*} [comm_monoid_with_zero R] (n p : R) (k : ℕ)
+
+variable {R : Type _} [CommMonoidWithZero R] (n p : R) (k : ℕ)
 
 /-- `n` is a prime power if there is a prime `p` and a positive natural `k` such that `n` can be
 written as `p^k`. -/
-def is_prime_pow : Prop :=
-∃ (p : R) (k : ℕ), prime p ∧ 0 < k ∧ p ^ k = n
+def IsPrimePow : Prop :=
+  ∃ (p : R)(k : ℕ), Prime p ∧ 0 < k ∧ p ^ k = n
 
-lemma is_prime_pow_def :
-  is_prime_pow n ↔ ∃ (p : R) (k : ℕ), prime p ∧ 0 < k ∧ p ^ k = n := iff.rfl
+theorem is_prime_pow_def : IsPrimePow n ↔ ∃ (p : R)(k : ℕ), Prime p ∧ 0 < k ∧ p ^ k = n :=
+  Iff.rfl
 
 /-- An equivalent definition for prime powers: `n` is a prime power iff there is a prime `p` and a
 natural `k` such that `n` can be written as `p^(k+1)`. -/
-lemma is_prime_pow_iff_pow_succ :
-  is_prime_pow n ↔ ∃ (p : R) (k : ℕ), prime p ∧ p ^ (k + 1) = n :=
-(is_prime_pow_def _).trans
-⟨λ ⟨p, k, hp, hk, hn⟩, ⟨_, _, hp, by rwa [nat.sub_add_cancel hk]⟩,
-  λ ⟨p, k, hp, hn⟩, ⟨_, _, hp, nat.succ_pos', hn⟩⟩
+theorem is_prime_pow_iff_pow_succ : IsPrimePow n ↔ ∃ (p : R)(k : ℕ), Prime p ∧ p ^ (k + 1) = n :=
+  (is_prime_pow_def _).trans
+    ⟨fun ⟨p, k, hp, hk, hn⟩ =>
+      ⟨_, _, hp, by
+        rwa [Nat.sub_add_cancelₓ hk]⟩,
+      fun ⟨p, k, hp, hn⟩ => ⟨_, _, hp, Nat.succ_pos', hn⟩⟩
 
-lemma not_is_prime_pow_zero [no_zero_divisors R] :
-  ¬ is_prime_pow (0 : R) :=
-begin
-  simp only [is_prime_pow_def, not_exists, not_and', and_imp],
-  intros x n hn hx,
-  rw pow_eq_zero hx,
-  simp,
-end
+theorem not_is_prime_pow_zero [NoZeroDivisors R] : ¬IsPrimePow (0 : R) := by
+  simp only [is_prime_pow_def, not_exists, not_and', and_imp]
+  intro x n hn hx
+  rw [pow_eq_zero hx]
+  simp
 
-lemma not_is_prime_pow_one : ¬ is_prime_pow (1 : R) :=
-begin
-  simp only [is_prime_pow_def, not_exists, not_and', and_imp],
-  intros x n hn hx ht,
-  exact ht.not_unit (is_unit_of_pow_eq_one x n hx hn),
-end
+theorem not_is_prime_pow_one : ¬IsPrimePow (1 : R) := by
+  simp only [is_prime_pow_def, not_exists, not_and', and_imp]
+  intro x n hn hx ht
+  exact ht.not_unit (is_unit_of_pow_eq_one x n hx hn)
 
-lemma prime.is_prime_pow {p : R} (hp : prime p) : is_prime_pow p :=
-⟨p, 1, hp, zero_lt_one, by simp⟩
+theorem Prime.is_prime_pow {p : R} (hp : Prime p) : IsPrimePow p :=
+  ⟨p, 1, hp, zero_lt_one, by
+    simp ⟩
 
-lemma is_prime_pow.pow {n : R} (hn : is_prime_pow n)
-  {k : ℕ} (hk : k ≠ 0) : is_prime_pow (n ^ k) :=
-let ⟨p, k', hp, hk', hn⟩ := hn in ⟨p, k * k', hp, mul_pos hk.bot_lt hk', by rw [pow_mul', hn]⟩
+theorem IsPrimePow.pow {n : R} (hn : IsPrimePow n) {k : ℕ} (hk : k ≠ 0) : IsPrimePow (n ^ k) :=
+  let ⟨p, k', hp, hk', hn⟩ := hn
+  ⟨p, k * k', hp, mul_pos hk.bot_lt hk', by
+    rw [pow_mul', hn]⟩
 
-theorem is_prime_pow.ne_zero [no_zero_divisors R] {n : R} (h : is_prime_pow n) : n ≠ 0 :=
-λ t, eq.rec not_is_prime_pow_zero t.symm h
+theorem IsPrimePow.ne_zero [NoZeroDivisors R] {n : R} (h : IsPrimePow n) : n ≠ 0 := fun t =>
+  Eq.ndrec not_is_prime_pow_zero t.symm h
 
-lemma is_prime_pow.ne_one {n : R} (h : is_prime_pow n) : n ≠ 1 :=
-λ t, eq.rec not_is_prime_pow_one t.symm h
+theorem IsPrimePow.ne_one {n : R} (h : IsPrimePow n) : n ≠ 1 := fun t => Eq.ndrec not_is_prime_pow_one t.symm h
 
-section unique_units
+section UniqueUnits
 
-lemma eq_of_prime_pow_eq {R : Type*} [cancel_comm_monoid_with_zero R] [unique Rˣ] {p₁ p₂ : R}
-  {k₁ k₂ : ℕ} (hp₁ : prime p₁) (hp₂ : prime p₂) (hk₁ : 0 < k₁) (h : p₁ ^ k₁ = p₂ ^ k₂) :
-  p₁ = p₂ :=
-by { rw [←associated_iff_eq] at h ⊢, apply h.of_pow_associated_of_prime hp₁ hp₂ hk₁ }
+theorem eq_of_prime_pow_eq {R : Type _} [CancelCommMonoidWithZero R] [Unique Rˣ] {p₁ p₂ : R} {k₁ k₂ : ℕ}
+    (hp₁ : Prime p₁) (hp₂ : Prime p₂) (hk₁ : 0 < k₁) (h : p₁ ^ k₁ = p₂ ^ k₂) : p₁ = p₂ := by
+  rw [← associated_iff_eq] at h⊢
+  apply h.of_pow_associated_of_prime hp₁ hp₂ hk₁
 
-lemma eq_of_prime_pow_eq' {R : Type*} [cancel_comm_monoid_with_zero R] [unique Rˣ] {p₁ p₂ : R}
-  {k₁ k₂ : ℕ} (hp₁ : prime p₁) (hp₂ : prime p₂) (hk₁ : 0 < k₂) (h : p₁ ^ k₁ = p₂ ^ k₂) :
-  p₁ = p₂ :=
-by { rw [←associated_iff_eq] at h ⊢, apply h.of_pow_associated_of_prime' hp₁ hp₂ hk₁ }
+theorem eq_of_prime_pow_eq' {R : Type _} [CancelCommMonoidWithZero R] [Unique Rˣ] {p₁ p₂ : R} {k₁ k₂ : ℕ}
+    (hp₁ : Prime p₁) (hp₂ : Prime p₂) (hk₁ : 0 < k₂) (h : p₁ ^ k₁ = p₂ ^ k₂) : p₁ = p₂ := by
+  rw [← associated_iff_eq] at h⊢
+  apply h.of_pow_associated_of_prime' hp₁ hp₂ hk₁
 
-end unique_units
+end UniqueUnits
 
-section nat
+section Nat
 
-lemma is_prime_pow_nat_iff (n : ℕ) :
-  is_prime_pow n ↔ ∃ (p k : ℕ), nat.prime p ∧ 0 < k ∧ p ^ k = n :=
-by simp only [is_prime_pow_def, nat.prime_iff]
+theorem is_prime_pow_nat_iff (n : ℕ) : IsPrimePow n ↔ ∃ p k : ℕ, Nat.Prime p ∧ 0 < k ∧ p ^ k = n := by
+  simp only [is_prime_pow_def, Nat.prime_iff]
 
-lemma nat.prime.is_prime_pow {p : ℕ} (hp : p.prime) : is_prime_pow p :=
-(nat.prime_iff.mp hp).is_prime_pow
+theorem Nat.Prime.is_prime_pow {p : ℕ} (hp : p.Prime) : IsPrimePow p :=
+  (Nat.prime_iff.mp hp).IsPrimePow
 
-lemma is_prime_pow_nat_iff_bounded (n : ℕ) :
-  is_prime_pow n ↔ ∃ (p : ℕ), p ≤ n ∧ ∃ (k : ℕ), k ≤ n ∧ p.prime ∧ 0 < k ∧ p ^ k = n :=
-begin
-  rw is_prime_pow_nat_iff,
-  refine iff.symm ⟨λ ⟨p, _, k, _, hp, hk, hn⟩, ⟨p, k, hp, hk, hn⟩, _⟩,
-  rintro ⟨p, k, hp, hk, rfl⟩,
-  refine ⟨p, _, k, (nat.lt_pow_self hp.one_lt _).le, hp, hk, rfl⟩,
-  simpa using nat.pow_le_pow_of_le_right hp.pos hk,
-end
+theorem is_prime_pow_nat_iff_bounded (n : ℕ) :
+    IsPrimePow n ↔ ∃ p : ℕ, p ≤ n ∧ ∃ k : ℕ, k ≤ n ∧ p.Prime ∧ 0 < k ∧ p ^ k = n := by
+  rw [is_prime_pow_nat_iff]
+  refine' Iff.symm ⟨fun ⟨p, _, k, _, hp, hk, hn⟩ => ⟨p, k, hp, hk, hn⟩, _⟩
+  rintro ⟨p, k, hp, hk, rfl⟩
+  refine' ⟨p, _, k, (Nat.lt_pow_self hp.one_lt _).le, hp, hk, rfl⟩
+  simpa using Nat.pow_le_pow_of_le_rightₓ hp.pos hk
 
-instance {n : ℕ} : decidable (is_prime_pow n) :=
-decidable_of_iff' _ (is_prime_pow_nat_iff_bounded n)
+instance {n : ℕ} : Decidable (IsPrimePow n) :=
+  decidableOfIff' _ (is_prime_pow_nat_iff_bounded n)
 
-lemma is_prime_pow.min_fac_pow_factorization_eq {n : ℕ} (hn : is_prime_pow n) :
-  n.min_fac ^ n.factorization n.min_fac = n :=
-begin
-  obtain ⟨p, k, hp, hk, rfl⟩ := hn,
-  rw ←nat.prime_iff at hp,
-  rw [hp.pow_min_fac hk.ne', hp.factorization_pow, finsupp.single_eq_same],
-end
+theorem IsPrimePow.min_fac_pow_factorization_eq {n : ℕ} (hn : IsPrimePow n) : n.minFac ^ n.factorization n.minFac = n :=
+  by
+  obtain ⟨p, k, hp, hk, rfl⟩ := hn
+  rw [← Nat.prime_iff] at hp
+  rw [hp.pow_min_fac hk.ne', hp.factorization_pow, Finsupp.single_eq_same]
 
-lemma is_prime_pow_of_min_fac_pow_factorization_eq {n : ℕ}
-  (h : n.min_fac ^ n.factorization n.min_fac = n) (hn : n ≠ 1) :
-  is_prime_pow n :=
-begin
-  rcases eq_or_ne n 0 with rfl | hn',
-  { simpa using h },
-  refine ⟨_, _, nat.prime_iff.1 (nat.min_fac_prime hn), _, h⟩,
-  rw [pos_iff_ne_zero, ←finsupp.mem_support_iff, nat.factor_iff_mem_factorization,
-    nat.mem_factors_iff_dvd hn' (nat.min_fac_prime hn)],
-  apply nat.min_fac_dvd
-end
+theorem is_prime_pow_of_min_fac_pow_factorization_eq {n : ℕ} (h : n.minFac ^ n.factorization n.minFac = n)
+    (hn : n ≠ 1) : IsPrimePow n := by
+  rcases eq_or_ne n 0 with (rfl | hn')
+  · simpa using h
+    
+  refine' ⟨_, _, Nat.prime_iff.1 (Nat.min_fac_prime hn), _, h⟩
+  rw [pos_iff_ne_zero, ← Finsupp.mem_support_iff, Nat.factor_iff_mem_factorization,
+    Nat.mem_factors_iff_dvd hn' (Nat.min_fac_prime hn)]
+  apply Nat.min_fac_dvd
 
-lemma is_prime_pow_iff_min_fac_pow_factorization_eq {n : ℕ} (hn : n ≠ 1) :
-  is_prime_pow n ↔ n.min_fac ^ n.factorization n.min_fac = n :=
-⟨λ h, h.min_fac_pow_factorization_eq, λ h, is_prime_pow_of_min_fac_pow_factorization_eq h hn⟩
+theorem is_prime_pow_iff_min_fac_pow_factorization_eq {n : ℕ} (hn : n ≠ 1) :
+    IsPrimePow n ↔ n.minFac ^ n.factorization n.minFac = n :=
+  ⟨fun h => h.min_fac_pow_factorization_eq, fun h => is_prime_pow_of_min_fac_pow_factorization_eq h hn⟩
 
-
-lemma is_prime_pow.dvd {n m : ℕ} (hn : is_prime_pow n) (hm : m ∣ n) (hm₁ : m ≠ 1) :
-  is_prime_pow m :=
-begin
-  rw is_prime_pow_nat_iff at hn ⊢,
-  rcases hn with ⟨p, k, hp, hk, rfl⟩,
-  obtain ⟨i, hik, rfl⟩ := (nat.dvd_prime_pow hp).1 hm,
-  refine ⟨p, i, hp, _, rfl⟩,
-  apply nat.pos_of_ne_zero,
-  rintro rfl,
-  simpa using hm₁,
-end
+theorem IsPrimePow.dvd {n m : ℕ} (hn : IsPrimePow n) (hm : m ∣ n) (hm₁ : m ≠ 1) : IsPrimePow m := by
+  rw [is_prime_pow_nat_iff] at hn⊢
+  rcases hn with ⟨p, k, hp, hk, rfl⟩
+  obtain ⟨i, hik, rfl⟩ := (Nat.dvd_prime_pow hp).1 hm
+  refine' ⟨p, i, hp, _, rfl⟩
+  apply Nat.pos_of_ne_zeroₓ
+  rintro rfl
+  simpa using hm₁
 
 /-- An equivalent definition for prime powers: `n` is a prime power iff there is a unique prime
 dividing it. -/
-lemma is_prime_pow_iff_unique_prime_dvd {n : ℕ} :
-  is_prime_pow n ↔ ∃! p : ℕ, p.prime ∧ p ∣ n :=
-begin
-  rw is_prime_pow_nat_iff,
-  split,
-  { rintro ⟨p, k, hp, hk, rfl⟩,
-    refine ⟨p, ⟨hp, dvd_pow_self _ hk.ne'⟩, _⟩,
-    rintro q ⟨hq, hq'⟩,
-    exact (nat.prime_dvd_prime_iff_eq hq hp).1 (hq.dvd_of_dvd_pow hq') },
-  rintro ⟨p, ⟨hp, hn⟩, hq⟩,
+theorem is_prime_pow_iff_unique_prime_dvd {n : ℕ} : IsPrimePow n ↔ ∃! p : ℕ, p.Prime ∧ p ∣ n := by
+  rw [is_prime_pow_nat_iff]
+  constructor
+  · rintro ⟨p, k, hp, hk, rfl⟩
+    refine' ⟨p, ⟨hp, dvd_pow_self _ hk.ne'⟩, _⟩
+    rintro q ⟨hq, hq'⟩
+    exact (Nat.prime_dvd_prime_iff_eq hq hp).1 (hq.dvd_of_dvd_pow hq')
+    
+  rintro ⟨p, ⟨hp, hn⟩, hq⟩
   -- Take care of the n = 0 case
-  rcases eq_or_ne n 0 with rfl | hn₀,
-  { obtain ⟨q, hq', hq''⟩ := nat.exists_infinite_primes (p + 1),
-    cases hq q ⟨hq'', by simp⟩,
-    simpa using hq' },
+  rcases eq_or_ne n 0 with (rfl | hn₀)
+  · obtain ⟨q, hq', hq''⟩ := Nat.exists_infinite_primes (p + 1)
+    cases
+      hq q
+        ⟨hq'', by
+          simp ⟩
+    simpa using hq'
+    
   -- So assume 0 < n
-  refine ⟨p, n.factorization p, hp, hp.factorization_pos_of_dvd hn₀ hn, _⟩,
-  simp only [and_imp] at hq,
-  apply nat.dvd_antisymm (nat.pow_factorization_dvd _ _),
+  refine' ⟨p, n.factorization p, hp, hp.factorization_pos_of_dvd hn₀ hn, _⟩
+  simp only [and_imp] at hq
+  apply Nat.dvd_antisymm (Nat.pow_factorization_dvd _ _)
   -- We need to show n ∣ p ^ n.factorization p
-  apply nat.dvd_of_factors_subperm hn₀,
-  rw [hp.factors_pow, list.subperm_ext_iff],
-  intros q hq',
-  rw nat.mem_factors hn₀ at hq',
-  cases hq _ hq'.1 hq'.2,
-  simp,
-end
+  apply Nat.dvd_of_factors_subperm hn₀
+  rw [hp.factors_pow, List.subperm_ext_iff]
+  intro q hq'
+  rw [Nat.mem_factors hn₀] at hq'
+  cases hq _ hq'.1 hq'.2
+  simp
 
-lemma is_prime_pow_pow_iff {n k : ℕ} (hk : k ≠ 0) :
-  is_prime_pow (n ^ k) ↔ is_prime_pow n :=
-begin
-  simp only [is_prime_pow_iff_unique_prime_dvd],
-  apply exists_unique_congr,
-  simp only [and.congr_right_iff],
-  intros p hp,
-  exact ⟨hp.dvd_of_dvd_pow, λ t, t.trans (dvd_pow_self _ hk)⟩,
-end
+theorem is_prime_pow_pow_iff {n k : ℕ} (hk : k ≠ 0) : IsPrimePow (n ^ k) ↔ IsPrimePow n := by
+  simp only [is_prime_pow_iff_unique_prime_dvd]
+  apply exists_unique_congr
+  simp only [And.congr_right_iff]
+  intro p hp
+  exact ⟨hp.dvd_of_dvd_pow, fun t => t.trans (dvd_pow_self _ hk)⟩
 
-lemma nat.coprime.is_prime_pow_dvd_mul {n a b : ℕ} (hab : nat.coprime a b) (hn : is_prime_pow n) :
-  n ∣ a * b ↔ n ∣ a ∨ n ∣ b :=
-begin
-  rcases eq_or_ne a 0 with rfl | ha,
-  { simp only [nat.coprime_zero_left] at hab,
-    simp [hab, finset.filter_singleton, not_is_prime_pow_one] },
-  rcases eq_or_ne b 0 with rfl | hb,
-  { simp only [nat.coprime_zero_right] at hab,
-    simp [hab, finset.filter_singleton, not_is_prime_pow_one] },
-  refine ⟨_, λ h, or.elim h (λ i, i.trans (dvd_mul_right _ _)) (λ i, i.trans (dvd_mul_left _ _))⟩,
-  obtain ⟨p, k, hp, hk, rfl⟩ := (is_prime_pow_nat_iff _).1 hn,
-  simp only [hp.pow_dvd_iff_le_factorization (mul_ne_zero ha hb),
-    nat.factorization_mul ha hb, hp.pow_dvd_iff_le_factorization ha,
-    hp.pow_dvd_iff_le_factorization hb, pi.add_apply, finsupp.coe_add],
-  have : a.factorization p = 0 ∨ b.factorization p = 0,
-  { rw [←finsupp.not_mem_support_iff, ←finsupp.not_mem_support_iff, ←not_and_distrib,
-      ←finset.mem_inter],
-    exact λ t, nat.factorization_disjoint_of_coprime hab t },
-  cases this;
-  simp [this, imp_or_distrib],
-end
+theorem Nat.Coprime.is_prime_pow_dvd_mul {n a b : ℕ} (hab : Nat.Coprime a b) (hn : IsPrimePow n) :
+    n ∣ a * b ↔ n ∣ a ∨ n ∣ b := by
+  rcases eq_or_ne a 0 with (rfl | ha)
+  · simp only [Nat.coprime_zero_leftₓ] at hab
+    simp [hab, Finset.filter_singleton, not_is_prime_pow_one]
+    
+  rcases eq_or_ne b 0 with (rfl | hb)
+  · simp only [Nat.coprime_zero_rightₓ] at hab
+    simp [hab, Finset.filter_singleton, not_is_prime_pow_one]
+    
+  refine' ⟨_, fun h => Or.elim h (fun i => i.trans (dvd_mul_right _ _)) fun i => i.trans (dvd_mul_left _ _)⟩
+  obtain ⟨p, k, hp, hk, rfl⟩ := (is_prime_pow_nat_iff _).1 hn
+  simp only [hp.pow_dvd_iff_le_factorization (mul_ne_zero ha hb), Nat.factorization_mul ha hb,
+    hp.pow_dvd_iff_le_factorization ha, hp.pow_dvd_iff_le_factorization hb, Pi.add_apply, Finsupp.coe_add]
+  have : a.factorization p = 0 ∨ b.factorization p = 0 := by
+    rw [← Finsupp.not_mem_support_iff, ← Finsupp.not_mem_support_iff, ← not_and_distrib, ← Finset.mem_inter]
+    exact fun t => Nat.factorization_disjoint_of_coprime hab t
+  cases this <;> simp [this, imp_or_distrib]
 
-lemma nat.disjoint_divisors_filter_prime_pow {a b : ℕ} (hab : a.coprime b) :
-  disjoint (a.divisors.filter is_prime_pow) (b.divisors.filter is_prime_pow) :=
-begin
-  simp only [finset.disjoint_left, finset.mem_filter, and_imp, nat.mem_divisors, not_and],
-  rintro n han ha hn hbn hb -,
-  exact hn.ne_one (nat.eq_one_of_dvd_coprimes hab han hbn),
-end
+theorem Nat.disjoint_divisors_filter_prime_pow {a b : ℕ} (hab : a.Coprime b) :
+    Disjoint (a.divisors.filter IsPrimePow) (b.divisors.filter IsPrimePow) := by
+  simp only [Finset.disjoint_left, Finset.mem_filter, and_imp, Nat.mem_divisors, not_and]
+  rintro n han ha hn hbn hb -
+  exact hn.ne_one (Nat.eq_one_of_dvd_coprimes hab han hbn)
 
-lemma nat.mul_divisors_filter_prime_pow {a b : ℕ} (hab : a.coprime b) :
-  (a * b).divisors.filter is_prime_pow = (a.divisors ∪ b.divisors).filter is_prime_pow :=
-begin
-  rcases eq_or_ne a 0 with rfl | ha,
-  { simp only [nat.coprime_zero_left] at hab,
-    simp [hab, finset.filter_singleton, not_is_prime_pow_one] },
-  rcases eq_or_ne b 0 with rfl | hb,
-  { simp only [nat.coprime_zero_right] at hab,
-    simp [hab, finset.filter_singleton, not_is_prime_pow_one] },
-  ext n,
-  simp only [ha, hb, finset.mem_union, finset.mem_filter, nat.mul_eq_zero, and_true, ne.def,
-    and.congr_left_iff, not_false_iff, nat.mem_divisors, or_self],
-  apply hab.is_prime_pow_dvd_mul,
-end
+theorem Nat.mul_divisors_filter_prime_pow {a b : ℕ} (hab : a.Coprime b) :
+    (a * b).divisors.filter IsPrimePow = (a.divisors ∪ b.divisors).filter IsPrimePow := by
+  rcases eq_or_ne a 0 with (rfl | ha)
+  · simp only [Nat.coprime_zero_leftₓ] at hab
+    simp [hab, Finset.filter_singleton, not_is_prime_pow_one]
+    
+  rcases eq_or_ne b 0 with (rfl | hb)
+  · simp only [Nat.coprime_zero_rightₓ] at hab
+    simp [hab, Finset.filter_singleton, not_is_prime_pow_one]
+    
+  ext n
+  simp only [ha, hb, Finset.mem_union, Finset.mem_filter, Nat.mul_eq_zero, and_trueₓ, Ne.def, And.congr_left_iff,
+    not_false_iff, Nat.mem_divisors, or_selfₓ]
+  apply hab.is_prime_pow_dvd_mul
 
-lemma is_prime_pow.two_le : ∀ {n : ℕ}, is_prime_pow n → 2 ≤ n
-| 0 h := (not_is_prime_pow_zero h).elim
-| 1 h := (not_is_prime_pow_one h).elim
-| (n+2) _ := le_add_self
+theorem IsPrimePow.two_le : ∀ {n : ℕ}, IsPrimePow n → 2 ≤ n
+  | 0, h => (not_is_prime_pow_zero h).elim
+  | 1, h => (not_is_prime_pow_one h).elim
+  | n + 2, _ => le_add_self
 
-theorem is_prime_pow.pos {n : ℕ} (hn : is_prime_pow n) : 0 < n := pos_of_gt hn.two_le
+theorem IsPrimePow.pos {n : ℕ} (hn : IsPrimePow n) : 0 < n :=
+  pos_of_gt hn.two_le
 
-theorem is_prime_pow.one_lt {n : ℕ} (h : is_prime_pow n) : 1 < n := h.two_le
+theorem IsPrimePow.one_lt {n : ℕ} (h : IsPrimePow n) : 1 < n :=
+  h.two_le
 
-end nat
+end Nat
+

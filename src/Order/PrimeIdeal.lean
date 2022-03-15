@@ -3,8 +3,8 @@ Copyright (c) 2021 Noam Atar. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Noam Atar
 -/
-import order.ideal
-import order.pfilter
+import Mathbin.Order.Ideal
+import Mathbin.Order.Pfilter
 
 /-!
 # Prime ideals
@@ -30,184 +30,182 @@ ideal, prime
 
 -/
 
-open order.pfilter
 
-namespace order
+open Order.Pfilter
 
-variables {P : Type*}
+namespace Order
 
-namespace ideal
+variable {P : Type _}
+
+namespace Ideal
 
 /-- A pair of an `ideal` and a `pfilter` which form a partition of `P`.
 -/
 @[nolint has_inhabited_instance]
-structure prime_pair (P : Type*) [preorder P] :=
-(I            : ideal P)
-(F            : pfilter P)
-(is_compl_I_F : is_compl (I : set P) F)
+structure PrimePair (P : Type _) [Preorderₓ P] where
+  i : Ideal P
+  f : Pfilter P
+  is_compl_I_F : IsCompl (I : Set P) F
 
-namespace prime_pair
+namespace PrimePair
 
-variables [preorder P] (IF : prime_pair P)
+variable [Preorderₓ P] (IF : PrimePair P)
 
-lemma compl_I_eq_F : (IF.I : set P)ᶜ = IF.F := IF.is_compl_I_F.compl_eq
-lemma compl_F_eq_I : (IF.F : set P)ᶜ = IF.I := IF.is_compl_I_F.eq_compl.symm
+theorem compl_I_eq_F : (IF.i : Set P)ᶜ = IF.f :=
+  IF.is_compl_I_F.compl_eq
 
-lemma I_is_proper : is_proper IF.I :=
-begin
-  cases IF.F.nonempty,
-  apply is_proper_of_not_mem (_ : w ∉ IF.I),
-  rwa ← IF.compl_I_eq_F at h,
-end
+theorem compl_F_eq_I : (IF.f : Set P)ᶜ = IF.i :=
+  IF.is_compl_I_F.eq_compl.symm
 
-lemma disjoint : disjoint (IF.I : set P) IF.F := IF.is_compl_I_F.disjoint
+theorem I_is_proper : IsProper IF.i := by
+  cases IF.F.nonempty
+  apply is_proper_of_not_mem (_ : w ∉ IF.I)
+  rwa [← IF.compl_I_eq_F] at h
 
-lemma I_union_F : (IF.I : set P) ∪ IF.F = set.univ := IF.is_compl_I_F.sup_eq_top
-lemma F_union_I : (IF.F : set P) ∪ IF.I = set.univ := IF.is_compl_I_F.symm.sup_eq_top
+theorem disjoint : Disjoint (IF.i : Set P) IF.f :=
+  IF.is_compl_I_F.Disjoint
 
-end prime_pair
+theorem I_union_F : (IF.i : Set P) ∪ IF.f = Set.Univ :=
+  IF.is_compl_I_F.sup_eq_top
+
+theorem F_union_I : (IF.f : Set P) ∪ IF.i = Set.Univ :=
+  IF.is_compl_I_F.symm.sup_eq_top
+
+end PrimePair
 
 /-- An ideal `I` is prime if its complement is a filter.
 -/
-@[mk_iff] class is_prime [preorder P] (I : ideal P) extends is_proper I : Prop :=
-(compl_filter : is_pfilter (I : set P)ᶜ)
+@[mk_iff]
+class IsPrime [Preorderₓ P] (I : Ideal P) extends IsProper I : Prop where
+  compl_filter : IsPfilter ((I : Set P)ᶜ)
 
-section preorder
+section Preorderₓ
 
-variable [preorder P]
+variable [Preorderₓ P]
 
 /-- Create an element of type `order.ideal.prime_pair` from an ideal satisfying the predicate
 `order.ideal.is_prime`. -/
-def is_prime.to_prime_pair {I : ideal P} (h : is_prime I) : prime_pair P :=
-{ I            := I,
-  F            := h.compl_filter.to_pfilter,
-  is_compl_I_F := is_compl_compl }
+def IsPrime.toPrimePair {I : Ideal P} (h : IsPrime I) : PrimePair P :=
+  { i, f := h.compl_filter.toPfilter, is_compl_I_F := is_compl_compl }
 
-lemma prime_pair.I_is_prime (IF : prime_pair P) : is_prime IF.I :=
-{ compl_filter := by { rw IF.compl_I_eq_F, exact IF.F.is_pfilter },
-  ..IF.I_is_proper }
+theorem PrimePair.I_is_prime (IF : PrimePair P) : IsPrime IF.i :=
+  { IF.I_is_proper with
+    compl_filter := by
+      rw [IF.compl_I_eq_F]
+      exact IF.F.is_pfilter }
 
-end preorder
+end Preorderₓ
 
-section semilattice_inf
+section SemilatticeInf
 
-variables [semilattice_inf P] {x y : P} {I : ideal P}
+variable [SemilatticeInf P] {x y : P} {I : Ideal P}
 
-lemma is_prime.mem_or_mem (hI : is_prime I) {x y : P} : x ⊓ y ∈ I → x ∈ I ∨ y ∈ I :=
-begin
-  contrapose!,
-  let F := hI.compl_filter.to_pfilter,
-  show x ∈ F ∧ y ∈ F → x ⊓ y ∈ F,
-  exact λ h, inf_mem _ h.1 _ h.2,
-end
+theorem IsPrime.mem_or_mem (hI : IsPrime I) {x y : P} : x⊓y ∈ I → x ∈ I ∨ y ∈ I := by
+  contrapose!
+  let F := hI.compl_filter.to_pfilter
+  show x ∈ F ∧ y ∈ F → x⊓y ∈ F
+  exact fun h => inf_mem _ h.1 _ h.2
 
-lemma is_prime.of_mem_or_mem [is_proper I] (hI : ∀ {x y : P}, x ⊓ y ∈ I → x ∈ I ∨ y ∈ I) :
-  is_prime I :=
-begin
-  rw is_prime_iff,
-  use ‹_›,
-  apply is_pfilter.of_def,
-  { exact set.nonempty_compl.2 (I.is_proper_iff.1 ‹_›) },
-  { intros x _ y _,
-    refine ⟨x ⊓ y, _, inf_le_left, inf_le_right⟩,
-    have := mt hI,
-    tauto! },
-  { exact @mem_compl_of_ge _ _ _ }
-end
+theorem IsPrime.of_mem_or_mem [IsProper I] (hI : ∀ {x y : P}, x⊓y ∈ I → x ∈ I ∨ y ∈ I) : IsPrime I := by
+  rw [is_prime_iff]
+  use ‹_›
+  apply is_pfilter.of_def
+  · exact Set.nonempty_compl.2 (I.is_proper_iff.1 ‹_›)
+    
+  · intro x _ y _
+    refine' ⟨x⊓y, _, inf_le_left, inf_le_right⟩
+    have := mt hI
+    tauto!
+    
+  · exact @mem_compl_of_ge _ _ _
+    
 
-lemma is_prime_iff_mem_or_mem [is_proper I] : is_prime I ↔ ∀ {x y : P}, x ⊓ y ∈ I → x ∈ I ∨ y ∈ I :=
-⟨is_prime.mem_or_mem, is_prime.of_mem_or_mem⟩
+theorem is_prime_iff_mem_or_mem [IsProper I] : IsPrime I ↔ ∀ {x y : P}, x⊓y ∈ I → x ∈ I ∨ y ∈ I :=
+  ⟨IsPrime.mem_or_mem, IsPrime.of_mem_or_mem⟩
 
-end semilattice_inf
+end SemilatticeInf
 
-section distrib_lattice
+section DistribLattice
 
-variables [distrib_lattice P] {I : ideal P}
+variable [DistribLattice P] {I : Ideal P}
 
-@[priority 100]
-instance is_maximal.is_prime [is_maximal I] : is_prime I :=
-begin
-  rw is_prime_iff_mem_or_mem,
-  intros x y,
-  contrapose!,
-  rintro ⟨hx, hynI⟩ hxy,
-  apply hynI,
-  let J := I ⊔ principal x,
-  have hJuniv : (J : set P) = set.univ :=
-    is_maximal.maximal_proper (lt_sup_principal_of_not_mem ‹_›),
-  have hyJ : y ∈ ↑J := set.eq_univ_iff_forall.mp hJuniv y,
-  rw coe_sup_eq at hyJ,
-  rcases hyJ with ⟨a, ha, b, hb, hy⟩,
-  rw hy,
-  apply sup_mem _ ha _,
-  refine I.mem_of_le (le_inf hb _) hxy,
-  rw hy,
+instance (priority := 100) IsMaximal.is_prime [IsMaximal I] : IsPrime I := by
+  rw [is_prime_iff_mem_or_mem]
+  intro x y
+  contrapose!
+  rintro ⟨hx, hynI⟩ hxy
+  apply hynI
+  let J := I⊔principal x
+  have hJuniv : (J : Set P) = Set.Univ := is_maximal.maximal_proper (lt_sup_principal_of_not_mem ‹_›)
+  have hyJ : y ∈ ↑J := set.eq_univ_iff_forall.mp hJuniv y
+  rw [coe_sup_eq] at hyJ
+  rcases hyJ with ⟨a, ha, b, hb, hy⟩
+  rw [hy]
+  apply sup_mem _ ha _
+  refine' I.mem_of_le (le_inf hb _) hxy
+  rw [hy]
   exact le_sup_right
-end
 
-end distrib_lattice
+end DistribLattice
 
-section boolean_algebra
+section BooleanAlgebra
 
-variables [boolean_algebra P] {x : P} {I : ideal P}
+variable [BooleanAlgebra P] {x : P} {I : Ideal P}
 
-lemma is_prime.mem_or_compl_mem (hI : is_prime I) : x ∈ I ∨ xᶜ ∈ I :=
-begin
-  apply hI.mem_or_mem,
-  rw inf_compl_eq_bot,
-  exact bot_mem,
-end
+theorem IsPrime.mem_or_compl_mem (hI : IsPrime I) : x ∈ I ∨ xᶜ ∈ I := by
+  apply hI.mem_or_mem
+  rw [inf_compl_eq_bot]
+  exact bot_mem
 
-lemma is_prime.mem_compl_of_not_mem (hI : is_prime I) (hxnI : x ∉ I) : xᶜ ∈ I :=
-hI.mem_or_compl_mem.resolve_left hxnI
+theorem IsPrime.mem_compl_of_not_mem (hI : IsPrime I) (hxnI : x ∉ I) : xᶜ ∈ I :=
+  hI.mem_or_compl_mem.resolve_left hxnI
 
-lemma is_prime_of_mem_or_compl_mem [is_proper I] (h : ∀ {x : P}, x ∈ I ∨ xᶜ ∈ I) : is_prime I :=
-begin
-  simp only [is_prime_iff_mem_or_mem, or_iff_not_imp_left],
-  intros x y hxy hxI,
-  have hxcI : xᶜ ∈ I := h.resolve_left hxI,
-  have ass : (x ⊓ y) ⊔ (y ⊓ xᶜ) ∈ I := sup_mem _ hxy _ (mem_of_le I inf_le_right hxcI),
+theorem is_prime_of_mem_or_compl_mem [IsProper I] (h : ∀ {x : P}, x ∈ I ∨ xᶜ ∈ I) : IsPrime I := by
+  simp only [is_prime_iff_mem_or_mem, or_iff_not_imp_left]
+  intro x y hxy hxI
+  have hxcI : xᶜ ∈ I := h.resolve_left hxI
+  have ass : x⊓y⊔y⊓xᶜ ∈ I := sup_mem _ hxy _ (mem_of_le I inf_le_right hxcI)
   rwa [inf_comm, sup_inf_inf_compl] at ass
-end
 
-lemma is_prime_iff_mem_or_compl_mem [is_proper I] : is_prime I ↔ ∀ {x : P}, x ∈ I ∨ xᶜ ∈ I :=
-⟨λ h _, h.mem_or_compl_mem, is_prime_of_mem_or_compl_mem⟩
+theorem is_prime_iff_mem_or_compl_mem [IsProper I] : IsPrime I ↔ ∀ {x : P}, x ∈ I ∨ xᶜ ∈ I :=
+  ⟨fun h _ => h.mem_or_compl_mem, is_prime_of_mem_or_compl_mem⟩
 
-@[priority 100]
-instance is_prime.is_maximal [is_prime I] : is_maximal I :=
-begin
-  simp only [is_maximal_iff, set.eq_univ_iff_forall, is_prime.to_is_proper, true_and],
-  intros J hIJ x,
-  rcases set.exists_of_ssubset hIJ with ⟨y, hyJ, hyI⟩,
-  suffices ass : (x ⊓ y) ⊔ (x ⊓ yᶜ) ∈ J,
-  { rwa sup_inf_inf_compl at ass },
-  exact sup_mem _ (J.mem_of_le inf_le_right hyJ) _
-    (hIJ.le $ I.mem_of_le inf_le_right $ is_prime.mem_compl_of_not_mem ‹_› hyI),
-end
+instance (priority := 100) IsPrime.is_maximal [IsPrime I] : IsMaximal I := by
+  simp only [is_maximal_iff, Set.eq_univ_iff_forall, is_prime.to_is_proper, true_andₓ]
+  intro J hIJ x
+  rcases Set.exists_of_ssubset hIJ with ⟨y, hyJ, hyI⟩
+  suffices ass : x⊓y⊔x⊓yᶜ ∈ J
+  · rwa [sup_inf_inf_compl] at ass
+    
+  exact
+    sup_mem _ (J.mem_of_le inf_le_right hyJ) _
+      (hIJ.le <| I.mem_of_le inf_le_right <| is_prime.mem_compl_of_not_mem ‹_› hyI)
 
-end boolean_algebra
+end BooleanAlgebra
 
-end ideal
+end Ideal
 
-namespace pfilter
+namespace Pfilter
 
-variable [preorder P]
+variable [Preorderₓ P]
 
 /-- A filter `F` is prime if its complement is an ideal.
 -/
-@[mk_iff] class is_prime (F : pfilter P) : Prop :=
-(compl_ideal : is_ideal (F : set P)ᶜ)
+@[mk_iff]
+class IsPrime (F : Pfilter P) : Prop where
+  compl_ideal : IsIdeal ((F : Set P)ᶜ)
 
 /-- Create an element of type `order.ideal.prime_pair` from a filter satisfying the predicate
 `order.pfilter.is_prime`. -/
-def is_prime.to_prime_pair {F : pfilter P} (h : is_prime F) : ideal.prime_pair P :=
-{ I            := h.compl_ideal.to_ideal,
-  F            := F,
-  is_compl_I_F := is_compl_compl.symm }
+def IsPrime.toPrimePair {F : Pfilter P} (h : IsPrime F) : Ideal.PrimePair P :=
+  { i := h.compl_ideal.toIdeal, f, is_compl_I_F := is_compl_compl.symm }
 
-lemma _root_.order.ideal.prime_pair.F_is_prime (IF : ideal.prime_pair P) : is_prime IF.F :=
-{ compl_ideal := by { rw IF.compl_F_eq_I, exact IF.I.is_ideal } }
+theorem _root_.order.ideal.prime_pair.F_is_prime (IF : Ideal.PrimePair P) : IsPrime IF.f :=
+  { compl_ideal := by
+      rw [IF.compl_F_eq_I]
+      exact IF.I.is_ideal }
 
-end pfilter
+end Pfilter
 
-end order
+end Order
+

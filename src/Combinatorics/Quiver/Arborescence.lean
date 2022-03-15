@@ -3,10 +3,10 @@ Copyright (c) 2021 David Wärn. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: David Wärn
 -/
-import order.well_founded
-import data.nat.basic
-import combinatorics.quiver.subquiver
-import combinatorics.quiver.path
+import Mathbin.Order.WellFounded
+import Mathbin.Data.Nat.Basic
+import Mathbin.Combinatorics.Quiver.Subquiver
+import Mathbin.Combinatorics.Quiver.Path
 
 /-!
 # Arborescences
@@ -27,92 +27,110 @@ subtree is an arborescence. This proves the directed analogue of 'every connecte
 spanning tree'. This proof avoids the use of Zorn's lemma.
 -/
 
-open opposite
-universes v u
 
-namespace quiver
+open Opposite
+
+universe v u
+
+namespace Quiver
 
 /-- A quiver is an arborescence when there is a unique path from the default vertex
     to every other vertex. -/
-class arborescence (V : Type u) [quiver.{v} V] : Type (max u v) :=
-(root : V)
-(unique_path : Π (b : V), unique (path root b))
+class Arborescence (V : Type u) [Quiver.{v} V] : Type max u v where
+  root : V
+  uniquePath : ∀ b : V, Unique (Path root b)
 
 /-- The root of an arborescence. -/
-def root (V : Type u) [quiver V] [arborescence V] : V :=
-arborescence.root
+def root (V : Type u) [Quiver V] [Arborescence V] : V :=
+  arborescence.root
 
-instance {V : Type u} [quiver V] [arborescence V] (b : V) : unique (path (root V) b) :=
-arborescence.unique_path b
+instance {V : Type u} [Quiver V] [Arborescence V] (b : V) : Unique (Path (root V) b) :=
+  Arborescence.uniquePath b
 
 /-- To show that `[quiver V]` is an arborescence with root `r : V`, it suffices to
   - provide a height function `V → ℕ` such that every arrow goes from a
     lower vertex to a higher vertex,
   - show that every vertex has at most one arrow to it, and
   - show that every vertex other than `r` has an arrow to it. -/
-noncomputable def arborescence_mk {V : Type u} [quiver V] (r : V)
-  (height : V → ℕ)
-  (height_lt : ∀ ⦃a b⦄, (a ⟶ b) → height a < height b)
-  (unique_arrow : ∀ ⦃a b c : V⦄ (e : a ⟶ c) (f : b ⟶ c), a = b ∧ e == f)
-  (root_or_arrow : ∀ b, b = r ∨ ∃ a, nonempty (a ⟶ b)) : arborescence V :=
-{ root := r,
-  unique_path := λ b, ⟨classical.inhabited_of_nonempty
-    begin
-      rcases (show ∃ n, height b < n, from ⟨_, lt_add_one _⟩) with ⟨n, hn⟩,
-      induction n with n ih generalizing b,
-      { exact false.elim (nat.not_lt_zero _ hn) },
-      rcases root_or_arrow b with ⟨⟨⟩⟩ | ⟨a, ⟨e⟩⟩,
-      { exact ⟨path.nil⟩ },
-      { rcases ih a (lt_of_lt_of_le (height_lt e) (nat.lt_succ_iff.mp hn)) with ⟨p⟩,
-        exact ⟨p.cons e⟩ }
-    end,
-    begin
-      have height_le : ∀ {a b}, path a b → height a ≤ height b,
-      { intros a b p, induction p with b c p e ih, refl,
-        exact le_of_lt (lt_of_le_of_lt ih (height_lt e)) },
-      suffices : ∀ p q : path r b, p = q,
-      { intro p, apply this },
-      intros p q, induction p with a c p e ih; cases q with b _ q f,
-      { refl },
-      { exact false.elim (lt_irrefl _ (lt_of_le_of_lt (height_le q) (height_lt f))) },
-      { exact false.elim (lt_irrefl _ (lt_of_le_of_lt (height_le p) (height_lt e))) },
-      { rcases unique_arrow e f with ⟨⟨⟩, ⟨⟩⟩, rw ih },
-    end ⟩ }
+noncomputable def arborescenceMk {V : Type u} [Quiver V] (r : V) (height : V → ℕ)
+    (height_lt : ∀ ⦃a b⦄, (a ⟶ b) → height a < height b)
+    (unique_arrow : ∀ ⦃a b c : V⦄ e : a ⟶ c f : b ⟶ c, a = b ∧ HEq e f)
+    (root_or_arrow : ∀ b, b = r ∨ ∃ a, Nonempty (a ⟶ b)) : Arborescence V where
+  root := r
+  uniquePath := fun b =>
+    ⟨Classical.inhabitedOfNonempty
+        (by
+          rcases show ∃ n, height b < n from ⟨_, lt_add_one _⟩ with ⟨n, hn⟩
+          induction' n with n ih generalizing b
+          · exact False.elim (Nat.not_lt_zeroₓ _ hn)
+            
+          rcases root_or_arrow b with (⟨⟨⟩⟩ | ⟨a, ⟨e⟩⟩)
+          · exact ⟨path.nil⟩
+            
+          · rcases ih a (lt_of_lt_of_leₓ (height_lt e) (nat.lt_succ_iff.mp hn)) with ⟨p⟩
+            exact ⟨p.cons e⟩
+            ),
+      by
+      have height_le : ∀ {a b}, path a b → height a ≤ height b := by
+        intro a b p
+        induction' p with b c p e ih
+        rfl
+        exact le_of_ltₓ (lt_of_le_of_ltₓ ih (height_lt e))
+      suffices ∀ p q : path r b, p = q by
+        intro p
+        apply this
+      intro p q
+      induction' p with a c p e ih <;> cases' q with b _ q f
+      · rfl
+        
+      · exact False.elim (lt_irreflₓ _ (lt_of_le_of_ltₓ (height_le q) (height_lt f)))
+        
+      · exact False.elim (lt_irreflₓ _ (lt_of_le_of_ltₓ (height_le p) (height_lt e)))
+        
+      · rcases unique_arrow e f with ⟨⟨⟩, ⟨⟩⟩
+        rw [ih]
+        ⟩
 
 /-- `rooted_connected r` means that there is a path from `r` to any other vertex. -/
-class rooted_connected {V : Type u} [quiver V] (r : V) : Prop :=
-(nonempty_path : ∀ b : V, nonempty (path r b))
+class RootedConnected {V : Type u} [Quiver V] (r : V) : Prop where
+  nonempty_path : ∀ b : V, Nonempty (Path r b)
 
 attribute [instance] rooted_connected.nonempty_path
 
-section geodesic_subtree
+section GeodesicSubtree
 
-variables {V : Type u} [quiver.{v+1} V] (r : V) [rooted_connected r]
+variable {V : Type u} [Quiver.{v + 1} V] (r : V) [RootedConnected r]
 
 /-- A path from `r` of minimal length. -/
-noncomputable def shortest_path (b : V) : path r b :=
-well_founded.min (measure_wf path.length) set.univ set.univ_nonempty
+noncomputable def shortestPath (b : V) : Path r b :=
+  WellFounded.min (measure_wf Path.length) Set.Univ Set.univ_nonempty
 
 /-- The length of a path is at least the length of the shortest path -/
-lemma shortest_path_spec {a : V} (p : path r a) :
-  (shortest_path r a).length ≤ p.length :=
-not_lt.mp (well_founded.not_lt_min (measure_wf _) set.univ _ trivial)
+theorem shortest_path_spec {a : V} (p : Path r a) : (shortestPath r a).length ≤ p.length :=
+  not_ltₓ.mp (WellFounded.not_lt_min (measure_wf _) Set.Univ _ trivialₓ)
 
 /-- A subquiver which by construction is an arborescence. -/
-def geodesic_subtree : wide_subquiver V :=
-λ a b, { e | ∃ p : path r a, shortest_path r b = p.cons e }
+def GeodesicSubtree : WideSubquiver V := fun a b => { e | ∃ p : Path r a, shortestPath r b = p.cons e }
 
-noncomputable instance geodesic_arborescence : arborescence (geodesic_subtree r) :=
-arborescence_mk r (λ a, (shortest_path r a).length)
-(by { rintros a b ⟨e, p, h⟩, rw [h, path.length_cons, nat.lt_succ_iff], apply shortest_path_spec })
-(by { rintros a b c ⟨e, p, h⟩ ⟨f, q, j⟩, cases h.symm.trans j, split; refl })
-begin
-  intro b,
-  rcases hp : shortest_path r b with (_ | ⟨a, _, p, e⟩),
-  { exact or.inl rfl },
-  { exact or.inr ⟨a, ⟨⟨e, p, hp⟩⟩⟩ }
-end
+noncomputable instance geodesicArborescence : Arborescence (GeodesicSubtree r) :=
+  arborescenceMk r (fun a => (shortestPath r a).length)
+    (by
+      rintro a b ⟨e, p, h⟩
+      rw [h, path.length_cons, Nat.lt_succ_iffₓ]
+      apply shortest_path_spec)
+    (by
+      rintro a b c ⟨e, p, h⟩ ⟨f, q, j⟩
+      cases h.symm.trans j
+      constructor <;> rfl)
+    (by
+      intro b
+      rcases hp : shortest_path r b with (_ | ⟨a, _, p, e⟩)
+      · exact Or.inl rfl
+        
+      · exact Or.inr ⟨a, ⟨⟨e, p, hp⟩⟩⟩
+        )
 
-end geodesic_subtree
+end GeodesicSubtree
 
-end quiver
+end Quiver
+

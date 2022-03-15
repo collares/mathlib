@@ -3,9 +3,9 @@ Copyright (c) 2018 Chris Hughes. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chris Hughes
 -/
-import data.equiv.mul_add
-import tactic.norm_num
-import data.part
+import Mathbin.Data.Equiv.MulAdd
+import Mathbin.Tactic.NormNum
+import Mathbin.Data.Part
 
 /-!
 # Natural numbers with infinity
@@ -45,486 +45,600 @@ followed by `@[simp] lemma to_with_top_zero'` whose proof uses `convert`.
 
 enat, with_top ℕ
 -/
-open part (hiding some)
+
+
+open Part hiding some
 
 /-- Type of natural numbers with infinity (`⊤`) -/
-def enat : Type := part ℕ
+def Enat : Type :=
+  Part ℕ
 
-namespace enat
+namespace Enat
 
 /-- The computable embedding `ℕ → enat`.
 
 This coincides with the coercion `coe : ℕ → enat`, see `enat.some_eq_coe`.
 However, `coe` is noncomputable so `some` is preferable when computability is a concern. -/
-def some : ℕ → enat := part.some
+def some : ℕ → Enat :=
+  Part.some
 
-instance : has_zero enat := ⟨some 0⟩
-instance : inhabited enat := ⟨0⟩
-instance : has_one enat := ⟨some 1⟩
-instance : has_add enat := ⟨λ x y, ⟨x.dom ∧ y.dom, λ h, get x h.1 + get y h.2⟩⟩
+instance : Zero Enat :=
+  ⟨some 0⟩
 
-instance (n : ℕ) : decidable (some n).dom := is_true trivial
+instance : Inhabited Enat :=
+  ⟨0⟩
 
-lemma some_eq_coe (n : ℕ) : some n = n :=
-begin
-  induction n with n ih, { refl },
-  apply part.ext',
-  { show true ↔ ((n : enat).dom ∧ true), rw [← ih, and_true], exact iff.rfl },
-  { intros h H, show n.succ = (n : enat).get H.1 + 1,
-    rw [nat.cast_succ] at H, revert H, simp only [← ih], intro, refl },
-end
+instance : One Enat :=
+  ⟨some 1⟩
 
-@[simp] lemma coe_inj {x y : ℕ} : (x : enat) = y ↔ x = y :=
-by simpa only [← some_eq_coe] using part.some_inj
+instance : Add Enat :=
+  ⟨fun x y => ⟨x.Dom ∧ y.Dom, fun h => get x h.1 + get y h.2⟩⟩
 
-@[simp] lemma dom_some (x : ℕ) : (some x).dom := trivial
+instance (n : ℕ) : Decidable (some n).Dom :=
+  isTrue trivialₓ
 
-@[simp] lemma dom_coe (x : ℕ) : (x : enat).dom := by rw [← some_eq_coe]; trivial
+theorem some_eq_coe (n : ℕ) : some n = n := by
+  induction' n with n ih
+  · rfl
+    
+  apply Part.ext'
+  · show True ↔ (n : Enat).Dom ∧ True
+    rw [← ih, and_trueₓ]
+    exact Iff.rfl
+    
+  · intro h H
+    show n.succ = (n : Enat).get H.1 + 1
+    rw [Nat.cast_succₓ] at H
+    revert H
+    simp only [← ih]
+    intro
+    rfl
+    
 
-instance : add_comm_monoid enat :=
-{ add       := (+),
-  zero      := (0),
-  add_comm  := λ x y, part.ext' and.comm (λ _ _, add_comm _ _),
-  zero_add  := λ x, part.ext' (true_and _) (λ _ _, zero_add _),
-  add_zero  := λ x, part.ext' (and_true _) (λ _ _, add_zero _),
-  add_assoc := λ x y z, part.ext' and.assoc (λ _ _, add_assoc _ _ _) }
+@[simp]
+theorem coe_inj {x y : ℕ} : (x : Enat) = y ↔ x = y := by
+  simpa only [← some_eq_coe] using Part.some_inj
 
-instance : has_le enat := ⟨λ x y, ∃ h : y.dom → x.dom, ∀ hy : y.dom, x.get (h hy) ≤ y.get hy⟩
-instance : has_top enat := ⟨none⟩
-instance : has_bot enat := ⟨0⟩
-instance : has_sup enat := ⟨λ x y, ⟨x.dom ∧ y.dom, λ h, x.get h.1 ⊔ y.get h.2⟩⟩
+@[simp]
+theorem dom_some (x : ℕ) : (some x).Dom :=
+  trivialₓ
 
-lemma le_def (x y : enat) : x ≤ y ↔ ∃ h : y.dom → x.dom, ∀ hy : y.dom, x.get (h hy) ≤ y.get hy :=
-iff.rfl
+@[simp]
+theorem dom_coe (x : ℕ) : (x : Enat).Dom := by
+  rw [← some_eq_coe] <;> trivial
 
-@[elab_as_eliminator] protected lemma cases_on' {P : enat → Prop} :
-  ∀ a : enat, P ⊤ → (∀ n : ℕ, P (some n)) → P a :=
-part.induction_on
+instance : AddCommMonoidₓ Enat where
+  add := (· + ·)
+  zero := 0
+  add_comm := fun x y => Part.ext' And.comm fun _ _ => add_commₓ _ _
+  zero_add := fun x => Part.ext' (true_andₓ _) fun _ _ => zero_addₓ _
+  add_zero := fun x => Part.ext' (and_trueₓ _) fun _ _ => add_zeroₓ _
+  add_assoc := fun x y z => Part.ext' And.assoc fun _ _ => add_assocₓ _ _ _
 
-@[elab_as_eliminator] protected lemma cases_on {P : enat → Prop} :
-  ∀ a : enat, P ⊤ → (∀ n : ℕ, P n) → P a :=
-by { simp only [← some_eq_coe], exact enat.cases_on' }
+instance : LE Enat :=
+  ⟨fun x y => ∃ h : y.Dom → x.Dom, ∀ hy : y.Dom, x.get (h hy) ≤ y.get hy⟩
 
-@[simp] lemma top_add (x : enat) : ⊤ + x = ⊤ :=
-part.ext' (false_and _) (λ h, h.left.elim)
+instance : HasTop Enat :=
+  ⟨none⟩
 
-@[simp] lemma add_top (x : enat) : x + ⊤ = ⊤ :=
-by rw [add_comm, top_add]
+instance : HasBot Enat :=
+  ⟨0⟩
 
-@[simp] lemma coe_get {x : enat} (h : x.dom) : (x.get h : enat) = x :=
-by { rw [← some_eq_coe], exact part.ext' (iff_of_true trivial h) (λ _ _, rfl) }
+instance : HasSup Enat :=
+  ⟨fun x y => ⟨x.Dom ∧ y.Dom, fun h => x.get h.1⊔y.get h.2⟩⟩
 
-@[simp, norm_cast] lemma get_coe' (x : ℕ) (h : (x : enat).dom) : get (x : enat) h = x :=
-by rw [← coe_inj, coe_get]
+theorem le_def (x y : Enat) : x ≤ y ↔ ∃ h : y.Dom → x.Dom, ∀ hy : y.Dom, x.get (h hy) ≤ y.get hy :=
+  Iff.rfl
 
-lemma get_coe {x : ℕ} : get (x : enat) (dom_coe x) = x := get_coe' _ _
+@[elab_as_eliminator]
+protected theorem cases_on' {P : Enat → Prop} : ∀ a : Enat, P ⊤ → (∀ n : ℕ, P (some n)) → P a :=
+  Part.induction_on
 
-lemma coe_add_get {x : ℕ} {y : enat} (h : ((x : enat) + y).dom) :
-  get ((x : enat) + y) h = x + get y h.2 :=
-by { simp only [← some_eq_coe] at h ⊢, refl }
+@[elab_as_eliminator]
+protected theorem cases_on {P : Enat → Prop} : ∀ a : Enat, P ⊤ → (∀ n : ℕ, P n) → P a := by
+  simp only [← some_eq_coe]
+  exact Enat.cases_on'
 
-@[simp] lemma get_add {x y : enat} (h : (x + y).dom) :
-  get (x + y) h = x.get h.1 + y.get h.2 := rfl
+@[simp]
+theorem top_add (x : Enat) : ⊤ + x = ⊤ :=
+  Part.ext' (false_andₓ _) fun h => h.left.elim
 
-@[simp] lemma get_zero (h : (0 : enat).dom) : (0 : enat).get h = 0 := rfl
+@[simp]
+theorem add_top (x : Enat) : x + ⊤ = ⊤ := by
+  rw [add_commₓ, top_add]
 
-@[simp] lemma get_one (h : (1 : enat).dom) : (1 : enat).get h = 1 := rfl
+@[simp]
+theorem coe_get {x : Enat} (h : x.Dom) : (x.get h : Enat) = x := by
+  rw [← some_eq_coe]
+  exact Part.ext' (iff_of_true trivialₓ h) fun _ _ => rfl
 
-lemma get_eq_iff_eq_some {a : enat} {ha : a.dom} {b : ℕ} :
-  a.get ha = b ↔ a = some b := get_eq_iff_eq_some
+@[simp, norm_cast]
+theorem get_coe' (x : ℕ) (h : (x : Enat).Dom) : get (x : Enat) h = x := by
+  rw [← coe_inj, coe_get]
 
-lemma get_eq_iff_eq_coe {a : enat} {ha : a.dom} {b : ℕ} :
-  a.get ha = b ↔ a = b := by rw [get_eq_iff_eq_some, some_eq_coe]
+theorem get_coe {x : ℕ} : get (x : Enat) (dom_coe x) = x :=
+  get_coe' _ _
 
-lemma dom_of_le_of_dom {x y : enat} : x ≤ y → y.dom → x.dom := λ ⟨h, _⟩, h
+theorem coe_add_get {x : ℕ} {y : Enat} (h : ((x : Enat) + y).Dom) : get ((x : Enat) + y) h = x + get y h.2 := by
+  simp only [← some_eq_coe] at h⊢
+  rfl
 
-lemma dom_of_le_some {x : enat} {y : ℕ} (h : x ≤ some y) : x.dom := dom_of_le_of_dom h trivial
+@[simp]
+theorem get_add {x y : Enat} (h : (x + y).Dom) : get (x + y) h = x.get h.1 + y.get h.2 :=
+  rfl
 
-lemma dom_of_le_coe {x : enat} {y : ℕ} (h : x ≤ y) : x.dom :=
-by { rw [← some_eq_coe] at h, exact dom_of_le_some h }
+@[simp]
+theorem get_zero (h : (0 : Enat).Dom) : (0 : Enat).get h = 0 :=
+  rfl
 
-instance decidable_le (x y : enat) [decidable x.dom] [decidable y.dom] : decidable (x ≤ y) :=
-if hx : x.dom
-then decidable_of_decidable_of_iff
-  (show decidable (∀ (hy : (y : enat).dom), x.get hx ≤ (y : enat).get hy),
-    from forall_prop_decidable _) $
-  by { dsimp [(≤)], simp only [hx, exists_prop_of_true, forall_true_iff] }
-else if hy : y.dom
-then is_false $ λ h, hx $ dom_of_le_of_dom h hy
-else is_true ⟨λ h, (hy h).elim, λ h, (hy h).elim⟩
+@[simp]
+theorem get_one (h : (1 : Enat).Dom) : (1 : Enat).get h = 1 :=
+  rfl
+
+theorem get_eq_iff_eq_some {a : Enat} {ha : a.Dom} {b : ℕ} : a.get ha = b ↔ a = some b :=
+  get_eq_iff_eq_some
+
+theorem get_eq_iff_eq_coe {a : Enat} {ha : a.Dom} {b : ℕ} : a.get ha = b ↔ a = b := by
+  rw [get_eq_iff_eq_some, some_eq_coe]
+
+theorem dom_of_le_of_dom {x y : Enat} : x ≤ y → y.Dom → x.Dom := fun ⟨h, _⟩ => h
+
+theorem dom_of_le_some {x : Enat} {y : ℕ} (h : x ≤ some y) : x.Dom :=
+  dom_of_le_of_dom h trivialₓ
+
+theorem dom_of_le_coe {x : Enat} {y : ℕ} (h : x ≤ y) : x.Dom := by
+  rw [← some_eq_coe] at h
+  exact dom_of_le_some h
+
+instance decidableLe (x y : Enat) [Decidable x.Dom] [Decidable y.Dom] : Decidable (x ≤ y) :=
+  if hx : x.Dom then
+    decidableOfDecidableOfIff
+        (show Decidable (∀ hy : (y : Enat).Dom, x.get hx ≤ (y : Enat).get hy) from forallPropDecidable _) <|
+      by
+      dsimp [(· ≤ ·)]
+      simp only [hx, exists_prop_of_true, forall_true_iff]
+  else
+    if hy : y.Dom then is_false fun h => hx <| dom_of_le_of_dom h hy
+    else isTrue ⟨fun h => (hy h).elim, fun h => (hy h).elim⟩
 
 /-- The coercion `ℕ → enat` preserves `0` and addition. -/
-def coe_hom : ℕ →+ enat := ⟨coe, nat.cast_zero, nat.cast_add⟩
+def coeHom : ℕ →+ Enat :=
+  ⟨coe, Nat.cast_zeroₓ, Nat.cast_addₓ⟩
 
-@[simp] lemma coe_coe_hom : ⇑coe_hom = coe := rfl
+@[simp]
+theorem coe_coe_hom : ⇑coe_hom = coe :=
+  rfl
 
-instance : partial_order enat :=
-{ le          := (≤),
-  le_refl     := λ x, ⟨id, λ _, le_rfl⟩,
-  le_trans    := λ x y z ⟨hxy₁, hxy₂⟩ ⟨hyz₁, hyz₂⟩,
-    ⟨hxy₁ ∘ hyz₁, λ _, le_trans (hxy₂ _) (hyz₂ _)⟩,
-  le_antisymm := λ x y ⟨hxy₁, hxy₂⟩ ⟨hyx₁, hyx₂⟩, part.ext' ⟨hyx₁, hxy₁⟩
-    (λ _ _, le_antisymm (hxy₂ _) (hyx₂ _)) }
+instance : PartialOrderₓ Enat where
+  le := (· ≤ ·)
+  le_refl := fun x => ⟨id, fun _ => le_rfl⟩
+  le_trans := fun x y z ⟨hxy₁, hxy₂⟩ ⟨hyz₁, hyz₂⟩ => ⟨hxy₁ ∘ hyz₁, fun _ => le_transₓ (hxy₂ _) (hyz₂ _)⟩
+  le_antisymm := fun x y ⟨hxy₁, hxy₂⟩ ⟨hyx₁, hyx₂⟩ => Part.ext' ⟨hyx₁, hxy₁⟩ fun _ _ => le_antisymmₓ (hxy₂ _) (hyx₂ _)
 
-lemma lt_def (x y : enat) : x < y ↔ ∃ (hx : x.dom), ∀ (hy : y.dom), x.get hx < y.get hy :=
-begin
-  rw [lt_iff_le_not_le, le_def, le_def, not_exists],
-  split,
-  { rintro ⟨⟨hyx, H⟩, h⟩,
-    by_cases hx : x.dom,
-    { use hx, intro hy,
-      specialize H hy, specialize h (λ _, hy),
-      rw not_forall at h, cases h with hx' h,
-      rw not_le at h, exact h },
-    { specialize h (λ hx', (hx hx').elim),
-      rw not_forall at h, cases h with hx' h,
-      exact (hx hx').elim } },
-  { rintro ⟨hx, H⟩, exact ⟨⟨λ _, hx, λ hy, (H hy).le⟩, λ hxy h, not_lt_of_le (h _) (H _)⟩ }
-end
+theorem lt_def (x y : Enat) : x < y ↔ ∃ hx : x.Dom, ∀ hy : y.Dom, x.get hx < y.get hy := by
+  rw [lt_iff_le_not_leₓ, le_def, le_def, not_exists]
+  constructor
+  · rintro ⟨⟨hyx, H⟩, h⟩
+    by_cases' hx : x.dom
+    · use hx
+      intro hy
+      specialize H hy
+      specialize h fun _ => hy
+      rw [not_forall] at h
+      cases' h with hx' h
+      rw [not_leₓ] at h
+      exact h
+      
+    · specialize h fun hx' => (hx hx').elim
+      rw [not_forall] at h
+      cases' h with hx' h
+      exact (hx hx').elim
+      
+    
+  · rintro ⟨hx, H⟩
+    exact ⟨⟨fun _ => hx, fun hy => (H hy).le⟩, fun hxy h => not_lt_of_le (h _) (H _)⟩
+    
 
-@[simp, norm_cast] lemma coe_le_coe {x y : ℕ} : (x : enat) ≤ y ↔ x ≤ y :=
-by { rw [← some_eq_coe, ← some_eq_coe], exact ⟨λ ⟨_, h⟩, h trivial, λ h, ⟨λ _, trivial, λ _, h⟩⟩ }
+@[simp, norm_cast]
+theorem coe_le_coe {x y : ℕ} : (x : Enat) ≤ y ↔ x ≤ y := by
+  rw [← some_eq_coe, ← some_eq_coe]
+  exact ⟨fun ⟨_, h⟩ => h trivialₓ, fun h => ⟨fun _ => trivialₓ, fun _ => h⟩⟩
 
-@[simp, norm_cast] lemma coe_lt_coe {x y : ℕ} : (x : enat) < y ↔ x < y :=
-by rw [lt_iff_le_not_le, lt_iff_le_not_le, coe_le_coe, coe_le_coe]
+@[simp, norm_cast]
+theorem coe_lt_coe {x y : ℕ} : (x : Enat) < y ↔ x < y := by
+  rw [lt_iff_le_not_leₓ, lt_iff_le_not_leₓ, coe_le_coe, coe_le_coe]
 
-@[simp] lemma get_le_get {x y : enat} {hx : x.dom} {hy : y.dom} :
-  x.get hx ≤ y.get hy ↔ x ≤ y :=
-by conv { to_lhs, rw [← coe_le_coe, coe_get, coe_get]}
+@[simp]
+theorem get_le_get {x y : Enat} {hx : x.Dom} {hy : y.Dom} : x.get hx ≤ y.get hy ↔ x ≤ y := by
+  conv => lhs rw [← coe_le_coe, coe_get, coe_get]
 
-lemma le_coe_iff (x : enat) (n : ℕ) : x ≤ n ↔ ∃ h : x.dom, x.get h ≤ n :=
-begin
-  rw [← some_eq_coe],
-  show (∃ (h : true → x.dom), _) ↔ ∃ h : x.dom, x.get h ≤ n,
+theorem le_coe_iff (x : Enat) (n : ℕ) : x ≤ n ↔ ∃ h : x.Dom, x.get h ≤ n := by
+  rw [← some_eq_coe]
+  show (∃ h : True → x.dom, _) ↔ ∃ h : x.dom, x.get h ≤ n
   simp only [forall_prop_of_true, some_eq_coe, dom_coe, get_coe']
-end
 
-lemma lt_coe_iff (x : enat) (n : ℕ) : x < n ↔ ∃ h : x.dom, x.get h < n :=
-by simp only [lt_def, forall_prop_of_true, get_coe', dom_coe]
+theorem lt_coe_iff (x : Enat) (n : ℕ) : x < n ↔ ∃ h : x.Dom, x.get h < n := by
+  simp only [lt_def, forall_prop_of_true, get_coe', dom_coe]
 
-lemma coe_le_iff (n : ℕ) (x : enat) : (n : enat) ≤ x ↔ ∀ h : x.dom, n ≤ x.get h :=
-begin
-  rw [← some_eq_coe],
-  simp only [le_def, exists_prop_of_true, dom_some, forall_true_iff],
-  refl,
-end
+theorem coe_le_iff (n : ℕ) (x : Enat) : (n : Enat) ≤ x ↔ ∀ h : x.Dom, n ≤ x.get h := by
+  rw [← some_eq_coe]
+  simp only [le_def, exists_prop_of_true, dom_some, forall_true_iff]
+  rfl
 
-lemma coe_lt_iff (n : ℕ) (x : enat) : (n : enat) < x ↔ ∀ h : x.dom, n < x.get h :=
-begin
-  rw [← some_eq_coe],
-  simp only [lt_def, exists_prop_of_true, dom_some, forall_true_iff],
-  refl,
-end
+theorem coe_lt_iff (n : ℕ) (x : Enat) : (n : Enat) < x ↔ ∀ h : x.Dom, n < x.get h := by
+  rw [← some_eq_coe]
+  simp only [lt_def, exists_prop_of_true, dom_some, forall_true_iff]
+  rfl
 
-protected lemma zero_lt_one : (0 : enat) < 1 :=
-by { norm_cast, norm_num }
+protected theorem zero_lt_one : (0 : Enat) < 1 := by
+  norm_cast
+  norm_num
 
-instance semilattice_sup : semilattice_sup enat :=
-{ sup := (⊔),
-  le_sup_left := λ _ _, ⟨and.left, λ _, le_sup_left⟩,
-  le_sup_right := λ _ _, ⟨and.right, λ _, le_sup_right⟩,
-  sup_le := λ x y z ⟨hx₁, hx₂⟩ ⟨hy₁, hy₂⟩, ⟨λ hz, ⟨hx₁ hz, hy₁ hz⟩,
-    λ _, sup_le (hx₂ _) (hy₂ _)⟩,
-  ..enat.partial_order }
+instance semilatticeSup : SemilatticeSup Enat :=
+  { Enat.partialOrder with sup := (·⊔·), le_sup_left := fun _ _ => ⟨And.left, fun _ => le_sup_left⟩,
+    le_sup_right := fun _ _ => ⟨And.right, fun _ => le_sup_right⟩,
+    sup_le := fun x y z ⟨hx₁, hx₂⟩ ⟨hy₁, hy₂⟩ => ⟨fun hz => ⟨hx₁ hz, hy₁ hz⟩, fun _ => sup_le (hx₂ _) (hy₂ _)⟩ }
 
-instance order_bot : order_bot enat :=
-{ bot := (⊥),
-  bot_le := λ _, ⟨λ _, trivial, λ _, nat.zero_le _⟩ }
+instance orderBot : OrderBot Enat where
+  bot := ⊥
+  bot_le := fun _ => ⟨fun _ => trivialₓ, fun _ => Nat.zero_leₓ _⟩
 
-instance order_top : order_top enat :=
-{ top := (⊤),
-  le_top := λ x, ⟨λ h, false.elim h, λ hy, false.elim hy⟩ }
+instance orderTop : OrderTop Enat where
+  top := ⊤
+  le_top := fun x => ⟨fun h => False.elim h, fun hy => False.elim hy⟩
 
-lemma dom_of_lt {x y : enat} : x < y → x.dom :=
-enat.cases_on x not_top_lt $ λ _ _, dom_coe _
+theorem dom_of_lt {x y : Enat} : x < y → x.Dom :=
+  (Enat.cases_on x not_top_lt) fun _ _ => dom_coe _
 
-lemma top_eq_none : (⊤ : enat) = none := rfl
+theorem top_eq_none : (⊤ : Enat) = none :=
+  rfl
 
-@[simp] lemma coe_lt_top (x : ℕ) : (x : enat) < ⊤ :=
-ne.lt_top (λ h, absurd (congr_arg dom h) $ by simpa only [dom_coe] using true_ne_false)
+@[simp]
+theorem coe_lt_top (x : ℕ) : (x : Enat) < ⊤ :=
+  Ne.lt_top fun h =>
+    absurd (congr_argₓ Dom h) <| by
+      simpa only [dom_coe] using true_ne_false
 
-@[simp] lemma coe_ne_top (x : ℕ) : (x : enat) ≠ ⊤ := ne_of_lt (coe_lt_top x)
+@[simp]
+theorem coe_ne_top (x : ℕ) : (x : Enat) ≠ ⊤ :=
+  ne_of_ltₓ (coe_lt_top x)
 
-lemma ne_top_iff {x : enat} : x ≠ ⊤ ↔ ∃ (n : ℕ), x = n :=
-by simpa only [← some_eq_coe] using part.ne_none_iff
+theorem ne_top_iff {x : Enat} : x ≠ ⊤ ↔ ∃ n : ℕ, x = n := by
+  simpa only [← some_eq_coe] using Part.ne_none_iff
 
-lemma ne_top_iff_dom {x : enat} : x ≠ ⊤ ↔ x.dom :=
-by classical; exact not_iff_comm.1 part.eq_none_iff'.symm
+theorem ne_top_iff_dom {x : Enat} : x ≠ ⊤ ↔ x.Dom := by
+  classical <;> exact not_iff_comm.1 part.eq_none_iff'.symm
 
-lemma ne_top_of_lt {x y : enat} (h : x < y) : x ≠ ⊤ :=
-ne_of_lt $ lt_of_lt_of_le h le_top
+theorem ne_top_of_lt {x y : Enat} (h : x < y) : x ≠ ⊤ :=
+  ne_of_ltₓ <| lt_of_lt_of_leₓ h le_top
 
-lemma eq_top_iff_forall_lt (x : enat) : x = ⊤ ↔ ∀ n : ℕ, (n : enat) < x :=
-begin
-  split,
-  { rintro rfl n, exact coe_lt_top _ },
-  { contrapose!, rw ne_top_iff, rintro ⟨n, rfl⟩, exact ⟨n, irrefl _⟩ }
-end
+theorem eq_top_iff_forall_lt (x : Enat) : x = ⊤ ↔ ∀ n : ℕ, (n : Enat) < x := by
+  constructor
+  · rintro rfl n
+    exact coe_lt_top _
+    
+  · contrapose!
+    rw [ne_top_iff]
+    rintro ⟨n, rfl⟩
+    exact ⟨n, irrefl _⟩
+    
 
-lemma eq_top_iff_forall_le (x : enat) : x = ⊤ ↔ ∀ n : ℕ, (n : enat) ≤ x :=
-(eq_top_iff_forall_lt x).trans
-⟨λ h n, (h n).le, λ h n, lt_of_lt_of_le (coe_lt_coe.mpr n.lt_succ_self) (h (n + 1))⟩
+theorem eq_top_iff_forall_le (x : Enat) : x = ⊤ ↔ ∀ n : ℕ, (n : Enat) ≤ x :=
+  (eq_top_iff_forall_lt x).trans
+    ⟨fun h n => (h n).le, fun h n => lt_of_lt_of_leₓ (coe_lt_coe.mpr n.lt_succ_self) (h (n + 1))⟩
 
-lemma pos_iff_one_le {x : enat} : 0 < x ↔ 1 ≤ x :=
-enat.cases_on x (by simp only [iff_true, le_top, coe_lt_top, ← @nat.cast_zero enat]) $
-  λ n, by { rw [← nat.cast_zero, ← nat.cast_one, enat.coe_lt_coe, enat.coe_le_coe], refl }
+theorem pos_iff_one_le {x : Enat} : 0 < x ↔ 1 ≤ x :=
+  (Enat.cases_on x
+      (by
+        simp only [iff_trueₓ, le_top, coe_lt_top, ← @Nat.cast_zeroₓ Enat]))
+    fun n => by
+    rw [← Nat.cast_zeroₓ, ← Nat.cast_oneₓ, Enat.coe_lt_coe, Enat.coe_le_coe]
+    rfl
 
-instance : is_total enat (≤) :=
-{ total := λ x y, enat.cases_on x
-    (or.inr le_top) (enat.cases_on y (λ _, or.inl le_top)
-      (λ x y, (le_total x y).elim (or.inr ∘ coe_le_coe.2)
-        (or.inl ∘ coe_le_coe.2))) }
+instance : IsTotal Enat (· ≤ ·) where
+  Total := fun x y =>
+    Enat.cases_on x (Or.inr le_top)
+      (Enat.cases_on y (fun _ => Or.inl le_top) fun x y =>
+        (le_totalₓ x y).elim (Or.inr ∘ coe_le_coe.2) (Or.inl ∘ coe_le_coe.2))
 
-noncomputable instance : linear_order enat :=
-{ le_total := is_total.total,
-  decidable_le := classical.dec_rel _,
-  max := (⊔),
-  max_def := @sup_eq_max_default _ _ (id _) _,
-  ..enat.partial_order }
+noncomputable instance : LinearOrderₓ Enat :=
+  { Enat.partialOrder with le_total := IsTotal.total, decidableLe := Classical.decRel _, max := (·⊔·),
+    max_def := @sup_eq_max_default _ _ (id _) _ }
 
-instance : bounded_order enat :=
-{ ..enat.order_top,
-  ..enat.order_bot }
+instance : BoundedOrder Enat :=
+  { Enat.orderTop, Enat.orderBot with }
 
-noncomputable instance : lattice enat :=
-{ inf := min,
-  inf_le_left := min_le_left,
-  inf_le_right := min_le_right,
-  le_inf := λ _ _ _, le_min,
-  ..enat.semilattice_sup }
+noncomputable instance : Lattice Enat :=
+  { Enat.semilatticeSup with inf := min, inf_le_left := min_le_leftₓ, inf_le_right := min_le_rightₓ,
+    le_inf := fun _ _ _ => le_minₓ }
 
-instance : ordered_add_comm_monoid enat :=
-{ add_le_add_left := λ a b ⟨h₁, h₂⟩ c,
-    enat.cases_on c (by simp)
-      (λ c, ⟨λ h, and.intro (dom_coe _) (h₁ h.2),
-        λ h, by simpa only [coe_add_get] using add_le_add_left (h₂ _) c⟩),
-  ..enat.linear_order,
-  ..enat.add_comm_monoid }
+instance : OrderedAddCommMonoid Enat :=
+  { Enat.linearOrder, Enat.addCommMonoid with
+    add_le_add_left := fun c =>
+      Enat.cases_on c
+        (by
+          simp )
+        fun c =>
+        ⟨fun h => And.intro (dom_coe _) (h₁ h.2), fun h => by
+          simpa only [coe_add_get] using add_le_add_left (h₂ _) c⟩ }
 
-instance : canonically_ordered_add_monoid enat :=
-{ le_iff_exists_add := λ a b, enat.cases_on b
-    (iff_of_true le_top ⟨⊤, (add_top _).symm⟩)
-    (λ b, enat.cases_on a
-      (iff_of_false (not_le_of_gt (coe_lt_top _))
-        (not_exists.2 (λ x, ne_of_lt (by rw [top_add]; exact coe_lt_top _))))
-      (λ a, ⟨λ h, ⟨(b - a : ℕ),
-          by rw [← nat.cast_add, coe_inj, add_comm, tsub_add_cancel_of_le (coe_le_coe.1 h)]⟩,
-        (λ ⟨c, hc⟩, enat.cases_on c
-          (λ hc, hc.symm ▸ show (a : enat) ≤ a + ⊤, by rw [add_top]; exact le_top)
-          (λ c (hc : (b : enat) = a + c),
-            coe_le_coe.2 (by rw [← nat.cast_add, coe_inj] at hc;
-              rw hc; exact nat.le_add_right _ _)) hc)⟩)),
-  ..enat.semilattice_sup,
-  ..enat.order_bot,
-  ..enat.ordered_add_comm_monoid }
+instance : CanonicallyOrderedAddMonoid Enat :=
+  { Enat.semilatticeSup, Enat.orderBot, Enat.orderedAddCommMonoid with
+    le_iff_exists_add := fun a b =>
+      Enat.cases_on b (iff_of_true le_top ⟨⊤, (add_top _).symm⟩) fun b =>
+        Enat.cases_on a
+          (iff_of_false (not_le_of_gtₓ (coe_lt_top _))
+            (not_exists.2 fun x =>
+              ne_of_ltₓ
+                (by
+                  rw [top_add] <;> exact coe_lt_top _)))
+          fun a =>
+          ⟨fun h =>
+            ⟨(b - a : ℕ), by
+              rw [← Nat.cast_addₓ, coe_inj, add_commₓ, tsub_add_cancel_of_le (coe_le_coe.1 h)]⟩,
+            fun ⟨c, hc⟩ =>
+            Enat.cases_on c
+              (fun hc =>
+                hc.symm ▸
+                  show (a : Enat) ≤ a + ⊤ by
+                    rw [add_top] <;> exact le_top)
+              (fun hc : (b : Enat) = a + c =>
+                coe_le_coe.2
+                  (by
+                    rw [← Nat.cast_addₓ, coe_inj] at hc <;> rw [hc] <;> exact Nat.le_add_rightₓ _ _))
+              hc⟩ }
 
-protected lemma add_lt_add_right {x y z : enat} (h : x < y) (hz : z ≠ ⊤) : x + z < y + z :=
-begin
-  rcases ne_top_iff.mp (ne_top_of_lt h) with ⟨m, rfl⟩,
-  rcases ne_top_iff.mp hz with ⟨k, rfl⟩,
-  induction y using enat.cases_on with n,
-  { rw [top_add], apply_mod_cast coe_lt_top },
-  norm_cast at h, apply_mod_cast add_lt_add_right h
-end
+protected theorem add_lt_add_right {x y z : Enat} (h : x < y) (hz : z ≠ ⊤) : x + z < y + z := by
+  rcases ne_top_iff.mp (ne_top_of_lt h) with ⟨m, rfl⟩
+  rcases ne_top_iff.mp hz with ⟨k, rfl⟩
+  induction' y using Enat.cases_on with n
+  · rw [top_add]
+    apply_mod_cast coe_lt_top
+    
+  norm_cast  at h
+  apply_mod_cast add_lt_add_right h
 
-protected lemma add_lt_add_iff_right {x y z : enat} (hz : z ≠ ⊤) : x + z < y + z ↔ x < y :=
-⟨lt_of_add_lt_add_right, λ h, enat.add_lt_add_right h hz⟩
+protected theorem add_lt_add_iff_right {x y z : Enat} (hz : z ≠ ⊤) : x + z < y + z ↔ x < y :=
+  ⟨lt_of_add_lt_add_right, fun h => Enat.add_lt_add_right h hz⟩
 
-protected lemma add_lt_add_iff_left {x y z : enat} (hz : z ≠ ⊤) : z + x < z + y ↔ x < y :=
-by rw [add_comm z, add_comm z, enat.add_lt_add_iff_right hz]
+protected theorem add_lt_add_iff_left {x y z : Enat} (hz : z ≠ ⊤) : z + x < z + y ↔ x < y := by
+  rw [add_commₓ z, add_commₓ z, Enat.add_lt_add_iff_right hz]
 
-protected lemma lt_add_iff_pos_right {x y : enat} (hx : x ≠ ⊤) : x < x + y ↔ 0 < y :=
-by { conv_rhs { rw [← enat.add_lt_add_iff_left hx] }, rw [add_zero] }
+protected theorem lt_add_iff_pos_right {x y : Enat} (hx : x ≠ ⊤) : x < x + y ↔ 0 < y := by
+  conv_rhs => rw [← Enat.add_lt_add_iff_left hx]
+  rw [add_zeroₓ]
 
-lemma lt_add_one {x : enat} (hx : x ≠ ⊤) : x < x + 1 :=
-by { rw [enat.lt_add_iff_pos_right hx], norm_cast, norm_num }
+theorem lt_add_one {x : Enat} (hx : x ≠ ⊤) : x < x + 1 := by
+  rw [Enat.lt_add_iff_pos_right hx]
+  norm_cast
+  norm_num
 
-lemma le_of_lt_add_one {x y : enat} (h : x < y + 1) : x ≤ y :=
-begin
-  induction y using enat.cases_on with n, apply le_top,
-  rcases ne_top_iff.mp (ne_top_of_lt h) with ⟨m, rfl⟩,
-  apply_mod_cast nat.le_of_lt_succ, apply_mod_cast h
-end
+theorem le_of_lt_add_one {x y : Enat} (h : x < y + 1) : x ≤ y := by
+  induction' y using Enat.cases_on with n
+  apply le_top
+  rcases ne_top_iff.mp (ne_top_of_lt h) with ⟨m, rfl⟩
+  apply_mod_cast Nat.le_of_lt_succₓ
+  apply_mod_cast h
 
-lemma add_one_le_of_lt {x y : enat} (h : x < y) : x + 1 ≤ y :=
-begin
-  induction y using enat.cases_on with n, apply le_top,
-  rcases ne_top_iff.mp (ne_top_of_lt h) with ⟨m, rfl⟩,
-  apply_mod_cast nat.succ_le_of_lt, apply_mod_cast h
-end
+theorem add_one_le_of_lt {x y : Enat} (h : x < y) : x + 1 ≤ y := by
+  induction' y using Enat.cases_on with n
+  apply le_top
+  rcases ne_top_iff.mp (ne_top_of_lt h) with ⟨m, rfl⟩
+  apply_mod_cast Nat.succ_le_of_ltₓ
+  apply_mod_cast h
 
-lemma add_one_le_iff_lt {x y : enat} (hx : x ≠ ⊤) : x + 1 ≤ y ↔ x < y :=
-begin
-  split, swap, exact add_one_le_of_lt,
-  intro h, rcases ne_top_iff.mp hx with ⟨m, rfl⟩,
-  induction y using enat.cases_on with n, apply coe_lt_top,
-  apply_mod_cast nat.lt_of_succ_le, apply_mod_cast h
-end
+theorem add_one_le_iff_lt {x y : Enat} (hx : x ≠ ⊤) : x + 1 ≤ y ↔ x < y := by
+  constructor
+  swap
+  exact add_one_le_of_lt
+  intro h
+  rcases ne_top_iff.mp hx with ⟨m, rfl⟩
+  induction' y using Enat.cases_on with n
+  apply coe_lt_top
+  apply_mod_cast Nat.lt_of_succ_leₓ
+  apply_mod_cast h
 
-lemma lt_add_one_iff_lt {x y : enat} (hx : x ≠ ⊤) : x < y + 1 ↔ x ≤ y :=
-begin
-  split, exact le_of_lt_add_one,
-  intro h, rcases ne_top_iff.mp hx with ⟨m, rfl⟩,
-  induction y using enat.cases_on with n, { rw [top_add], apply coe_lt_top },
-  apply_mod_cast nat.lt_succ_of_le, apply_mod_cast h
-end
+theorem lt_add_one_iff_lt {x y : Enat} (hx : x ≠ ⊤) : x < y + 1 ↔ x ≤ y := by
+  constructor
+  exact le_of_lt_add_one
+  intro h
+  rcases ne_top_iff.mp hx with ⟨m, rfl⟩
+  induction' y using Enat.cases_on with n
+  · rw [top_add]
+    apply coe_lt_top
+    
+  apply_mod_cast Nat.lt_succ_of_leₓ
+  apply_mod_cast h
 
-lemma add_eq_top_iff {a b : enat} : a + b = ⊤ ↔ a = ⊤ ∨ b = ⊤ :=
-by apply enat.cases_on a; apply enat.cases_on b;
-  simp; simp only [(nat.cast_add _ _).symm, enat.coe_ne_top]; simp
+theorem add_eq_top_iff {a b : Enat} : a + b = ⊤ ↔ a = ⊤ ∨ b = ⊤ := by
+  apply Enat.cases_on a <;>
+    apply Enat.cases_on b <;> simp <;> simp only [(Nat.cast_addₓ _ _).symm, Enat.coe_ne_top] <;> simp
 
-protected lemma add_right_cancel_iff {a b c : enat} (hc : c ≠ ⊤) : a + c = b + c ↔ a = b :=
-begin
-  rcases ne_top_iff.1 hc with ⟨c, rfl⟩,
-  apply enat.cases_on a; apply enat.cases_on b;
-  simp [add_eq_top_iff, coe_ne_top, @eq_comm _ (⊤ : enat)];
-  simp only [(nat.cast_add _ _).symm, add_left_cancel_iff, enat.coe_inj, add_comm];
-  tauto
-end
+protected theorem add_right_cancel_iff {a b c : Enat} (hc : c ≠ ⊤) : a + c = b + c ↔ a = b := by
+  rcases ne_top_iff.1 hc with ⟨c, rfl⟩
+  apply Enat.cases_on a <;>
+    apply Enat.cases_on b <;>
+      simp [add_eq_top_iff, coe_ne_top, @eq_comm _ (⊤ : Enat)] <;>
+        simp only [(Nat.cast_addₓ _ _).symm, add_left_cancel_iffₓ, Enat.coe_inj, add_commₓ] <;> tauto
 
-protected lemma add_left_cancel_iff {a b c : enat} (ha : a ≠ ⊤) : a + b = a + c ↔ b = c :=
-by rw [add_comm a, add_comm a, enat.add_right_cancel_iff ha]
+protected theorem add_left_cancel_iff {a b c : Enat} (ha : a ≠ ⊤) : a + b = a + c ↔ b = c := by
+  rw [add_commₓ a, add_commₓ a, Enat.add_right_cancel_iff ha]
 
-section with_top
+section WithTop
 
 /-- Computably converts an `enat` to a `with_top ℕ`. -/
-def to_with_top (x : enat) [decidable x.dom] : with_top ℕ := x.to_option
+def toWithTop (x : Enat) [Decidable x.Dom] : WithTop ℕ :=
+  x.toOption
 
-lemma to_with_top_top : to_with_top ⊤ = ⊤ := rfl
+theorem to_with_top_top : toWithTop ⊤ = ⊤ :=
+  rfl
 
-@[simp] lemma to_with_top_top' {h : decidable (⊤ : enat).dom} : to_with_top ⊤ = ⊤ :=
-by convert to_with_top_top
+@[simp]
+theorem to_with_top_top' {h : Decidable (⊤ : Enat).Dom} : toWithTop ⊤ = ⊤ := by
+  convert to_with_top_top
 
-lemma to_with_top_zero : to_with_top 0 = 0 := rfl
+theorem to_with_top_zero : toWithTop 0 = 0 :=
+  rfl
 
-@[simp] lemma to_with_top_zero' {h : decidable (0 : enat).dom} : to_with_top 0 = 0 :=
-by convert to_with_top_zero
+@[simp]
+theorem to_with_top_zero' {h : Decidable (0 : Enat).Dom} : toWithTop 0 = 0 := by
+  convert to_with_top_zero
 
-lemma to_with_top_some (n : ℕ) : to_with_top (some n) = n := rfl
+theorem to_with_top_some (n : ℕ) : toWithTop (some n) = n :=
+  rfl
 
-lemma to_with_top_coe (n : ℕ) {_ : decidable (n : enat).dom} : to_with_top n = n :=
-by simp only [← some_eq_coe, ← to_with_top_some]
+theorem to_with_top_coe (n : ℕ) {_ : Decidable (n : Enat).Dom} : toWithTop n = n := by
+  simp only [← some_eq_coe, ← to_with_top_some]
 
-@[simp] lemma to_with_top_coe' (n : ℕ) {h : decidable (n : enat).dom} :
-  to_with_top (n : enat) = n :=
-by convert to_with_top_coe n
+@[simp]
+theorem to_with_top_coe' (n : ℕ) {h : Decidable (n : Enat).Dom} : toWithTop (n : Enat) = n := by
+  convert to_with_top_coe n
 
-@[simp] lemma to_with_top_le {x y : enat} : Π [decidable x.dom]
-  [decidable y.dom], by exactI to_with_top x ≤ to_with_top y ↔ x ≤ y :=
-enat.cases_on y (by simp) (enat.cases_on x (by simp) (by intros; simp))
+@[simp]
+theorem to_with_top_le {x y : Enat} : ∀ [Decidable x.Dom] [Decidable y.Dom], to_with_top x ≤ to_with_top y ↔ x ≤ y :=
+  Enat.cases_on y
+    (by
+      simp )
+    (Enat.cases_on x
+      (by
+        simp )
+      (by
+        intros <;> simp ))
 
-@[simp] lemma to_with_top_lt {x y : enat} [decidable x.dom] [decidable y.dom] :
-  to_with_top x < to_with_top y ↔ x < y :=
-lt_iff_lt_of_le_iff_le to_with_top_le
+@[simp]
+theorem to_with_top_lt {x y : Enat} [Decidable x.Dom] [Decidable y.Dom] : toWithTop x < toWithTop y ↔ x < y :=
+  lt_iff_lt_of_le_iff_le to_with_top_le
 
-end with_top
+end WithTop
 
-section with_top_equiv
+section WithTopEquiv
 
-open_locale classical
+open_locale Classical
 
-@[simp] lemma to_with_top_add {x y : enat} : to_with_top (x + y) = to_with_top x + to_with_top y :=
-by apply enat.cases_on y; apply enat.cases_on x; simp [← nat.cast_add, ← with_top.coe_add]
+@[simp]
+theorem to_with_top_add {x y : Enat} : toWithTop (x + y) = toWithTop x + toWithTop y := by
+  apply Enat.cases_on y <;> apply Enat.cases_on x <;> simp [← Nat.cast_addₓ, ← WithTop.coe_add]
 
 /-- `equiv` between `enat` and `with_top ℕ` (for the order isomorphism see `with_top_order_iso`). -/
-noncomputable def with_top_equiv : enat ≃ with_top ℕ :=
-{ to_fun := λ x, to_with_top x,
-  inv_fun := λ x, match x with (option.some n) := coe n | none := ⊤ end,
-  left_inv := λ x, by apply enat.cases_on x; intros; simp; refl,
-  right_inv := λ x, by cases x; simp [with_top_equiv._match_1]; refl }
+noncomputable def withTopEquiv : Enat ≃ WithTop ℕ where
+  toFun := fun x => toWithTop x
+  invFun := fun x =>
+    match x with
+    | Option.some n => coe n
+    | none => ⊤
+  left_inv := fun x => by
+    apply Enat.cases_on x <;> intros <;> simp <;> rfl
+  right_inv := fun x => by
+    cases x <;> simp [with_top_equiv._match_1] <;> rfl
 
-@[simp] lemma with_top_equiv_top : with_top_equiv ⊤ = ⊤ :=
-to_with_top_top'
+@[simp]
+theorem with_top_equiv_top : withTopEquiv ⊤ = ⊤ :=
+  to_with_top_top'
 
-@[simp] lemma with_top_equiv_coe (n : nat) : with_top_equiv n = n :=
-to_with_top_coe' _
+@[simp]
+theorem with_top_equiv_coe (n : Nat) : withTopEquiv n = n :=
+  to_with_top_coe' _
 
-@[simp] lemma with_top_equiv_zero : with_top_equiv 0 = 0 :=
-by simpa only [nat.cast_zero] using with_top_equiv_coe 0
+@[simp]
+theorem with_top_equiv_zero : withTopEquiv 0 = 0 := by
+  simpa only [Nat.cast_zeroₓ] using with_top_equiv_coe 0
 
-@[simp] lemma with_top_equiv_le {x y : enat} : with_top_equiv x ≤ with_top_equiv y ↔ x ≤ y :=
-to_with_top_le
+@[simp]
+theorem with_top_equiv_le {x y : Enat} : withTopEquiv x ≤ withTopEquiv y ↔ x ≤ y :=
+  to_with_top_le
 
-@[simp] lemma with_top_equiv_lt {x y : enat} : with_top_equiv x < with_top_equiv y ↔ x < y :=
-to_with_top_lt
+@[simp]
+theorem with_top_equiv_lt {x y : Enat} : withTopEquiv x < withTopEquiv y ↔ x < y :=
+  to_with_top_lt
 
 /-- `to_with_top` induces an order isomorphism between `enat` and `with_top ℕ`. -/
-noncomputable def with_top_order_iso : enat ≃o with_top ℕ :=
-{ map_rel_iff' := λ _ _, with_top_equiv_le,
-  .. with_top_equiv}
+noncomputable def withTopOrderIso : Enat ≃o WithTop ℕ :=
+  { withTopEquiv with map_rel_iff' := fun _ _ => with_top_equiv_le }
 
-@[simp] lemma with_top_equiv_symm_top : with_top_equiv.symm ⊤ = ⊤ :=
-rfl
+@[simp]
+theorem with_top_equiv_symm_top : withTopEquiv.symm ⊤ = ⊤ :=
+  rfl
 
-@[simp] lemma with_top_equiv_symm_coe (n : nat) : with_top_equiv.symm n = n :=
-rfl
+@[simp]
+theorem with_top_equiv_symm_coe (n : Nat) : withTopEquiv.symm n = n :=
+  rfl
 
-@[simp] lemma with_top_equiv_symm_zero : with_top_equiv.symm 0 = 0 :=
-rfl
+@[simp]
+theorem with_top_equiv_symm_zero : withTopEquiv.symm 0 = 0 :=
+  rfl
 
-@[simp] lemma with_top_equiv_symm_le {x y : with_top ℕ} :
-  with_top_equiv.symm x ≤ with_top_equiv.symm y ↔ x ≤ y :=
-by rw ← with_top_equiv_le; simp
+@[simp]
+theorem with_top_equiv_symm_le {x y : WithTop ℕ} : withTopEquiv.symm x ≤ withTopEquiv.symm y ↔ x ≤ y := by
+  rw [← with_top_equiv_le] <;> simp
 
-@[simp] lemma with_top_equiv_symm_lt {x y : with_top ℕ} :
-  with_top_equiv.symm x < with_top_equiv.symm y ↔ x < y :=
-by rw ← with_top_equiv_lt; simp
+@[simp]
+theorem with_top_equiv_symm_lt {x y : WithTop ℕ} : withTopEquiv.symm x < withTopEquiv.symm y ↔ x < y := by
+  rw [← with_top_equiv_lt] <;> simp
 
 /-- `to_with_top` induces an additive monoid isomorphism between `enat` and `with_top ℕ`. -/
-noncomputable def with_top_add_equiv : enat ≃+ with_top ℕ :=
-{ map_add' := λ x y, by simp only [with_top_equiv]; convert to_with_top_add,
-  ..with_top_equiv}
+noncomputable def withTopAddEquiv : Enat ≃+ WithTop ℕ :=
+  { withTopEquiv with
+    map_add' := fun x y => by
+      simp only [with_top_equiv] <;> convert to_with_top_add }
 
-end with_top_equiv
+end WithTopEquiv
 
-lemma lt_wf : well_founded ((<) : enat → enat → Prop) :=
-show well_founded (λ a b : enat, a < b),
-by haveI := classical.dec; simp only [to_with_top_lt.symm] {eta := ff};
-    exact inv_image.wf _ (with_top.well_founded_lt nat.lt_wf)
+theorem lt_wf : WellFounded ((· < ·) : Enat → Enat → Prop) :=
+  show WellFounded fun a b : Enat => a < b by
+    have := Classical.dec <;>
+      simp (config := { eta := false })only [to_with_top_lt.symm] <;>
+        exact InvImage.wfₓ _ (WithTop.well_founded_lt Nat.lt_wf)
 
-instance : has_well_founded enat := ⟨(<), lt_wf⟩
+instance : HasWellFounded Enat :=
+  ⟨(· < ·), lt_wf⟩
 
-section find
+section Find
 
-variables (P : ℕ → Prop) [decidable_pred P]
+variable (P : ℕ → Prop) [DecidablePred P]
 
 /-- The smallest `enat` satisfying a (decidable) predicate `P : ℕ → Prop` -/
-def find : enat := ⟨∃ n, P n, nat.find⟩
+def find : Enat :=
+  ⟨∃ n, P n, Nat.findₓ⟩
 
-@[simp] lemma find_get (h : (find P).dom) : (find P).get h = nat.find h := rfl
+@[simp]
+theorem find_get (h : (find P).Dom) : (find P).get h = Nat.findₓ h :=
+  rfl
 
-lemma find_dom (h : ∃ n, P n) : (find P).dom := h
+theorem find_dom (h : ∃ n, P n) : (find P).Dom :=
+  h
 
-lemma lt_find (n : ℕ) (h : ∀ m ≤ n, ¬P m) : (n : enat) < find P :=
-begin
-  rw coe_lt_iff, intro h', rw find_get,
-  have := @nat.find_spec P _ h',
-  contrapose! this,
+theorem lt_find (n : ℕ) (h : ∀, ∀ m ≤ n, ∀, ¬P m) : (n : Enat) < find P := by
+  rw [coe_lt_iff]
+  intro h'
+  rw [find_get]
+  have := @Nat.find_specₓ P _ h'
+  contrapose! this
   exact h _ this
-end
 
-lemma lt_find_iff (n : ℕ) : (n : enat) < find P ↔ (∀ m ≤ n, ¬P m) :=
-begin
-  refine ⟨_, lt_find P n⟩,
-  intros h m hm,
-  by_cases H : (find P).dom,
-  { apply nat.find_min H, rw coe_lt_iff at h, specialize h H, exact lt_of_le_of_lt hm h },
-  { exact not_exists.mp H m }
-end
+theorem lt_find_iff (n : ℕ) : (n : Enat) < find P ↔ ∀, ∀ m ≤ n, ∀, ¬P m := by
+  refine' ⟨_, lt_find P n⟩
+  intro h m hm
+  by_cases' H : (find P).Dom
+  · apply Nat.find_minₓ H
+    rw [coe_lt_iff] at h
+    specialize h H
+    exact lt_of_le_of_ltₓ hm h
+    
+  · exact not_exists.mp H m
+    
 
-lemma find_le (n : ℕ) (h : P n) : find P ≤ n :=
-by { rw le_coe_iff, refine ⟨⟨_, h⟩, @nat.find_min' P _ _ _ h⟩ }
+theorem find_le (n : ℕ) (h : P n) : find P ≤ n := by
+  rw [le_coe_iff]
+  refine' ⟨⟨_, h⟩, @Nat.find_min'ₓ P _ _ _ h⟩
 
-lemma find_eq_top_iff : find P = ⊤ ↔ ∀ n, ¬P n :=
-(eq_top_iff_forall_lt _).trans
-⟨λ h n, (lt_find_iff P n).mp (h n) _ le_rfl, λ h n, lt_find P n $ λ _ _, h _⟩
+theorem find_eq_top_iff : find P = ⊤ ↔ ∀ n, ¬P n :=
+  (eq_top_iff_forall_lt _).trans
+    ⟨fun h n => (lt_find_iff P n).mp (h n) _ le_rfl, fun h n => (lt_find P n) fun _ _ => h _⟩
 
-end find
+end Find
 
-noncomputable instance : linear_ordered_add_comm_monoid_with_top enat :=
-{ top_add' := top_add,
-  .. enat.linear_order,
-  .. enat.ordered_add_comm_monoid,
-  .. enat.order_top }
+noncomputable instance : LinearOrderedAddCommMonoidWithTop Enat :=
+  { Enat.linearOrder, Enat.orderedAddCommMonoid, Enat.orderTop with top_add' := top_add }
 
-end enat
+end Enat
+

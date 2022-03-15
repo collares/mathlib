@@ -3,8 +3,8 @@ Copyright (c) 2019 Abhimanyu Pallavi Sudhir. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Abhimanyu Pallavi Sudhir, Yury Kudryashov
 -/
-import order.filter.ultrafilter
-import order.filter.germ
+import Mathbin.Order.Filter.Ultrafilter
+import Mathbin.Order.Filter.Germ
 
 /-!
 # Ultraproducts
@@ -18,110 +18,128 @@ ultrafilter. Definitions and properties that work for any filter should go to `o
 ultrafilter, ultraproduct
 -/
 
-universes u v
-variables {α : Type u} {β : Type v} {φ : ultrafilter α}
-open_locale classical
 
-namespace filter
+universe u v
 
-local notation `∀*` binders `, ` r:(scoped p, filter.eventually p φ) := r
+variable {α : Type u} {β : Type v} {φ : Ultrafilter α}
 
-namespace germ
+open_locale Classical
 
-open ultrafilter
+namespace Filter
 
-local notation `β*` := germ (φ : filter α) β
+-- mathport name: «expr∀* , »
+local notation3 "∀* " (...) ", " r:(scoped p => Filter.Eventually p φ) => r
+
+namespace Germ
+
+open Ultrafilter
+
+-- mathport name: «exprβ*»
+local notation "β*" => Germ (φ : Filter α) β
 
 /-- If `φ` is an ultrafilter then the ultraproduct is a division ring. -/
-instance [division_ring β] : division_ring β* :=
-{ mul_inv_cancel := λ f, induction_on f $ λ f hf, coe_eq.2 $ (φ.em (λ y, f y = 0)).elim
-    (λ H, (hf $ coe_eq.2 H).elim) (λ H, H.mono $ λ x, mul_inv_cancel),
-  inv_zero := coe_eq.2 $ by simp only [(∘), inv_zero],
-  .. germ.ring, .. germ.div_inv_monoid, .. germ.nontrivial }
+instance [DivisionRing β] : DivisionRing β* :=
+  { Germ.ring, Germ.divInvMonoid, Germ.nontrivial with
+    mul_inv_cancel := fun f =>
+      (induction_on f) fun f hf =>
+        coe_eq.2 <|
+          (φ.em fun y => f y = 0).elim (fun H => (hf <| coe_eq.2 H).elim) fun H => H.mono fun x => mul_inv_cancel,
+    inv_zero :=
+      coe_eq.2 <| by
+        simp only [(· ∘ ·), inv_zero] }
 
 /-- If `φ` is an ultrafilter then the ultraproduct is a field. -/
-instance [field β] : field β* :=
-{ .. germ.comm_ring, .. germ.division_ring }
+instance [Field β] : Field β* :=
+  { Germ.commRing, Germ.divisionRing with }
 
 /-- If `φ` is an ultrafilter then the ultraproduct is a linear order. -/
-noncomputable instance [linear_order β] : linear_order β* :=
-{ le_total := λ f g, induction_on₂ f g $ λ f g, eventually_or.1 $ eventually_of_forall $
-    λ x, le_total _ _,
-  decidable_le := by apply_instance,
-  .. germ.partial_order }
+noncomputable instance [LinearOrderₓ β] : LinearOrderₓ β* :=
+  { Germ.partialOrder with
+    le_total := fun f g =>
+      (induction_on₂ f g) fun f g => eventually_or.1 <| eventually_of_forall fun x => le_totalₓ _ _,
+    decidableLe := by
+      infer_instance }
 
-@[simp, norm_cast] lemma const_div [division_ring β] (x y : β) : (↑(x / y) : β*) = ↑x / ↑y := rfl
+@[simp, norm_cast]
+theorem const_div [DivisionRing β] (x y : β) : (↑(x / y) : β*) = ↑x / ↑y :=
+  rfl
 
-lemma coe_lt [preorder β] {f g : α → β} : (f : β*) < g ↔ ∀* x, f x < g x :=
-by simp only [lt_iff_le_not_le, eventually_and, coe_le, eventually_not, eventually_le]
+theorem coe_lt [Preorderₓ β] {f g : α → β} : (f : β*) < g ↔ ∀* x, f x < g x := by
+  simp only [lt_iff_le_not_leₓ, eventually_and, coe_le, eventually_not, eventually_le]
 
-lemma coe_pos [preorder β] [has_zero β] {f : α → β} : 0 < (f : β*) ↔ ∀* x, 0 < f x :=
-coe_lt
+theorem coe_pos [Preorderₓ β] [Zero β] {f : α → β} : 0 < (f : β*) ↔ ∀* x, 0 < f x :=
+  coe_lt
 
-lemma const_lt [preorder β] {x y : β} : (↑x : β*) < ↑y ↔ x < y :=
-coe_lt.trans lift_rel_const_iff
+theorem const_lt [Preorderₓ β] {x y : β} : (↑x : β*) < ↑y ↔ x < y :=
+  coe_lt.trans lift_rel_const_iff
 
-lemma lt_def [preorder β] : ((<) : β* → β* → Prop) = lift_rel (<) :=
-by { ext ⟨f⟩ ⟨g⟩, exact coe_lt }
+theorem lt_def [Preorderₓ β] : ((· < ·) : β* → β* → Prop) = LiftRel (· < ·) := by
+  ext ⟨f⟩ ⟨g⟩
+  exact coe_lt
 
 /-- If `φ` is an ultrafilter then the ultraproduct is an ordered ring. -/
-instance [ordered_ring β] : ordered_ring β* :=
-{ zero_le_one := const_le zero_le_one,
-  mul_pos := λ x y, induction_on₂ x y $ λ f g hf hg, coe_pos.2 $
-    (coe_pos.1 hg).mp $ (coe_pos.1 hf).mono $ λ x, mul_pos,
-  .. germ.ring, .. germ.ordered_add_comm_group, .. germ.nontrivial }
+instance [OrderedRing β] : OrderedRing β* :=
+  { Germ.ring, Germ.orderedAddCommGroup, Germ.nontrivial with zero_le_one := const_le zero_le_one,
+    mul_pos := fun x y =>
+      (induction_on₂ x y) fun f g hf hg => coe_pos.2 <| (coe_pos.1 hg).mp <| (coe_pos.1 hf).mono fun x => mul_pos }
 
 /-- If `φ` is an ultrafilter then the ultraproduct is a linear ordered ring. -/
-noncomputable instance [linear_ordered_ring β] : linear_ordered_ring β* :=
-{ .. germ.ordered_ring, .. germ.linear_order, .. germ.nontrivial }
+noncomputable instance [LinearOrderedRing β] : LinearOrderedRing β* :=
+  { Germ.orderedRing, Germ.linearOrder, Germ.nontrivial with }
 
 /-- If `φ` is an ultrafilter then the ultraproduct is a linear ordered field. -/
-noncomputable instance [linear_ordered_field β] : linear_ordered_field β* :=
-{ .. germ.linear_ordered_ring, .. germ.field }
+noncomputable instance [LinearOrderedField β] : LinearOrderedField β* :=
+  { Germ.linearOrderedRing, Germ.field with }
 
 /-- If `φ` is an ultrafilter then the ultraproduct is a linear ordered commutative ring. -/
-noncomputable instance [linear_ordered_comm_ring β] :
-  linear_ordered_comm_ring β* :=
-{ .. germ.linear_ordered_ring, .. germ.comm_monoid }
+noncomputable instance [LinearOrderedCommRing β] : LinearOrderedCommRing β* :=
+  { Germ.linearOrderedRing, Germ.commMonoid with }
 
 /-- If `φ` is an ultrafilter then the ultraproduct is a decidable linear ordered commutative
 group. -/
-noncomputable instance [linear_ordered_add_comm_group β] : linear_ordered_add_comm_group β* :=
-{ .. germ.ordered_add_comm_group, .. germ.linear_order }
+noncomputable instance [LinearOrderedAddCommGroup β] : LinearOrderedAddCommGroup β* :=
+  { Germ.orderedAddCommGroup, Germ.linearOrder with }
 
-lemma max_def [linear_order β] (x y : β*) : max x y = map₂ max x y :=
-induction_on₂ x y $ λ a b,
-begin
-  cases le_total (a : β*) b,
-  { rw [max_eq_right h, map₂_coe, coe_eq], exact h.mono (λ i hi, (max_eq_right hi).symm) },
-  { rw [max_eq_left h, map₂_coe, coe_eq], exact h.mono (λ i hi, (max_eq_left hi).symm) }
-end
+theorem max_def [LinearOrderₓ β] (x y : β*) : max x y = map₂ max x y :=
+  (induction_on₂ x y) fun a b => by
+    cases le_totalₓ (a : β*) b
+    · rw [max_eq_rightₓ h, map₂_coe, coe_eq]
+      exact h.mono fun i hi => (max_eq_rightₓ hi).symm
+      
+    · rw [max_eq_leftₓ h, map₂_coe, coe_eq]
+      exact h.mono fun i hi => (max_eq_leftₓ hi).symm
+      
 
-lemma min_def [K : linear_order β] (x y : β*) : min x y = map₂ min x y :=
-induction_on₂ x y $ λ a b,
-begin
-  cases le_total (a : β*) b,
-  { rw [min_eq_left h, map₂_coe, coe_eq], exact h.mono (λ i hi, (min_eq_left hi).symm) },
-  { rw [min_eq_right h, map₂_coe, coe_eq], exact h.mono (λ i hi, (min_eq_right hi).symm) }
-end
+theorem min_def [K : LinearOrderₓ β] (x y : β*) : min x y = map₂ min x y :=
+  (induction_on₂ x y) fun a b => by
+    cases le_totalₓ (a : β*) b
+    · rw [min_eq_leftₓ h, map₂_coe, coe_eq]
+      exact h.mono fun i hi => (min_eq_leftₓ hi).symm
+      
+    · rw [min_eq_rightₓ h, map₂_coe, coe_eq]
+      exact h.mono fun i hi => (min_eq_rightₓ hi).symm
+      
 
-lemma abs_def [linear_ordered_add_comm_group β] (x : β*) : |x| = map abs x :=
-induction_on x $ λ a, by exact rfl
+theorem abs_def [LinearOrderedAddCommGroup β] (x : β*) : abs x = map abs x :=
+  (induction_on x) fun a => rfl
 
-@[simp] lemma const_max [linear_order β] (x y : β) : (↑(max x y : β) : β*) = max ↑x ↑y :=
-by rw [max_def, map₂_const]
+@[simp]
+theorem const_max [LinearOrderₓ β] (x y : β) : (↑(max x y : β) : β*) = max ↑x ↑y := by
+  rw [max_def, map₂_const]
 
-@[simp] lemma const_min [linear_order β] (x y : β) : (↑(min x y : β) : β*) = min ↑x ↑y :=
-by rw [min_def, map₂_const]
+@[simp]
+theorem const_min [LinearOrderₓ β] (x y : β) : (↑(min x y : β) : β*) = min ↑x ↑y := by
+  rw [min_def, map₂_const]
 
-@[simp] lemma const_abs [linear_ordered_add_comm_group β] (x : β) :
-  (↑(|x|) : β*) = |↑x| :=
-by rw [abs_def, map_const]
+@[simp]
+theorem const_abs [LinearOrderedAddCommGroup β] (x : β) : (↑(abs x) : β*) = abs ↑x := by
+  rw [abs_def, map_const]
 
-lemma linear_order.to_lattice_eq_filter_germ_lattice [linear_order β] :
-  (@linear_order.to_lattice (filter.germ ↑φ β) filter.germ.linear_order) = filter.germ.lattice :=
-lattice.ext (λ x y, iff.rfl)
+theorem linearOrder.to_lattice_eq_filter_germ_lattice [LinearOrderₓ β] :
+    @LinearOrderₓ.toLattice (Filter.Germ (↑φ) β) Filter.Germ.linearOrder = Filter.Germ.lattice :=
+  Lattice.ext fun x y => Iff.rfl
 
-end germ
+end Germ
 
-end filter
+end Filter
+

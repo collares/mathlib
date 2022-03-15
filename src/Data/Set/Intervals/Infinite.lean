@@ -3,7 +3,7 @@ Copyright (c) 2020 Reid Barton. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Reid Barton
 -/
-import data.set.finite
+import Mathbin.Data.Set.Finite
 
 /-!
 # Infinitude of intervals
@@ -12,62 +12,60 @@ Bounded intervals in dense orders are infinite, as are unbounded intervals
 in orders that are unbounded on the appropriate side.
 -/
 
-namespace set
 
-variables {α : Type*} [preorder α]
+namespace Set
 
-section bounded
+variable {α : Type _} [Preorderₓ α]
 
-variables [densely_ordered α]
+section Bounded
 
-lemma Ioo.infinite {a b : α} (h : a < b) : infinite (Ioo a b) :=
-begin
-  rintro (f : finite (Ioo a b)),
-  obtain ⟨m, hm₁, hm₂⟩ : ∃ m ∈ Ioo a b, ∀ x ∈ Ioo a b, ¬x < m,
-  { simpa [h] using finset.exists_minimal f.to_finset },
-  obtain ⟨z, hz₁, hz₂⟩ : ∃ z, a < z ∧ z < m := exists_between hm₁.1,
-  exact hm₂ z ⟨hz₁, lt_trans hz₂ hm₁.2⟩ hz₂,
-end
+variable [DenselyOrdered α]
 
-lemma Ico.infinite {a b : α} (h : a < b) : infinite (Ico a b) :=
-(Ioo.infinite h).mono Ioo_subset_Ico_self
+theorem Ioo.infinite {a b : α} (h : a < b) : Infinite (Ioo a b) := by
+  rintro (f : finite (Ioo a b))
+  obtain ⟨m, hm₁, hm₂⟩ : ∃ m ∈ Ioo a b, ∀, ∀ x ∈ Ioo a b, ∀, ¬x < m := by
+    simpa [h] using Finset.exists_minimal f.to_finset
+  obtain ⟨z, hz₁, hz₂⟩ : ∃ z, a < z ∧ z < m := exists_between hm₁.1
+  exact hm₂ z ⟨hz₁, lt_transₓ hz₂ hm₁.2⟩ hz₂
 
-lemma Ioc.infinite {a b : α} (h : a < b) : infinite (Ioc a b) :=
-(Ioo.infinite h).mono Ioo_subset_Ioc_self
+theorem Ico.infinite {a b : α} (h : a < b) : Infinite (Ico a b) :=
+  (Ioo.infinite h).mono Ioo_subset_Ico_self
 
-lemma Icc.infinite {a b : α} (h : a < b) : infinite (Icc a b) :=
-(Ioo.infinite h).mono Ioo_subset_Icc_self
+theorem Ioc.infinite {a b : α} (h : a < b) : Infinite (Ioc a b) :=
+  (Ioo.infinite h).mono Ioo_subset_Ioc_self
 
-end bounded
+theorem Icc.infinite {a b : α} (h : a < b) : Infinite (Icc a b) :=
+  (Ioo.infinite h).mono Ioo_subset_Icc_self
 
-section unbounded_below
+end Bounded
 
-variables [no_min_order α]
+section UnboundedBelow
 
-lemma Iio.infinite {b : α} : infinite (Iio b) :=
-begin
-  rintro (f : finite (Iio b)),
-  obtain ⟨m, hm₁, hm₂⟩ : ∃ m < b, ∀ x < b, ¬x < m,
-  { simpa using finset.exists_minimal f.to_finset },
-  obtain ⟨z, hz⟩ : ∃ z, z < m := exists_lt _,
-  exact hm₂ z (lt_trans hz hm₁) hz
-end
+variable [NoMinOrder α]
 
-lemma Iic.infinite {b : α} : infinite (Iic b) :=
-Iio.infinite.mono Iio_subset_Iic_self
+theorem Iio.infinite {b : α} : Infinite (Iio b) := by
+  rintro (f : finite (Iio b))
+  obtain ⟨m, hm₁, hm₂⟩ : ∃ m < b, ∀, ∀ x < b, ∀, ¬x < m := by
+    simpa using Finset.exists_minimal f.to_finset
+  obtain ⟨z, hz⟩ : ∃ z, z < m := exists_lt _
+  exact hm₂ z (lt_transₓ hz hm₁) hz
 
-end unbounded_below
+theorem Iic.infinite {b : α} : Infinite (Iic b) :=
+  Iio.infinite.mono Iio_subset_Iic_self
 
-section unbounded_above
+end UnboundedBelow
 
-variables [no_max_order α]
+section UnboundedAbove
 
-lemma Ioi.infinite {a : α} : infinite (Ioi a) :=
-by apply @Iio.infinite (order_dual α)
+variable [NoMaxOrder α]
 
-lemma Ici.infinite {a : α} : infinite (Ici a) :=
-Ioi.infinite.mono Ioi_subset_Ici_self
+theorem Ioi.infinite {a : α} : Infinite (Ioi a) := by
+  apply @Iio.infinite (OrderDual α)
 
-end unbounded_above
+theorem Ici.infinite {a : α} : Infinite (Ici a) :=
+  Ioi.infinite.mono Ioi_subset_Ici_self
 
-end set
+end UnboundedAbove
+
+end Set
+

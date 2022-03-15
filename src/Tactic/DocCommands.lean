@@ -3,7 +3,7 @@ Copyright (c) 2020 Robert Y. Lewis. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Robert Y. Lewis
 -/
-import tactic.fix_reflect_string
+import Mathbin.Tactic.FixReflectString
 
 /-!
 # Documentation commands
@@ -29,70 +29,69 @@ Similarly, `add_tactic_doc` creates a declaration `` `tactic_doc.i `` that store
 information.
 -/
 
+
 /-- A rudimentary hash function on strings. -/
-def string.hash (s : string) : ℕ :=
-s.fold 1 (λ h c, (33*h + c.val) % unsigned_sz)
+def Stringₓ.hash (s : Stringₓ) : ℕ :=
+  s.fold 1 fun h c => (33 * h + c.val) % unsignedSz
 
 /-- `mk_hashed_name nspace id` hashes the string `id` to a value `i` and returns the name
 `nspace._i` -/
-meta def string.mk_hashed_name (nspace : name) (id : string) : name :=
-nspace <.> ("_" ++ to_string id.hash)
+unsafe def string.mk_hashed_name (nspace : Name) (id : Stringₓ) : Name :=
+  mkStrName nspace ("_" ++ toString id.hash)
 
-open tactic
+open Tactic
 
-/--
-`copy_doc_string fr to` copies the docstring from the declaration named `fr`
+/-- `copy_doc_string fr to` copies the docstring from the declaration named `fr`
 to each declaration named in the list `to`. -/
-meta def tactic.copy_doc_string (fr : name) (to : list name) : tactic unit :=
-do fr_ds ← doc_string fr,
-   to.mmap' $ λ tgt, add_doc_string tgt fr_ds
+unsafe def tactic.copy_doc_string (fr : Name) (to : List Name) : tactic Unit := do
+  let fr_ds ← doc_string fr
+  to fun tgt => add_doc_string tgt fr_ds
 
-open lean lean.parser interactive
+open Lean Lean.Parser Interactive
 
-/--
-`copy_doc_string source → target_1 target_2 ... target_n` copies the doc string of the
+/-- `copy_doc_string source → target_1 target_2 ... target_n` copies the doc string of the
 declaration named `source` to each of `target_1`, `target_2`, ..., `target_n`.
  -/
-@[user_command] meta def copy_doc_string_cmd
-  (_ : parse (tk "copy_doc_string")) : parser unit :=
-do fr ← parser.ident,
-   tk "->",
-   to ← parser.many parser.ident,
-   expr.const fr _  ← resolve_name fr,
-   to ← parser.of_tactic (to.mmap $ λ n, expr.const_name <$> resolve_name n),
-   tactic.copy_doc_string fr to
+@[user_command]
+unsafe def copy_doc_string_cmd (_ : parse (tk "copy_doc_string")) : parser Unit := do
+  let fr ← parser.ident
+  tk "->"
+  let to ← parser.many parser.ident
+  let expr.const fr _ ← resolve_name fr
+  let to ← parser.of_tactic (to.mmap fun n => expr.const_name <$> resolve_name n)
+  tactic.copy_doc_string fr to
 
 /-! ### The `library_note` command -/
 
+
 /-- A user attribute `library_note` for tagging decls of type `string × string` for use in note
 output. -/
-@[user_attribute] meta def library_note_attr : user_attribute :=
-{ name := `library_note,
-  descr := "Notes about library features to be included in documentation",
-  parser := failed }
+@[user_attribute]
+unsafe def library_note_attr : user_attribute where
+  Name := `library_note
+  descr := "Notes about library features to be included in documentation"
+  parser := failed
 
-/--
-`mk_reflected_definition name val` constructs a definition declaration by reflection.
+/-- `mk_reflected_definition name val` constructs a definition declaration by reflection.
 
 Example: ``mk_reflected_definition `foo 17`` constructs the definition
 declaration corresponding to `def foo : ℕ := 17`
 -/
-meta def mk_reflected_definition (decl_name : name) {type} [reflected type]
-  (body : type) [reflected body] : declaration :=
-mk_definition decl_name (reflect type).collect_univ_params (reflect type) (reflect body)
+unsafe def mk_reflected_definition (decl_name : Name) {type} [reflected type] (body : type) [reflected body] :
+    declaration :=
+  mk_definition decl_name (reflect type).collect_univ_params (reflect type) (reflect body)
 
 /-- If `note_name` and `note` are `pexpr`s representing strings,
 `add_library_note note_name note` adds a declaration of type `string × string` and tags it with
 the `library_note` attribute. -/
-meta def tactic.add_library_note (note_name note : string) : tactic unit :=
-do let decl_name := note_name.mk_hashed_name `library_note,
-   add_decl $ mk_reflected_definition decl_name (note_name, note),
-   library_note_attr.set decl_name () tt none
+unsafe def tactic.add_library_note (note_name note : Stringₓ) : tactic Unit := do
+  let decl_name := note_name.mk_hashed_name `library_note
+  add_decl <| mk_reflected_definition decl_name (note_name, note)
+  library_note_attr decl_name () tt none
 
-open tactic
+open Tactic
 
-/--
-A command to add library notes. Syntax:
+/-- A command to add library notes. Syntax:
 ```
 /--
 note message
@@ -100,110 +99,103 @@ note message
 library_note "note id"
 ```
 -/
-@[user_command] meta def library_note (mi : interactive.decl_meta_info)
-  (_ : parse (tk "library_note")) : parser unit := do
-note_name ← parser.pexpr,
-note_name ← eval_pexpr string note_name,
-some doc_string ← pure mi.doc_string | fail "library_note requires a doc string",
-add_library_note note_name doc_string
+@[user_command]
+unsafe def library_note (mi : interactive.decl_meta_info) (_ : parse (tk "library_note")) : parser Unit := do
+  let note_name ← parser.pexpr
+  let note_name ← eval_pexpr Stringₓ note_name
+  let some doc_string ← pure mi.doc_string | fail "library_note requires a doc string"
+  add_library_note note_name doc_string
 
 /-- Collects all notes in the current environment.
 Returns a list of pairs `(note_id, note_content)` -/
-meta def tactic.get_library_notes : tactic (list (string × string)) :=
-attribute.get_instances `library_note >>=
-  list.mmap (λ dcl, mk_const dcl >>= eval_expr (string × string))
+unsafe def tactic.get_library_notes : tactic (List (Stringₓ × Stringₓ)) :=
+  attribute.get_instances `library_note >>= List.mmapₓ fun dcl => mk_const dcl >>= eval_expr (Stringₓ × Stringₓ)
 
 /-! ### The `add_tactic_doc_entry` command -/
 
+
 /-- The categories of tactic doc entry. -/
-@[derive [decidable_eq, has_reflect]]
-inductive doc_category
-| tactic | cmd | hole_cmd | attr
+inductive DocCategory
+  | tactic
+  | cmd
+  | hole_cmd
+  | attr
+  deriving DecidableEq, has_reflect
 
 /-- Format a `doc_category` -/
-meta def doc_category.to_string : doc_category → string
-| doc_category.tactic := "tactic"
-| doc_category.cmd := "command"
-| doc_category.hole_cmd := "hole_command"
-| doc_category.attr := "attribute"
+unsafe def doc_category.to_string : DocCategory → Stringₓ
+  | DocCategory.tactic => "tactic"
+  | DocCategory.cmd => "command"
+  | DocCategory.hole_cmd => "hole_command"
+  | DocCategory.attr => "attribute"
 
-meta instance : has_to_format doc_category := ⟨↑doc_category.to_string⟩
+unsafe instance : has_to_format DocCategory :=
+  ⟨↑doc_category.to_string⟩
 
 /-- The information used to generate a tactic doc entry -/
-@[derive has_reflect]
-structure tactic_doc_entry :=
-(name : string)
-(category : doc_category)
-(decl_names : list _root_.name)
-(tags : list string := [])
-(description : string := "")
-(inherit_description_from : option _root_.name := none)
+structure TacticDocEntry where
+  Name : Stringₓ
+  category : DocCategory
+  declNames : List Name
+  tags : List Stringₓ := []
+  description : Stringₓ := ""
+  inheritDescriptionFrom : Option Name := none
+  deriving has_reflect
 
 /-- Turns a `tactic_doc_entry` into a JSON representation. -/
-meta def tactic_doc_entry.to_json (d : tactic_doc_entry) : json :=
-json.object [
-  ("name", d.name),
-  ("category", d.category.to_string),
-  ("decl_names", d.decl_names.map (json.of_string ∘ to_string)),
-  ("tags", d.tags.map json.of_string),
-  ("description", d.description)
-]
+unsafe def tactic_doc_entry.to_json (d : TacticDocEntry) : json :=
+  json.object
+    [("name", d.Name), ("category", d.category.toString), ("decl_names", d.declNames.map (json.of_string ∘ toString)),
+      ("tags", d.tags.map json.of_string), ("description", d.description)]
 
-meta instance : has_to_string tactic_doc_entry :=
-⟨json.unparse ∘ tactic_doc_entry.to_json⟩
+unsafe instance : HasToString TacticDocEntry :=
+  ⟨json.unparse ∘ tactic_doc_entry.to_json⟩
 
 /-- `update_description_from tde inh_id` replaces the `description` field of `tde` with the
     doc string of the declaration named `inh_id`. -/
-meta def tactic_doc_entry.update_description_from (tde : tactic_doc_entry) (inh_id : name) :
-  tactic tactic_doc_entry :=
-do ds ← doc_string inh_id <|> fail (to_string inh_id ++ " has no doc string"),
-   return { description := ds .. tde }
+unsafe def tactic_doc_entry.update_description_from (tde : TacticDocEntry) (inh_id : Name) : tactic TacticDocEntry := do
+  let ds ← doc_string inh_id <|> fail (toString inh_id ++ " has no doc string")
+  return { tde with description := ds }
 
-/--
-`update_description tde` replaces the `description` field of `tde` with:
+/-- `update_description tde` replaces the `description` field of `tde` with:
 
 * the doc string of `tde.inherit_description_from`, if this field has a value
 * the doc string of the entry in `tde.decl_names`, if this field has length 1
 
 If neither of these conditions are met, it returns `tde`. -/
-meta def tactic_doc_entry.update_description (tde : tactic_doc_entry) : tactic tactic_doc_entry :=
-match tde.inherit_description_from, tde.decl_names with
-| some inh_id, _ := tde.update_description_from inh_id
-| none, [inh_id] := tde.update_description_from inh_id
-| none, _ := return tde
-end
+unsafe def tactic_doc_entry.update_description (tde : TacticDocEntry) : tactic TacticDocEntry :=
+  match tde.inheritDescriptionFrom, tde.declNames with
+  | some inh_id, _ => tde.update_description_from inh_id
+  | none, [inh_id] => tde.update_description_from inh_id
+  | none, _ => return tde
 
 /-- A user attribute `tactic_doc` for tagging decls of type `tactic_doc_entry`
 for use in doc output -/
-@[user_attribute] meta def tactic_doc_entry_attr : user_attribute :=
-{ name := `tactic_doc,
-  descr := "Information about a tactic to be included in documentation",
-  parser := failed }
+@[user_attribute]
+unsafe def tactic_doc_entry_attr : user_attribute where
+  Name := `tactic_doc
+  descr := "Information about a tactic to be included in documentation"
+  parser := failed
 
 /-- Collects everything in the environment tagged with the attribute `tactic_doc`. -/
-meta def tactic.get_tactic_doc_entries : tactic (list tactic_doc_entry) :=
-attribute.get_instances `tactic_doc >>=
-  list.mmap (λ dcl, mk_const dcl >>= eval_expr tactic_doc_entry)
+unsafe def tactic.get_tactic_doc_entries : tactic (List TacticDocEntry) :=
+  attribute.get_instances `tactic_doc >>= List.mmapₓ fun dcl => mk_const dcl >>= eval_expr TacticDocEntry
 
 /-- `add_tactic_doc tde` adds a declaration to the environment
 with `tde` as its body and tags it with the `tactic_doc`
 attribute. If `tde.decl_names` has exactly one entry `` `decl`` and
 if `tde.description` is the empty string, `add_tactic_doc` uses the doc
 string of `decl` as the description. -/
-meta def tactic.add_tactic_doc (tde : tactic_doc_entry) : tactic unit :=
-do when (tde.description = "" ∧ tde.inherit_description_from.is_none ∧ tde.decl_names.length ≠ 1) $
-     fail "A tactic doc entry must either:
- 1. have a description written as a doc-string for the `add_tactic_doc` invocation, or
- 2. have a single declaration in the `decl_names` field, to inherit a description from, or
- 3. explicitly indicate the declaration to inherit the description from using
-    `inherit_description_from`.",
-   tde ← if tde.description = "" then tde.update_description else return tde,
-   let decl_name := (tde.name ++ tde.category.to_string).mk_hashed_name `tactic_doc,
-   add_decl $ mk_definition decl_name [] `(tactic_doc_entry) (reflect tde),
-   tactic_doc_entry_attr.set decl_name () tt none
+unsafe def tactic.add_tactic_doc (tde : TacticDocEntry) : tactic Unit := do
+  when (tde = "" ∧ tde ∧ tde ≠ 1) <|
+      fail
+        "A tactic doc entry must either:\n 1. have a description written as a doc-string for the `add_tactic_doc` invocation, or\n 2. have a single declaration in the `decl_names` field, to inherit a description from, or\n 3. explicitly indicate the declaration to inherit the description from using\n    `inherit_description_from`."
+  let tde ← if tde.description = "" then tde.update_description else return tde
+  let decl_name := (tde.Name ++ tde.category.toString).mk_hashed_name `tactic_doc
+  add_decl <| mk_definition decl_name [] (quote.1 TacticDocEntry) (reflect tde)
+  tactic_doc_entry_attr decl_name () tt none
 
-/--
-A command used to add documentation for a tactic, command, hole command, or attribute.
+/-- A command used to add documentation for a tactic, command, hole command, or attribute.
 
 Usage: after defining an interactive tactic, command, or attribute,
 add its documentation as follows.
@@ -243,18 +235,18 @@ Note that providing a badly formed `tactic_doc_entry` to the command can result 
 messages.
 
 -/
-@[user_command] meta def add_tactic_doc_command (mi : interactive.decl_meta_info)
-  (_ : parse $ tk "add_tactic_doc") : parser unit := do
-pe ← parser.pexpr,
-e ← eval_pexpr tactic_doc_entry pe,
-let e : tactic_doc_entry := match mi.doc_string with
-  | some desc := { description := desc, ..e }
-  | none := e
-  end,
-tactic.add_tactic_doc e .
+@[user_command]
+unsafe def add_tactic_doc_command (mi : interactive.decl_meta_info) (_ : parse <| tk "add_tactic_doc") : parser Unit :=
+  do
+  let pe ← parser.pexpr
+  let e ← eval_pexpr TacticDocEntry pe
+  let e : TacticDocEntry :=
+    match mi.doc_string with
+    | some desc => { e with description := desc }
+    | none => e
+  tactic.add_tactic_doc e
 
-/--
-At various places in mathlib, we leave implementation notes that are referenced from many other
+/-- At various places in mathlib, we leave implementation notes that are referenced from many other
 files. To keep track of these notes, we use the command `library_note`. This makes it easy to
 retrieve a list of all notes, e.g. for documentation output.
 
@@ -295,30 +287,20 @@ def f := pi_binders ...
 ```
 -/
 add_tactic_doc
-{ name                     := "library_note",
-  category                 := doc_category.cmd,
-  decl_names               := [`library_note, `tactic.add_library_note],
-  tags                     := ["documentation"],
-  inherit_description_from := `library_note }
+  { Name := "library_note", category := DocCategory.cmd, declNames := [`library_note, `tactic.add_library_note],
+    tags := ["documentation"], inheritDescriptionFrom := `library_note }
 
 add_tactic_doc
-{ name                     := "add_tactic_doc",
-  category                 := doc_category.cmd,
-  decl_names               := [`add_tactic_doc_command, `tactic.add_tactic_doc],
-  tags                     := ["documentation"],
-  inherit_description_from := `add_tactic_doc_command }
+  { Name := "add_tactic_doc", category := DocCategory.cmd,
+    declNames := [`add_tactic_doc_command, `tactic.add_tactic_doc], tags := ["documentation"],
+    inheritDescriptionFrom := `add_tactic_doc_command }
 
 add_tactic_doc
-{ name := "copy_doc_string",
-  category := doc_category.cmd,
-  decl_names := [`copy_doc_string_cmd, `tactic.copy_doc_string],
-  tags := ["documentation"],
-  inherit_description_from := `copy_doc_string_cmd }
+  { Name := "copy_doc_string", category := DocCategory.cmd,
+    declNames := [`copy_doc_string_cmd, `tactic.copy_doc_string], tags := ["documentation"],
+    inheritDescriptionFrom := `copy_doc_string_cmd }
 
--- add docs to core tactics
-
-/--
-The congruence closure tactic `cc` tries to solve the goal by chaining
+/-- The congruence closure tactic `cc` tries to solve the goal by chaining
 equalities from context and applying congruence (i.e. if `a = b`, then `f a = f b`).
 It is a finishing tactic, i.e. it is meant to close
 the current goal, not to make some inconclusive progress.
@@ -358,14 +340,12 @@ Journal of the ACM (1980)
 [Congruence closure in intensional type theory](https://leanprover.github.io/papers/congr.pdf)
 (de Moura, Selsam IJCAR 2016).
 -/
+-- add docs to core tactics
 add_tactic_doc
-{ name := "cc (congruence closure)",
-  category := doc_category.tactic,
-  decl_names := [`tactic.interactive.cc],
-  tags := ["core", "finishing"] }
+  { Name := "cc (congruence closure)", category := DocCategory.tactic, declNames := [`tactic.interactive.cc],
+    tags := ["core", "finishing"] }
 
-/--
-`conv {...}` allows the user to perform targeted rewriting on a goal or hypothesis,
+/-- `conv {...}` allows the user to perform targeted rewriting on a goal or hypothesis,
 by focusing on particular subexpressions.
 
 See <https://leanprover-community.github.io/extras/conv.html> for more details.
@@ -415,19 +395,13 @@ end
 and likewise for `to_rhs`.
 -/
 add_tactic_doc
-{ name := "conv",
-  category := doc_category.tactic,
-  decl_names := [`tactic.interactive.conv],
-  tags := ["core"] }
+  { Name := "conv", category := DocCategory.tactic, declNames := [`tactic.interactive.conv], tags := ["core"] }
 
 add_tactic_doc
-{ name := "simp",
-  category := doc_category.tactic,
-  decl_names := [`tactic.interactive.simp],
-  tags := ["core", "simplification"] }
+  { Name := "simp", category := DocCategory.tactic, declNames := [`tactic.interactive.simp],
+    tags := ["core", "simplification"] }
 
-/--
-Accepts terms with the type `component tactic_state string` or `html empty` and
+/-- Accepts terms with the type `component tactic_state string` or `html empty` and
 renders them interactively.
 Requires a compatible version of the vscode extension to view the resulting widget.
 
@@ -448,13 +422,9 @@ component.ignore_props $ component.mk_simple int int 0 (λ _ x y, (x + y, none))
 ```
 -/
 add_tactic_doc
-{ name := "#html",
-  category := doc_category.cmd,
-  decl_names := [`show_widget_cmd],
-  tags := ["core", "widgets"] }
+  { Name := "#html", category := DocCategory.cmd, declNames := [`show_widget_cmd], tags := ["core", "widgets"] }
 
-/--
-The `add_decl_doc` command is used to add a doc string to an existing declaration.
+/-- The `add_decl_doc` command is used to add a doc string to an existing declaration.
 
 ```lean
 def foo := 5
@@ -465,15 +435,14 @@ Doc string for foo.
 add_decl_doc foo
 ```
 -/
-@[user_command] meta def add_decl_doc_command (mi : interactive.decl_meta_info)
-  (_ : parse $ tk "add_decl_doc") : parser unit := do
-n ← parser.ident,
-n ← resolve_constant n,
-some doc ← pure mi.doc_string | fail "add_decl_doc requires a doc string",
-add_doc_string n doc
+@[user_command]
+unsafe def add_decl_doc_command (mi : interactive.decl_meta_info) (_ : parse <| tk "add_decl_doc") : parser Unit := do
+  let n ← parser.ident
+  let n ← resolve_constant n
+  let some doc ← pure mi.doc_string | fail "add_decl_doc requires a doc string"
+  add_doc_string n doc
 
 add_tactic_doc
-{ name := "add_decl_doc",
-  category := doc_category.cmd,
-  decl_names := [``add_decl_doc_command],
-  tags := ["documentation"] }
+  { Name := "add_decl_doc", category := DocCategory.cmd, declNames := [`` add_decl_doc_command],
+    tags := ["documentation"] }
+

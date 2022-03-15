@@ -3,10 +3,10 @@ Copyright (c) 2021 Eric Wieser. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Eric Wieser
 -/
-import group_theory.subgroup.basic
-import algebra.graded_monoid
-import algebra.direct_sum.basic
-import algebra.big_operators.pi
+import Mathbin.GroupTheory.Subgroup.Basic
+import Mathbin.Algebra.GradedMonoid
+import Mathbin.Algebra.DirectSum.Basic
+import Mathbin.Algebra.BigOperators.Pi
 
 /-!
 # Additively-graded multiplicative structures on `⨁ i, A i`
@@ -66,268 +66,238 @@ mapping `⨁ i, A i →+ ⨆ i, A i` can be obtained as
 graded ring, filtered ring, direct sum, add_submonoid
 -/
 
-set_option old_structure_cmd true
 
-variables {ι : Type*} [decidable_eq ι]
+variable {ι : Type _} [DecidableEq ι]
 
-namespace direct_sum
+namespace DirectSum
 
-open_locale direct_sum
+open_locale DirectSum
 
 /-! ### Typeclasses -/
-section defs
 
-variables (A : ι → Type*)
+
+section Defs
+
+variable (A : ι → Type _)
 
 /-- A graded version of `non_unital_non_assoc_semiring`. -/
-class gnon_unital_non_assoc_semiring [has_add ι] [Π i, add_comm_monoid (A i)] extends
-  graded_monoid.ghas_mul A :=
-(mul_zero : ∀ {i j} (a : A i), mul a (0 : A j) = 0)
-(zero_mul : ∀ {i j} (b : A j), mul (0 : A i) b = 0)
-(mul_add : ∀ {i j} (a : A i) (b c : A j), mul a (b + c) = mul a b + mul a c)
-(add_mul : ∀ {i j} (a b : A i) (c : A j), mul (a + b) c = mul a c + mul b c)
+class GnonUnitalNonAssocSemiring [Add ι] [∀ i, AddCommMonoidₓ (A i)] extends GradedMonoid.GhasMul A where
+  mul_zero : ∀ {i j} a : A i, mul a (0 : A j) = 0
+  zero_mul : ∀ {i j} b : A j, mul (0 : A i) b = 0
+  mul_add : ∀ {i j} a : A i b c : A j, mul a (b + c) = mul a b + mul a c
+  add_mul : ∀ {i j} a b : A i c : A j, mul (a + b) c = mul a c + mul b c
 
-end defs
+end Defs
 
-section defs
+section Defs
 
-variables (A : ι → Type*)
+variable (A : ι → Type _)
 
 /-- A graded version of `semiring`. -/
-class gsemiring [add_monoid ι] [Π i, add_comm_monoid (A i)] extends
-  gnon_unital_non_assoc_semiring A, graded_monoid.gmonoid A
+class Gsemiring [AddMonoidₓ ι] [∀ i, AddCommMonoidₓ (A i)] extends GnonUnitalNonAssocSemiring A, GradedMonoid.Gmonoid A
 
 /-- A graded version of `comm_semiring`. -/
-class gcomm_semiring [add_comm_monoid ι] [Π i, add_comm_monoid (A i)] extends
-  gsemiring A, graded_monoid.gcomm_monoid A
+class GcommSemiring [AddCommMonoidₓ ι] [∀ i, AddCommMonoidₓ (A i)] extends Gsemiring A, GradedMonoid.GcommMonoid A
 
-end defs
+end Defs
 
-lemma of_eq_of_graded_monoid_eq {A : ι → Type*} [Π (i : ι), add_comm_monoid (A i)]
-  {i j : ι} {a : A i} {b : A j} (h : graded_monoid.mk i a = graded_monoid.mk j b) :
-  direct_sum.of A i a = direct_sum.of A j b :=
-dfinsupp.single_eq_of_sigma_eq h
+theorem of_eq_of_graded_monoid_eq {A : ι → Type _} [∀ i : ι, AddCommMonoidₓ (A i)] {i j : ι} {a : A i} {b : A j}
+    (h : GradedMonoid.mk i a = GradedMonoid.mk j b) : DirectSum.of A i a = DirectSum.of A j b :=
+  Dfinsupp.single_eq_of_sigma_eq h
 
-variables (A : ι → Type*)
+variable (A : ι → Type _)
 
 /-! ### Instances for `⨁ i, A i` -/
 
 
-section one
-variables [has_zero ι] [graded_monoid.ghas_one A] [Π i, add_comm_monoid (A i)]
+section One
 
-instance : has_one (⨁ i, A i) :=
-{ one := direct_sum.of (λ i, A i) 0 graded_monoid.ghas_one.one }
+variable [Zero ι] [GradedMonoid.GhasOne A] [∀ i, AddCommMonoidₓ (A i)]
 
-end one
+instance : One (⨁ i, A i) where
+  one := DirectSum.of (fun i => A i) 0 GradedMonoid.GhasOne.one
 
-section mul
-variables [has_add ι] [Π i, add_comm_monoid (A i)] [gnon_unital_non_assoc_semiring A]
+end One
 
-open add_monoid_hom (flip_apply coe_comp comp_hom_apply_apply)
+section Mul
+
+variable [Add ι] [∀ i, AddCommMonoidₓ (A i)] [GnonUnitalNonAssocSemiring A]
+
+open AddMonoidHom (flip_apply coe_comp comp_hom_apply_apply)
 
 /-- The piecewise multiplication from the `has_mul` instance, as a bundled homomorphism. -/
 @[simps]
-def gmul_hom {i j} : A i →+ A j →+ A (i + j) :=
-{ to_fun := λ a,
-  { to_fun := λ b, graded_monoid.ghas_mul.mul a b,
-    map_zero' := gnon_unital_non_assoc_semiring.mul_zero _,
-    map_add' := gnon_unital_non_assoc_semiring.mul_add _ },
-  map_zero' := add_monoid_hom.ext $ λ a, gnon_unital_non_assoc_semiring.zero_mul a,
-  map_add' := λ a₁ a₂, add_monoid_hom.ext $ λ b, gnon_unital_non_assoc_semiring.add_mul _ _ _}
+def gmulHom {i j} : A i →+ A j →+ A (i + j) where
+  toFun := fun a =>
+    { toFun := fun b => GradedMonoid.GhasMul.mul a b, map_zero' := GnonUnitalNonAssocSemiring.mul_zero _,
+      map_add' := GnonUnitalNonAssocSemiring.mul_add _ }
+  map_zero' := AddMonoidHom.ext fun a => GnonUnitalNonAssocSemiring.zero_mul a
+  map_add' := fun a₁ a₂ => AddMonoidHom.ext fun b => GnonUnitalNonAssocSemiring.add_mul _ _ _
 
 /-- The multiplication from the `has_mul` instance, as a bundled homomorphism. -/
-def mul_hom : (⨁ i, A i) →+ (⨁ i, A i) →+ ⨁ i, A i :=
-direct_sum.to_add_monoid $ λ i,
-  add_monoid_hom.flip $ direct_sum.to_add_monoid $ λ j, add_monoid_hom.flip $
-    (direct_sum.of A _).comp_hom.comp $ gmul_hom A
+def mulHom : (⨁ i, A i) →+ (⨁ i, A i) →+ ⨁ i, A i :=
+  DirectSum.toAddMonoid fun i =>
+    AddMonoidHom.flip <|
+      DirectSum.toAddMonoid fun j => AddMonoidHom.flip <| (DirectSum.of A _).compHom.comp <| gmulHom A
 
-instance : non_unital_non_assoc_semiring (⨁ i, A i) :=
-{ mul := λ a b, mul_hom A a b,
-  zero := 0,
-  add := (+),
-  zero_mul := λ a, by simp only [add_monoid_hom.map_zero, add_monoid_hom.zero_apply],
-  mul_zero := λ a, by simp only [add_monoid_hom.map_zero],
-  left_distrib := λ a b c, by simp only [add_monoid_hom.map_add],
-  right_distrib := λ a b c, by simp only [add_monoid_hom.map_add, add_monoid_hom.add_apply],
-  .. direct_sum.add_comm_monoid _ _}
+instance : NonUnitalNonAssocSemiringₓ (⨁ i, A i) :=
+  { DirectSum.addCommMonoid _ _ with mul := fun a b => mulHom A a b, zero := 0, add := (· + ·),
+    zero_mul := fun a => by
+      simp only [AddMonoidHom.map_zero, AddMonoidHom.zero_apply],
+    mul_zero := fun a => by
+      simp only [AddMonoidHom.map_zero],
+    left_distrib := fun a b c => by
+      simp only [AddMonoidHom.map_add],
+    right_distrib := fun a b c => by
+      simp only [AddMonoidHom.map_add, AddMonoidHom.add_apply] }
 
-variables {A}
+variable {A}
 
-lemma mul_hom_of_of {i j} (a : A i) (b : A j) :
-  mul_hom A (of _ i a) (of _ j b) = of _ (i + j) (graded_monoid.ghas_mul.mul a b) :=
-begin
-  unfold mul_hom,
-  rw [to_add_monoid_of, flip_apply, to_add_monoid_of, flip_apply, coe_comp, function.comp_app,
-      comp_hom_apply_apply, coe_comp, function.comp_app, gmul_hom_apply_apply],
-end
+theorem mul_hom_of_of {i j} (a : A i) (b : A j) :
+    mulHom A (of _ i a) (of _ j b) = of _ (i + j) (GradedMonoid.GhasMul.mul a b) := by
+  unfold MulHom
+  rw [to_add_monoid_of, flip_apply, to_add_monoid_of, flip_apply, coe_comp, Function.comp_app, comp_hom_apply_apply,
+    coe_comp, Function.comp_app, gmul_hom_apply_apply]
 
-lemma of_mul_of {i j} (a : A i) (b : A j) :
-  of _ i a * of _ j b = of _ (i + j) (graded_monoid.ghas_mul.mul a b) :=
-mul_hom_of_of a b
+theorem of_mul_of {i j} (a : A i) (b : A j) : of _ i a * of _ j b = of _ (i + j) (GradedMonoid.GhasMul.mul a b) :=
+  mul_hom_of_of a b
 
-end mul
+end Mul
 
-section semiring
-variables [Π i, add_comm_monoid (A i)] [add_monoid ι] [gsemiring A]
+section Semiringₓ
 
-open add_monoid_hom (flip_hom coe_comp comp_hom_apply_apply flip_apply flip_hom_apply)
+variable [∀ i, AddCommMonoidₓ (A i)] [AddMonoidₓ ι] [Gsemiring A]
 
-private lemma one_mul (x : ⨁ i, A i) : 1 * x = x :=
-suffices mul_hom A 1 = add_monoid_hom.id (⨁ i, A i),
-  from add_monoid_hom.congr_fun this x,
-begin
-  apply add_hom_ext, intros i xi,
-  unfold has_one.one,
-  rw mul_hom_of_of,
-  exact of_eq_of_graded_monoid_eq (one_mul $ graded_monoid.mk i xi),
-end
+open AddMonoidHom (flipHom coe_comp comp_hom_apply_apply flip_apply flip_hom_apply)
 
-private lemma mul_one (x : ⨁ i, A i) : x * 1 = x :=
-suffices (mul_hom A).flip 1 = add_monoid_hom.id (⨁ i, A i),
-  from add_monoid_hom.congr_fun this x,
-begin
-  apply add_hom_ext, intros i xi,
-  unfold has_one.one,
-  rw [flip_apply, mul_hom_of_of],
-  exact of_eq_of_graded_monoid_eq (mul_one $ graded_monoid.mk i xi),
-end
+private theorem one_mul (x : ⨁ i, A i) : 1 * x = x := by
+  suffices mulHom A 1 = AddMonoidHom.id (⨁ i, A i) from AddMonoidHom.congr_fun this x
+  apply add_hom_ext
+  intro i xi
+  unfold One.one
+  rw [mul_hom_of_of]
+  exact of_eq_of_graded_monoid_eq (one_mulₓ <| GradedMonoid.mk i xi)
 
-private lemma mul_assoc (a b c : ⨁ i, A i) : a * b * c = a * (b * c) :=
-suffices (mul_hom A).comp_hom.comp (mul_hom A)            -- `λ a b c, a * b * c` as a bundled hom
-       = (add_monoid_hom.comp_hom flip_hom $              -- `λ a b c, a * (b * c)` as a bundled hom
-             (mul_hom A).flip.comp_hom.comp (mul_hom A)).flip,
-  from add_monoid_hom.congr_fun (add_monoid_hom.congr_fun (add_monoid_hom.congr_fun this a) b) c,
-begin
-  ext ai ax bi bx ci cx : 6,
-  dsimp only [coe_comp, function.comp_app, comp_hom_apply_apply, flip_apply, flip_hom_apply],
-  rw [mul_hom_of_of, mul_hom_of_of, mul_hom_of_of, mul_hom_of_of],
-  exact of_eq_of_graded_monoid_eq (mul_assoc (graded_monoid.mk ai ax) ⟨bi, bx⟩ ⟨ci, cx⟩),
-end
+private theorem mul_one (x : ⨁ i, A i) : x * 1 = x := by
+  suffices (mulHom A).flip 1 = AddMonoidHom.id (⨁ i, A i) from AddMonoidHom.congr_fun this x
+  apply add_hom_ext
+  intro i xi
+  unfold One.one
+  rw [flip_apply, mul_hom_of_of]
+  exact of_eq_of_graded_monoid_eq (mul_oneₓ <| GradedMonoid.mk i xi)
+
+private theorem mul_assoc (a b c : ⨁ i, A i) : a * b * c = a * (b * c) := by
+  suffices
+    (-- `λ a b c, a * b * c` as a bundled hom
+              mulHom
+              A).compHom.comp
+        (mulHom A) =
+      (AddMonoidHom.compHom flipHom <|
+          (-- `λ a b c, a * (b * c)` as a bundled hom
+                    mulHom
+                    A).flip.compHom.comp
+            (mulHom A)).flip
+    from AddMonoidHom.congr_fun (AddMonoidHom.congr_fun (AddMonoidHom.congr_fun this a) b) c
+  ext ai ax bi bx ci cx : 6
+  dsimp only [coe_comp, Function.comp_app, comp_hom_apply_apply, flip_apply, flip_hom_apply]
+  rw [mul_hom_of_of, mul_hom_of_of, mul_hom_of_of, mul_hom_of_of]
+  exact of_eq_of_graded_monoid_eq (mul_assoc (GradedMonoid.mk ai ax) ⟨bi, bx⟩ ⟨ci, cx⟩)
 
 /-- The `semiring` structure derived from `gsemiring A`. -/
-instance semiring : semiring (⨁ i, A i) :=
-{ one := 1,
-  mul := (*),
-  zero := 0,
-  add := (+),
-  one_mul := one_mul A,
-  mul_one := mul_one A,
-  mul_assoc := mul_assoc A,
-  ..direct_sum.non_unital_non_assoc_semiring _, }
+instance semiring : Semiringₓ (⨁ i, A i) :=
+  { DirectSum.nonUnitalNonAssocSemiring _ with one := 1, mul := (· * ·), zero := 0, add := (· + ·),
+    one_mul := one_mulₓ A, mul_one := mul_oneₓ A, mul_assoc := mul_assoc A }
 
-lemma of_pow {i} (a : A i) (n : ℕ) :
-  of _ i a ^ n = of _ (n • i) (graded_monoid.gmonoid.gnpow _ a) :=
-begin
-  induction n with n,
-  { exact of_eq_of_graded_monoid_eq (pow_zero $ graded_monoid.mk _ a).symm, },
-  { rw [pow_succ, n_ih, of_mul_of],
-    exact of_eq_of_graded_monoid_eq (pow_succ (graded_monoid.mk _ a) n).symm, },
-end
+theorem of_pow {i} (a : A i) (n : ℕ) : of _ i a ^ n = of _ (n • i) (GradedMonoid.Gmonoid.gnpow _ a) := by
+  induction' n with n
+  · exact of_eq_of_graded_monoid_eq (pow_zeroₓ <| GradedMonoid.mk _ a).symm
+    
+  · rw [pow_succₓ, n_ih, of_mul_of]
+    exact of_eq_of_graded_monoid_eq (pow_succₓ (GradedMonoid.mk _ a) n).symm
+    
 
-lemma of_list_dprod {α} (l : list α) (fι : α → ι) (fA : Π a, A (fι a)) :
-  of A _ (l.dprod fι fA) = (l.map $ λ a, of A (fι a) (fA a)).prod :=
-begin
-  induction l,
-  { simp only [list.map_nil, list.prod_nil, list.dprod_nil],
-    refl },
-  { simp only [list.map_cons, list.prod_cons, list.dprod_cons, ←l_ih, direct_sum.of_mul_of],
-    refl },
-end
+theorem of_list_dprod {α} (l : List α) (fι : α → ι) (fA : ∀ a, A (fι a)) :
+    of A _ (l.dprod fι fA) = (l.map fun a => of A (fι a) (fA a)).Prod := by
+  induction l
+  · simp only [List.map_nil, List.prod_nil, List.dprod_nil]
+    rfl
+    
+  · simp only [List.map_cons, List.prod_cons, List.dprod_cons, ← l_ih, DirectSum.of_mul_of]
+    rfl
+    
 
-lemma list_prod_of_fn_of_eq_dprod (n : ℕ) (fι : fin n → ι) (fA : Π a, A (fι a)) :
-  (list.of_fn $ λ a, of A (fι a) (fA a)).prod = of A _ ((list.fin_range n).dprod fι fA) :=
-by rw [list.of_fn_eq_map, of_list_dprod]
+theorem list_prod_of_fn_of_eq_dprod (n : ℕ) (fι : Finₓ n → ι) (fA : ∀ a, A (fι a)) :
+    (List.ofFnₓ fun a => of A (fι a) (fA a)).Prod = of A _ ((List.finRange n).dprod fι fA) := by
+  rw [List.of_fn_eq_map, of_list_dprod]
 
-open_locale big_operators
+open_locale BigOperators
 
 /-- A heavily unfolded version of the definition of multiplication -/
-lemma mul_eq_sum_support_ghas_mul
-  [Π (i : ι) (x : A i), decidable (x ≠ 0)] (a a' : ⨁ i, A i) :
-  a * a' =
-    ∑ (ij : ι × ι) in (dfinsupp.support a).product (dfinsupp.support a'),
-      direct_sum.of _ _ (graded_monoid.ghas_mul.mul (a ij.fst) (a' ij.snd)) :=
-begin
-  change direct_sum.mul_hom _ a a' = _,
-  dsimp [direct_sum.mul_hom, direct_sum.to_add_monoid, dfinsupp.lift_add_hom_apply],
-  simp only [dfinsupp.sum_add_hom_apply, dfinsupp.sum, dfinsupp.finset_sum_apply,
-    add_monoid_hom.coe_finset_sum, finset.sum_apply, add_monoid_hom.flip_apply,
-    add_monoid_hom.comp_hom_apply_apply, add_monoid_hom.comp_apply,
-    direct_sum.gmul_hom_apply_apply],
-  rw finset.sum_product,
-end
+theorem mul_eq_sum_support_ghas_mul [∀ i : ι x : A i, Decidable (x ≠ 0)] (a a' : ⨁ i, A i) :
+    a * a' =
+      ∑ ij : ι × ι in (Dfinsupp.support a).product (Dfinsupp.support a'),
+        DirectSum.of _ _ (GradedMonoid.GhasMul.mul (a ij.fst) (a' ij.snd)) :=
+  by
+  change DirectSum.mulHom _ a a' = _
+  dsimp [DirectSum.mulHom, DirectSum.toAddMonoid, Dfinsupp.lift_add_hom_apply]
+  simp only [Dfinsupp.sum_add_hom_apply, Dfinsupp.sum, Dfinsupp.finset_sum_apply, AddMonoidHom.coe_finset_sum,
+    Finset.sum_apply, AddMonoidHom.flip_apply, AddMonoidHom.comp_hom_apply_apply, AddMonoidHom.comp_apply,
+    DirectSum.gmul_hom_apply_apply]
+  rw [Finset.sum_product]
 
-end semiring
+end Semiringₓ
 
-section comm_semiring
+section CommSemiringₓ
 
-variables [Π i, add_comm_monoid (A i)] [add_comm_monoid ι] [gcomm_semiring A]
+variable [∀ i, AddCommMonoidₓ (A i)] [AddCommMonoidₓ ι] [GcommSemiring A]
 
-private lemma mul_comm (a b : ⨁ i, A i) : a * b = b * a :=
-suffices mul_hom A = (mul_hom A).flip,
-  from add_monoid_hom.congr_fun (add_monoid_hom.congr_fun this a) b,
-begin
-  apply add_hom_ext, intros ai ax, apply add_hom_ext, intros bi bx,
-  rw [add_monoid_hom.flip_apply, mul_hom_of_of, mul_hom_of_of],
-  exact of_eq_of_graded_monoid_eq (gcomm_semiring.mul_comm ⟨ai, ax⟩ ⟨bi, bx⟩),
-end
+private theorem mul_comm (a b : ⨁ i, A i) : a * b = b * a := by
+  suffices mulHom A = (mulHom A).flip from AddMonoidHom.congr_fun (AddMonoidHom.congr_fun this a) b
+  apply add_hom_ext
+  intro ai ax
+  apply add_hom_ext
+  intro bi bx
+  rw [AddMonoidHom.flip_apply, mul_hom_of_of, mul_hom_of_of]
+  exact of_eq_of_graded_monoid_eq (gcomm_semiring.mul_comm ⟨ai, ax⟩ ⟨bi, bx⟩)
 
 /-- The `comm_semiring` structure derived from `gcomm_semiring A`. -/
-instance comm_semiring : comm_semiring (⨁ i, A i) :=
-{ one := 1,
-  mul := (*),
-  zero := 0,
-  add := (+),
-  mul_comm := mul_comm A,
-  ..direct_sum.semiring _, }
+instance commSemiring : CommSemiringₓ (⨁ i, A i) :=
+  { DirectSum.semiring _ with one := 1, mul := (· * ·), zero := 0, add := (· + ·), mul_comm := mul_comm A }
 
-end comm_semiring
+end CommSemiringₓ
 
-section non_unital_non_assoc_ring
-variables [Π i, add_comm_group (A i)] [has_add ι] [gnon_unital_non_assoc_semiring A]
+section NonUnitalNonAssocRing
+
+variable [∀ i, AddCommGroupₓ (A i)] [Add ι] [GnonUnitalNonAssocSemiring A]
 
 /-- The `ring` derived from `gsemiring A`. -/
-instance non_assoc_ring : non_unital_non_assoc_ring (⨁ i, A i) :=
-{ mul := (*),
-  zero := 0,
-  add := (+),
-  neg := has_neg.neg,
-  ..(direct_sum.non_unital_non_assoc_semiring _),
-  ..(direct_sum.add_comm_group _), }
+instance nonAssocRing : NonUnitalNonAssocRing (⨁ i, A i) :=
+  { DirectSum.nonUnitalNonAssocSemiring _, DirectSum.addCommGroup _ with mul := (· * ·), zero := 0, add := (· + ·),
+    neg := Neg.neg }
 
-end non_unital_non_assoc_ring
+end NonUnitalNonAssocRing
 
-section ring
-variables [Π i, add_comm_group (A i)] [add_monoid ι] [gsemiring A]
+section Ringₓ
+
+variable [∀ i, AddCommGroupₓ (A i)] [AddMonoidₓ ι] [Gsemiring A]
 
 /-- The `ring` derived from `gsemiring A`. -/
-instance ring : ring (⨁ i, A i) :=
-{ one := 1,
-  mul := (*),
-  zero := 0,
-  add := (+),
-  neg := has_neg.neg,
-  ..(direct_sum.semiring _),
-  ..(direct_sum.add_comm_group _), }
+instance ring : Ringₓ (⨁ i, A i) :=
+  { DirectSum.semiring _, DirectSum.addCommGroup _ with one := 1, mul := (· * ·), zero := 0, add := (· + ·),
+    neg := Neg.neg }
 
+end Ringₓ
 
-end ring
+section CommRingₓ
 
-section comm_ring
-variables [Π i, add_comm_group (A i)] [add_comm_monoid ι] [gcomm_semiring A]
+variable [∀ i, AddCommGroupₓ (A i)] [AddCommMonoidₓ ι] [GcommSemiring A]
 
 /-- The `comm_ring` derived from `gcomm_semiring A`. -/
-instance comm_ring : comm_ring (⨁ i, A i) :=
-{ one := 1,
-  mul := (*),
-  zero := 0,
-  add := (+),
-  neg := has_neg.neg,
-  ..(direct_sum.ring _),
-  ..(direct_sum.comm_semiring _), }
+instance commRing : CommRingₓ (⨁ i, A i) :=
+  { DirectSum.ring _, DirectSum.commSemiring _ with one := 1, mul := (· * ·), zero := 0, add := (· + ·),
+    neg := Neg.neg }
 
-end comm_ring
-
+end CommRingₓ
 
 /-! ### Instances for `A 0`
 
@@ -335,153 +305,154 @@ The various `g*` instances are enough to promote the `add_comm_monoid (A 0)` str
 types of multiplicative structure.
 -/
 
-section grade_zero
 
-section one
-variables [has_zero ι] [graded_monoid.ghas_one A] [Π i, add_comm_monoid (A i)]
+section GradeZero
 
-@[simp] lemma of_zero_one : of _ 0 (1 : A 0) = 1 := rfl
+section One
 
-end one
+variable [Zero ι] [GradedMonoid.GhasOne A] [∀ i, AddCommMonoidₓ (A i)]
 
-section mul
-variables [add_zero_class ι] [Π i, add_comm_monoid (A i)] [gnon_unital_non_assoc_semiring A]
+@[simp]
+theorem of_zero_one : of _ 0 (1 : A 0) = 1 :=
+  rfl
 
-@[simp] lemma of_zero_smul {i} (a : A 0) (b : A i) : of _ _ (a • b) = of _ _ a * of _ _ b :=
-(of_eq_of_graded_monoid_eq (graded_monoid.mk_zero_smul a b)).trans (of_mul_of _ _).symm
+end One
 
-@[simp] lemma of_zero_mul (a b : A 0) : of _ 0 (a * b) = of _ 0 a * of _ 0 b:=
-of_zero_smul A a b
+section Mul
 
-instance grade_zero.non_unital_non_assoc_semiring : non_unital_non_assoc_semiring (A 0) :=
-function.injective.non_unital_non_assoc_semiring (of A 0) dfinsupp.single_injective
-  (of A 0).map_zero (of A 0).map_add (of_zero_mul A) (λ x n, dfinsupp.single_smul n x)
+variable [AddZeroClass ι] [∀ i, AddCommMonoidₓ (A i)] [GnonUnitalNonAssocSemiring A]
 
-instance grade_zero.smul_with_zero (i : ι) : smul_with_zero (A 0) (A i) :=
-begin
-  letI := smul_with_zero.comp_hom (⨁ i, A i) (of A 0).to_zero_hom,
-  refine dfinsupp.single_injective.smul_with_zero (of A i).to_zero_hom (of_zero_smul A),
-end
+@[simp]
+theorem of_zero_smul {i} (a : A 0) (b : A i) : of _ _ (a • b) = of _ _ a * of _ _ b :=
+  (of_eq_of_graded_monoid_eq (GradedMonoid.mk_zero_smul a b)).trans (of_mul_of _ _).symm
 
-end mul
+@[simp]
+theorem of_zero_mul (a b : A 0) : of _ 0 (a * b) = of _ 0 a * of _ 0 b :=
+  of_zero_smul A a b
 
-section semiring
-variables [Π i, add_comm_monoid (A i)] [add_monoid ι] [gsemiring A]
+instance GradeZero.nonUnitalNonAssocSemiring : NonUnitalNonAssocSemiringₓ (A 0) :=
+  Function.Injective.nonUnitalNonAssocSemiring (of A 0) Dfinsupp.single_injective (of A 0).map_zero (of A 0).map_add
+    (of_zero_mul A) fun x n => Dfinsupp.single_smul n x
 
-@[simp] lemma of_zero_pow (a : A 0) : ∀ n : ℕ, of _ 0 (a ^ n) = of _ 0 a ^ n
-| 0 := by rw [pow_zero, pow_zero, direct_sum.of_zero_one]
-| (n + 1) := by rw [pow_succ, pow_succ, of_zero_mul, of_zero_pow]
+instance GradeZero.smulWithZero (i : ι) : SmulWithZero (A 0) (A i) := by
+  let this' := SmulWithZero.compHom (⨁ i, A i) (of A 0).toZeroHom
+  refine' dfinsupp.single_injective.smul_with_zero (of A i).toZeroHom (of_zero_smul A)
+
+end Mul
+
+section Semiringₓ
+
+variable [∀ i, AddCommMonoidₓ (A i)] [AddMonoidₓ ι] [Gsemiring A]
+
+@[simp]
+theorem of_zero_pow (a : A 0) : ∀ n : ℕ, of _ 0 (a ^ n) = of _ 0 a ^ n
+  | 0 => by
+    rw [pow_zeroₓ, pow_zeroₓ, DirectSum.of_zero_one]
+  | n + 1 => by
+    rw [pow_succₓ, pow_succₓ, of_zero_mul, of_zero_pow]
 
 /-- The `semiring` structure derived from `gsemiring A`. -/
-instance grade_zero.semiring : semiring (A 0) :=
-function.injective.semiring (of A 0) dfinsupp.single_injective
-  (of A 0).map_zero (of_zero_one A) (of A 0).map_add (of_zero_mul A)
-  (λ x n, dfinsupp.single_smul n x) (λ x n, of_zero_pow _ _ _)
+instance GradeZero.semiring : Semiringₓ (A 0) :=
+  Function.Injective.semiring (of A 0) Dfinsupp.single_injective (of A 0).map_zero (of_zero_one A) (of A 0).map_add
+    (of_zero_mul A) (fun x n => Dfinsupp.single_smul n x) fun x n => of_zero_pow _ _ _
 
 /-- `of A 0` is a `ring_hom`, using the `direct_sum.grade_zero.semiring` structure. -/
-def of_zero_ring_hom : A 0 →+* (⨁ i, A i) :=
-{ map_one' := of_zero_one A, map_mul' := of_zero_mul A, ..(of _ 0) }
+def ofZeroRingHom : A 0 →+* ⨁ i, A i :=
+  { of _ 0 with map_one' := of_zero_one A, map_mul' := of_zero_mul A }
 
 /-- Each grade `A i` derives a `A 0`-module structure from `gsemiring A`. Note that this results
 in an overall `module (A 0) (⨁ i, A i)` structure via `direct_sum.module`.
 -/
-instance grade_zero.module {i} : module (A 0) (A i) :=
-begin
-  letI := module.comp_hom (⨁ i, A i) (of_zero_ring_hom A),
-  exact dfinsupp.single_injective.module (A 0) (of A i) (λ a, of_zero_smul A a),
-end
+instance GradeZero.module {i} : Module (A 0) (A i) := by
+  let this' := Module.compHom (⨁ i, A i) (of_zero_ring_hom A)
+  exact dfinsupp.single_injective.module (A 0) (of A i) fun a => of_zero_smul A a
 
-end semiring
+end Semiringₓ
 
-section comm_semiring
+section CommSemiringₓ
 
-variables [Π i, add_comm_monoid (A i)] [add_comm_monoid ι] [gcomm_semiring A]
+variable [∀ i, AddCommMonoidₓ (A i)] [AddCommMonoidₓ ι] [GcommSemiring A]
 
 /-- The `comm_semiring` structure derived from `gcomm_semiring A`. -/
-instance grade_zero.comm_semiring : comm_semiring (A 0) :=
-function.injective.comm_semiring (of A 0) dfinsupp.single_injective
-  (of A 0).map_zero (of_zero_one A) (of A 0).map_add (of_zero_mul A)
-  (λ x n, dfinsupp.single_smul n x) (λ x n, of_zero_pow _ _ _)
+instance GradeZero.commSemiring : CommSemiringₓ (A 0) :=
+  Function.Injective.commSemiring (of A 0) Dfinsupp.single_injective (of A 0).map_zero (of_zero_one A) (of A 0).map_add
+    (of_zero_mul A) (fun x n => Dfinsupp.single_smul n x) fun x n => of_zero_pow _ _ _
 
-end comm_semiring
+end CommSemiringₓ
 
-section ring
-variables [Π i, add_comm_group (A i)] [add_zero_class ι] [gnon_unital_non_assoc_semiring A]
+section Ringₓ
+
+variable [∀ i, AddCommGroupₓ (A i)] [AddZeroClass ι] [GnonUnitalNonAssocSemiring A]
 
 /-- The `non_unital_non_assoc_ring` derived from `gnon_unital_non_assoc_semiring A`. -/
-instance grade_zero.non_unital_non_assoc_ring : non_unital_non_assoc_ring (A 0) :=
-function.injective.non_unital_non_assoc_ring (of A 0) dfinsupp.single_injective
-  (of A 0).map_zero (of A 0).map_add (of_zero_mul A)
-  (of A 0).map_neg (of A 0).map_sub
-  (λ x n, begin
-    letI : Π i, distrib_mul_action ℕ (A i) := λ i, infer_instance,
-    exact dfinsupp.single_smul n x
-  end)
-  (λ x n, begin
-    letI : Π i, distrib_mul_action ℤ (A i) := λ i, infer_instance,
-    exact dfinsupp.single_smul n x
-  end)
+instance GradeZero.nonUnitalNonAssocRing : NonUnitalNonAssocRing (A 0) :=
+  Function.Injective.nonUnitalNonAssocRing (of A 0) Dfinsupp.single_injective (of A 0).map_zero (of A 0).map_add
+    (of_zero_mul A) (of A 0).map_neg (of A 0).map_sub
+    (fun x n => by
+      let this' : ∀ i, DistribMulAction ℕ (A i) := fun i => inferInstance
+      exact Dfinsupp.single_smul n x)
+    fun x n => by
+    let this' : ∀ i, DistribMulAction ℤ (A i) := fun i => inferInstance
+    exact Dfinsupp.single_smul n x
 
-end ring
+end Ringₓ
 
-section ring
-variables [Π i, add_comm_group (A i)] [add_monoid ι] [gsemiring A]
+section Ringₓ
+
+variable [∀ i, AddCommGroupₓ (A i)] [AddMonoidₓ ι] [Gsemiring A]
 
 /-- The `ring` derived from `gsemiring A`. -/
-instance grade_zero.ring : ring (A 0) :=
-function.injective.ring (of A 0) dfinsupp.single_injective
-  (of A 0).map_zero (of_zero_one A) (of A 0).map_add (of_zero_mul A)
-  (of A 0).map_neg (of A 0).map_sub
-  (λ x n, begin
-    letI : Π i, distrib_mul_action ℕ (A i) := λ i, infer_instance,
-    exact dfinsupp.single_smul n x
-  end)
-  (λ x n, begin
-    letI : Π i, distrib_mul_action ℤ (A i) := λ i, infer_instance,
-    exact dfinsupp.single_smul n x
-  end) (λ x n, of_zero_pow _ _ _)
+instance GradeZero.ring : Ringₓ (A 0) :=
+  Function.Injective.ring (of A 0) Dfinsupp.single_injective (of A 0).map_zero (of_zero_one A) (of A 0).map_add
+    (of_zero_mul A) (of A 0).map_neg (of A 0).map_sub
+    (fun x n => by
+      let this' : ∀ i, DistribMulAction ℕ (A i) := fun i => inferInstance
+      exact Dfinsupp.single_smul n x)
+    (fun x n => by
+      let this' : ∀ i, DistribMulAction ℤ (A i) := fun i => inferInstance
+      exact Dfinsupp.single_smul n x)
+    fun x n => of_zero_pow _ _ _
 
-end ring
+end Ringₓ
 
-section comm_ring
-variables [Π i, add_comm_group (A i)] [add_comm_monoid ι] [gcomm_semiring A]
+section CommRingₓ
+
+variable [∀ i, AddCommGroupₓ (A i)] [AddCommMonoidₓ ι] [GcommSemiring A]
 
 /-- The `comm_ring` derived from `gcomm_semiring A`. -/
-instance grade_zero.comm_ring : comm_ring (A 0) :=
-function.injective.comm_ring (of A 0) dfinsupp.single_injective
-  (of A 0).map_zero (of_zero_one A) (of A 0).map_add (of_zero_mul A)
-  (of A 0).map_neg (of A 0).map_sub
-  (λ x n, begin
-    letI : Π i, distrib_mul_action ℕ (A i) := λ i, infer_instance,
-    exact dfinsupp.single_smul n x
-  end)
-  (λ x n, begin
-    letI : Π i, distrib_mul_action ℤ (A i) := λ i, infer_instance,
-    exact dfinsupp.single_smul n x
-  end) (λ x n, of_zero_pow _ _ _)
+instance GradeZero.commRing : CommRingₓ (A 0) :=
+  Function.Injective.commRing (of A 0) Dfinsupp.single_injective (of A 0).map_zero (of_zero_one A) (of A 0).map_add
+    (of_zero_mul A) (of A 0).map_neg (of A 0).map_sub
+    (fun x n => by
+      let this' : ∀ i, DistribMulAction ℕ (A i) := fun i => inferInstance
+      exact Dfinsupp.single_smul n x)
+    (fun x n => by
+      let this' : ∀ i, DistribMulAction ℤ (A i) := fun i => inferInstance
+      exact Dfinsupp.single_smul n x)
+    fun x n => of_zero_pow _ _ _
 
-end comm_ring
+end CommRingₓ
 
-end grade_zero
+end GradeZero
 
-section to_semiring
+section ToSemiring
 
-variables {R : Type*} [Π i, add_comm_monoid (A i)] [add_monoid ι] [gsemiring A] [semiring R]
-variables {A}
+variable {R : Type _} [∀ i, AddCommMonoidₓ (A i)] [AddMonoidₓ ι] [Gsemiring A] [Semiringₓ R]
+
+variable {A}
 
 /-- If two ring homomorphisms from `⨁ i, A i` are equal on each `of A i y`,
 then they are equal.
 
 See note [partially-applied ext lemmas]. -/
 @[ext]
-lemma ring_hom_ext' ⦃F G : (⨁ i, A i) →+* R⦄
-  (h : ∀ i, (↑F : _ →+ R).comp (of A i) = (↑G : _ →+ R).comp (of A i)) : F = G :=
-ring_hom.coe_add_monoid_hom_injective $ direct_sum.add_hom_ext' h
+theorem ring_hom_ext' ⦃F G : (⨁ i, A i) →+* R⦄ (h : ∀ i, (↑F : _ →+ R).comp (of A i) = (↑G : _ →+ R).comp (of A i)) :
+    F = G :=
+  RingHom.coe_add_monoid_hom_injective <| DirectSum.add_hom_ext' h
 
 /-- Two `ring_hom`s out of a direct sum are equal if they agree on the generators. -/
-lemma ring_hom_ext ⦃f g : (⨁ i, A i) →+* R⦄ (h : ∀ i x, f (of A i x) = g (of A i x)) :
-  f = g :=
-ring_hom_ext' $ λ i, add_monoid_hom.ext $ h i
+theorem ring_hom_ext ⦃f g : (⨁ i, A i) →+* R⦄ (h : ∀ i x, f (of A i x) = g (of A i x)) : f = g :=
+  ring_hom_ext' fun i => AddMonoidHom.ext <| h i
 
 /-- A family of `add_monoid_hom`s preserving `direct_sum.ghas_one.one` and `direct_sum.ghas_mul.mul`
 describes a `ring_hom`s on `⨁ i, A i`. This is a stronger version of `direct_sum.to_monoid`.
@@ -491,101 +462,87 @@ coercions such as `add_submonoid.subtype (A i)`, and the `[gsemiring A]` structu
 `direct_sum.gsemiring.of_add_submonoids`, in which case the proofs about `ghas_one` and `ghas_mul`
 can be discharged by `rfl`. -/
 @[simps]
-def to_semiring
-  (f : Π i, A i →+ R) (hone : f _ (graded_monoid.ghas_one.one) = 1)
-  (hmul : ∀ {i j} (ai : A i) (aj : A j), f _ (graded_monoid.ghas_mul.mul ai aj) = f _ ai * f _ aj) :
-  (⨁ i, A i) →+* R :=
-{ to_fun := to_add_monoid f,
-  map_one' := begin
-    change (to_add_monoid f) (of _ 0 _) = 1,
-    rw to_add_monoid_of,
-    exact hone
-  end,
-  map_mul' := begin
-    rw (to_add_monoid f).map_mul_iff,
-    ext xi xv yi yv : 4,
-    show to_add_monoid f (of A xi xv * of A yi yv) =
-         to_add_monoid f (of A xi xv) * to_add_monoid f (of A yi yv),
-    rw [of_mul_of, to_add_monoid_of, to_add_monoid_of, to_add_monoid_of],
-    exact hmul _ _,
-  end,
-  .. to_add_monoid f}
+def toSemiring (f : ∀ i, A i →+ R) (hone : f _ GradedMonoid.GhasOne.one = 1)
+    (hmul : ∀ {i j} ai : A i aj : A j, f _ (GradedMonoid.GhasMul.mul ai aj) = f _ ai * f _ aj) : (⨁ i, A i) →+* R :=
+  { toAddMonoid f with toFun := toAddMonoid f,
+    map_one' := by
+      change (to_add_monoid f) (of _ 0 _) = 1
+      rw [to_add_monoid_of]
+      exact hone,
+    map_mul' := by
+      rw [(to_add_monoid f).map_mul_iff]
+      ext xi xv yi yv : 4
+      show to_add_monoid f (of A xi xv * of A yi yv) = to_add_monoid f (of A xi xv) * to_add_monoid f (of A yi yv)
+      rw [of_mul_of, to_add_monoid_of, to_add_monoid_of, to_add_monoid_of]
+      exact hmul _ _ }
 
-@[simp] lemma to_semiring_of (f : Π i, A i →+ R) (hone hmul) (i : ι) (x : A i) :
-  to_semiring f hone hmul (of _ i x) = f _ x :=
-to_add_monoid_of f i x
+@[simp]
+theorem to_semiring_of (f : ∀ i, A i →+ R) hone hmul (i : ι) (x : A i) : toSemiring f hone hmul (of _ i x) = f _ x :=
+  to_add_monoid_of f i x
 
-@[simp] lemma to_semiring_coe_add_monoid_hom (f : Π i, A i →+ R) (hone hmul):
-  (to_semiring f hone hmul : (⨁ i, A i) →+ R) = to_add_monoid f := rfl
+@[simp]
+theorem to_semiring_coe_add_monoid_hom (f : ∀ i, A i →+ R) hone hmul :
+    (toSemiring f hone hmul : (⨁ i, A i) →+ R) = toAddMonoid f :=
+  rfl
 
 /-- Families of `add_monoid_hom`s preserving `direct_sum.ghas_one.one` and `direct_sum.ghas_mul.mul`
 are isomorphic to `ring_hom`s on `⨁ i, A i`. This is a stronger version of `dfinsupp.lift_add_hom`.
 -/
 @[simps]
-def lift_ring_hom :
-  {f : Π {i}, A i →+ R //
-    f (graded_monoid.ghas_one.one) = 1 ∧
-    ∀ {i j} (ai : A i) (aj : A j), f (graded_monoid.ghas_mul.mul ai aj) = f ai * f aj} ≃
-    ((⨁ i, A i) →+* R) :=
-{ to_fun := λ f, to_semiring f.1 f.2.1 f.2.2,
-  inv_fun := λ F,
-    ⟨λ i, (F : (⨁ i, A i) →+ R).comp (of _ i), begin
-      simp only [add_monoid_hom.comp_apply, ring_hom.coe_add_monoid_hom],
-      rw ←F.map_one,
-      refl
-    end, λ i j ai aj, begin
-      simp only [add_monoid_hom.comp_apply, ring_hom.coe_add_monoid_hom],
-      rw [←F.map_mul, of_mul_of],
-    end⟩,
-  left_inv := λ f, begin
-    ext xi xv,
-    exact to_add_monoid_of f.1 xi xv,
-  end,
-  right_inv := λ F, begin
-    apply ring_hom.coe_add_monoid_hom_injective,
-    ext xi xv,
-    simp only [ring_hom.coe_add_monoid_hom_mk,
-      direct_sum.to_add_monoid_of,
-      add_monoid_hom.mk_coe,
-      add_monoid_hom.comp_apply, to_semiring_coe_add_monoid_hom],
-  end}
+def liftRingHom :
+    { f : ∀ {i}, A i →+ R //
+        f GradedMonoid.GhasOne.one = 1 ∧ ∀ {i j} ai : A i aj : A j, f (GradedMonoid.GhasMul.mul ai aj) = f ai * f aj } ≃
+      ((⨁ i, A i) →+* R) where
+  toFun := fun f => toSemiring f.1 f.2.1 f.2.2
+  invFun := fun F =>
+    ⟨fun i => (F : (⨁ i, A i) →+ R).comp (of _ i), by
+      simp only [AddMonoidHom.comp_apply, RingHom.coe_add_monoid_hom]
+      rw [← F.map_one]
+      rfl, fun i j ai aj => by
+      simp only [AddMonoidHom.comp_apply, RingHom.coe_add_monoid_hom]
+      rw [← F.map_mul, of_mul_of]⟩
+  left_inv := fun f => by
+    ext xi xv
+    exact to_add_monoid_of f.1 xi xv
+  right_inv := fun F => by
+    apply RingHom.coe_add_monoid_hom_injective
+    ext xi xv
+    simp only [RingHom.coe_add_monoid_hom_mk, DirectSum.to_add_monoid_of, AddMonoidHom.mk_coe, AddMonoidHom.comp_apply,
+      to_semiring_coe_add_monoid_hom]
 
-end to_semiring
+end ToSemiring
 
-end direct_sum
+end DirectSum
 
 /-! ### Concrete instances -/
 
-section uniform
 
-variables (ι)
+section Uniform
 
-/-- A direct sum of copies of a `semiring` inherits the multiplication structure. -/
-instance non_unital_non_assoc_semiring.direct_sum_gnon_unital_non_assoc_semiring
-  {R : Type*} [add_monoid ι] [non_unital_non_assoc_semiring R] :
-  direct_sum.gnon_unital_non_assoc_semiring (λ i : ι, R) :=
-{ mul_zero := λ i j, mul_zero,
-  zero_mul := λ i j, zero_mul,
-  mul_add := λ i j, mul_add,
-  add_mul := λ i j, add_mul,
-  ..has_mul.ghas_mul ι }
+variable (ι)
 
 /-- A direct sum of copies of a `semiring` inherits the multiplication structure. -/
-instance semiring.direct_sum_gsemiring {R : Type*} [add_monoid ι] [semiring R] :
-  direct_sum.gsemiring (λ i : ι, R) :=
-{ ..non_unital_non_assoc_semiring.direct_sum_gnon_unital_non_assoc_semiring ι, ..monoid.gmonoid ι }
+instance NonUnitalNonAssocSemiringₓ.directSumGnonUnitalNonAssocSemiring {R : Type _} [AddMonoidₓ ι]
+    [NonUnitalNonAssocSemiringₓ R] : DirectSum.GnonUnitalNonAssocSemiring fun i : ι => R :=
+  { Mul.ghasMul ι with mul_zero := fun i j => mul_zero, zero_mul := fun i j => zero_mul, mul_add := fun i j => mul_addₓ,
+    add_mul := fun i j => add_mulₓ }
 
-open_locale direct_sum
+/-- A direct sum of copies of a `semiring` inherits the multiplication structure. -/
+instance Semiringₓ.directSumGsemiring {R : Type _} [AddMonoidₓ ι] [Semiringₓ R] : DirectSum.Gsemiring fun i : ι => R :=
+  { NonUnitalNonAssocSemiringₓ.directSumGnonUnitalNonAssocSemiring ι, Monoidₓ.gmonoid ι with }
+
+open_locale DirectSum
 
 -- To check `has_mul.ghas_mul_mul` matches
-example {R : Type*} [add_monoid ι] [semiring R] (i j : ι) (a b : R) :
-  (direct_sum.of _ i a * direct_sum.of _ j b : ⨁ i, R) = direct_sum.of _ (i + j) (by exact a * b) :=
-by rw [direct_sum.of_mul_of, has_mul.ghas_mul_mul]
+example {R : Type _} [AddMonoidₓ ι] [Semiringₓ R] (i j : ι) (a b : R) :
+    (DirectSum.of _ i a * DirectSum.of _ j b : ⨁ i, R) = DirectSum.of _ (i + j) (a * b) := by
+  rw [DirectSum.of_mul_of, Mul.ghas_mul_mul]
 
 /-- A direct sum of copies of a `comm_semiring` inherits the commutative multiplication structure.
 -/
-instance comm_semiring.direct_sum_gcomm_semiring {R : Type*} [add_comm_monoid ι] [comm_semiring R] :
-  direct_sum.gcomm_semiring (λ i : ι, R) :=
-{ ..comm_monoid.gcomm_monoid ι, ..semiring.direct_sum_gsemiring ι }
+instance CommSemiringₓ.directSumGcommSemiring {R : Type _} [AddCommMonoidₓ ι] [CommSemiringₓ R] :
+    DirectSum.GcommSemiring fun i : ι => R :=
+  { CommMonoidₓ.gcommMonoid ι, Semiringₓ.directSumGsemiring ι with }
 
-end uniform
+end Uniform
+

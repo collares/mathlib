@@ -3,7 +3,7 @@ Copyright (c) 2020 Fox Thomson. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Fox Thomson
 -/
-import set_theory.pgame
+import Mathbin.SetTheory.Pgame
 
 /-!
 # Basic definitions about who has a winning stratergy
@@ -13,71 +13,111 @@ means the second, first, left and right players have a winning strategy respecti
 These are defined by inequalities which can be unfolded with `pgame.lt_def` and `pgame.le_def`.
 -/
 
-namespace pgame
 
-local infix ` ≈ ` := equiv
+namespace Pgame
+
+-- mathport name: «expr ≈ »
+local infixl:0 " ≈ " => Equiv
 
 /-- The player who goes first loses -/
-def first_loses (G : pgame) : Prop := G ≤ 0 ∧ 0 ≤ G
+def FirstLoses (G : Pgame) : Prop :=
+  G ≤ 0 ∧ 0 ≤ G
 
 /-- The player who goes first wins -/
-def first_wins (G : pgame) : Prop := 0 < G ∧ G < 0
+def FirstWins (G : Pgame) : Prop :=
+  0 < G ∧ G < 0
 
 /-- The left player can always win -/
-def left_wins (G : pgame) : Prop := 0 < G ∧ 0 ≤ G
+def LeftWins (G : Pgame) : Prop :=
+  0 < G ∧ 0 ≤ G
 
 /-- The right player can always win -/
-def right_wins (G : pgame) : Prop := G ≤ 0 ∧ G < 0
+def RightWins (G : Pgame) : Prop :=
+  G ≤ 0 ∧ G < 0
 
-theorem zero_first_loses : first_loses 0 := by tidy
-theorem one_left_wins : left_wins 1 :=
-⟨by { rw lt_def_le, tidy }, by rw le_def; tidy⟩
+theorem zero_first_loses : FirstLoses 0 := by
+  tidy
 
-theorem star_first_wins : first_wins star := ⟨zero_lt_star, star_lt_zero⟩
-theorem omega_left_wins : left_wins omega :=
-⟨by { rw lt_def_le, exact or.inl ⟨ulift.up 0, by tidy⟩ }, by rw le_def; tidy⟩
+theorem one_left_wins : LeftWins 1 :=
+  ⟨by
+    rw [lt_def_le]
+    tidy, by
+    rw [le_def] <;> tidy⟩
 
-lemma winner_cases (G : pgame) : G.left_wins ∨ G.right_wins ∨ G.first_loses ∨ G.first_wins :=
-begin
-  classical,
-  by_cases hpos : 0 < G;
-  by_cases hneg : G < 0;
-  { try { rw not_lt at hpos },
-    try { rw not_lt at hneg },
-    try { left, exact ⟨hpos, hneg⟩ },
-    try { right, left, exact ⟨hpos, hneg⟩ },
-    try { right, right, left, exact ⟨hpos, hneg⟩ },
-    try { right, right, right, exact ⟨hpos, hneg⟩ } }
-end
+theorem star_first_wins : FirstWins star :=
+  ⟨zero_lt_star, star_lt_zero⟩
 
-lemma first_loses_is_zero {G : pgame} : G.first_loses ↔ G ≈ 0 := by refl
+theorem omega_left_wins : LeftWins omega :=
+  ⟨by
+    rw [lt_def_le]
+    exact
+      Or.inl
+        ⟨ULift.up 0, by
+          tidy⟩,
+    by
+    rw [le_def] <;> tidy⟩
 
-lemma first_loses_of_equiv {G H : pgame} (h : G ≈ H) : G.first_loses → H.first_loses :=
-λ hGp, ⟨le_of_equiv_of_le h.symm hGp.1, le_of_le_of_equiv hGp.2 h⟩
-lemma first_wins_of_equiv {G H : pgame} (h : G ≈ H) : G.first_wins → H.first_wins :=
-λ hGn, ⟨lt_of_lt_of_equiv hGn.1 h, lt_of_equiv_of_lt h.symm hGn.2⟩
-lemma left_wins_of_equiv {G H : pgame} (h : G ≈ H) : G.left_wins → H.left_wins :=
-λ hGl, ⟨lt_of_lt_of_equiv hGl.1 h, le_of_le_of_equiv hGl.2 h⟩
-lemma right_wins_of_equiv {G H : pgame} (h : G ≈ H) : G.right_wins → H.right_wins :=
-λ hGr, ⟨le_of_equiv_of_le h.symm hGr.1, lt_of_equiv_of_lt h.symm hGr.2⟩
+theorem winner_cases (G : Pgame) : G.LeftWins ∨ G.RightWins ∨ G.FirstLoses ∨ G.FirstWins := by
+  classical
+  by_cases' hpos : 0 < G <;>
+    by_cases' hneg : G < 0 <;>
+      · try
+          rw [not_ltₓ] at hpos
+        try
+          rw [not_ltₓ] at hneg
+        try
+          left
+          exact ⟨hpos, hneg⟩
+        try
+          right
+          left
+          exact ⟨hpos, hneg⟩
+        try
+          right
+          right
+          left
+          exact ⟨hpos, hneg⟩
+        try
+          right
+          right
+          right
+          exact ⟨hpos, hneg⟩
+        
 
-lemma first_loses_of_equiv_iff {G H : pgame} (h : G ≈ H) : G.first_loses ↔ H.first_loses :=
-⟨first_loses_of_equiv h, first_loses_of_equiv h.symm⟩
-lemma first_wins_of_equiv_iff {G H : pgame} (h : G ≈ H) : G.first_wins ↔ H.first_wins :=
-⟨first_wins_of_equiv h, first_wins_of_equiv h.symm⟩
-lemma left_wins_of_equiv_iff {G H : pgame} (h : G ≈ H) : G.left_wins ↔ H.left_wins :=
-⟨left_wins_of_equiv h, left_wins_of_equiv h.symm⟩
-lemma right_wins_of_equiv_iff {G H : pgame} (h : G ≈ H) : G.right_wins ↔ H.right_wins :=
-⟨right_wins_of_equiv h, right_wins_of_equiv h.symm⟩
+theorem first_loses_is_zero {G : Pgame} : G.FirstLoses ↔ (G ≈ 0) := by
+  rfl
 
-lemma not_first_wins_of_first_loses {G : pgame} : G.first_loses → ¬G.first_wins :=
-begin
-  rw first_loses_is_zero,
-  rintros h ⟨h₀, -⟩,
-  exact pgame.lt_irrefl 0 (lt_of_lt_of_equiv h₀ h)
-end
+theorem first_loses_of_equiv {G H : Pgame} (h : G ≈ H) : G.FirstLoses → H.FirstLoses := fun hGp =>
+  ⟨le_of_equiv_of_le h.symm hGp.1, le_of_le_of_equiv hGp.2 h⟩
 
-lemma not_first_loses_of_first_wins {G : pgame} : G.first_wins → ¬G.first_loses :=
-imp_not_comm.1 $ not_first_wins_of_first_loses
+theorem first_wins_of_equiv {G H : Pgame} (h : G ≈ H) : G.FirstWins → H.FirstWins := fun hGn =>
+  ⟨lt_of_lt_of_equiv hGn.1 h, lt_of_equiv_of_lt h.symm hGn.2⟩
 
-end pgame
+theorem left_wins_of_equiv {G H : Pgame} (h : G ≈ H) : G.LeftWins → H.LeftWins := fun hGl =>
+  ⟨lt_of_lt_of_equiv hGl.1 h, le_of_le_of_equiv hGl.2 h⟩
+
+theorem right_wins_of_equiv {G H : Pgame} (h : G ≈ H) : G.RightWins → H.RightWins := fun hGr =>
+  ⟨le_of_equiv_of_le h.symm hGr.1, lt_of_equiv_of_lt h.symm hGr.2⟩
+
+theorem first_loses_of_equiv_iff {G H : Pgame} (h : G ≈ H) : G.FirstLoses ↔ H.FirstLoses :=
+  ⟨first_loses_of_equiv h, first_loses_of_equiv h.symm⟩
+
+theorem first_wins_of_equiv_iff {G H : Pgame} (h : G ≈ H) : G.FirstWins ↔ H.FirstWins :=
+  ⟨first_wins_of_equiv h, first_wins_of_equiv h.symm⟩
+
+theorem left_wins_of_equiv_iff {G H : Pgame} (h : G ≈ H) : G.LeftWins ↔ H.LeftWins :=
+  ⟨left_wins_of_equiv h, left_wins_of_equiv h.symm⟩
+
+theorem right_wins_of_equiv_iff {G H : Pgame} (h : G ≈ H) : G.RightWins ↔ H.RightWins :=
+  ⟨right_wins_of_equiv h, right_wins_of_equiv h.symm⟩
+
+theorem not_first_wins_of_first_loses {G : Pgame} : G.FirstLoses → ¬G.FirstWins := by
+  rw [first_loses_is_zero]
+  rintro h ⟨h₀, -⟩
+  exact Pgame.lt_irrefl 0 (lt_of_lt_of_equiv h₀ h)
+
+theorem not_first_loses_of_first_wins {G : Pgame} : G.FirstWins → ¬G.FirstLoses :=
+  imp_not_comm.1 <| not_first_wins_of_first_loses
+
+end Pgame
+

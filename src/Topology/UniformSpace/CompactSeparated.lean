@@ -3,8 +3,9 @@ Copyright (c) 2020 Patrick Massot. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Patrick Massot
 -/
-import topology.uniform_space.separation
-import topology.uniform_space.uniform_convergence
+import Mathbin.Topology.UniformSpace.Separation
+import Mathbin.Topology.UniformSpace.UniformConvergence
+
 /-!
 # Compact separated uniform spaces
 
@@ -28,225 +29,236 @@ loop.
 uniform space, uniform continuity, compact space
 -/
 
-open_locale classical uniformity topological_space filter
-open filter uniform_space set
 
-variables {α β γ : Type*} [uniform_space α] [uniform_space β]
+open_locale Classical uniformity TopologicalSpace Filter
 
+open Filter UniformSpace Set
+
+variable {α β γ : Type _} [UniformSpace α] [UniformSpace β]
 
 /-!
 ### Uniformity on compact separated spaces
 -/
 
+
 /-- On a separated compact uniform space, the topology determines the uniform structure, entourages
 are exactly the neighborhoods of the diagonal. -/
-lemma compact_space_uniformity [compact_space α] [separated_space α] : 𝓤 α = ⨆ x : α, 𝓝 (x, x) :=
-begin
-  symmetry, refine le_antisymm supr_nhds_le_uniformity _,
-  by_contra H,
-  obtain ⟨V, hV, h⟩ : ∃ V : set (α × α), (∀ x : α, V ∈ 𝓝 (x, x)) ∧ 𝓤 α ⊓ 𝓟 Vᶜ ≠ ⊥,
-  { simpa [le_iff_forall_inf_principal_compl] using H },
-  let F := 𝓤 α ⊓ 𝓟 Vᶜ,
-  haveI : ne_bot F := ⟨h⟩,
-  obtain ⟨⟨x, y⟩, hx⟩ : ∃ (p : α × α), cluster_pt p F :=
-    cluster_point_of_compact F,
-  have : cluster_pt (x, y) (𝓤 α) :=
-    hx.of_inf_left,
-  have hxy : x = y := eq_of_uniformity_inf_nhds this,
-  subst hxy,
-  have : cluster_pt (x, x) (𝓟 Vᶜ) :=
-   hx.of_inf_right,
-  have : (x, x) ∉ interior V,
-  { have : (x, x) ∈ closure Vᶜ, by rwa mem_closure_iff_cluster_pt,
-    rwa closure_compl at this },
-  have : (x, x) ∈ interior V,
-  { rw mem_interior_iff_mem_nhds,
-    exact hV x },
+theorem compact_space_uniformity [CompactSpace α] [SeparatedSpace α] : 𝓤 α = ⨆ x : α, 𝓝 (x, x) := by
+  symm
+  refine' le_antisymmₓ supr_nhds_le_uniformity _
+  by_contra H
+  obtain ⟨V, hV, h⟩ : ∃ V : Set (α × α), (∀ x : α, V ∈ 𝓝 (x, x)) ∧ 𝓤 α⊓𝓟 (Vᶜ) ≠ ⊥ := by
+    simpa [le_iff_forall_inf_principal_compl] using H
+  let F := 𝓤 α⊓𝓟 (Vᶜ)
+  have : ne_bot F := ⟨h⟩
+  obtain ⟨⟨x, y⟩, hx⟩ : ∃ p : α × α, ClusterPt p F := cluster_point_of_compact F
+  have : ClusterPt (x, y) (𝓤 α) := hx.of_inf_left
+  have hxy : x = y := eq_of_uniformity_inf_nhds this
+  subst hxy
+  have : ClusterPt (x, x) (𝓟 (Vᶜ)) := hx.of_inf_right
+  have : (x, x) ∉ Interior V := by
+    have : (x, x) ∈ Closure (Vᶜ) := by
+      rwa [mem_closure_iff_cluster_pt]
+    rwa [closure_compl] at this
+  have : (x, x) ∈ Interior V := by
+    rw [mem_interior_iff_mem_nhds]
+    exact hV x
   contradiction
-end
 
-lemma unique_uniformity_of_compact_t2 [t : topological_space γ] [compact_space γ]
-[t2_space γ] {u u' : uniform_space γ}
-(h : u.to_topological_space = t) (h' : u'.to_topological_space = t) : u = u' :=
-begin
-  apply uniform_space_eq,
-  change uniformity _ = uniformity _,
-  haveI : @compact_space γ u.to_topological_space, { rw h ; assumption },
-  haveI : @compact_space γ u'.to_topological_space, { rw h' ; assumption },
-  haveI : @separated_space γ u, { rwa [separated_iff_t2, h] },
-  haveI : @separated_space γ u', { rwa [separated_iff_t2, h'] },
+theorem unique_uniformity_of_compact_t2 [t : TopologicalSpace γ] [CompactSpace γ] [T2Space γ] {u u' : UniformSpace γ}
+    (h : u.toTopologicalSpace = t) (h' : u'.toTopologicalSpace = t) : u = u' := by
+  apply uniform_space_eq
+  change uniformity _ = uniformity _
+  have : @CompactSpace γ u.to_topological_space := by
+    rw [h] <;> assumption
+  have : @CompactSpace γ u'.to_topological_space := by
+    rw [h'] <;> assumption
+  have : @SeparatedSpace γ u := by
+    rwa [separated_iff_t2, h]
+  have : @SeparatedSpace γ u' := by
+    rwa [separated_iff_t2, h']
   rw [compact_space_uniformity, compact_space_uniformity, h, h']
-end
 
+-- ././Mathport/Syntax/Translate/Basic.lean:598:2: warning: expanding binder collection (U₁ V₁ «expr ∈ » expr𝓝() x)
+-- ././Mathport/Syntax/Translate/Basic.lean:598:2: warning: expanding binder collection (U₂ V₂ «expr ∈ » expr𝓝() y)
+-- ././Mathport/Syntax/Translate/Basic.lean:598:2: warning: expanding binder collection (y «expr ≠ » x)
 /-- The unique uniform structure inducing a given compact Hausdorff topological structure. -/
-def uniform_space_of_compact_t2 [topological_space γ] [compact_space γ] [t2_space γ] :
-  uniform_space γ :=
-{ uniformity := ⨆ x, 𝓝 (x, x),
-  refl := begin
-    simp_rw [filter.principal_le_iff, mem_supr],
-    rintros V V_in ⟨x, _⟩ ⟨⟩,
-    exact mem_of_mem_nhds (V_in x),
-  end,
-  symm := begin
-    refine le_of_eq _,
-    rw map_supr,
-    congr' with x : 1,
-    erw [nhds_prod_eq, ← prod_comm],
-  end,
-  comp := begin
+def uniformSpaceOfCompactT2 [TopologicalSpace γ] [CompactSpace γ] [T2Space γ] : UniformSpace γ where
+  uniformity := ⨆ x, 𝓝 (x, x)
+  refl := by
+    simp_rw [Filter.principal_le_iff, mem_supr]
+    rintro V V_in ⟨x, _⟩ ⟨⟩
+    exact mem_of_mem_nhds (V_in x)
+  symm := by
+    refine' le_of_eqₓ _
+    rw [map_supr]
+    congr with x : 1
+    erw [nhds_prod_eq, ← prod_comm]
+  comp := by
     /-
-    This is the difficult part of the proof. We need to prove that, for each neighborhood W
-    of the diagonal Δ, W ○ W is still a neighborhood of the diagonal.
-    -/
-    set 𝓝Δ := ⨆ x : γ, 𝓝 (x, x), -- The filter of neighborhoods of Δ
-    set F := 𝓝Δ.lift' (λ (s : set (γ × γ)), s ○ s), -- Compositions of neighborhoods of Δ
+        This is the difficult part of the proof. We need to prove that, for each neighborhood W
+        of the diagonal Δ, W ○ W is still a neighborhood of the diagonal.
+        -/
+    set 𝓝Δ := ⨆ x : γ, 𝓝 (x, x)
+    -- The filter of neighborhoods of Δ
+    set F := 𝓝Δ.lift' fun s : Set (γ × γ) => s ○ s
+    -- Compositions of neighborhoods of Δ
     -- If this weren't true, then there would be V ∈ 𝓝Δ such that F ⊓ 𝓟 Vᶜ ≠ ⊥
-    rw le_iff_forall_inf_principal_compl,
-    intros V V_in,
-    by_contra H,
-    haveI : ne_bot (F ⊓ 𝓟 Vᶜ) := ⟨H⟩,
+    rw [le_iff_forall_inf_principal_compl]
+    intro V V_in
+    by_contra H
+    have : ne_bot (F⊓𝓟 (Vᶜ)) := ⟨H⟩
     -- Hence compactness would give us a cluster point (x, y) for F ⊓ 𝓟 Vᶜ
-    obtain ⟨⟨x, y⟩, hxy⟩ : ∃ (p : γ × γ), cluster_pt p (F ⊓ 𝓟 Vᶜ) := cluster_point_of_compact _,
+    obtain ⟨⟨x, y⟩, hxy⟩ : ∃ p : γ × γ, ClusterPt p (F⊓𝓟 (Vᶜ)) := cluster_point_of_compact _
     -- In particular (x, y) is a cluster point of 𝓟 Vᶜ, hence is not in the interior of V,
     -- and a fortiori not in Δ, so x ≠ y
-    have clV : cluster_pt (x, y) (𝓟 $ Vᶜ) := hxy.of_inf_right,
-    have : (x, y) ∉ interior V,
-    { have : (x, y) ∈ closure (Vᶜ), by rwa mem_closure_iff_cluster_pt,
-      rwa closure_compl at this },
-    have diag_subset : diagonal γ ⊆ interior V,
-    { rw subset_interior_iff_nhds,
-      rintros ⟨x, x⟩ ⟨⟩,
-      exact (mem_supr.mp V_in : _) x },
-    have x_ne_y : x ≠ y,
-    { intro h,
-      apply this,
-      apply diag_subset,
-      simp [h] },
+    have clV : ClusterPt (x, y) (𝓟 <| Vᶜ) := hxy.of_inf_right
+    have : (x, y) ∉ Interior V := by
+      have : (x, y) ∈ Closure (Vᶜ) := by
+        rwa [mem_closure_iff_cluster_pt]
+      rwa [closure_compl] at this
+    have diag_subset : diagonal γ ⊆ Interior V := by
+      rw [subset_interior_iff_nhds]
+      rintro ⟨x, x⟩ ⟨⟩
+      exact (mem_supr.mp V_in : _) x
+    have x_ne_y : x ≠ y := by
+      intro h
+      apply this
+      apply diag_subset
+      simp [h]
     -- Since γ is compact and Hausdorff, it is normal, hence regular.
-    haveI : normal_space γ := normal_of_compact_t2,
+    have : NormalSpace γ := normal_of_compact_t2
     -- So there are closed neighboords V₁ and V₂ of x and y contained in disjoint open neighborhoods
     -- U₁ and U₂.
-    obtain
-      ⟨U₁, U₁_in, V₁, V₁_in, U₂, U₂_in₂, V₂, V₂_in, V₁_cl, V₂_cl, U₁_op, U₂_op, VU₁, VU₂, hU₁₂⟩ :
-        ∃ (U₁ V₁ ∈ 𝓝 x) (U₂ V₂ ∈ 𝓝 y),
-          is_closed V₁ ∧ is_closed V₂ ∧ is_open U₁ ∧ is_open U₂ ∧ V₁ ⊆ U₁ ∧ V₂ ⊆ U₂ ∧ U₁ ∩ U₂ = ∅ :=
-       disjoint_nested_nhds x_ne_y,
+    obtain ⟨U₁, U₁_in, V₁, V₁_in, U₂, U₂_in₂, V₂, V₂_in, V₁_cl, V₂_cl, U₁_op, U₂_op, VU₁, VU₂, hU₁₂⟩ :
+      ∃ (U₁ V₁ : _)(_ : U₁ ∈ 𝓝 x)(_ : V₁ ∈ 𝓝 x)(U₂ V₂ : _)(_ : U₂ ∈ 𝓝 y)(_ : V₂ ∈ 𝓝 y),
+        IsClosed V₁ ∧ IsClosed V₂ ∧ IsOpen U₁ ∧ IsOpen U₂ ∧ V₁ ⊆ U₁ ∧ V₂ ⊆ U₂ ∧ U₁ ∩ U₂ = ∅ :=
+      disjoint_nested_nhds x_ne_y
     -- We set U₃ := (V₁ ∪ V₂)ᶜ so that W := U₁ ×ˢ U₁ ∪ U₂ ×ˢ U₂ ∪ U₃ ×ˢ U₃ is an open
     -- neighborhood of Δ.
-    let U₃ := (V₁ ∪ V₂)ᶜ,
-    have U₃_op : is_open U₃ :=
-      is_open_compl_iff.mpr (is_closed.union V₁_cl V₂_cl),
-    let W := U₁ ×ˢ U₁ ∪ U₂ ×ˢ U₂ ∪ U₃ ×ˢ U₃,
-    have W_in : W ∈ 𝓝Δ,
-    { rw mem_supr,
-      intros x,
-      apply is_open.mem_nhds (is_open.union (is_open.union _ _) _),
-      { by_cases hx : x ∈ V₁ ∪ V₂,
-        { left,
-          cases hx with hx hx ; [left, right] ; split ; tauto },
-        { right,
-          rw mem_prod,
-          tauto }, },
-      all_goals { simp only [is_open.prod, *] } },
+    let U₃ := (V₁ ∪ V₂)ᶜ
+    have U₃_op : IsOpen U₃ := is_open_compl_iff.mpr (IsClosed.union V₁_cl V₂_cl)
+    let W := U₁ ×ˢ U₁ ∪ U₂ ×ˢ U₂ ∪ U₃ ×ˢ U₃
+    have W_in : W ∈ 𝓝Δ := by
+      rw [mem_supr]
+      intro x
+      apply IsOpen.mem_nhds (IsOpen.union (IsOpen.union _ _) _)
+      · by_cases' hx : x ∈ V₁ ∪ V₂
+        · left
+          cases' hx with hx hx <;> [left, right] <;> constructor <;> tauto
+          
+        · right
+          rw [mem_prod]
+          tauto
+          
+        
+      all_goals
+        simp only [IsOpen.prod, *]
     -- So W ○ W ∈ F by definition of F
-    have : W ○ W ∈ F, by simpa only using mem_lift' W_in,
+    have : W ○ W ∈ F := by
+      simpa only using mem_lift' W_in
     -- And V₁ ×ˢ V₂ ∈ 𝓝 (x, y)
-    have hV₁₂ : V₁ ×ˢ V₂ ∈ 𝓝 (x, y) := prod_is_open.mem_nhds V₁_in V₂_in,
+    have hV₁₂ : V₁ ×ˢ V₂ ∈ 𝓝 (x, y) := ProdIsOpen.mem_nhds V₁_in V₂_in
     -- But (x, y) is also a cluster point of F so (V₁ ×ˢ V₂) ∩ (W ○ W) ≠ ∅
-    have clF : cluster_pt (x, y) F := hxy.of_inf_left,
-    obtain ⟨p, p_in⟩ : ∃ p, p ∈ (V₁ ×ˢ V₂) ∩ (W ○ W) :=
-      cluster_pt_iff.mp clF hV₁₂ this,
+    have clF : ClusterPt (x, y) F := hxy.of_inf_left
+    obtain ⟨p, p_in⟩ : ∃ p, p ∈ V₁ ×ˢ V₂ ∩ (W ○ W) := cluster_pt_iff.mp clF hV₁₂ this
     -- However the construction of W implies (V₁ ×ˢ V₂) ∩ (W ○ W) = ∅.
     -- Indeed assume for contradiction there is some (u, v) in the intersection.
     -- So u ∈ V₁, v ∈ V₂, and there exists some w such that (u, w) ∈ W and (w ,v) ∈ W.
     -- Because u is in V₁ which is disjoint from U₂ and U₃, (u, w) ∈ W forces (u, w) ∈ U₁ ×ˢ U₁.
     -- Similarly, because v ∈ V₂, (w ,v) ∈ W forces (w, v) ∈ U₂ ×ˢ U₂.
     -- Hence w ∈ U₁ ∩ U₂ which is empty.
-    have inter_empty : (V₁ ×ˢ V₂) ∩ (W ○ W) = ∅,
-    { rw eq_empty_iff_forall_not_mem,
-      rintros ⟨u, v⟩ ⟨⟨u_in, v_in⟩, w, huw, hwv⟩,
+    have inter_empty : V₁ ×ˢ V₂ ∩ (W ○ W) = ∅ := by
+      rw [eq_empty_iff_forall_not_mem]
+      rintro ⟨u, v⟩ ⟨⟨u_in, v_in⟩, w, huw, hwv⟩
       have uw_in : (u, w) ∈ U₁ ×ˢ U₁ :=
-        set.mem_prod.2 ((huw.resolve_right (λ h, (h.1 $ or.inl u_in))).resolve_right
-        (λ h, have u ∈ U₁ ∩ U₂, from ⟨VU₁ u_in, h.1⟩, by rwa hU₁₂ at this)),
+        Set.mem_prod.2
+          ((huw.resolve_right fun h => h.1 <| Or.inl u_in).resolve_right fun h => by
+            have : u ∈ U₁ ∩ U₂ := ⟨VU₁ u_in, h.1⟩
+            rwa [hU₁₂] at this)
       have wv_in : (w, v) ∈ U₂ ×ˢ U₂ :=
-        set.mem_prod.2 ((hwv.resolve_right (λ h, (h.2 $ or.inr v_in))).resolve_left
-        (λ h, have v ∈ U₁ ∩ U₂, from ⟨h.2, VU₂ v_in⟩, by rwa hU₁₂ at this)),
-      have : w ∈ U₁ ∩ U₂ := ⟨uw_in.2, wv_in.1⟩,
-      rwa hU₁₂ at this },
+        Set.mem_prod.2
+          ((hwv.resolve_right fun h => h.2 <| Or.inr v_in).resolve_left fun h => by
+            have : v ∈ U₁ ∩ U₂ := ⟨h.2, VU₂ v_in⟩
+            rwa [hU₁₂] at this)
+      have : w ∈ U₁ ∩ U₂ := ⟨uw_in.2, wv_in.1⟩
+      rwa [hU₁₂] at this
     -- So we have a contradiction
-    rwa inter_empty at p_in,
-  end,
-  is_open_uniformity := begin
+    rwa [inter_empty] at p_in
+  is_open_uniformity := by
     -- Here we need to prove the topology induced by the constructed uniformity is the
     -- topology we started with.
-    suffices : ∀ x : γ, filter.comap (prod.mk x) (⨆ y, 𝓝 (y ,y)) = 𝓝 x,
-    { intros s,
-      change is_open s ↔ _,
-      simp_rw [is_open_iff_mem_nhds, nhds_eq_comap_uniformity_aux, this] },
-    intros x,
+    suffices ∀ x : γ, Filter.comap (Prod.mk x) (⨆ y, 𝓝 (y, y)) = 𝓝 x by
+      intro s
+      change IsOpen s ↔ _
+      simp_rw [is_open_iff_mem_nhds, nhds_eq_comap_uniformity_aux, this]
+    intro x
     simp_rw [comap_supr, nhds_prod_eq, comap_prod,
-             show prod.fst ∘ prod.mk x = λ y : γ, x, by ext ; simp,
-             show prod.snd ∘ (prod.mk x) = (id : γ → γ), by ext ; refl, comap_id],
-    rw [supr_split_single _ x, comap_const_of_mem (λ V, mem_of_mem_nhds)],
-    suffices : ∀ y ≠ x, comap (λ (y : γ), x) (𝓝 y) ⊓ 𝓝 y ≤ 𝓝 x,
-      by simpa,
-    intros y hxy,
-    simp [comap_const_of_not_mem (compl_singleton_mem_nhds hxy) (by simp)],
-  end }
+      show Prod.fst ∘ Prod.mk x = fun y : γ => x by
+        ext <;> simp ,
+      show Prod.snd ∘ Prod.mk x = (id : γ → γ) by
+        ext <;> rfl,
+      comap_id]
+    rw [supr_split_single _ x, comap_const_of_mem fun V => mem_of_mem_nhds]
+    suffices ∀ y _ : y ≠ x, comap (fun y : γ => x) (𝓝 y)⊓𝓝 y ≤ 𝓝 x by
+      simpa
+    intro y hxy
+    simp
+      [comap_const_of_not_mem (compl_singleton_mem_nhds hxy)
+        (by
+          simp )]
 
 /-!
 ### Heine-Cantor theorem
 -/
 
+
 /-- Heine-Cantor: a continuous function on a compact separated uniform space is uniformly
 continuous. -/
-lemma compact_space.uniform_continuous_of_continuous [compact_space α] [separated_space α]
-  {f : α → β} (h : continuous f) : uniform_continuous f :=
-calc
-map (prod.map f f) (𝓤 α) = map (prod.map f f) (⨆ x, 𝓝 (x, x))  : by rw compact_space_uniformity
-                     ... =  ⨆ x, map (prod.map f f) (𝓝 (x, x)) : by rw map_supr
-                     ... ≤ ⨆ x, 𝓝 (f x, f x)     : supr_le_supr (λ x, (h.prod_map h).continuous_at)
-                     ... ≤ ⨆ y, 𝓝 (y, y)         : supr_comp_le (λ y, 𝓝 (y, y)) f
-                     ... ≤ 𝓤 β                   : supr_nhds_le_uniformity
+theorem CompactSpace.uniform_continuous_of_continuous [CompactSpace α] [SeparatedSpace α] {f : α → β}
+    (h : Continuous f) : UniformContinuous f :=
+  calc
+    map (Prod.map f f) (𝓤 α) = map (Prod.map f f) (⨆ x, 𝓝 (x, x)) := by
+      rw [compact_space_uniformity]
+    _ = ⨆ x, map (Prod.map f f) (𝓝 (x, x)) := by
+      rw [map_supr]
+    _ ≤ ⨆ x, 𝓝 (f x, f x) := supr_le_supr fun x => (h.prod_map h).ContinuousAt
+    _ ≤ ⨆ y, 𝓝 (y, y) := supr_comp_le (fun y => 𝓝 (y, y)) f
+    _ ≤ 𝓤 β := supr_nhds_le_uniformity
+    
 
 /-- Heine-Cantor: a continuous function on a compact separated set of a uniform space is
 uniformly continuous. -/
-lemma is_compact.uniform_continuous_on_of_continuous' {s : set α} {f : α → β}
-  (hs : is_compact s) (hs' : is_separated s) (hf : continuous_on f s) : uniform_continuous_on f s :=
-begin
-  rw uniform_continuous_on_iff_restrict,
-  rw is_separated_iff_induced at hs',
-  rw is_compact_iff_compact_space at hs,
-  rw continuous_on_iff_continuous_restrict at hf,
-  resetI,
-  exact compact_space.uniform_continuous_of_continuous hf,
-end
+theorem IsCompact.uniform_continuous_on_of_continuous' {s : Set α} {f : α → β} (hs : IsCompact s) (hs' : IsSeparated s)
+    (hf : ContinuousOn f s) : UniformContinuousOn f s := by
+  rw [uniform_continuous_on_iff_restrict]
+  rw [is_separated_iff_induced] at hs'
+  rw [is_compact_iff_compact_space] at hs
+  rw [continuous_on_iff_continuous_restrict] at hf
+  skip
+  exact CompactSpace.uniform_continuous_of_continuous hf
 
 /-- Heine-Cantor: a continuous function on a compact set of a separated uniform space
 is uniformly continuous. -/
-lemma is_compact.uniform_continuous_on_of_continuous [separated_space α] {s : set α} {f : α → β}
-  (hs : is_compact s) (hf : continuous_on f s) : uniform_continuous_on f s :=
-hs.uniform_continuous_on_of_continuous' (is_separated_of_separated_space s) hf
+theorem IsCompact.uniform_continuous_on_of_continuous [SeparatedSpace α] {s : Set α} {f : α → β} (hs : IsCompact s)
+    (hf : ContinuousOn f s) : UniformContinuousOn f s :=
+  hs.uniform_continuous_on_of_continuous' (is_separated_of_separated_space s) hf
 
 /-- A family of functions `α → β → γ` tends uniformly to its value at `x` if `α` is locally compact,
 `β` is compact and separated and `f` is continuous on `U × (univ : set β)` for some separated
 neighborhood `U` of `x`. -/
-lemma continuous_on.tendsto_uniformly [locally_compact_space α] [compact_space β]
-  [separated_space β] [uniform_space γ] {f : α → β → γ} {x : α} {U : set α}
-  (hxU : U ∈ 𝓝 x) (hU : is_separated U) (h : continuous_on ↿f (U ×ˢ (univ : set β))) :
-  tendsto_uniformly f (f x) (𝓝 x) :=
-begin
-  rcases locally_compact_space.local_compact_nhds _ _ hxU with ⟨K, hxK, hKU, hK⟩,
-  have : uniform_continuous_on ↿f (K ×ˢ (univ : set β)),
-  { refine is_compact.uniform_continuous_on_of_continuous' (hK.prod compact_univ) _
-      (h.mono $ prod_mono hKU subset.rfl),
-    exact (hU.mono hKU).prod (is_separated_of_separated_space _) },
+theorem ContinuousOn.tendsto_uniformly [LocallyCompactSpace α] [CompactSpace β] [SeparatedSpace β] [UniformSpace γ]
+    {f : α → β → γ} {x : α} {U : Set α} (hxU : U ∈ 𝓝 x) (hU : IsSeparated U)
+    (h : ContinuousOn (↿f) (U ×ˢ (Univ : Set β))) : TendstoUniformly f (f x) (𝓝 x) := by
+  rcases LocallyCompactSpace.local_compact_nhds _ _ hxU with ⟨K, hxK, hKU, hK⟩
+  have : UniformContinuousOn (↿f) (K ×ˢ (univ : Set β)) := by
+    refine' IsCompact.uniform_continuous_on_of_continuous' (hK.prod compact_univ) _ (h.mono <| prod_mono hKU subset.rfl)
+    exact (hU.mono hKU).Prod (is_separated_of_separated_space _)
   exact this.tendsto_uniformly hxK
-end
 
 /-- A continuous family of functions `α → β → γ` tends uniformly to its value at `x` if `α` is
 locally compact and `β` is compact and separated. -/
-lemma continuous.tendsto_uniformly [separated_space α] [locally_compact_space α]
-  [compact_space β] [separated_space β] [uniform_space γ]
-  (f : α → β → γ) (h : continuous ↿f) (x : α) : tendsto_uniformly f (f x) (𝓝 x) :=
-h.continuous_on.tendsto_uniformly univ_mem $ is_separated_of_separated_space _
+theorem Continuous.tendsto_uniformly [SeparatedSpace α] [LocallyCompactSpace α] [CompactSpace β] [SeparatedSpace β]
+    [UniformSpace γ] (f : α → β → γ) (h : Continuous ↿f) (x : α) : TendstoUniformly f (f x) (𝓝 x) :=
+  h.ContinuousOn.TendstoUniformly univ_mem <| is_separated_of_separated_space _
+

@@ -3,8 +3,7 @@ Copyright (c) 2021 Anne Baanen. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Anne Baanen
 -/
-
-import data.fun_like.embedding
+import Mathbin.Data.FunLike.Embedding
 
 /-!
 # Typeclass for a type `F` with an injective map to `A ≃ B`
@@ -117,67 +116,73 @@ instead of linearly increasing the work per `my_iso`-related declaration.
 
 -/
 
+
 /-- The class `equiv_like E α β` expresses that terms of type `E` have an
 injective coercion to bijections between `α` and `β`.
 
 This typeclass is used in the definition of the homomorphism typeclasses,
 such as `zero_equiv_class`, `mul_equiv_class`, `monoid_equiv_class`, ....
 -/
-class equiv_like (E : Sort*) (α β : out_param Sort*) :=
-(coe : E → α → β)
-(inv : E → β → α)
-(left_inv  : ∀ e, function.left_inverse (inv e) (coe e))
-(right_inv : ∀ e, function.right_inverse (inv e) (coe e))
--- The `inv` hypothesis makes this easier to prove with `congr'`
-(coe_injective' : ∀ e g, coe e = coe g → inv e = inv g → e = g)
+class EquivLike (E : Sort _) (α β : outParam (Sort _)) where
+  coe : E → α → β
+  inv : E → β → α
+  left_inv : ∀ e, Function.LeftInverse (inv e) (coe e)
+  right_inv : ∀ e, Function.RightInverse (inv e) (coe e)
+  -- The `inv` hypothesis makes this easier to prove with `congr'`
+  coe_injective' : ∀ e g, coe e = coe g → inv e = inv g → e = g
 
-namespace equiv_like
+namespace EquivLike
 
-variables {E F α β γ : Sort*} [iE : equiv_like E α β] [iF : equiv_like F β γ]
+variable {E F α β γ : Sort _} [iE : EquivLike E α β] [iF : EquivLike F β γ]
+
 include iE
 
-lemma inv_injective : function.injective (equiv_like.inv : E → (β → α)) :=
-λ e g h, coe_injective' e g ((right_inv e).eq_right_inverse (h.symm ▸ left_inv g)) h
+theorem inv_injective : Function.Injective (EquivLike.inv : E → β → α) := fun e g h =>
+  coe_injective' e g ((right_inv e).eq_right_inverse (h.symm ▸ left_inv g)) h
 
-@[priority 100]
-instance to_embedding_like : embedding_like E α β :=
-{ coe := coe,
-  coe_injective' := λ e g h, coe_injective' e g h
-    ((left_inv e).eq_right_inverse (h.symm ▸ right_inv g)),
-  injective' := λ e, (left_inv e).injective }
+instance (priority := 100) toEmbeddingLike : EmbeddingLike E α β where
+  coe := coe
+  coe_injective' := fun e g h => coe_injective' e g h ((left_inv e).eq_right_inverse (h.symm ▸ right_inv g))
+  injective' := fun e => (left_inv e).Injective
 
-protected lemma injective (e : E) : function.injective e := embedding_like.injective e
-protected lemma surjective (e : E) : function.surjective e := (right_inv e).surjective
-protected lemma bijective (e : E) : function.bijective (e : α → β) :=
-⟨equiv_like.injective e, equiv_like.surjective e⟩
+protected theorem injective (e : E) : Function.Injective e :=
+  EmbeddingLike.injective e
 
-theorem apply_eq_iff_eq (f : E) {x y : α} : f x = f y ↔ x = y := embedding_like.apply_eq_iff_eq f
+protected theorem surjective (e : E) : Function.Surjective e :=
+  (right_inv e).Surjective
 
-@[simp] lemma injective_comp (e : E) (f : β → γ) :
-  function.injective (f ∘ e) ↔ function.injective f :=
-function.injective.of_comp_iff' f (equiv_like.bijective e)
+protected theorem bijective (e : E) : Function.Bijective (e : α → β) :=
+  ⟨EquivLike.injective e, EquivLike.surjective e⟩
 
-@[simp] lemma surjective_comp (e : E) (f : β → γ) :
-  function.surjective (f ∘ e) ↔ function.surjective f :=
-(equiv_like.surjective e).of_comp_iff f
+theorem apply_eq_iff_eq (f : E) {x y : α} : f x = f y ↔ x = y :=
+  EmbeddingLike.apply_eq_iff_eq f
 
-@[simp] lemma bijective_comp (e : E) (f : β → γ) :
-  function.bijective (f ∘ e) ↔ function.bijective f :=
-(equiv_like.bijective e).of_comp_iff f
+@[simp]
+theorem injective_comp (e : E) (f : β → γ) : Function.Injective (f ∘ e) ↔ Function.Injective f :=
+  Function.Injective.of_comp_iff' f (EquivLike.bijective e)
+
+@[simp]
+theorem surjective_comp (e : E) (f : β → γ) : Function.Surjective (f ∘ e) ↔ Function.Surjective f :=
+  (EquivLike.surjective e).of_comp_iff f
+
+@[simp]
+theorem bijective_comp (e : E) (f : β → γ) : Function.Bijective (f ∘ e) ↔ Function.Bijective f :=
+  (EquivLike.bijective e).of_comp_iff f
 
 omit iE
+
 include iF
 
-lemma comp_injective (f : α → β) (e : F) :
-  function.injective (e ∘ f) ↔ function.injective f :=
-embedding_like.comp_injective f e
+theorem comp_injective (f : α → β) (e : F) : Function.Injective (e ∘ f) ↔ Function.Injective f :=
+  EmbeddingLike.comp_injective f e
 
-@[simp] lemma comp_surjective (f : α → β) (e : F) :
-  function.surjective (e ∘ f) ↔ function.surjective f :=
-function.surjective.of_comp_iff' (equiv_like.bijective e) f
+@[simp]
+theorem comp_surjective (f : α → β) (e : F) : Function.Surjective (e ∘ f) ↔ Function.Surjective f :=
+  Function.Surjective.of_comp_iff' (EquivLike.bijective e) f
 
-@[simp] lemma comp_bijective (f : α → β) (e : F) :
-  function.bijective (e ∘ f) ↔ function.bijective f :=
-(equiv_like.bijective e).of_comp_iff' f
+@[simp]
+theorem comp_bijective (f : α → β) (e : F) : Function.Bijective (e ∘ f) ↔ Function.Bijective f :=
+  (EquivLike.bijective e).of_comp_iff' f
 
-end equiv_like
+end EquivLike
+

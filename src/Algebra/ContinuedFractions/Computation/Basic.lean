@@ -3,9 +3,10 @@ Copyright (c) 2020 Kevin Kappelmann. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kevin Kappelmann
 -/
-import algebra.order.floor
-import algebra.continued_fractions.basic
-import algebra.order.field
+import Mathbin.Algebra.Order.Floor
+import Mathbin.Algebra.ContinuedFractions.Basic
+import Mathbin.Algebra.Order.Field
+
 /-!
 # Computable Continued Fractions
 
@@ -60,60 +61,67 @@ head term and the stream.
 numerics, number theory, approximations, fractions
 -/
 
-namespace generalized_continued_fraction
+
+namespace GeneralizedContinuedFraction
 
 -- Fix a carrier `K`.
-variable (K : Type*)
+variable (K : Type _)
 
-/--
-We collect an integer part `b = ⌊v⌋` and fractional part `fr = v - ⌊v⌋` of a value `v` in a pair
+/-- We collect an integer part `b = ⌊v⌋` and fractional part `fr = v - ⌊v⌋` of a value `v` in a pair
 `⟨b, fr⟩`.
 -/
-structure int_fract_pair := (b : ℤ) (fr : K)
+structure IntFractPair where
+  b : ℤ
+  fr : K
 
 variable {K}
 
 /-! Interlude: define some expected coercions and instances. -/
-namespace int_fract_pair
+
+
+namespace IntFractPair
 
 /-- Make an `int_fract_pair` printable. -/
-instance [has_repr K] : has_repr (int_fract_pair K) :=
-⟨λ p, "(b : " ++ (repr p.b) ++ ", fract : " ++ (repr p.fr) ++ ")"⟩
+instance [HasRepr K] : HasRepr (IntFractPair K) :=
+  ⟨fun p => "(b : " ++ reprₓ p.b ++ ", fract : " ++ reprₓ p.fr ++ ")"⟩
 
-instance inhabited [inhabited K] : inhabited (int_fract_pair K) := ⟨⟨0, default⟩⟩
+instance inhabited [Inhabited K] : Inhabited (IntFractPair K) :=
+  ⟨⟨0, default⟩⟩
 
-/--
-Maps a function `f` on the fractional components of a given pair.
+/-- Maps a function `f` on the fractional components of a given pair.
 -/
-def mapFr {β : Type*} (f : K → β) (gp : int_fract_pair K) : int_fract_pair β :=
-⟨gp.b, f gp.fr⟩
+def mapFr {β : Type _} (f : K → β) (gp : IntFractPair K) : IntFractPair β :=
+  ⟨gp.b, f gp.fr⟩
 
 section coe
+
 /-! Interlude: define some expected coercions. -/
-/- Fix another type `β` which we will convert to. -/
-variables {β : Type*} [has_coe K β]
+
+
+-- Fix another type `β` which we will convert to.
+variable {β : Type _} [Coe K β]
 
 /-- Coerce a pair by coercing the fractional component. -/
-instance has_coe_to_int_fract_pair : has_coe (int_fract_pair K) (int_fract_pair β) :=
-⟨mapFr coe⟩
+instance hasCoeToIntFractPair : Coe (IntFractPair K) (IntFractPair β) :=
+  ⟨mapFr coe⟩
 
 @[simp, norm_cast]
-lemma coe_to_int_fract_pair {b : ℤ} {fr : K} :
-  (↑(int_fract_pair.mk b fr) : int_fract_pair β) = int_fract_pair.mk b (↑fr : β) :=
-rfl
+theorem coe_to_int_fract_pair {b : ℤ} {fr : K} :
+    (↑(IntFractPair.mk b fr) : IntFractPair β) = IntFractPair.mk b (↑fr : β) :=
+  rfl
 
 end coe
 
 -- Note: this could be relaxed to something like `linear_ordered_division_ring` in the
 -- future.
-/- Fix a discrete linear ordered field with `floor` function. -/
-variables [linear_ordered_field K] [floor_ring K]
+-- Fix a discrete linear ordered field with `floor` function.
+variable [LinearOrderedField K] [FloorRing K]
 
 /-- Creates the integer and fractional part of a value `v`, i.e. `⟨⌊v⌋, v - ⌊v⌋⟩`. -/
-protected def of (v : K) : int_fract_pair K := ⟨⌊v⌋, int.fract v⟩
+protected def of (v : K) : IntFractPair K :=
+  ⟨⌊v⌋, Int.fract v⟩
 
-/--
-Creates the stream of integer and fractional parts of a value `v` needed to obtain the continued
+/-- Creates the stream of integer and fractional parts of a value `v` needed to obtain the continued
 fraction representation of `v` in `generalized_continued_fraction.of`. More precisely, given a value
 `v : K`, it recursively computes a stream of option `ℤ × K` pairs as follows:
 - `stream v 0 = some ⟨⌊v⌋, v - ⌊v⌋⟩`
@@ -127,20 +135,20 @@ For example, let `(v : ℚ) := 3.4`. The process goes as follows:
 - `stream v 2 = some ⟨⌊0.5⁻¹⌋, 0.5⁻¹ - ⌊0.5⁻¹⌋⟩ = some ⟨⌊2⌋, 2 - ⌊2⌋⟩ = some ⟨2, 0⟩`
 - `stream v n = none`, for `n ≥ 3`
 -/
-protected def stream (v : K) : stream $ option (int_fract_pair K)
-| 0 := some (int_fract_pair.of v)
-| (n + 1) := do ap_n ← stream n,
-  if ap_n.fr = 0 then none else int_fract_pair.of ap_n.fr⁻¹
+protected def stream (v : K) : Streamₓ <| Option (IntFractPair K)
+  | 0 => some (IntFractPair.of v)
+  | n + 1 => do
+    let ap_n ← Streamₓ n
+    if ap_n = 0 then none else int_fract_pair.of ap_n⁻¹
 
-/--
-Shows that `int_fract_pair.stream` has the sequence property, that is once we return `none` at
+/-- Shows that `int_fract_pair.stream` has the sequence property, that is once we return `none` at
 position `n`, we also return `none` at `n + 1`.
 -/
-lemma stream_is_seq (v : K) : (int_fract_pair.stream v).is_seq :=
-by { assume _ hyp, simp [int_fract_pair.stream, hyp] }
+theorem stream_is_seq (v : K) : (IntFractPair.stream v).IsSeq := by
+  intro _ hyp
+  simp [int_fract_pair.stream, hyp]
 
-/--
-Uses `int_fract_pair.stream` to create a sequence with head (i.e. `seq1`) of integer and fractional
+/-- Uses `int_fract_pair.stream` to create a sequence with head (i.e. `seq1`) of integer and fractional
 parts of a value `v`. The first value of `int_fract_pair.stream` is never `none`, so we can safely
 extract it and put the tail of the stream in the sequence part.
 
@@ -148,17 +156,18 @@ This is just an intermediate representation and users should not (need to) direc
 it. The setup of rewriting/simplification lemmas that make the definitions easy to use is done in
 `algebra.continued_fractions.computation.translations`.
 -/
-protected def seq1 (v : K) : seq1 $ int_fract_pair K :=
-⟨ int_fract_pair.of v,--the head
-  seq.tail -- take the tail of `int_fract_pair.stream` since the first element is already in the
-  -- head create a sequence from `int_fract_pair.stream`
-  ⟨ int_fract_pair.stream v, -- the underlying stream
-    @stream_is_seq _ _ _ v ⟩ ⟩ -- the proof that the stream is a sequence
+protected def seq1 (v : K) : Seq1 <| IntFractPair K :=
+  ⟨IntFractPair.of v,--the head
+      Seqₓₓ.tail-- take the tail of `int_fract_pair.stream` since the first element is already in the
+      -- head create a sequence from `int_fract_pair.stream`
+      ⟨IntFractPair.stream v,-- the underlying stream
+          @stream_is_seq
+          _ _ _ v⟩⟩
 
-end int_fract_pair
+-- the proof that the stream is a sequence
+end IntFractPair
 
-/--
-Returns the `generalized_continued_fraction` of a value. In fact, the returned gcf is also
+/-- Returns the `generalized_continued_fraction` of a value. In fact, the returned gcf is also
 a `continued_fraction` that terminates if and only if `v` is rational (those proofs will be
 added in a future commit).
 
@@ -169,12 +178,14 @@ process stops when the fractional part `v - ⌊v⌋` hits 0 at some step.
 The implementation uses `int_fract_pair.stream` to obtain the partial denominators of the continued
 fraction. Refer to said function for more details about the computation process.
 -/
-protected def of [linear_ordered_field K] [floor_ring K] (v : K) :
-  generalized_continued_fraction K :=
-let ⟨h, s⟩ := int_fract_pair.seq1 v in -- get the sequence of integer and fractional parts.
-⟨ h.b, -- the head is just the first integer part
-  s.map (λ p, ⟨1, p.b⟩) ⟩ -- the sequence consists of the remaining integer parts as the partial
-                          -- denominators; all partial numerators are simply 1
+protected def of [LinearOrderedField K] [FloorRing K] (v : K) : GeneralizedContinuedFraction K :=
+  let ⟨h, s⟩ := IntFractPair.seq1 v
+  -- get the sequence of integer and fractional parts.
+  ⟨h.b,-- the head is just the first integer part
+        s.map
+      fun p => ⟨1, p.b⟩⟩
 
+-- the sequence consists of the remaining integer parts as the partial
+-- denominators; all partial numerators are simply 1
+end GeneralizedContinuedFraction
 
-end generalized_continued_fraction

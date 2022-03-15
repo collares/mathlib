@@ -3,8 +3,8 @@ Copyright (c) 2021 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import data.fintype.basic
-import logic.small
+import Mathbin.Data.Fintype.Basic
+import Mathbin.Logic.Small
 
 /-!
 # All finite types are small.
@@ -13,11 +13,10 @@ That is, any `α` with `[fintype α]` is equivalent to a type in any universe.
 
 -/
 
-universes w v
 
-@[priority 100]
-instance small_of_fintype (α : Type v) [fintype α] : small.{w} α :=
-begin
-  rw small_congr (fintype.equiv_fin α),
-  apply_instance,
-end
+universe w v
+
+instance (priority := 100) small_of_fintype (α : Type v) [Fintype α] : Small.{w} α := by
+  rw [small_congr (Fintype.equivFin α)]
+  infer_instance
+

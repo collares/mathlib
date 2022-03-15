@@ -3,20 +3,22 @@ Copyright (c) 2021 Markus Himmel. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Markus Himmel
 -/
-import algebra.category.Group.Z_Module_equivalence
-import algebra.category.Module.subobject
+import Mathbin.Algebra.Category.Group.ZModuleEquivalence
+import Mathbin.Algebra.Category.Module.Subobject
 
 /-!
 # The category of abelian groups is well-powered
 -/
 
-open category_theory
+
+open CategoryTheory
 
 universe u
 
-namespace AddCommGroup
+namespace AddCommGroupₓₓ
 
-instance well_powered_AddCommGroup : well_powered (AddCommGroup.{u}) :=
-well_powered_of_equiv (forget₂ (Module.{u} ℤ) AddCommGroup.{u}).as_equivalence
+instance well_powered_AddCommGroup : WellPowered AddCommGroupₓₓ.{u} :=
+  well_powered_of_equiv (forget₂ (ModuleCat.{u} ℤ) AddCommGroupₓₓ.{u}).asEquivalence
 
-end AddCommGroup
+end AddCommGroupₓₓ
+

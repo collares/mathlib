@@ -3,7 +3,7 @@ Copyright (c) 2018 Mario Carneiro. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Mario Carneiro
 -/
-import data.list.nodup
+import Mathbin.Data.List.Nodup
 
 /-!
 # Erasure of duplicates in a list
@@ -17,58 +17,67 @@ occurrence of each.
 duplicate, multiplicity, nodup, `nub`
 -/
 
-universes u
 
-namespace list
+universe u
 
-variables {α : Type u} [decidable_eq α]
+namespace List
 
-@[simp] theorem dedup_nil : dedup [] = ([] : list α) := rfl
+variable {α : Type u} [DecidableEq α]
 
-theorem dedup_cons_of_mem' {a : α} {l : list α} (h : a ∈ dedup l) :
-  dedup (a :: l) = dedup l :=
-pw_filter_cons_of_neg $ by simpa only [forall_mem_ne] using h
+@[simp]
+theorem dedup_nil : dedup [] = ([] : List α) :=
+  rfl
 
-theorem dedup_cons_of_not_mem' {a : α} {l : list α} (h : a ∉ dedup l) :
-  dedup (a :: l) = a :: dedup l :=
-pw_filter_cons_of_pos $ by simpa only [forall_mem_ne] using h
+theorem dedup_cons_of_mem' {a : α} {l : List α} (h : a ∈ dedup l) : dedup (a :: l) = dedup l :=
+  pw_filter_cons_of_neg <| by
+    simpa only [forall_mem_ne] using h
 
-@[simp] theorem mem_dedup {a : α} {l : list α} : a ∈ dedup l ↔ a ∈ l :=
-by simpa only [dedup, forall_mem_ne, not_not] using not_congr (@forall_mem_pw_filter α (≠) _
-  (λ x y z xz, not_and_distrib.1 $ mt (and.rec eq.trans) xz) a l)
+theorem dedup_cons_of_not_mem' {a : α} {l : List α} (h : a ∉ dedup l) : dedup (a :: l) = a :: dedup l :=
+  pw_filter_cons_of_pos <| by
+    simpa only [forall_mem_ne] using h
 
-@[simp] theorem dedup_cons_of_mem {a : α} {l : list α} (h : a ∈ l) :
-  dedup (a :: l) = dedup l :=
-dedup_cons_of_mem' $ mem_dedup.2 h
+@[simp]
+theorem mem_dedup {a : α} {l : List α} : a ∈ dedup l ↔ a ∈ l := by
+  simpa only [dedup, forall_mem_ne, not_not] using
+    not_congr (@forall_mem_pw_filter α (· ≠ ·) _ (fun x y z xz => not_and_distrib.1 <| mt (And.ndrec Eq.trans) xz) a l)
 
-@[simp] theorem dedup_cons_of_not_mem {a : α} {l : list α} (h : a ∉ l) :
-  dedup (a :: l) = a :: dedup l :=
-dedup_cons_of_not_mem' $ mt mem_dedup.1 h
+@[simp]
+theorem dedup_cons_of_mem {a : α} {l : List α} (h : a ∈ l) : dedup (a :: l) = dedup l :=
+  dedup_cons_of_mem' <| mem_dedup.2 h
 
-theorem dedup_sublist : ∀ (l : list α), dedup l <+ l := pw_filter_sublist
+@[simp]
+theorem dedup_cons_of_not_mem {a : α} {l : List α} (h : a ∉ l) : dedup (a :: l) = a :: dedup l :=
+  dedup_cons_of_not_mem' <| mt mem_dedup.1 h
 
-theorem dedup_subset : ∀ (l : list α), dedup l ⊆ l := pw_filter_subset
+theorem dedup_sublist : ∀ l : List α, dedup l <+ l :=
+  pw_filter_sublist
 
-theorem subset_dedup (l : list α) : l ⊆ dedup l :=
-λ a, mem_dedup.2
+theorem dedup_subset : ∀ l : List α, dedup l ⊆ l :=
+  pw_filter_subset
 
-theorem nodup_dedup : ∀ l : list α, nodup (dedup l) := pairwise_pw_filter
+theorem subset_dedup (l : List α) : l ⊆ dedup l := fun a => mem_dedup.2
 
-theorem dedup_eq_self {l : list α} : dedup l = l ↔ nodup l := pw_filter_eq_self
+theorem nodup_dedup : ∀ l : List α, Nodupₓ (dedup l) :=
+  pairwise_pw_filter
 
-protected lemma nodup.dedup {l : list α} (h : l.nodup) : l.dedup = l :=
-list.dedup_eq_self.2 h
+theorem dedup_eq_self {l : List α} : dedup l = l ↔ Nodupₓ l :=
+  pw_filter_eq_self
 
-@[simp] theorem dedup_idempotent {l : list α} : dedup (dedup l) = dedup l :=
-pw_filter_idempotent
+protected theorem Nodupₓ.dedup {l : List α} (h : l.Nodup) : l.dedup = l :=
+  List.dedup_eq_self.2 h
 
-theorem dedup_append (l₁ l₂ : list α) : dedup (l₁ ++ l₂) = l₁ ∪ dedup l₂ :=
-begin
-  induction l₁ with a l₁ IH, {refl}, rw [cons_union, ← IH],
-  show dedup (a :: (l₁ ++ l₂)) = insert a (dedup (l₁ ++ l₂)),
-  by_cases a ∈ dedup (l₁ ++ l₂);
-  [ rw [dedup_cons_of_mem' h, insert_of_mem h],
+@[simp]
+theorem dedup_idempotent {l : List α} : dedup (dedup l) = dedup l :=
+  pw_filter_idempotent
+
+theorem dedup_append (l₁ l₂ : List α) : dedup (l₁ ++ l₂) = l₁ ∪ dedup l₂ := by
+  induction' l₁ with a l₁ IH
+  · rfl
+    
+  rw [cons_union, ← IH]
+  show dedup (a :: (l₁ ++ l₂)) = insert a (dedup (l₁ ++ l₂))
+  by_cases' a ∈ dedup (l₁ ++ l₂) <;> [rw [dedup_cons_of_mem' h, insert_of_mem h],
     rw [dedup_cons_of_not_mem' h, insert_of_not_mem h]]
-end
 
-end list
+end List
+

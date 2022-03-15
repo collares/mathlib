@@ -3,7 +3,7 @@ Copyright (c) 2021 Johan Commelin. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johan Commelin
 -/
-import analysis.normed_space.basic
+import Mathbin.Analysis.NormedSpace.Basic
 
 /-!
 # The integers as normed ring
@@ -16,28 +16,32 @@ to obtain a term of type `nnreal` (the nonnegative real numbers).
 The resulting nonnegative real number is denoted by `∥n∥₊`.
 -/
 
-open_locale big_operators
 
-namespace int
+open_locale BigOperators
 
-lemma nnnorm_coe_units (e : ℤˣ) : ∥(e : ℤ)∥₊ = 1 :=
-begin
-  obtain (rfl|rfl) := int.units_eq_one_or e;
-  simp only [units.coe_neg_one, units.coe_one, nnnorm_neg, nnnorm_one],
-end
+namespace Int
 
-lemma norm_coe_units (e : ℤˣ) : ∥(e : ℤ)∥ = 1 :=
-by rw [← coe_nnnorm, int.nnnorm_coe_units, nnreal.coe_one]
+theorem nnnorm_coe_units (e : ℤˣ) : ∥(e : ℤ)∥₊ = 1 := by
+  obtain rfl | rfl := Int.units_eq_one_or e <;> simp only [Units.coe_neg_one, Units.coe_one, nnnorm_neg, nnnorm_one]
 
-@[simp] lemma nnnorm_coe_nat (n : ℕ) : ∥(n : ℤ)∥₊ = n := real.nnnorm_coe_nat _
+theorem norm_coe_units (e : ℤˣ) : ∥(e : ℤ)∥ = 1 := by
+  rw [← coe_nnnorm, Int.nnnorm_coe_units, Nnreal.coe_one]
 
-@[simp] lemma norm_coe_nat (n : ℕ) : ∥(n : ℤ)∥ = n := real.norm_coe_nat _
+@[simp]
+theorem nnnorm_coe_nat (n : ℕ) : ∥(n : ℤ)∥₊ = n :=
+  Real.nnnorm_coe_nat _
 
-@[simp] lemma to_nat_add_to_nat_neg_eq_nnnorm (n : ℤ) : ↑(n.to_nat) + ↑((-n).to_nat) = ∥n∥₊ :=
-by rw [← nat.cast_add, to_nat_add_to_nat_neg_eq_nat_abs, nnreal.coe_nat_abs]
+@[simp]
+theorem norm_coe_nat (n : ℕ) : ∥(n : ℤ)∥ = n :=
+  Real.norm_coe_nat _
 
-@[simp] lemma to_nat_add_to_nat_neg_eq_norm (n : ℤ) : ↑(n.to_nat) + ↑((-n).to_nat) = ∥n∥ :=
-by simpa only [nnreal.coe_nat_cast, nnreal.coe_add]
-  using congr_arg (coe : _ → ℝ) (to_nat_add_to_nat_neg_eq_nnnorm n)
+@[simp]
+theorem to_nat_add_to_nat_neg_eq_nnnorm (n : ℤ) : ↑n.toNat + ↑(-n).toNat = ∥n∥₊ := by
+  rw [← Nat.cast_addₓ, to_nat_add_to_nat_neg_eq_nat_abs, Nnreal.coe_nat_abs]
 
-end int
+@[simp]
+theorem to_nat_add_to_nat_neg_eq_norm (n : ℤ) : ↑n.toNat + ↑(-n).toNat = ∥n∥ := by
+  simpa only [Nnreal.coe_nat_cast, Nnreal.coe_add] using congr_argₓ (coe : _ → ℝ) (to_nat_add_to_nat_neg_eq_nnnorm n)
+
+end Int
+

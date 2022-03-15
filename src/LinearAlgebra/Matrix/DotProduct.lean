@@ -3,9 +3,8 @@ Copyright (c) 2019 Johannes Hölzl. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johannes Hölzl, Patrick Massot, Casper Putz, Anne Baanen
 -/
-
-import data.matrix.basic
-import linear_algebra.std_basis
+import Mathbin.Data.Matrix.Basic
+import Mathbin.LinearAlgebra.StdBasis
 
 /-!
 # Dot product of two vectors
@@ -26,40 +25,39 @@ matrix, reindex
 
 -/
 
-universes v w
 
-namespace matrix
+universe v w
 
-variables {R : Type v} [semiring R] {n : Type w} [fintype n]
+namespace Matrix
 
-@[simp] lemma dot_product_std_basis_eq_mul [decidable_eq n] (v : n → R) (c : R) (i : n) :
-  dot_product v (linear_map.std_basis R (λ _, R) i c) = v i * c :=
-begin
-  rw [dot_product, finset.sum_eq_single i, linear_map.std_basis_same],
-  exact λ _ _ hb, by rw [linear_map.std_basis_ne _ _ _ _ hb, mul_zero],
-  exact λ hi, false.elim (hi $ finset.mem_univ _)
-end
+variable {R : Type v} [Semiringₓ R] {n : Type w} [Fintype n]
 
-@[simp] lemma dot_product_std_basis_one [decidable_eq n] (v : n → R) (i : n) :
-  dot_product v (linear_map.std_basis R (λ _, R) i 1) = v i :=
-by rw [dot_product_std_basis_eq_mul, mul_one]
+@[simp]
+theorem dot_product_std_basis_eq_mul [DecidableEq n] (v : n → R) (c : R) (i : n) :
+    dotProduct v (LinearMap.stdBasis R (fun _ => R) i c) = v i * c := by
+  rw [dot_product, Finset.sum_eq_single i, LinearMap.std_basis_same]
+  exact fun _ _ hb => by
+    rw [LinearMap.std_basis_ne _ _ _ _ hb, mul_zero]
+  exact fun hi => False.elim (hi <| Finset.mem_univ _)
 
-lemma dot_product_eq
-  (v w : n → R) (h : ∀ u, dot_product v u = dot_product w u) : v = w :=
-begin
-  funext x,
-  classical,
-  rw [← dot_product_std_basis_one v x, ← dot_product_std_basis_one w x, h],
-end
+@[simp]
+theorem dot_product_std_basis_one [DecidableEq n] (v : n → R) (i : n) :
+    dotProduct v (LinearMap.stdBasis R (fun _ => R) i 1) = v i := by
+  rw [dot_product_std_basis_eq_mul, mul_oneₓ]
 
-lemma dot_product_eq_iff {v w : n → R} :
-  (∀ u, dot_product v u = dot_product w u) ↔ v = w :=
-⟨λ h, dot_product_eq v w h, λ h _, h ▸ rfl⟩
+theorem dot_product_eq (v w : n → R) (h : ∀ u, dotProduct v u = dotProduct w u) : v = w := by
+  funext x
+  classical
+  rw [← dot_product_std_basis_one v x, ← dot_product_std_basis_one w x, h]
 
-lemma dot_product_eq_zero (v : n → R) (h : ∀ w, dot_product v w = 0) : v = 0 :=
-dot_product_eq _ _ $ λ u, (h u).symm ▸ (zero_dot_product u).symm
+theorem dot_product_eq_iff {v w : n → R} : (∀ u, dotProduct v u = dotProduct w u) ↔ v = w :=
+  ⟨fun h => dot_product_eq v w h, fun h _ => h ▸ rfl⟩
 
-lemma dot_product_eq_zero_iff {v : n → R} : (∀ w, dot_product v w = 0) ↔ v = 0 :=
-⟨λ h, dot_product_eq_zero v h, λ h w, h.symm ▸ zero_dot_product w⟩
+theorem dot_product_eq_zero (v : n → R) (h : ∀ w, dotProduct v w = 0) : v = 0 :=
+  (dot_product_eq _ _) fun u => (h u).symm ▸ (zero_dot_product u).symm
 
-end matrix
+theorem dot_product_eq_zero_iff {v : n → R} : (∀ w, dotProduct v w = 0) ↔ v = 0 :=
+  ⟨fun h => dot_product_eq_zero v h, fun h w => h.symm ▸ zero_dot_product w⟩
+
+end Matrix
+

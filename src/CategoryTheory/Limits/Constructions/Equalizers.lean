@@ -3,9 +3,9 @@ Copyright (c) 2020 Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bhavik Mehta
 -/
-import category_theory.limits.shapes.equalizers
-import category_theory.limits.shapes.binary_products
-import category_theory.limits.shapes.pullbacks
+import Mathbin.CategoryTheory.Limits.Shapes.Equalizers
+import Mathbin.CategoryTheory.Limits.Shapes.BinaryProducts
+import Mathbin.CategoryTheory.Limits.Shapes.Pullbacks
 
 /-!
 # Constructing equalizers from pullbacks and binary products.
@@ -15,71 +15,68 @@ If a category has pullbacks and binary products, then it has equalizers.
 TODO: provide the dual result.
 -/
 
-noncomputable theory
 
-universes v u
+noncomputable section
 
-open category_theory category_theory.category
+universe v u
 
-namespace category_theory.limits
+open CategoryTheory CategoryTheory.Category
 
-variables {C : Type u} [category.{v} C] [has_binary_products C] [has_pullbacks C]
+namespace CategoryTheory.Limits
+
+variable {C : Type u} [Category.{v} C] [HasBinaryProducts C] [HasPullbacks C]
 
 -- We hide the "implementation details" inside a namespace
-namespace has_equalizers_of_pullbacks_and_binary_products
+namespace HasEqualizersOfPullbacksAndBinaryProducts
 
 /-- Define the equalizing object -/
 @[reducible]
-def construct_equalizer (F : walking_parallel_pair ⥤ C) : C :=
-pullback (prod.lift (𝟙 _) (F.map walking_parallel_pair_hom.left))
-         (prod.lift (𝟙 _) (F.map walking_parallel_pair_hom.right))
+def constructEqualizer (F : walking_parallel_pair ⥤ C) : C :=
+  pullback (prod.lift (𝟙 _) (F.map WalkingParallelPairHom.left)) (prod.lift (𝟙 _) (F.map WalkingParallelPairHom.right))
 
 /-- Define the equalizing morphism -/
-abbreviation pullback_fst (F : walking_parallel_pair ⥤ C) :
-  construct_equalizer F ⟶ F.obj walking_parallel_pair.zero :=
-pullback.fst
+abbrev pullbackFst (F : walking_parallel_pair ⥤ C) : constructEqualizer F ⟶ F.obj WalkingParallelPair.zero :=
+  pullback.fst
 
-lemma pullback_fst_eq_pullback_snd (F : walking_parallel_pair ⥤ C) :
-  pullback_fst F = pullback.snd :=
-by convert pullback.condition =≫ limits.prod.fst; simp
+theorem pullback_fst_eq_pullback_snd (F : walking_parallel_pair ⥤ C) : pullbackFst F = pullback.snd := by
+  convert pullback.condition =≫ limits.prod.fst <;> simp
 
 /-- Define the equalizing cone -/
 @[reducible]
-def equalizer_cone (F : walking_parallel_pair ⥤ C) : cone F :=
-cone.of_fork
-  (fork.of_ι (pullback_fst F)
-    (begin
-      conv_rhs { rw pullback_fst_eq_pullback_snd, },
-      convert pullback.condition =≫ limits.prod.snd using 1; simp
-     end))
+def equalizerCone (F : walking_parallel_pair ⥤ C) : Cone F :=
+  Cone.ofFork
+    (Fork.ofι (pullbackFst F)
+      (by
+        conv_rhs => rw [pullback_fst_eq_pullback_snd]
+        convert pullback.condition =≫ limits.prod.snd using 1 <;> simp ))
 
 /-- Show the equalizing cone is a limit -/
-def equalizer_cone_is_limit (F : walking_parallel_pair ⥤ C) : is_limit (equalizer_cone F) :=
-{ lift :=
-  begin
-    intro c, apply pullback.lift (c.π.app _) (c.π.app _),
-    apply limit.hom_ext,
-    rintro (_ | _); simp
-  end,
-  fac' := by rintros c (_ | _); simp,
-  uniq' :=
-  begin
-    intros c _ J,
-    have J0 := J walking_parallel_pair.zero, simp at J0,
-    apply pullback.hom_ext,
-    { rwa limit.lift_π },
-    { erw [limit.lift_π, ← J0, pullback_fst_eq_pullback_snd] }
-  end }
+def equalizerConeIsLimit (F : walking_parallel_pair ⥤ C) : IsLimit (equalizerCone F) where
+  lift := by
+    intro c
+    apply pullback.lift (c.π.app _) (c.π.app _)
+    apply limit.hom_ext
+    rintro (_ | _) <;> simp
+  fac' := by
+    rintro c (_ | _) <;> simp
+  uniq' := by
+    intro c _ J
+    have J0 := J walking_parallel_pair.zero
+    simp at J0
+    apply pullback.hom_ext
+    · rwa [limit.lift_π]
+      
+    · erw [limit.lift_π, ← J0, pullback_fst_eq_pullback_snd]
+      
 
-end has_equalizers_of_pullbacks_and_binary_products
+end HasEqualizersOfPullbacksAndBinaryProducts
 
-open has_equalizers_of_pullbacks_and_binary_products
+open HasEqualizersOfPullbacksAndBinaryProducts
+
 /-- Any category with pullbacks and binary products, has equalizers. -/
 -- This is not an instance, as it is not always how one wants to construct equalizers!
-lemma has_equalizers_of_pullbacks_and_binary_products :
-  has_equalizers C :=
-{ has_limit := λ F, has_limit.mk
-  { cone := equalizer_cone F,
-    is_limit := equalizer_cone_is_limit F } }
+theorem has_equalizers_of_pullbacks_and_binary_products : HasEqualizers C :=
+  { HasLimit := fun F => HasLimit.mk { Cone := equalizerCone F, IsLimit := equalizerConeIsLimit F } }
 
-end category_theory.limits
+end CategoryTheory.Limits
+

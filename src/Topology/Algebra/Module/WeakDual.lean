@@ -3,7 +3,7 @@ Copyright (c) 2021 Kalle Kytölä. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kalle Kytölä, Moritz Doll
 -/
-import topology.algebra.module.basic
+import Mathbin.Topology.Algebra.Module.Basic
 
 /-!
 # Weak dual topology
@@ -58,163 +58,170 @@ weak-star, weak dual, duality
 
 -/
 
-noncomputable theory
-open filter
-open_locale topological_space
 
-variables {α 𝕜 R E F M : Type*}
+noncomputable section
 
-section weak_topology
+open Filter
 
+open_locale TopologicalSpace
+
+variable {α 𝕜 R E F M : Type _}
+
+section WeakTopology
+
+-- ././Mathport/Syntax/Translate/Basic.lean:980:9: unsupported derive handler module 𝕜
 /-- The space `E` equipped with the weak topology induced by the bilinear form `B`. -/
-@[derive [add_comm_monoid, module 𝕜],
-nolint has_inhabited_instance unused_arguments]
-def weak_bilin [comm_semiring 𝕜] [add_comm_monoid E] [module 𝕜 E] [add_comm_monoid F]
-  [module 𝕜 F] (B : E →ₗ[𝕜] F →ₗ[𝕜] 𝕜) := E
+@[nolint has_inhabited_instance unused_arguments]
+def WeakBilin [CommSemiringₓ 𝕜] [AddCommMonoidₓ E] [Module 𝕜 E] [AddCommMonoidₓ F] [Module 𝕜 F]
+    (B : E →ₗ[𝕜] F →ₗ[𝕜] 𝕜) :=
+  E deriving AddCommMonoidₓ, [anonymous]
 
-instance [comm_semiring 𝕜] [add_comm_group E] [module 𝕜 E] [add_comm_monoid F]
-  [module 𝕜 F] (B : E →ₗ[𝕜] F →ₗ[𝕜] 𝕜) : add_comm_group (weak_bilin B) :=
-by { dunfold weak_bilin, apply_instance }
+instance [CommSemiringₓ 𝕜] [AddCommGroupₓ E] [Module 𝕜 E] [AddCommMonoidₓ F] [Module 𝕜 F] (B : E →ₗ[𝕜] F →ₗ[𝕜] 𝕜) :
+    AddCommGroupₓ (WeakBilin B) := by
+  dunfold WeakBilin
+  infer_instance
 
-section semiring
+section Semiringₓ
 
-variables [topological_space 𝕜] [comm_semiring 𝕜]
-variables [add_comm_monoid E] [module 𝕜 E]
-variables [add_comm_monoid F] [module 𝕜 F]
-variables (B : E →ₗ[𝕜] F →ₗ[𝕜] 𝕜)
+variable [TopologicalSpace 𝕜] [CommSemiringₓ 𝕜]
 
-instance : topological_space (weak_bilin B) :=
-topological_space.induced (λ x y, B x y) Pi.topological_space
+variable [AddCommMonoidₓ E] [Module 𝕜 E]
 
-lemma coe_fn_continuous : continuous (λ (x : weak_bilin B) y, B x y) :=
-continuous_induced_dom
+variable [AddCommMonoidₓ F] [Module 𝕜 F]
 
-lemma eval_continuous (y : F) : continuous (λ x : weak_bilin B, B x y) :=
-( continuous_pi_iff.mp (coe_fn_continuous B)) y
+variable (B : E →ₗ[𝕜] F →ₗ[𝕜] 𝕜)
 
-lemma continuous_of_continuous_eval [topological_space α] {g : α → weak_bilin B}
-  (h : ∀ y, continuous (λ a, B (g a) y)) : continuous g :=
-continuous_induced_rng (continuous_pi_iff.mpr h)
+instance : TopologicalSpace (WeakBilin B) :=
+  TopologicalSpace.induced (fun x y => B x y) Pi.topologicalSpace
+
+theorem coe_fn_continuous : Continuous fun y => B x y :=
+  continuous_induced_dom
+
+theorem eval_continuous (y : F) : Continuous fun x : WeakBilin B => B x y :=
+  (continuous_pi_iff.mp (coe_fn_continuous B)) y
+
+theorem continuous_of_continuous_eval [TopologicalSpace α] {g : α → WeakBilin B}
+    (h : ∀ y, Continuous fun a => B (g a) y) : Continuous g :=
+  continuous_induced_rng (continuous_pi_iff.mpr h)
 
 /-- The coercion `(λ x y, B x y) : E → (F → 𝕜)` is an embedding. -/
-lemma bilin_embedding {B : E →ₗ[𝕜] F →ₗ[𝕜] 𝕜} (hB : function.injective B) :
-  embedding (λ (x : weak_bilin B)  y, B x y) :=
-function.injective.embedding_induced $ linear_map.coe_injective.comp hB
+theorem bilin_embedding {B : E →ₗ[𝕜] F →ₗ[𝕜] 𝕜} (hB : Function.Injective B) : Embedding fun y => B x y :=
+  Function.Injective.embedding_induced <| LinearMap.coe_injective.comp hB
 
-theorem tendsto_iff_forall_eval_tendsto {l : filter α} {f : α → (weak_bilin B)} {x : weak_bilin B}
-  (hB : function.injective B) : tendsto f l (𝓝 x) ↔ ∀ y, tendsto (λ i, B (f i) y) l (𝓝 (B x y)) :=
-by rw [← tendsto_pi_nhds, embedding.tendsto_nhds_iff (bilin_embedding hB)]
+theorem tendsto_iff_forall_eval_tendsto {l : Filter α} {f : α → WeakBilin B} {x : WeakBilin B}
+    (hB : Function.Injective B) : Tendsto f l (𝓝 x) ↔ ∀ y, Tendsto (fun i => B (f i) y) l (𝓝 (B x y)) := by
+  rw [← tendsto_pi_nhds, Embedding.tendsto_nhds_iff (bilin_embedding hB)]
 
 /-- Addition in `weak_space B` is continuous. -/
-instance [has_continuous_add 𝕜] : has_continuous_add (weak_bilin B) :=
-begin
-  refine ⟨continuous_induced_rng _⟩,
-  refine cast (congr_arg _ _) (((coe_fn_continuous B).comp continuous_fst).add
-    ((coe_fn_continuous B).comp continuous_snd)),
-  ext,
-  simp only [function.comp_app, pi.add_apply, map_add, linear_map.add_apply],
-end
+instance [HasContinuousAdd 𝕜] : HasContinuousAdd (WeakBilin B) := by
+  refine' ⟨continuous_induced_rng _⟩
+  refine'
+    cast (congr_argₓ _ _) (((coe_fn_continuous B).comp continuous_fst).add ((coe_fn_continuous B).comp continuous_snd))
+  ext
+  simp only [Function.comp_app, Pi.add_apply, map_add, LinearMap.add_apply]
 
 /-- Scalar multiplication by `𝕜` on `weak_bilin B` is continuous. -/
-instance [has_continuous_smul 𝕜 𝕜] : has_continuous_smul 𝕜 (weak_bilin B) :=
-begin
-  refine ⟨continuous_induced_rng _⟩,
-  refine cast (congr_arg _ _) (continuous_fst.smul ((coe_fn_continuous B).comp continuous_snd)),
-  ext,
-  simp only [function.comp_app, pi.smul_apply, linear_map.map_smulₛₗ, ring_hom.id_apply,
-    linear_map.smul_apply],
-end
+instance [HasContinuousSmul 𝕜 𝕜] : HasContinuousSmul 𝕜 (WeakBilin B) := by
+  refine' ⟨continuous_induced_rng _⟩
+  refine' cast (congr_argₓ _ _) (continuous_fst.smul ((coe_fn_continuous B).comp continuous_snd))
+  ext
+  simp only [Function.comp_app, Pi.smul_apply, LinearMap.map_smulₛₗ, RingHom.id_apply, LinearMap.smul_apply]
 
-end semiring
+end Semiringₓ
 
-section ring
+section Ringₓ
 
-variables [topological_space 𝕜] [comm_ring 𝕜]
-variables [add_comm_group E] [module 𝕜 E]
-variables [add_comm_group F] [module 𝕜 F]
-variables (B : E →ₗ[𝕜] F →ₗ[𝕜] 𝕜)
+variable [TopologicalSpace 𝕜] [CommRingₓ 𝕜]
+
+variable [AddCommGroupₓ E] [Module 𝕜 E]
+
+variable [AddCommGroupₓ F] [Module 𝕜 F]
+
+variable (B : E →ₗ[𝕜] F →ₗ[𝕜] 𝕜)
 
 /-- `weak_space B` is a `topological_add_group`, meaning that addition and negation are
 continuous. -/
-instance [has_continuous_add 𝕜] : topological_add_group (weak_bilin B) :=
-{ to_has_continuous_add := by apply_instance,
-  continuous_neg := begin
-    refine continuous_induced_rng (continuous_pi_iff.mpr (λ y, _)),
-    refine cast (congr_arg _ _) (eval_continuous B (-y)),
-    ext,
-    simp only [map_neg, function.comp_app, linear_map.neg_apply],
-  end }
+instance [HasContinuousAdd 𝕜] : TopologicalAddGroup (WeakBilin B) where
+  to_has_continuous_add := by
+    infer_instance
+  continuous_neg := by
+    refine' continuous_induced_rng (continuous_pi_iff.mpr fun y => _)
+    refine' cast (congr_argₓ _ _) (eval_continuous B (-y))
+    ext
+    simp only [map_neg, Function.comp_app, LinearMap.neg_apply]
 
-end ring
+end Ringₓ
 
-end weak_topology
+end WeakTopology
 
-section weak_star_topology
+section WeakStarTopology
 
 /-- The canonical pairing of a vector space and its topological dual. -/
-def top_dual_pairing (𝕜 E) [comm_semiring 𝕜] [topological_space 𝕜] [has_continuous_add 𝕜]
-  [add_comm_monoid E] [module 𝕜 E] [topological_space E]
-  [has_continuous_const_smul 𝕜 𝕜] :
-  (E →L[𝕜] 𝕜) →ₗ[𝕜] E →ₗ[𝕜] 𝕜 := continuous_linear_map.coe_lm 𝕜
+def topDualPairing 𝕜 E [CommSemiringₓ 𝕜] [TopologicalSpace 𝕜] [HasContinuousAdd 𝕜] [AddCommMonoidₓ E] [Module 𝕜 E]
+    [TopologicalSpace E] [HasContinuousConstSmul 𝕜 𝕜] : (E →L[𝕜] 𝕜) →ₗ[𝕜] E →ₗ[𝕜] 𝕜 :=
+  ContinuousLinearMap.coeLm 𝕜
 
-variables [comm_semiring 𝕜] [topological_space 𝕜] [has_continuous_add 𝕜]
-variables [has_continuous_const_smul 𝕜 𝕜]
-variables [add_comm_monoid E] [module 𝕜 E] [topological_space E]
+variable [CommSemiringₓ 𝕜] [TopologicalSpace 𝕜] [HasContinuousAdd 𝕜]
 
-lemma dual_pairing_apply (v : (E →L[𝕜] 𝕜)) (x : E) : top_dual_pairing 𝕜 E v x = v x := rfl
+variable [HasContinuousConstSmul 𝕜 𝕜]
 
+variable [AddCommMonoidₓ E] [Module 𝕜 E] [TopologicalSpace E]
+
+theorem dual_pairing_apply (v : E →L[𝕜] 𝕜) (x : E) : topDualPairing 𝕜 E v x = v x :=
+  rfl
+
+-- ././Mathport/Syntax/Translate/Basic.lean:980:9: unsupported derive handler module 𝕜
 /-- The weak star topology is the topology coarsest topology on `E →L[𝕜] 𝕜` such that all
 functionals `λ v, top_dual_pairing 𝕜 E v x` are continuous. -/
-@[derive [add_comm_monoid, module 𝕜, topological_space, has_continuous_add]]
-def weak_dual (𝕜 E) [comm_semiring 𝕜] [topological_space 𝕜] [has_continuous_add 𝕜]
-  [has_continuous_const_smul 𝕜 𝕜] [add_comm_monoid E] [module 𝕜 E] [topological_space E] :=
-weak_bilin (top_dual_pairing 𝕜 E)
+def WeakDual 𝕜 E [CommSemiringₓ 𝕜] [TopologicalSpace 𝕜] [HasContinuousAdd 𝕜] [HasContinuousConstSmul 𝕜 𝕜]
+    [AddCommMonoidₓ E] [Module 𝕜 E] [TopologicalSpace E] :=
+  WeakBilin (topDualPairing 𝕜 E)deriving AddCommMonoidₓ, [anonymous], TopologicalSpace, HasContinuousAdd
 
-instance : inhabited (weak_dual 𝕜 E) :=
-by {dunfold weak_dual, dunfold weak_bilin, apply_instance}
+instance : Inhabited (WeakDual 𝕜 E) := by
+  dunfold WeakDual
+  dunfold WeakBilin
+  infer_instance
 
-instance fun_like_weak_dual : fun_like (weak_dual 𝕜 E) E (λ _, 𝕜) :=
-by {dunfold weak_dual, dunfold weak_bilin, apply_instance}
+instance funLikeWeakDual : FunLike (WeakDual 𝕜 E) E fun _ => 𝕜 := by
+  dunfold WeakDual
+  dunfold WeakBilin
+  infer_instance
 
 /-- If a monoid `M` distributively continuously acts on `𝕜` and this action commutes with
 multiplication on `𝕜`, then it acts on `weak_dual 𝕜 E`. -/
-instance (M) [monoid M] [distrib_mul_action M 𝕜] [smul_comm_class 𝕜 M 𝕜]
-  [has_continuous_const_smul M 𝕜] :
-  mul_action M (weak_dual 𝕜 E) :=
-continuous_linear_map.mul_action
+instance M [Monoidₓ M] [DistribMulAction M 𝕜] [SmulCommClass 𝕜 M 𝕜] [HasContinuousConstSmul M 𝕜] :
+    MulAction M (WeakDual 𝕜 E) :=
+  ContinuousLinearMap.mulAction
 
 /-- If a monoid `M` distributively continuously acts on `𝕜` and this action commutes with
 multiplication on `𝕜`, then it acts distributively on `weak_dual 𝕜 E`. -/
-instance (M) [monoid M] [distrib_mul_action M 𝕜] [smul_comm_class 𝕜 M 𝕜]
-  [has_continuous_const_smul M 𝕜] :
-  distrib_mul_action M (weak_dual 𝕜 E) :=
-continuous_linear_map.distrib_mul_action
+instance M [Monoidₓ M] [DistribMulAction M 𝕜] [SmulCommClass 𝕜 M 𝕜] [HasContinuousConstSmul M 𝕜] :
+    DistribMulAction M (WeakDual 𝕜 E) :=
+  ContinuousLinearMap.distribMulAction
 
 /-- If `𝕜` is a topological module over a semiring `R` and scalar multiplication commutes with the
 multiplication on `𝕜`, then `weak_dual 𝕜 E` is a module over `R`. -/
-instance R_module (R) [semiring R] [module R 𝕜] [smul_comm_class 𝕜 R 𝕜]
-  [has_continuous_const_smul R 𝕜] :
-  module R (weak_dual 𝕜 E) :=
-continuous_linear_map.module
+instance rModule R [Semiringₓ R] [Module R 𝕜] [SmulCommClass 𝕜 R 𝕜] [HasContinuousConstSmul R 𝕜] :
+    Module R (WeakDual 𝕜 E) :=
+  ContinuousLinearMap.module
 
-instance (M) [monoid M] [distrib_mul_action M 𝕜] [smul_comm_class 𝕜 M 𝕜]
-  [has_continuous_const_smul M 𝕜] : has_continuous_const_smul M (weak_dual 𝕜 E) :=
-⟨λ m, continuous_induced_rng $ (coe_fn_continuous (top_dual_pairing 𝕜 E)).const_smul m⟩
+instance M [Monoidₓ M] [DistribMulAction M 𝕜] [SmulCommClass 𝕜 M 𝕜] [HasContinuousConstSmul M 𝕜] :
+    HasContinuousConstSmul M (WeakDual 𝕜 E) :=
+  ⟨fun m => continuous_induced_rng <| (coe_fn_continuous (topDualPairing 𝕜 E)).const_smul m⟩
 
 /-- If a monoid `M` distributively continuously acts on `𝕜` and this action commutes with
 multiplication on `𝕜`, then it continuously acts on `weak_dual 𝕜 E`. -/
-instance (M) [monoid M] [distrib_mul_action M 𝕜] [smul_comm_class 𝕜 M 𝕜]
-  [topological_space M] [has_continuous_smul M 𝕜] :
-  has_continuous_smul M (weak_dual 𝕜 E) :=
-⟨continuous_induced_rng $ continuous_fst.smul ((coe_fn_continuous (top_dual_pairing 𝕜 E)).comp
-  continuous_snd)⟩
+instance M [Monoidₓ M] [DistribMulAction M 𝕜] [SmulCommClass 𝕜 M 𝕜] [TopologicalSpace M] [HasContinuousSmul M 𝕜] :
+    HasContinuousSmul M (WeakDual 𝕜 E) :=
+  ⟨continuous_induced_rng <| continuous_fst.smul ((coe_fn_continuous (topDualPairing 𝕜 E)).comp continuous_snd)⟩
 
+-- ././Mathport/Syntax/Translate/Basic.lean:980:9: unsupported derive handler module 𝕜
 /-- The weak topology is the topology coarsest topology on `E` such that all
 functionals `λ x, top_dual_pairing 𝕜 E v x` are continuous. -/
-@[derive [add_comm_monoid, module 𝕜, topological_space, has_continuous_add],
-nolint has_inhabited_instance]
-def weak_space (𝕜 E) [comm_semiring 𝕜] [topological_space 𝕜] [has_continuous_add 𝕜]
-  [has_continuous_const_smul 𝕜 𝕜] [add_comm_monoid E] [module 𝕜 E] [topological_space E] :=
-weak_bilin (top_dual_pairing 𝕜 E).flip
+@[nolint has_inhabited_instance]
+def WeakSpace 𝕜 E [CommSemiringₓ 𝕜] [TopologicalSpace 𝕜] [HasContinuousAdd 𝕜] [HasContinuousConstSmul 𝕜 𝕜]
+    [AddCommMonoidₓ E] [Module 𝕜 E] [TopologicalSpace E] :=
+  WeakBilin (topDualPairing 𝕜 E).flip deriving AddCommMonoidₓ, [anonymous], TopologicalSpace, HasContinuousAdd
 
-end weak_star_topology
+end WeakStarTopology
+

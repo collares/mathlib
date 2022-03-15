@@ -3,8 +3,8 @@ Copyright (c) 2022 Yaël Dillies. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yaël Dillies
 -/
-import order.category.BoundedOrder
-import order.category.Lattice
+import Mathbin.Order.Category.BoundedOrder
+import Mathbin.Order.Category.Lattice
 
 /-!
 # The category of bounded lattices
@@ -15,76 +15,95 @@ In literature, this is sometimes called `Lat`, the category of lattices, because
 understood to entail having a bottom and a top element.
 -/
 
-universes u
 
-open category_theory
+universe u
+
+open CategoryTheory
 
 /-- The category of bounded lattices with bounded lattice morphisms. -/
-structure BoundedLattice :=
-(to_Lattice : Lattice)
-[is_bounded_order : bounded_order to_Lattice]
+structure BoundedLattice where
+  toLattice : Latticeₓ
+  [isBoundedOrder : BoundedOrder to_Lattice]
 
 namespace BoundedLattice
 
-instance : has_coe_to_sort BoundedLattice Type* := ⟨λ X, X.to_Lattice⟩
-instance (X : BoundedLattice) : lattice X := X.to_Lattice.str
+instance : CoeSort BoundedLattice (Type _) :=
+  ⟨fun X => X.toLattice⟩
 
-attribute [instance] BoundedLattice.is_bounded_order
+instance (X : BoundedLattice) : Lattice X :=
+  X.toLattice.str
+
+attribute [instance] BoundedLattice.isBoundedOrder
 
 /-- Construct a bundled `BoundedLattice` from `lattice` + `bounded_order`. -/
-def of (α : Type*) [lattice α] [bounded_order α] : BoundedLattice := ⟨⟨α⟩⟩
+def of (α : Type _) [Lattice α] [BoundedOrder α] : BoundedLattice :=
+  ⟨⟨α⟩⟩
 
-@[simp] lemma coe_of (α : Type*) [lattice α] [bounded_order α] : ↥(of α) = α := rfl
+@[simp]
+theorem coe_of (α : Type _) [Lattice α] [BoundedOrder α] : ↥(of α) = α :=
+  rfl
 
-instance : inhabited BoundedLattice := ⟨of punit⟩
+instance : Inhabited BoundedLattice :=
+  ⟨of PUnit⟩
 
-instance : large_category.{u} BoundedLattice :=
-{ hom := λ X Y, bounded_lattice_hom X Y,
-  id := λ X, bounded_lattice_hom.id X,
-  comp := λ X Y Z f g, g.comp f,
-  id_comp' := λ X Y, bounded_lattice_hom.comp_id,
-  comp_id' := λ X Y, bounded_lattice_hom.id_comp,
-  assoc' := λ W X Y Z _ _ _, bounded_lattice_hom.comp_assoc _ _ _ }
+instance : LargeCategory.{u} BoundedLattice where
+  Hom := fun X Y => BoundedLatticeHom X Y
+  id := fun X => BoundedLatticeHom.id X
+  comp := fun X Y Z f g => g.comp f
+  id_comp' := fun X Y => BoundedLatticeHom.comp_id
+  comp_id' := fun X Y => BoundedLatticeHom.id_comp
+  assoc' := fun W X Y Z _ _ _ => BoundedLatticeHom.comp_assoc _ _ _
 
-instance : concrete_category BoundedLattice :=
-{ forget := ⟨coe_sort, λ X Y, coe_fn, λ X, rfl, λ X Y Z f g, rfl⟩,
-  forget_faithful := ⟨λ X Y, by convert fun_like.coe_injective⟩ }
+instance : ConcreteCategory BoundedLattice where
+  forget := ⟨coeSort, fun X Y => coeFn, fun X => rfl, fun X Y Z f g => rfl⟩
+  forget_faithful :=
+    ⟨fun X Y => by
+      convert FunLike.coe_injective⟩
 
-instance has_forget_to_Lattice : has_forget₂ BoundedLattice Lattice :=
-{ forget₂ := { obj := λ X, ⟨X⟩, map := λ X Y, bounded_lattice_hom.to_lattice_hom } }
+instance hasForgetToLattice : HasForget₂ BoundedLattice Latticeₓ where
+  forget₂ := { obj := fun X => ⟨X⟩, map := fun X Y => BoundedLatticeHom.toLatticeHom }
 
-instance has_forget_to_BoundedOrder : has_forget₂ BoundedLattice BoundedOrder :=
-{ forget₂ := { obj := λ X, BoundedOrder.of X,
-               map := λ X Y, bounded_lattice_hom.to_bounded_order_hom } }
+instance hasForgetToBoundedOrder : HasForget₂ BoundedLattice BoundedOrderCat where
+  forget₂ := { obj := fun X => BoundedOrderCat.of X, map := fun X Y => BoundedLatticeHom.toBoundedOrderHom }
 
-lemma forget_Lattice_PartialOrder_eq_forget_BoundedOrder_PartialOrder :
-  forget₂ BoundedLattice Lattice ⋙ forget₂ Lattice PartialOrder =
-    forget₂ BoundedLattice BoundedOrder ⋙ forget₂ BoundedOrder PartialOrder := rfl
+theorem forget_Lattice_PartialOrder_eq_forget_BoundedOrder_PartialOrder :
+    forget₂ BoundedLattice Latticeₓ ⋙ forget₂ Latticeₓ PartialOrderₓₓ =
+      forget₂ BoundedLattice BoundedOrderCat ⋙ forget₂ BoundedOrderCat PartialOrderₓₓ :=
+  rfl
 
 /-- Constructs an equivalence between bounded lattices from an order isomorphism
 between them. -/
-@[simps] def iso.mk {α β : BoundedLattice.{u}} (e : α ≃o β) : α ≅ β :=
-{ hom := e,
-  inv := e.symm,
-  hom_inv_id' := by { ext, exact e.symm_apply_apply _ },
-  inv_hom_id' := by { ext, exact e.apply_symm_apply _ } }
+@[simps]
+def Iso.mk {α β : BoundedLattice.{u}} (e : α ≃o β) : α ≅ β where
+  Hom := e
+  inv := e.symm
+  hom_inv_id' := by
+    ext
+    exact e.symm_apply_apply _
+  inv_hom_id' := by
+    ext
+    exact e.apply_symm_apply _
 
 /-- `order_dual` as a functor. -/
-@[simps] def dual : BoundedLattice ⥤ BoundedLattice :=
-{ obj := λ X, of (order_dual X), map := λ X Y, bounded_lattice_hom.dual }
+@[simps]
+def dual : BoundedLattice ⥤ BoundedLattice where
+  obj := fun X => of (OrderDual X)
+  map := fun X Y => BoundedLatticeHom.dual
 
 /-- The equivalence between `BoundedLattice` and itself induced by `order_dual` both ways. -/
-@[simps functor inverse] def dual_equiv : BoundedLattice ≌ BoundedLattice :=
-equivalence.mk dual dual
-  (nat_iso.of_components (λ X, iso.mk $ order_iso.dual_dual X) $ λ X Y f, rfl)
-  (nat_iso.of_components (λ X, iso.mk $ order_iso.dual_dual X) $ λ X Y f, rfl)
+@[simps Functor inverse]
+def dualEquiv : BoundedLattice ≌ BoundedLattice :=
+  Equivalence.mk dual dual ((NatIso.ofComponents fun X => iso.mk <| OrderIso.dualDual X) fun X Y f => rfl)
+    ((NatIso.ofComponents fun X => iso.mk <| OrderIso.dualDual X) fun X Y f => rfl)
 
 end BoundedLattice
 
-lemma BoundedLattice_dual_comp_forget_to_Lattice :
-  BoundedLattice.dual ⋙ forget₂ BoundedLattice Lattice =
-    forget₂ BoundedLattice Lattice ⋙ Lattice.dual := rfl
+theorem BoundedLattice_dual_comp_forget_to_Lattice :
+    BoundedLattice.dual ⋙ forget₂ BoundedLattice Latticeₓ = forget₂ BoundedLattice Latticeₓ ⋙ Latticeₓ.dual :=
+  rfl
 
-lemma BoundedLattice_dual_comp_forget_to_BoundedOrder :
-  BoundedLattice.dual ⋙ forget₂ BoundedLattice BoundedOrder =
-    forget₂ BoundedLattice BoundedOrder ⋙ BoundedOrder.dual := rfl
+theorem BoundedLattice_dual_comp_forget_to_BoundedOrder :
+    BoundedLattice.dual ⋙ forget₂ BoundedLattice BoundedOrderCat =
+      forget₂ BoundedLattice BoundedOrderCat ⋙ BoundedOrderCat.dual :=
+  rfl
+

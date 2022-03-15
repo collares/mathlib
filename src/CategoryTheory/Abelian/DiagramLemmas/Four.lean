@@ -3,7 +3,7 @@ Copyright (c) 2020 Markus Himmel. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Markus Himmel
 -/
-import category_theory.abelian.pseudoelements
+import Mathbin.CategoryTheory.Abelian.Pseudoelements
 
 /-!
 # The four and five lemmas
@@ -46,30 +46,39 @@ equivalence of exactness and co-exactness follows easily.
 
 four lemma, five lemma, diagram lemma, diagram chase
 -/
-open category_theory (hiding comp_apply)
-open category_theory.abelian.pseudoelement
-open category_theory.limits
 
-universes v u
 
-variables {V : Type u} [category.{v} V] [abelian V]
+open CategoryTheory hiding comp_apply
 
-local attribute [instance] preadditive.has_equalizers_of_has_kernels
+open CategoryTheory.Abelian.Pseudoelement
 
-open_locale pseudoelement
+open CategoryTheory.Limits
 
-namespace category_theory.abelian
+universe v u
 
-variables {A B C D A' B' C' D' : V}
-variables {f : A ⟶ B} {g : B ⟶ C} {h : C ⟶ D}
-variables {f' : A' ⟶ B'} {g' : B' ⟶ C'} {h' : C' ⟶ D'}
-variables {α : A ⟶ A'} {β : B ⟶ B'} {γ : C ⟶ C'} {δ : D ⟶ D'}
-variables (comm₁ : α ≫ f' = f ≫ β) (comm₂ : β ≫ g' = g ≫ γ) (comm₃ : γ ≫ h' = h ≫ δ)
+variable {V : Type u} [Category.{v} V] [Abelian V]
+
+attribute [local instance] preadditive.has_equalizers_of_has_kernels
+
+open_locale Pseudoelement
+
+namespace CategoryTheory.Abelian
+
+variable {A B C D A' B' C' D' : V}
+
+variable {f : A ⟶ B} {g : B ⟶ C} {h : C ⟶ D}
+
+variable {f' : A' ⟶ B'} {g' : B' ⟶ C'} {h' : C' ⟶ D'}
+
+variable {α : A ⟶ A'} {β : B ⟶ B'} {γ : C ⟶ C'} {δ : D ⟶ D'}
+
+variable (comm₁ : α ≫ f' = f ≫ β) (comm₂ : β ≫ g' = g ≫ γ) (comm₃ : γ ≫ h' = h ≫ δ)
+
 include comm₁ comm₂ comm₃
 
 section
-variables [exact f g] [exact g h] [exact f' g']
 
+variable [Exact f g] [Exact g h] [Exact f' g']
 
 /-- The four lemma, mono version. For names of objects and morphisms, refer to the following
     diagram:
@@ -83,33 +92,49 @@ v         v         v         v
 A' --f'-> B' --g'-> C' --h'-> D'
 ```
 -/
-lemma mono_of_epi_of_mono_of_mono (hα : epi α) (hβ : mono β) (hδ : mono δ) : mono γ :=
-mono_of_zero_of_map_zero _ $ λ c hc,
-  have h c = 0, from
-    suffices δ (h c) = 0, from zero_of_map_zero _ (pseudo_injective_of_mono _) _ this,
-    calc δ (h c) = h' (γ c) : by rw [←comp_apply, ←comm₃, comp_apply]
-             ... = h' 0     : by rw hc
-             ... = 0        : apply_zero _,
-  exists.elim (pseudo_exact_of_exact.2 _ this) $ λ b hb,
-    have g' (β b) = 0, from
-      calc g' (β b) = γ (g b) : by rw [←comp_apply, comm₂, comp_apply]
-                ... = γ c     : by rw hb
-                ... = 0       : hc,
-    exists.elim (pseudo_exact_of_exact.2 _ this) $ λ a' ha',
-      exists.elim (pseudo_surjective_of_epi α a') $ λ a ha,
-      have f a = b, from
-        suffices β (f a) = β b, from pseudo_injective_of_mono _ this,
-        calc β (f a) = f' (α a) : by rw [←comp_apply, ←comm₁, comp_apply]
-                 ... = f' a'    : by rw ha
-                 ... = β b      : ha',
-      calc c = g b     : hb.symm
-         ... = g (f a) : by rw this
-         ... = 0       : pseudo_exact_of_exact.1 _
+theorem mono_of_epi_of_mono_of_mono (hα : Epi α) (hβ : Mono β) (hδ : Mono δ) : Mono γ :=
+  (mono_of_zero_of_map_zero _) fun c hc =>
+    have : h c = 0 :=
+      suffices δ (h c) = 0 from zero_of_map_zero _ (pseudo_injective_of_mono _) _ this
+      calc
+        δ (h c) = h' (γ c) := by
+          rw [← comp_apply, ← comm₃, comp_apply]
+        _ = h' 0 := by
+          rw [hc]
+        _ = 0 := apply_zero _
+        
+    (Exists.elim (pseudo_exact_of_exact.2 _ this)) fun b hb =>
+      have : g' (β b) = 0 :=
+        calc
+          g' (β b) = γ (g b) := by
+            rw [← comp_apply, comm₂, comp_apply]
+          _ = γ c := by
+            rw [hb]
+          _ = 0 := hc
+          
+      (Exists.elim (pseudo_exact_of_exact.2 _ this)) fun a' ha' =>
+        (Exists.elim (pseudo_surjective_of_epi α a')) fun a ha =>
+          have : f a = b :=
+            suffices β (f a) = β b from pseudo_injective_of_mono _ this
+            calc
+              β (f a) = f' (α a) := by
+                rw [← comp_apply, ← comm₁, comp_apply]
+              _ = f' a' := by
+                rw [ha]
+              _ = β b := ha'
+              
+          calc
+            c = g b := hb.symm
+            _ = g (f a) := by
+              rw [this]
+            _ = 0 := pseudo_exact_of_exact.1 _
+            
 
 end
 
 section
-variables [exact g h] [exact f' g'] [exact g' h']
+
+variable [Exact g h] [Exact f' g'] [Exact g' h']
 
 /-- The four lemma, epi version. For names of objects and morphisms, refer to the following
     diagram:
@@ -123,43 +148,83 @@ v         v         v         v
 A' --f'-> B' --g'-> C' --h'-> D'
 ```
 -/
-lemma epi_of_epi_of_epi_of_mono (hα : epi α) (hγ : epi γ) (hδ : mono δ) : epi β :=
-preadditive.epi_of_cancel_zero _ $ λ R r hβr,
-  have hf'r : f' ≫ r = 0, from limits.zero_of_epi_comp α $
-    calc α ≫ f' ≫ r = f ≫ β ≫ r : by rw reassoc_of comm₁
-                 ... = f ≫ 0      : by rw hβr
-                 ... = 0           : has_zero_morphisms.comp_zero _ _,
-  let y : R ⟶ pushout r g' := pushout.inl, z : C' ⟶ pushout r g' := pushout.inr in
-  have mono y, from mono_inl_of_factor_thru_epi_mono_factorization r g' (cokernel.π f')
-    (cokernel.desc f' g' (by simp)) (by simp) (cokernel.desc f' r hf'r) (by simp) _
-    (colimit.is_colimit _),
-  have hz : g ≫ γ ≫ z = 0, from
-    calc g ≫ γ ≫ z = β ≫ g' ≫ z : by rw ←reassoc_of comm₂
-                ... = β ≫ r ≫ y  : by rw ←pushout.condition
-                ... = 0 ≫ y       : by rw reassoc_of hβr
-                ... = 0           : has_zero_morphisms.zero_comp _ _,
-  let v : pushout r g' ⟶ pushout (γ ≫ z) (h ≫ δ) := pushout.inl,
-      w : D' ⟶ pushout (γ ≫ z) (h ≫ δ) := pushout.inr in
-  have mono v, from mono_inl_of_factor_thru_epi_mono_factorization _ _ (cokernel.π g)
-    (cokernel.desc g h (by simp) ≫ δ) (by simp) (cokernel.desc _ _ hz) (by simp) _
-    (colimit.is_colimit _),
-  have hzv : z ≫ v = h' ≫ w, from (cancel_epi γ).1 $
-    calc γ ≫ z ≫ v = h ≫ δ ≫ w  : by rw [←category.assoc, pushout.condition, category.assoc]
-                ... = γ ≫ h' ≫ w : by rw reassoc_of comm₃,
-  suffices (r ≫ y) ≫ v = 0, by exactI zero_of_comp_mono _ (zero_of_comp_mono _ this),
-  calc (r ≫ y) ≫ v = g' ≫ z ≫ v : by rw [pushout.condition, category.assoc]
-                ... = g' ≫ h' ≫ w : by rw hzv
-                ... = 0 ≫ w        : exact.w_assoc _
-                ... = 0            : has_zero_morphisms.zero_comp _ _
+theorem epi_of_epi_of_epi_of_mono (hα : Epi α) (hγ : Epi γ) (hδ : Mono δ) : Epi β :=
+  (Preadditive.epi_of_cancel_zero _) fun R r hβr =>
+    have hf'r : f' ≫ r = 0 :=
+      Limits.zero_of_epi_comp α <|
+        calc
+          α ≫ f' ≫ r = f ≫ β ≫ r := by
+            rw [reassoc_of comm₁]
+          _ = f ≫ 0 := by
+            rw [hβr]
+          _ = 0 := HasZeroMorphisms.comp_zero _ _
+          
+    let y : R ⟶ pushout r g' := pushout.inl
+    let z : C' ⟶ pushout r g' := pushout.inr
+    have : Mono y :=
+      mono_inl_of_factor_thru_epi_mono_factorization r g' (cokernel.π f')
+        (cokernel.desc f' g'
+          (by
+            simp ))
+        (by
+          simp )
+        (cokernel.desc f' r hf'r)
+        (by
+          simp )
+        _ (colimit.isColimit _)
+    have hz : g ≫ γ ≫ z = 0 :=
+      calc
+        g ≫ γ ≫ z = β ≫ g' ≫ z := by
+          rw [← reassoc_of comm₂]
+        _ = β ≫ r ≫ y := by
+          rw [← pushout.condition]
+        _ = 0 ≫ y := by
+          rw [reassoc_of hβr]
+        _ = 0 := HasZeroMorphisms.zero_comp _ _
+        
+    let v : pushout r g' ⟶ pushout (γ ≫ z) (h ≫ δ) := pushout.inl
+    let w : D' ⟶ pushout (γ ≫ z) (h ≫ δ) := pushout.inr
+    have : Mono v :=
+      mono_inl_of_factor_thru_epi_mono_factorization _ _ (cokernel.π g)
+        (cokernel.desc g h
+            (by
+              simp ) ≫
+          δ)
+        (by
+          simp )
+        (cokernel.desc _ _ hz)
+        (by
+          simp )
+        _ (colimit.isColimit _)
+    have hzv : z ≫ v = h' ≫ w :=
+      (cancel_epi γ).1 <|
+        calc
+          γ ≫ z ≫ v = h ≫ δ ≫ w := by
+            rw [← category.assoc, pushout.condition, category.assoc]
+          _ = γ ≫ h' ≫ w := by
+            rw [reassoc_of comm₃]
+          
+    suffices (r ≫ y) ≫ v = 0 from zero_of_comp_mono _ (zero_of_comp_mono _ this)
+    calc
+      (r ≫ y) ≫ v = g' ≫ z ≫ v := by
+        rw [pushout.condition, category.assoc]
+      _ = g' ≫ h' ≫ w := by
+        rw [hzv]
+      _ = 0 ≫ w := Exact.w_assoc _
+      _ = 0 := HasZeroMorphisms.zero_comp _ _
+      
 
 end
 
-section five
-variables {E E' : V} {i : D ⟶ E} {i' : D' ⟶ E'} {ε : E ⟶ E'} (comm₄ : δ ≫ i' = i ≫ ε)
-variables [exact f g] [exact g h] [exact h i] [exact f' g'] [exact g' h'] [exact h' i']
-variables [is_iso α] [is_iso β] [is_iso δ] [is_iso ε]
-include comm₄
+section Five
 
+variable {E E' : V} {i : D ⟶ E} {i' : D' ⟶ E'} {ε : E ⟶ E'} (comm₄ : δ ≫ i' = i ≫ ε)
+
+variable [Exact f g] [Exact g h] [Exact h i] [Exact f' g'] [Exact g' h'] [Exact h' i']
+
+variable [IsIso α] [IsIso β] [IsIso δ] [IsIso ε]
+
+include comm₄
 
 /-- The five lemma. For names of objects and morphisms, refer to the following diagram:
 
@@ -172,10 +237,14 @@ v         v         v         v         v
 A' --f'-> B' --g'-> C' --h'-> D' --i'-> E'
 ```
 -/
-lemma is_iso_of_is_iso_of_is_iso_of_is_iso_of_is_iso : is_iso γ :=
-have mono γ, by apply mono_of_epi_of_mono_of_mono comm₁ comm₂ comm₃; apply_instance,
-have epi γ, by apply epi_of_epi_of_epi_of_mono comm₂ comm₃ comm₄; apply_instance,
-by exactI is_iso_of_mono_of_epi _
+theorem is_iso_of_is_iso_of_is_iso_of_is_iso_of_is_iso : IsIso γ :=
+  have : Mono γ := by
+    apply mono_of_epi_of_mono_of_mono comm₁ comm₂ comm₃ <;> infer_instance
+  have : Epi γ := by
+    apply epi_of_epi_of_epi_of_mono comm₂ comm₃ comm₄ <;> infer_instance
+  is_iso_of_mono_of_epi _
 
-end five
-end category_theory.abelian
+end Five
+
+end CategoryTheory.Abelian
+

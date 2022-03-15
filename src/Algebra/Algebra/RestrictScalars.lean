@@ -3,7 +3,7 @@ Copyright (c) 2018 Kenny Lau. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau, Yury Kudryashov
 -/
-import algebra.algebra.basic
+import Mathbin.Algebra.Algebra.Basic
 
 /-!
 
@@ -34,7 +34,8 @@ refer to restricting the scalar type in a bundled type, such as from `A →ₗ[R
 * `subalgebra.restrict_scalars`
 -/
 
-variables (R S M A : Type*)
+
+variable (R S M A : Type _)
 
 /-- If we put an `R`-algebra structure on a semiring `S`, we get a natural equivalence from the
 category of `S`-modules to the category of representations of the algebra `S` (over `R`). The type
@@ -68,70 +69,84 @@ Note that this means we almost always want to state definitions and lemmas in th
 An example of when one might want to use `restrict_scalars` would be if one has a vector space
 over a field of characteristic zero and wishes to make use of the `ℚ`-algebra structure. -/
 @[nolint unused_arguments]
-def restrict_scalars (R S M : Type*) : Type* := M
+def RestrictScalars (R S M : Type _) : Type _ :=
+  M
 
-instance [I : inhabited M] : inhabited (restrict_scalars R S M) := I
+instance [I : Inhabited M] : Inhabited (RestrictScalars R S M) :=
+  I
 
-instance [I : add_comm_monoid M] : add_comm_monoid (restrict_scalars R S M) := I
+instance [I : AddCommMonoidₓ M] : AddCommMonoidₓ (RestrictScalars R S M) :=
+  I
 
-instance [I : add_comm_group M] : add_comm_group (restrict_scalars R S M) := I
+instance [I : AddCommGroupₓ M] : AddCommGroupₓ (RestrictScalars R S M) :=
+  I
 
-instance restrict_scalars.module_orig [semiring S] [add_comm_monoid M] [I : module S M] :
-  module S (restrict_scalars R S M) := I
+instance RestrictScalars.moduleOrig [Semiringₓ S] [AddCommMonoidₓ M] [I : Module S M] :
+    Module S (RestrictScalars R S M) :=
+  I
 
 /-- `restrict_scalars.linear_equiv` is an equivalence of modules over the semiring `S`. -/
-def restrict_scalars.linear_equiv [semiring S] [add_comm_monoid M] [module S M] :
-  restrict_scalars R S M ≃ₗ[S] M :=
-linear_equiv.refl S M
+def RestrictScalars.linearEquiv [Semiringₓ S] [AddCommMonoidₓ M] [Module S M] : RestrictScalars R S M ≃ₗ[S] M :=
+  LinearEquiv.refl S M
 
-section module
-variables [semiring S] [add_comm_monoid M] [comm_semiring R] [algebra R S] [module S M]
+section Module
 
-/--
-When `M` is a module over a ring `S`, and `S` is an algebra over `R`, then `M` inherits a
+variable [Semiringₓ S] [AddCommMonoidₓ M] [CommSemiringₓ R] [Algebra R S] [Module S M]
+
+/-- When `M` is a module over a ring `S`, and `S` is an algebra over `R`, then `M` inherits a
 module structure over `R`.
 
 The preferred way of setting this up is `[module R M] [module S M] [is_scalar_tower R S M]`.
 -/
-instance : module R (restrict_scalars R S M) :=
-module.comp_hom M (algebra_map R S)
+instance : Module R (RestrictScalars R S M) :=
+  Module.compHom M (algebraMap R S)
 
-lemma restrict_scalars_smul_def (c : R) (x : restrict_scalars R S M) :
-  c • x = ((algebra_map R S c) • x : M) := rfl
+theorem restrict_scalars_smul_def (c : R) (x : RestrictScalars R S M) : c • x = (algebraMap R S c • x : M) :=
+  rfl
 
-@[simp] lemma restrict_scalars.linear_equiv_map_smul (t : R) (x : restrict_scalars R S M) :
-  restrict_scalars.linear_equiv R S M (t • x)
-  = (algebra_map R S t) • restrict_scalars.linear_equiv R S M x :=
-rfl
+@[simp]
+theorem RestrictScalars.linear_equiv_map_smul (t : R) (x : RestrictScalars R S M) :
+    RestrictScalars.linearEquiv R S M (t • x) = algebraMap R S t • RestrictScalars.linearEquiv R S M x :=
+  rfl
 
-instance : is_scalar_tower R S (restrict_scalars R S M) :=
-⟨λ r S M, by { rw [algebra.smul_def, mul_smul], refl }⟩
+instance : IsScalarTower R S (RestrictScalars R S M) :=
+  ⟨fun r S M => by
+    rw [Algebra.smul_def, mul_smul]
+    rfl⟩
 
-end module
+end Module
 
-section algebra
+section Algebra
 
-instance [I : semiring A] : semiring (restrict_scalars R S A) := I
-instance [I : ring A] : ring (restrict_scalars R S A) := I
-instance [I : comm_semiring A] : comm_semiring (restrict_scalars R S A) := I
-instance [I : comm_ring A] : comm_ring (restrict_scalars R S A) := I
+instance [I : Semiringₓ A] : Semiringₓ (RestrictScalars R S A) :=
+  I
 
-variables [comm_semiring S] [semiring A]
+instance [I : Ringₓ A] : Ringₓ (RestrictScalars R S A) :=
+  I
 
-instance restrict_scalars.algebra_orig [I : algebra S A] : algebra S (restrict_scalars R S A) := I
+instance [I : CommSemiringₓ A] : CommSemiringₓ (RestrictScalars R S A) :=
+  I
 
-variables [algebra S A]
+instance [I : CommRingₓ A] : CommRingₓ (RestrictScalars R S A) :=
+  I
+
+variable [CommSemiringₓ S] [Semiringₓ A]
+
+instance RestrictScalars.algebraOrig [I : Algebra S A] : Algebra S (RestrictScalars R S A) :=
+  I
+
+variable [Algebra S A]
 
 /-- Tautological `S`-algebra isomorphism `restrict_scalars R S A ≃ₐ[S] A`. -/
-def restrict_scalars.alg_equiv : restrict_scalars R S A ≃ₐ[S] A := alg_equiv.refl
+def RestrictScalars.algEquiv : RestrictScalars R S A ≃ₐ[S] A :=
+  AlgEquiv.refl
 
-variables [comm_semiring R] [algebra R S]
+variable [CommSemiringₓ R] [Algebra R S]
 
 /-- `R ⟶ S` induces `S-Alg ⥤ R-Alg` -/
-instance : algebra R (restrict_scalars R S A) :=
-{ smul := (•),
-  commutes' := λ r x, algebra.commutes _ _,
-  smul_def' := λ _ _, algebra.smul_def _ _,
-  .. (algebra_map S A).comp (algebra_map R S) }
+instance : Algebra R (RestrictScalars R S A) :=
+  { (algebraMap S A).comp (algebraMap R S) with smul := (· • ·), commutes' := fun r x => Algebra.commutes _ _,
+    smul_def' := fun _ _ => Algebra.smul_def _ _ }
 
-end algebra
+end Algebra
+

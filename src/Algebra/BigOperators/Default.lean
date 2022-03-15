@@ -1,9 +1,10 @@
 -- Import this file to pull in everything about "big operators".
+import Mathbin.Algebra.BigOperators.Order
+import Mathbin.Algebra.BigOperators.Intervals
+import Mathbin.Algebra.BigOperators.Ring
+import Mathbin.Algebra.BigOperators.Pi
+import Mathbin.Algebra.BigOperators.Finsupp
+import Mathbin.Algebra.BigOperators.NatAntidiagonal
+import Mathbin.Algebra.BigOperators.Enat
+
 -- When preparing a contribution to mathlib, it is best to minimize the imports you use.
-import algebra.big_operators.order
-import algebra.big_operators.intervals
-import algebra.big_operators.ring
-import algebra.big_operators.pi
-import algebra.big_operators.finsupp
-import algebra.big_operators.nat_antidiagonal
-import algebra.big_operators.enat

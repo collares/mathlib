@@ -3,7 +3,7 @@ Copyright (c) 2021 Yury Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury Kudryashov
 -/
-import measure_theory.measure.lebesgue
+import Mathbin.MeasureTheory.Measure.Lebesgue
 
 /-!
 # Lebesgue measure on `ℂ`
@@ -15,28 +15,30 @@ equivalences (`measurable_equiv`) to both types and prove that both of them are 
 (in the sense of `measure_theory.measure_preserving`).
 -/
 
-open measure_theory
-noncomputable theory
 
-namespace complex
+open MeasureTheory
+
+noncomputable section
+
+namespace Complex
 
 /-- Lebesgue measure on `ℂ`. -/
-instance measure_space : measure_space ℂ :=
-⟨measure.map basis_one_I.equiv_fun.symm volume⟩
+instance measureSpace : MeasureSpace ℂ :=
+  ⟨Measure.map basisOneI.equivFun.symm volume⟩
 
 /-- Measurable equivalence between `ℂ` and `ℝ² = fin 2 → ℝ`. -/
-def measurable_equiv_pi : ℂ ≃ᵐ (fin 2 → ℝ) :=
-basis_one_I.equiv_fun.to_continuous_linear_equiv.to_homeomorph.to_measurable_equiv
+def measurableEquivPi : ℂ ≃ᵐ (Finₓ 2 → ℝ) :=
+  basisOneI.equivFun.toContinuousLinearEquiv.toHomeomorph.toMeasurableEquiv
 
 /-- Measurable equivalence between `ℂ` and `ℝ × ℝ`. -/
-def measurable_equiv_real_prod : ℂ ≃ᵐ (ℝ × ℝ) :=
-equiv_real_prodₗ.to_homeomorph.to_measurable_equiv
+def measurableEquivRealProd : ℂ ≃ᵐ ℝ × ℝ :=
+  equivRealProdₗ.toHomeomorph.toMeasurableEquiv
 
-lemma volume_preserving_equiv_pi :
-  measure_preserving measurable_equiv_pi :=
-(measurable_equiv_pi.symm.measurable.measure_preserving _).symm
+theorem volume_preserving_equiv_pi : MeasurePreserving measurableEquivPi :=
+  (measurableEquivPi.symm.Measurable.MeasurePreserving _).symm
 
-lemma volume_preserving_equiv_real_prod : measure_preserving measurable_equiv_real_prod :=
-(volume_preserving_fin_two_arrow ℝ).comp volume_preserving_equiv_pi
+theorem volume_preserving_equiv_real_prod : MeasurePreserving measurableEquivRealProd :=
+  (volume_preserving_fin_two_arrow ℝ).comp volume_preserving_equiv_pi
 
-end complex
+end Complex
+

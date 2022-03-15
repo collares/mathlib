@@ -3,7 +3,7 @@ Copyright (c) 2022 Yaël Dillies. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yaël Dillies
 -/
-import topology.continuous_function.basic
+import Mathbin.Topology.ContinuousFunction.Basic
 
 /-!
 # Spectral maps
@@ -22,124 +22,157 @@ compact open set is compact open.
 Once we have `spectral_space`, `is_spectral_map` should move to `topology.spectral.basic`.
 -/
 
-open function order_dual
 
-variables {F α β γ δ : Type*}
+open Function OrderDual
 
-section unbundled
-variables [topological_space α] [topological_space β] [topological_space γ] {f : α → β} {s : set β}
+variable {F α β γ δ : Type _}
+
+section Unbundled
+
+variable [TopologicalSpace α] [TopologicalSpace β] [TopologicalSpace γ] {f : α → β} {s : Set β}
 
 /-- A function between topological spaces is spectral if it is continuous and the preimage of every
 compact open set is compact open. -/
-structure is_spectral_map (f : α → β) extends continuous f : Prop :=
-(compact_preimage_of_open ⦃s : set β⦄ : is_open s → is_compact s → is_compact (f ⁻¹' s))
+structure IsSpectralMap (f : α → β) extends Continuous f : Prop where
+  compact_preimage_of_open ⦃s : Set β⦄ : IsOpen s → IsCompact s → IsCompact (f ⁻¹' s)
 
-lemma is_compact.preimage_of_open (hf : is_spectral_map f) (h₀ : is_compact s) (h₁ : is_open s) :
-  is_compact (f ⁻¹' s) :=
-hf.compact_preimage_of_open h₁ h₀
+theorem IsCompact.preimage_of_open (hf : IsSpectralMap f) (h₀ : IsCompact s) (h₁ : IsOpen s) : IsCompact (f ⁻¹' s) :=
+  hf.compact_preimage_of_open h₁ h₀
 
-lemma is_spectral_map.continuous {f : α → β} (hf : is_spectral_map f) : continuous f :=
-hf.to_continuous
+theorem IsSpectralMap.continuous {f : α → β} (hf : IsSpectralMap f) : Continuous f :=
+  hf.to_continuous
 
-lemma is_spectral_map_id : is_spectral_map (@id α) := ⟨continuous_id, λ s _, id⟩
+theorem is_spectral_map_id : IsSpectralMap (@id α) :=
+  ⟨continuous_id, fun s _ => id⟩
 
-lemma is_spectral_map.comp {f : β → γ} {g : α → β} (hf : is_spectral_map f)
-  (hg : is_spectral_map g) :
-  is_spectral_map (f ∘ g) :=
-⟨hf.continuous.comp hg.continuous,
-  λ s hs₀ hs₁, (hs₁.preimage_of_open hf hs₀).preimage_of_open hg (hs₀.preimage hf.continuous)⟩
+theorem IsSpectralMap.comp {f : β → γ} {g : α → β} (hf : IsSpectralMap f) (hg : IsSpectralMap g) :
+    IsSpectralMap (f ∘ g) :=
+  ⟨hf.Continuous.comp hg.Continuous, fun s hs₀ hs₁ =>
+    (hs₁.preimage_of_open hf hs₀).preimage_of_open hg (hs₀.Preimage hf.Continuous)⟩
 
-end unbundled
+end Unbundled
 
 /-- The type of spectral maps from `α` to `β`. -/
-structure spectral_map (α β : Type*) [topological_space α] [topological_space β] :=
-(to_fun : α → β)
-(spectral' : is_spectral_map to_fun)
+structure SpectralMap (α β : Type _) [TopologicalSpace α] [TopologicalSpace β] where
+  toFun : α → β
+  spectral' : IsSpectralMap to_fun
 
 /-- `spectral_map_class F α β` states that `F` is a type of spectral maps.
 
 You should extend this class when you extend `spectral_map`. -/
-class spectral_map_class (F : Type*) (α β : out_param $ Type*) [topological_space α]
-  [topological_space β]
-  extends fun_like F α (λ _, β) :=
-(map_spectral (f : F) : is_spectral_map f)
+class SpectralMapClass (F : Type _) (α β : outParam <| Type _) [TopologicalSpace α] [TopologicalSpace β] extends
+  FunLike F α fun _ => β where
+  map_spectral (f : F) : IsSpectralMap f
 
-export spectral_map_class (map_spectral)
+export SpectralMapClass (map_spectral)
 
 attribute [simp] map_spectral
 
-@[priority 100] -- See note [lower instance priority]
-instance spectral_map_class.to_continuous_map_class [topological_space α] [topological_space β]
-  [spectral_map_class F α β] :
-  continuous_map_class F α β :=
-⟨λ f, (map_spectral f).continuous⟩
+-- See note [lower instance priority]
+instance (priority := 100) SpectralMapClass.toContinuousMapClass [TopologicalSpace α] [TopologicalSpace β]
+    [SpectralMapClass F α β] : ContinuousMapClass F α β :=
+  ⟨fun f => (map_spectral f).Continuous⟩
 
-instance [topological_space α] [topological_space β] [spectral_map_class F α β] :
-  has_coe_t F (spectral_map α β) :=
-⟨λ f, ⟨_, map_spectral f⟩⟩
+instance [TopologicalSpace α] [TopologicalSpace β] [SpectralMapClass F α β] : CoeTₓ F (SpectralMap α β) :=
+  ⟨fun f => ⟨_, map_spectral f⟩⟩
 
 /-! ### Spectral maps -/
 
-namespace spectral_map
-variables [topological_space α] [topological_space β] [topological_space γ] [topological_space δ]
+
+namespace SpectralMap
+
+variable [TopologicalSpace α] [TopologicalSpace β] [TopologicalSpace γ] [TopologicalSpace δ]
 
 /-- Reinterpret a `spectral_map` as a `continuous_map`. -/
-def to_continuous_map (f : spectral_map α β) : continuous_map α β := ⟨_, f.spectral'.continuous⟩
+def toContinuousMap (f : SpectralMap α β) : ContinuousMap α β :=
+  ⟨_, f.spectral'.Continuous⟩
 
-instance : spectral_map_class (spectral_map α β) α β :=
-{ coe := spectral_map.to_fun,
-  coe_injective' := λ f g h, by { cases f, cases g, congr' },
-  map_spectral := λ f, f.spectral' }
+instance : SpectralMapClass (SpectralMap α β) α β where
+  coe := SpectralMap.toFun
+  coe_injective' := fun f g h => by
+    cases f
+    cases g
+    congr
+  map_spectral := fun f => f.spectral'
 
 /-- Helper instance for when there's too many metavariables to apply `fun_like.has_coe_to_fun`
 directly. -/
-instance : has_coe_to_fun (spectral_map α β) (λ _, α → β) := fun_like.has_coe_to_fun
+instance : CoeFun (SpectralMap α β) fun _ => α → β :=
+  FunLike.hasCoeToFun
 
-@[simp] lemma to_fun_eq_coe {f : spectral_map α β} : f.to_fun = (f : α → β) := rfl
+@[simp]
+theorem to_fun_eq_coe {f : SpectralMap α β} : f.toFun = (f : α → β) :=
+  rfl
 
-@[ext] lemma ext {f g : spectral_map α β} (h : ∀ a, f a = g a) : f = g := fun_like.ext f g h
+@[ext]
+theorem ext {f g : SpectralMap α β} (h : ∀ a, f a = g a) : f = g :=
+  FunLike.ext f g h
 
 /-- Copy of a `spectral_map` with a new `to_fun` equal to the old one. Useful to fix definitional
 equalities. -/
-protected def copy (f : spectral_map α β) (f' : α → β) (h : f' = f) : spectral_map α β :=
-⟨f', h.symm.subst f.spectral'⟩
+protected def copy (f : SpectralMap α β) (f' : α → β) (h : f' = f) : SpectralMap α β :=
+  ⟨f', h.symm.subst f.spectral'⟩
 
-variables (α)
+variable (α)
 
 /-- `id` as a `spectral_map`. -/
-protected def id : spectral_map α α := ⟨id, is_spectral_map_id⟩
+protected def id : SpectralMap α α :=
+  ⟨id, is_spectral_map_id⟩
 
-instance : inhabited (spectral_map α α) := ⟨spectral_map.id α⟩
+instance : Inhabited (SpectralMap α α) :=
+  ⟨SpectralMap.id α⟩
 
-@[simp] lemma coe_id : ⇑(spectral_map.id α) = id := rfl
+@[simp]
+theorem coe_id : ⇑(SpectralMap.id α) = id :=
+  rfl
 
-variables {α}
+variable {α}
 
-@[simp] lemma id_apply (a : α) : spectral_map.id α a = a := rfl
+@[simp]
+theorem id_apply (a : α) : SpectralMap.id α a = a :=
+  rfl
 
 /-- Composition of `spectral_map`s as a `spectral_map`. -/
-def comp (f : spectral_map β γ) (g : spectral_map α β) : spectral_map α γ :=
-⟨f.to_continuous_map.comp g.to_continuous_map, f.spectral'.comp g.spectral'⟩
+def comp (f : SpectralMap β γ) (g : SpectralMap α β) : SpectralMap α γ :=
+  ⟨f.toContinuousMap.comp g.toContinuousMap, f.spectral'.comp g.spectral'⟩
 
-@[simp] lemma coe_comp (f : spectral_map β γ) (g : spectral_map α β) : (f.comp g : α → γ) = f ∘ g :=
-rfl
-@[simp] lemma comp_apply (f : spectral_map β γ) (g : spectral_map α β) (a : α) :
-  (f.comp g) a = f (g a) := rfl
-@[simp] lemma coe_comp_continuous_map (f : spectral_map β γ) (g : spectral_map α β) :
-  (f.comp g : continuous_map α γ) = (f : continuous_map β γ).comp g := rfl
-@[simp] lemma comp_assoc (f : spectral_map γ δ) (g : spectral_map β γ) (h : spectral_map α β) :
-  (f.comp g).comp h = f.comp (g.comp h) := rfl
-@[simp] lemma comp_id (f : spectral_map α β) : f.comp (spectral_map.id α) = f :=
-ext $ λ a, rfl
-@[simp] lemma id_comp (f : spectral_map α β) : (spectral_map.id β).comp f = f :=
-ext $ λ a, rfl
+@[simp]
+theorem coe_comp (f : SpectralMap β γ) (g : SpectralMap α β) : (f.comp g : α → γ) = f ∘ g :=
+  rfl
 
-lemma cancel_right {g₁ g₂ : spectral_map β γ} {f : spectral_map α β} (hf : surjective f) :
-  g₁.comp f = g₂.comp f ↔ g₁ = g₂ :=
-⟨λ h, ext $ hf.forall.2 $ fun_like.ext_iff.1 h, congr_arg _⟩
+@[simp]
+theorem comp_apply (f : SpectralMap β γ) (g : SpectralMap α β) (a : α) : (f.comp g) a = f (g a) :=
+  rfl
 
-lemma cancel_left {g : spectral_map β γ} {f₁ f₂ : spectral_map α β} (hg : injective g) :
-  g.comp f₁ = g.comp f₂ ↔ f₁ = f₂ :=
-⟨λ h, ext $ λ a, hg $ by rw [←comp_apply, h, comp_apply], congr_arg _⟩
+@[simp]
+theorem coe_comp_continuous_map (f : SpectralMap β γ) (g : SpectralMap α β) :
+    (f.comp g : ContinuousMap α γ) = (f : ContinuousMap β γ).comp g :=
+  rfl
 
-end spectral_map
+@[simp]
+theorem comp_assoc (f : SpectralMap γ δ) (g : SpectralMap β γ) (h : SpectralMap α β) :
+    (f.comp g).comp h = f.comp (g.comp h) :=
+  rfl
+
+@[simp]
+theorem comp_id (f : SpectralMap α β) : f.comp (SpectralMap.id α) = f :=
+  ext fun a => rfl
+
+@[simp]
+theorem id_comp (f : SpectralMap α β) : (SpectralMap.id β).comp f = f :=
+  ext fun a => rfl
+
+theorem cancel_right {g₁ g₂ : SpectralMap β γ} {f : SpectralMap α β} (hf : Surjective f) :
+    g₁.comp f = g₂.comp f ↔ g₁ = g₂ :=
+  ⟨fun h => ext <| hf.forall.2 <| FunLike.ext_iff.1 h, congr_argₓ _⟩
+
+theorem cancel_left {g : SpectralMap β γ} {f₁ f₂ : SpectralMap α β} (hg : Injective g) :
+    g.comp f₁ = g.comp f₂ ↔ f₁ = f₂ :=
+  ⟨fun h =>
+    ext fun a =>
+      hg <| by
+        rw [← comp_apply, h, comp_apply],
+    congr_argₓ _⟩
+
+end SpectralMap
+

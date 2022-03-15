@@ -3,7 +3,7 @@ Copyright (c) 2020 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import data.equiv.basic
+import Mathbin.Data.Equiv.Basic
 
 /-!
 # Functions functorial with respect to equivalences
@@ -14,76 +14,93 @@ coherently mapping equivalences to equivalences.
 In categorical language, it is an endofunctor of the "core" of the category `Type`.
 -/
 
-universes u₀ u₁ u₂ v₀ v₁ v₂
 
-open function
+universe u₀ u₁ u₂ v₀ v₁ v₂
 
-/--
-An `equiv_functor` is only functorial with respect to equivalences.
+open Function
+
+/-- An `equiv_functor` is only functorial with respect to equivalences.
 
 To construct an `equiv_functor`, it suffices to supply just the function `f α → f β` from
 an equivalence `α ≃ β`, and then prove the functor laws. It's then a consequence that
 this function is part of an equivalence, provided by `equiv_functor.map_equiv`.
 -/
-class equiv_functor (f : Type u₀ → Type u₁) :=
-(map : Π {α β}, (α ≃ β) → (f α → f β))
-(map_refl' : Π α, map (equiv.refl α) = @id (f α) . obviously)
-(map_trans' : Π {α β γ} (k : α ≃ β) (h : β ≃ γ),
-  map (k.trans h) = (map h) ∘ (map k) . obviously)
+class EquivFunctor (f : Type u₀ → Type u₁) where
+  map : ∀ {α β}, α ≃ β → f α → f β
+  map_refl' : ∀ α, map (Equivₓ.refl α) = @id (f α) := by
+    run_tac
+      obviously
+  map_trans' : ∀ {α β γ} k : α ≃ β h : β ≃ γ, map (k.trans h) = map h ∘ map k := by
+    run_tac
+      obviously
 
-restate_axiom equiv_functor.map_refl'
-restate_axiom equiv_functor.map_trans'
-attribute [simp] equiv_functor.map_refl
+restate_axiom EquivFunctor.map_refl'
 
-namespace equiv_functor
+restate_axiom EquivFunctor.map_trans'
+
+attribute [simp] EquivFunctor.map_refl
+
+namespace EquivFunctor
 
 section
-variables (f : Type u₀ → Type u₁) [equiv_functor f] {α β : Type u₀} (e : α ≃ β)
+
+variable (f : Type u₀ → Type u₁) [EquivFunctor f] {α β : Type u₀} (e : α ≃ β)
 
 /-- An `equiv_functor` in fact takes every equiv to an equiv. -/
-def map_equiv :
-  f α ≃ f β :=
-{ to_fun := equiv_functor.map e,
-  inv_fun := equiv_functor.map e.symm,
-  left_inv := λ x, by { convert (congr_fun (equiv_functor.map_trans e e.symm) x).symm, simp, },
-  right_inv := λ y, by { convert (congr_fun (equiv_functor.map_trans e.symm e) y).symm, simp, }, }
+def mapEquiv : f α ≃ f β where
+  toFun := EquivFunctor.map e
+  invFun := EquivFunctor.map e.symm
+  left_inv := fun x => by
+    convert (congr_funₓ (EquivFunctor.map_trans e e.symm) x).symm
+    simp
+  right_inv := fun y => by
+    convert (congr_funₓ (EquivFunctor.map_trans e.symm e) y).symm
+    simp
 
-@[simp] lemma map_equiv_apply (x : f α) :
-  map_equiv f e x = equiv_functor.map e x := rfl
+@[simp]
+theorem map_equiv_apply (x : f α) : mapEquiv f e x = EquivFunctor.map e x :=
+  rfl
 
-lemma map_equiv_symm_apply (y : f β) :
-  (map_equiv f e).symm y = equiv_functor.map e.symm y := rfl
+theorem map_equiv_symm_apply (y : f β) : (mapEquiv f e).symm y = EquivFunctor.map e.symm y :=
+  rfl
 
-@[simp] lemma map_equiv_refl (α) :
-  map_equiv f (equiv.refl α) = equiv.refl (f α) :=
-by simpa [equiv_functor.map_equiv]
+@[simp]
+theorem map_equiv_refl α : mapEquiv f (Equivₓ.refl α) = Equivₓ.refl (f α) := by
+  simpa [EquivFunctor.mapEquiv]
 
-@[simp] lemma map_equiv_symm :
-  (map_equiv f e).symm = map_equiv f e.symm :=
-equiv.ext $ map_equiv_symm_apply f e
+@[simp]
+theorem map_equiv_symm : (mapEquiv f e).symm = mapEquiv f e.symm :=
+  Equivₓ.ext <| map_equiv_symm_apply f e
 
-/--
-The composition of `map_equiv`s is carried over the `equiv_functor`.
+/-- The composition of `map_equiv`s is carried over the `equiv_functor`.
 For plain `functor`s, this lemma is named `map_map` when applied
 or `map_comp_map` when not applied.
 -/
-@[simp] lemma map_equiv_trans {γ : Type u₀} (ab : α ≃ β) (bc : β ≃ γ) :
-  (map_equiv f ab).trans (map_equiv f bc) = map_equiv f (ab.trans bc) :=
-equiv.ext $ λ x, by simp [map_equiv, map_trans']
+@[simp]
+theorem map_equiv_trans {γ : Type u₀} (ab : α ≃ β) (bc : β ≃ γ) :
+    (mapEquiv f ab).trans (mapEquiv f bc) = mapEquiv f (ab.trans bc) :=
+  Equivₓ.ext fun x => by
+    simp [map_equiv, map_trans']
 
 end
 
-@[priority 100]
-instance of_is_lawful_functor
-  (f : Type u₀ → Type u₁) [functor f] [is_lawful_functor f] : equiv_functor f :=
-{ map := λ α β e, functor.map e,
-  map_refl' := λ α, by { ext, apply is_lawful_functor.id_map, },
-  map_trans' := λ α β γ k h, by { ext x, apply (is_lawful_functor.comp_map k h x), } }
+instance (priority := 100) ofIsLawfulFunctor (f : Type u₀ → Type u₁) [Functor f] [IsLawfulFunctor f] :
+    EquivFunctor f where
+  map := fun α β e => Functor.map e
+  map_refl' := fun α => by
+    ext
+    apply IsLawfulFunctor.id_map
+  map_trans' := fun α β γ k h => by
+    ext x
+    apply IsLawfulFunctor.comp_map k h x
 
-lemma map_equiv.injective
-  (f : Type u₀ → Type u₁) [applicative f] [is_lawful_applicative f] {α β : Type u₀}
-  (h : ∀ γ, function.injective (pure : γ → f γ)) :
-  function.injective (@equiv_functor.map_equiv f _ α β) :=
-λ e₁ e₂ H, equiv.ext $ λ x, h β (by simpa [equiv_functor.map] using equiv.congr_fun H (pure x))
+theorem mapEquiv.injective (f : Type u₀ → Type u₁) [Applicativeₓ f] [IsLawfulApplicative f] {α β : Type u₀}
+    (h : ∀ γ, Function.Injective (pure : γ → f γ)) : Function.Injective (@EquivFunctor.mapEquiv f _ α β) :=
+  fun e₁ e₂ H =>
+  Equivₓ.ext fun x =>
+    h β
+      (by
+        simpa [EquivFunctor.map] using Equivₓ.congr_fun H (pure x))
 
-end equiv_functor
+end EquivFunctor
+

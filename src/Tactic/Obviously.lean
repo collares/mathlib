@@ -3,8 +3,8 @@ Copyright (c) 2017 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import tactic.tidy
-import tactic.replacer
+import Mathbin.Tactic.Tidy
+import Mathbin.Tactic.Replacer
 
 /-!
 # The `obviously` tactic
@@ -23,6 +23,7 @@ In the past it had been used by an external category theory library which wanted
 `rewrite_search` as part of `obviously`.
 -/
 
+
 /-
 The propositional fields of `category` are annotated with the auto_param `obviously`,
 which is defined here as a
@@ -35,14 +36,15 @@ powerful tactics.
 -/
 def_replacer obviously
 
-/--
-The default implementation of `obviously`
+/-- The default implementation of `obviously`
 discharges any goals which contain `sorry` in their type using `sorry`,
 and then calls `tidy`.
 -/
-@[obviously] meta def obviously' :=
-tactic.sorry_if_contains_sorry <|>
-tactic.tidy <|>
-tactic.fail (
-"`obviously` failed to solve a subgoal.\n" ++
-"You may need to explicitly provide a proof of the corresponding structure field.")
+@[obviously]
+unsafe def obviously' :=
+  tactic.sorry_if_contains_sorry <|>
+    tactic.tidy <|>
+      tactic.fail
+        ("`obviously` failed to solve a subgoal.\n" ++
+          "You may need to explicitly provide a proof of the corresponding structure field.")
+

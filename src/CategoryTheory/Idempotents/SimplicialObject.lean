@@ -3,9 +3,8 @@ Copyright (c) 2022 Joël Riou. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Joël Riou
 -/
-
-import algebraic_topology.simplicial_object
-import category_theory.idempotents.functor_categories
+import Mathbin.AlgebraicTopology.SimplicialObject
+import Mathbin.CategoryTheory.Idempotents.FunctorCategories
 
 /-!
 
@@ -17,18 +16,20 @@ category `C` is.
 
 -/
 
-namespace category_theory
 
-namespace idempotents
+namespace CategoryTheory
 
-variables {C : Type*} [category C] [is_idempotent_complete C]
+namespace Idempotents
 
-instance : is_idempotent_complete (simplicial_object C) :=
-idempotents.functor_category_is_idempotent_complete _ _
+variable {C : Type _} [Category C] [IsIdempotentComplete C]
 
-instance : is_idempotent_complete (cosimplicial_object C) :=
-idempotents.functor_category_is_idempotent_complete _ _
+instance : IsIdempotentComplete (SimplicialObject C) :=
+  Idempotents.functor_category_is_idempotent_complete _ _
 
-end idempotents
+instance : IsIdempotentComplete (CosimplicialObject C) :=
+  Idempotents.functor_category_is_idempotent_complete _ _
 
-end category_theory
+end Idempotents
+
+end CategoryTheory
+

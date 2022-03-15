@@ -3,8 +3,8 @@ Copyright (c) 2021 Alex J. Best. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Alex J. Best
 -/
-import algebra.pointwise
-import algebra.module.pi
+import Mathbin.Algebra.Pointwise
+import Mathbin.Algebra.Module.Pi
 
 /-!
 # Pointwise actions on sets in Pi types
@@ -17,34 +17,36 @@ set multiplication, set addition, pointwise addition, pointwise multiplication, 
 
 -/
 
-open_locale pointwise
-open set
 
-variables {K ι : Type*} {R : ι → Type*}
+open_locale Pointwise
 
-@[to_additive]
-lemma smul_pi_subset [∀ i, has_scalar K (R i)] (r : K) (s : set ι) (t : Π i, set (R i)) :
-  r • pi s t ⊆ pi s (r • t) :=
-begin
-  rintros x ⟨y, h, rfl⟩ i hi,
-  exact smul_mem_smul_set (h i hi),
-end
+open Set
+
+variable {K ι : Type _} {R : ι → Type _}
 
 @[to_additive]
-lemma smul_univ_pi [∀ i, has_scalar K (R i)] (r : K) (t : Π i, set (R i)) :
-  r • pi (univ : set ι) t = pi (univ : set ι) (r • t) :=
-subset.antisymm (smul_pi_subset _ _ _) $ λ x h, begin
-  refine ⟨λ i, classical.some (h i $ set.mem_univ _), λ i hi, _, funext $ λ i, _⟩,
-  { exact (classical.some_spec (h i _)).left, },
-  { exact (classical.some_spec (h i _)).right, },
-end
+theorem smul_pi_subset [∀ i, HasScalar K (R i)] (r : K) (s : Set ι) (t : ∀ i, Set (R i)) : r • Pi s t ⊆ Pi s (r • t) :=
+  by
+  rintro x ⟨y, h, rfl⟩ i hi
+  exact smul_mem_smul_set (h i hi)
 
 @[to_additive]
-lemma smul_pi [group K] [∀ i, mul_action K (R i)] (r : K) (S : set ι) (t : Π i, set (R i)) :
-  r • S.pi t = S.pi (r • t) :=
-subset.antisymm (smul_pi_subset _ _ _) $ λ x h,
-  ⟨r⁻¹ • x, λ i hiS, mem_smul_set_iff_inv_smul_mem.mp (h i hiS), smul_inv_smul _ _⟩
+theorem smul_univ_pi [∀ i, HasScalar K (R i)] (r : K) (t : ∀ i, Set (R i)) :
+    r • Pi (Univ : Set ι) t = Pi (Univ : Set ι) (r • t) :=
+  (Subset.antisymm (smul_pi_subset _ _ _)) fun x h => by
+    refine' ⟨fun i => Classical.some (h i <| Set.mem_univ _), fun i hi => _, funext fun i => _⟩
+    · exact (Classical.some_spec (h i _)).left
+      
+    · exact (Classical.some_spec (h i _)).right
+      
 
-lemma smul_pi₀ [group_with_zero K] [∀ i, mul_action K (R i)] {r : K} (S : set ι)
-  (t : Π i, set (R i)) (hr : r ≠ 0) : r • S.pi t = S.pi (r • t) :=
-smul_pi (units.mk0 r hr) S t
+@[to_additive]
+theorem smul_pi [Groupₓ K] [∀ i, MulAction K (R i)] (r : K) (S : Set ι) (t : ∀ i, Set (R i)) :
+    r • S.pi t = S.pi (r • t) :=
+  (Subset.antisymm (smul_pi_subset _ _ _)) fun x h =>
+    ⟨r⁻¹ • x, fun i hiS => mem_smul_set_iff_inv_smul_mem.mp (h i hiS), smul_inv_smul _ _⟩
+
+theorem smul_pi₀ [GroupWithZeroₓ K] [∀ i, MulAction K (R i)] {r : K} (S : Set ι) (t : ∀ i, Set (R i)) (hr : r ≠ 0) :
+    r • S.pi t = S.pi (r • t) :=
+  smul_pi (Units.mk0 r hr) S t
+

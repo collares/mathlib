@@ -3,8 +3,8 @@ Copyright (c) 2022 Oliver Nash. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oliver Nash
 -/
-import algebra.lie.nilpotent
-import algebra.lie.cartan_subalgebra
+import Mathbin.Algebra.Lie.Nilpotent
+import Mathbin.Algebra.Lie.CartanSubalgebra
 
 /-!
 # Engel's theorem
@@ -64,225 +64,216 @@ into a single statement about nilpotency of Lie modules. This is not usually emp
 
 -/
 
-universes u₁ u₂ u₃ u₄
 
-variables {R : Type u₁} {L : Type u₂} {L₂ : Type u₃} {M : Type u₄}
-variables [comm_ring R] [lie_ring L] [lie_algebra R L] [lie_ring L₂] [lie_algebra R L₂]
-variables [add_comm_group M] [module R M] [lie_ring_module L M] [lie_module R L M]
+universe u₁ u₂ u₃ u₄
+
+variable {R : Type u₁} {L : Type u₂} {L₂ : Type u₃} {M : Type u₄}
+
+variable [CommRingₓ R] [LieRing L] [LieAlgebra R L] [LieRing L₂] [LieAlgebra R L₂]
+
+variable [AddCommGroupₓ M] [Module R M] [LieRingModule L M] [LieModule R L M]
 
 include R L
 
-namespace lie_submodule
+namespace LieSubmodule
 
-open lie_module
+open LieModule
 
-variables {I : lie_ideal R L} {x : L} (hxI : (R ∙ x) ⊔ I = ⊤)
+variable {I : LieIdeal R L} {x : L} (hxI : (R∙x)⊔I = ⊤)
 
 include hxI
 
-lemma exists_smul_add_of_span_sup_eq_top (y : L) : ∃ (t : R) (z ∈ I), y = t • x + z :=
-begin
-  have hy : y ∈ (⊤ : submodule R L) := submodule.mem_top,
-  simp only [← hxI, submodule.mem_sup, submodule.mem_span_singleton] at hy,
-  obtain ⟨-, ⟨t, rfl⟩, z, hz, rfl⟩ := hy,
-  exact ⟨t, z, hz, rfl⟩,
-end
+theorem exists_smul_add_of_span_sup_eq_top (y : L) : ∃ t : R, ∃ z ∈ I, y = t • x + z := by
+  have hy : y ∈ (⊤ : Submodule R L) := Submodule.mem_top
+  simp only [← hxI, Submodule.mem_sup, Submodule.mem_span_singleton] at hy
+  obtain ⟨-, ⟨t, rfl⟩, z, hz, rfl⟩ := hy
+  exact ⟨t, z, hz, rfl⟩
 
-lemma lie_top_eq_of_span_sup_eq_top (N : lie_submodule R L M) :
-  (↑⁅(⊤ : lie_ideal R L), N⁆ : submodule R M) =
-  (N : submodule R M).map (to_endomorphism R L M x) ⊔ (↑⁅I, N⁆ : submodule R M) :=
-begin
-  simp only [lie_ideal_oper_eq_linear_span', submodule.sup_span, mem_top, exists_prop,
-    exists_true_left, submodule.map_coe, to_endomorphism_apply_apply],
-  refine le_antisymm (submodule.span_le.mpr _) (submodule.span_mono (λ z hz, _)),
-  { rintros z ⟨y, n, hn : n ∈ N, rfl⟩,
-    obtain ⟨t, z, hz, rfl⟩ := exists_smul_add_of_span_sup_eq_top hxI y,
-    simp only [set_like.mem_coe, submodule.span_union, submodule.mem_sup],
-    exact ⟨t • ⁅x, n⁆, submodule.subset_span ⟨t • n, N.smul_mem' t hn, lie_smul t x n⟩,
-      ⁅z, n⁆, submodule.subset_span ⟨z, hz, n, hn, rfl⟩, by simp⟩, },
-  { rcases hz with ⟨m, hm, rfl⟩ | ⟨y, hy, m, hm, rfl⟩,
-    exacts [⟨x, m, hm, rfl⟩, ⟨y, m, hm, rfl⟩], },
-end
+theorem lie_top_eq_of_span_sup_eq_top (N : LieSubmodule R L M) :
+    (↑⁅(⊤ : LieIdeal R L),N⁆ : Submodule R M) =
+      (N : Submodule R M).map (toEndomorphism R L M x)⊔(↑⁅I,N⁆ : Submodule R M) :=
+  by
+  simp only [lie_ideal_oper_eq_linear_span', Submodule.sup_span, mem_top, exists_prop, exists_true_left,
+    Submodule.map_coe, to_endomorphism_apply_apply]
+  refine' le_antisymmₓ (submodule.span_le.mpr _) (Submodule.span_mono fun z hz => _)
+  · rintro z ⟨y, n, hn : n ∈ N, rfl⟩
+    obtain ⟨t, z, hz, rfl⟩ := exists_smul_add_of_span_sup_eq_top hxI y
+    simp only [SetLike.mem_coe, Submodule.span_union, Submodule.mem_sup]
+    exact
+      ⟨t • ⁅x,n⁆, Submodule.subset_span ⟨t • n, N.smul_mem' t hn, lie_smul t x n⟩, ⁅z,n⁆,
+        Submodule.subset_span ⟨z, hz, n, hn, rfl⟩, by
+        simp ⟩
+    
+  · rcases hz with (⟨m, hm, rfl⟩ | ⟨y, hy, m, hm, rfl⟩)
+    exacts[⟨x, m, hm, rfl⟩, ⟨y, m, hm, rfl⟩]
+    
 
-lemma lcs_le_lcs_of_is_nilpotent_span_sup_eq_top {n i j : ℕ} (hxn : (to_endomorphism R L M x)^n = 0)
-  (hIM : lower_central_series R L M i ≤ I.lcs M j) :
-  lower_central_series R L M (i + n) ≤ I.lcs M (j + 1) :=
-begin
-  suffices : ∀ l, ((⊤ : lie_ideal R L).lcs M (i + l) : submodule R M) ≤
-    (I.lcs M j : submodule R M).map
-    ((to_endomorphism R L M x)^l) ⊔ (I.lcs M (j + 1) : submodule R M),
-  { simpa only [bot_sup_eq, lie_ideal.incl_coe, submodule.map_zero, hxn] using this n, },
-  intros l,
-  induction l with l ih,
-  { simp only [add_zero, lie_ideal.lcs_succ, pow_zero, linear_map.one_eq_id, submodule.map_id],
-    exact le_sup_of_le_left hIM, },
-  { simp only [lie_ideal.lcs_succ, i.add_succ l, lie_top_eq_of_span_sup_eq_top hxI, sup_le_iff],
-    refine ⟨(submodule.map_mono ih).trans _, le_sup_of_le_right _⟩,
-    { rw [submodule.map_sup, ← submodule.map_comp, ← linear_map.mul_eq_comp, ← pow_succ,
-        ← I.lcs_succ],
-      exact sup_le_sup_left coe_map_to_endomorphism_le _, },
-    { refine le_trans (mono_lie_right _ _ I _) (mono_lie_right _ _ I hIM),
-      exact antitone_lower_central_series R L M le_self_add, }, },
-end
+theorem lcs_le_lcs_of_is_nilpotent_span_sup_eq_top {n i j : ℕ} (hxn : toEndomorphism R L M x ^ n = 0)
+    (hIM : lowerCentralSeries R L M i ≤ I.lcs M j) : lowerCentralSeries R L M (i + n) ≤ I.lcs M (j + 1) := by
+  suffices
+    ∀ l,
+      ((⊤ : LieIdeal R L).lcs M (i + l) : Submodule R M) ≤
+        (I.lcs M j : Submodule R M).map (to_endomorphism R L M x ^ l)⊔(I.lcs M (j + 1) : Submodule R M)
+    by
+    simpa only [bot_sup_eq, LieIdeal.incl_coe, Submodule.map_zero, hxn] using this n
+  intro l
+  induction' l with l ih
+  · simp only [add_zeroₓ, LieIdeal.lcs_succ, pow_zeroₓ, LinearMap.one_eq_id, Submodule.map_id]
+    exact le_sup_of_le_left hIM
+    
+  · simp only [LieIdeal.lcs_succ, i.add_succ l, lie_top_eq_of_span_sup_eq_top hxI, sup_le_iff]
+    refine' ⟨(Submodule.map_mono ih).trans _, le_sup_of_le_right _⟩
+    · rw [Submodule.map_sup, ← Submodule.map_comp, ← LinearMap.mul_eq_comp, ← pow_succₓ, ← I.lcs_succ]
+      exact sup_le_sup_left coe_map_to_endomorphism_le _
+      
+    · refine' le_transₓ (mono_lie_right _ _ I _) (mono_lie_right _ _ I hIM)
+      exact antitone_lower_central_series R L M le_self_add
+      
+    
 
-lemma is_nilpotent_of_is_nilpotent_span_sup_eq_top
-  (hnp : is_nilpotent $ to_endomorphism R L M x) (hIM : is_nilpotent R I M) :
-  is_nilpotent R L M :=
-begin
-  obtain ⟨n, hn⟩ := hnp,
-  unfreezingI { obtain ⟨k, hk⟩ := hIM, },
-  have hk' : I.lcs M k = ⊥,
-  { simp only [← coe_to_submodule_eq_iff, I.coe_lcs_eq, hk, bot_coe_submodule], },
-  suffices : ∀ l, lower_central_series R L M (l * n) ≤ I.lcs M l,
-  { use k * n,
-    simpa [hk'] using this k, },
-  intros l,
-  induction l with l ih,
-  { simp, },
-  { exact (l.succ_mul n).symm ▸ lcs_le_lcs_of_is_nilpotent_span_sup_eq_top hxI hn ih, },
-end
+theorem is_nilpotent_of_is_nilpotent_span_sup_eq_top (hnp : IsNilpotent <| toEndomorphism R L M x)
+    (hIM : IsNilpotent R I M) : IsNilpotent R L M := by
+  obtain ⟨n, hn⟩ := hnp
+  obtain ⟨k, hk⟩ := hIM
+  have hk' : I.lcs M k = ⊥ := by
+    simp only [← coe_to_submodule_eq_iff, I.coe_lcs_eq, hk, bot_coe_submodule]
+  suffices ∀ l, lower_central_series R L M (l * n) ≤ I.lcs M l by
+    use k * n
+    simpa [hk'] using this k
+  intro l
+  induction' l with l ih
+  · simp
+    
+  · exact (l.succ_mul n).symm ▸ lcs_le_lcs_of_is_nilpotent_span_sup_eq_top hxI hn ih
+    
 
-end lie_submodule
+end LieSubmodule
 
-section lie_algebra
+section LieAlgebra
 
-open lie_module (hiding is_nilpotent)
+open LieModule hiding IsNilpotent
 
-variables (R L)
+variable (R L)
 
 /-- A Lie algebra `L` is said to be Engelian if a sufficient condition for any `L`-Lie module `M` to
 be nilpotent is that the image of the map `L → End(M)` consists of nilpotent elements.
 
 Engel's theorem `lie_algebra.is_engelian_of_is_noetherian` states that any Noetherian Lie algebra is
 Engelian. -/
-def lie_algebra.is_engelian : Prop :=
-  ∀ (M : Type u₄) [add_comm_group M], by exactI ∀ [module R M] [lie_ring_module L M], by exactI ∀
-    [lie_module R L M], by exactI ∀ (h : ∀ (x : L), is_nilpotent (to_endomorphism R L M x)),
-    lie_module.is_nilpotent R L M
+def LieAlgebra.IsEngelian : Prop :=
+  ∀ M : Type u₄ [AddCommGroupₓ M],
+    ∀ [Module R M] [LieRingModule L M],
+      ∀ [LieModule R L M], ∀ h : ∀ x : L, IsNilpotent (to_endomorphism R L M x), LieModule.IsNilpotent R L M
 
-variables {R L}
+variable {R L}
 
-lemma lie_algebra.is_engelian_of_subsingleton [subsingleton L] : lie_algebra.is_engelian R L :=
-begin
-  intros M _i1 _i2 _i3 _i4 h,
-  use 1,
-  suffices : (⊤ : lie_ideal R L) = ⊥, { simp [this], },
-  haveI := (lie_submodule.subsingleton_iff R L L).mpr infer_instance,
-  apply subsingleton.elim,
-end
+theorem LieAlgebra.is_engelian_of_subsingleton [Subsingleton L] : LieAlgebra.IsEngelian R L := by
+  intro M _i1 _i2 _i3 _i4 h
+  use 1
+  suffices (⊤ : LieIdeal R L) = ⊥ by
+    simp [this]
+  have := (LieSubmodule.subsingleton_iff R L L).mpr inferInstance
+  apply Subsingleton.elimₓ
 
-lemma function.surjective.is_engelian
-  {f : L →ₗ⁅R⁆ L₂} (hf : function.surjective f) (h : lie_algebra.is_engelian.{u₁ u₂ u₄} R L) :
-  lie_algebra.is_engelian.{u₁ u₃ u₄} R L₂ :=
-begin
-  introsI M _i1 _i2 _i3 _i4 h',
-  letI : lie_ring_module L M := lie_ring_module.comp_lie_hom M f,
-  letI : lie_module R L M := comp_lie_hom M f,
-  have hnp : ∀ x, is_nilpotent (to_endomorphism R L M x) := λ x, h' (f x),
-  have surj_id : function.surjective (linear_map.id : M →ₗ[R] M) := function.surjective_id,
-  haveI : lie_module.is_nilpotent R L M := h M hnp,
-  apply hf.lie_module_is_nilpotent surj_id,
-  simp,
-end
+theorem Function.Surjective.is_engelian {f : L →ₗ⁅R⁆ L₂} (hf : Function.Surjective f)
+    (h : LieAlgebra.IsEngelian.{u₁, u₂, u₄} R L) : LieAlgebra.IsEngelian.{u₁, u₃, u₄} R L₂ := by
+  intros M _i1 _i2 _i3 _i4 h'
+  let this' : LieRingModule L M := LieRingModule.compLieHom M f
+  let this' : LieModule R L M := comp_lie_hom M f
+  have hnp : ∀ x, IsNilpotent (to_endomorphism R L M x) := fun x => h' (f x)
+  have surj_id : Function.Surjective (LinearMap.id : M →ₗ[R] M) := Function.surjective_id
+  have : LieModule.IsNilpotent R L M := h M hnp
+  apply hf.lie_module_is_nilpotent surj_id
+  simp
 
-lemma lie_equiv.is_engelian_iff (e : L ≃ₗ⁅R⁆ L₂) :
-  lie_algebra.is_engelian.{u₁ u₂ u₄} R L ↔ lie_algebra.is_engelian.{u₁ u₃ u₄} R L₂ :=
-⟨e.surjective.is_engelian, e.symm.surjective.is_engelian⟩
+theorem LieEquiv.is_engelian_iff (e : L ≃ₗ⁅R⁆ L₂) :
+    LieAlgebra.IsEngelian.{u₁, u₂, u₄} R L ↔ LieAlgebra.IsEngelian.{u₁, u₃, u₄} R L₂ :=
+  ⟨e.Surjective.IsEngelian, e.symm.Surjective.IsEngelian⟩
 
-lemma lie_algebra.exists_engelian_lie_subalgebra_of_lt_normalizer
-  {K : lie_subalgebra R L} (hK₁ : lie_algebra.is_engelian.{u₁ u₂ u₄} R K) (hK₂ : K < K.normalizer) :
-  ∃ (K' : lie_subalgebra R L) (hK' : lie_algebra.is_engelian.{u₁ u₂ u₄} R K'), K < K' :=
-begin
-  obtain ⟨x, hx₁, hx₂⟩ := set_like.exists_of_lt hK₂,
-  let K' : lie_subalgebra R L :=
-  { lie_mem' := λ y z, lie_subalgebra.lie_mem_sup_of_mem_normalizer hx₁,
-    .. (R ∙ x) ⊔ (K : submodule R L) },
-  have hxK' : x ∈ K' := submodule.mem_sup_left (submodule.subset_span (set.mem_singleton _)),
-  have hKK' : K ≤ K' := (lie_subalgebra.coe_submodule_le_coe_submodule K K').mp le_sup_right,
-  have hK' : K' ≤ K.normalizer,
-  { rw ← lie_subalgebra.coe_submodule_le_coe_submodule,
-    exact sup_le ((submodule.span_singleton_le_iff_mem _ _).mpr hx₁) hK₂.le, },
-  refine ⟨K', _, lt_iff_le_and_ne.mpr ⟨hKK', λ contra, hx₂ (contra.symm ▸ hxK')⟩⟩,
-  introsI M _i1 _i2 _i3 _i4 h,
-  obtain ⟨I, hI₁ : (I : lie_subalgebra R K') = lie_subalgebra.of_le hKK'⟩ :=
-    lie_subalgebra.exists_nested_lie_ideal_of_le_normalizer hKK' hK',
-  have hI₂ : (R ∙ (⟨x, hxK'⟩ : K')) ⊔ I = ⊤,
-  { rw [← lie_ideal.coe_to_lie_subalgebra_to_submodule R K' I, hI₁],
-    apply submodule.map_injective_of_injective (K' : submodule R L).injective_subtype,
-    simpa, },
-  have e : K ≃ₗ⁅R⁆ I := (lie_subalgebra.equiv_of_le hKK').trans
-    (lie_equiv.of_eq _ _ ((lie_subalgebra.coe_set_eq _ _).mpr hI₁.symm)),
-  have hI₃ : lie_algebra.is_engelian R I := e.is_engelian_iff.mp hK₁,
-  exact lie_submodule.is_nilpotent_of_is_nilpotent_span_sup_eq_top hI₂ (h _) (hI₃ _ (λ x, h x)),
-end
+theorem LieAlgebra.exists_engelian_lie_subalgebra_of_lt_normalizer {K : LieSubalgebra R L}
+    (hK₁ : LieAlgebra.IsEngelian.{u₁, u₂, u₄} R K) (hK₂ : K < K.normalizer) :
+    ∃ (K' : LieSubalgebra R L)(hK' : LieAlgebra.IsEngelian.{u₁, u₂, u₄} R K'), K < K' := by
+  obtain ⟨x, hx₁, hx₂⟩ := SetLike.exists_of_lt hK₂
+  let K' : LieSubalgebra R L :=
+    { (R∙x)⊔(K : Submodule R L) with lie_mem' := fun y z => LieSubalgebra.lie_mem_sup_of_mem_normalizer hx₁ }
+  have hxK' : x ∈ K' := Submodule.mem_sup_left (Submodule.subset_span (Set.mem_singleton _))
+  have hKK' : K ≤ K' := (LieSubalgebra.coe_submodule_le_coe_submodule K K').mp le_sup_right
+  have hK' : K' ≤ K.normalizer := by
+    rw [← LieSubalgebra.coe_submodule_le_coe_submodule]
+    exact sup_le ((Submodule.span_singleton_le_iff_mem _ _).mpr hx₁) hK₂.le
+  refine' ⟨K', _, lt_iff_le_and_ne.mpr ⟨hKK', fun contra => hx₂ (contra.symm ▸ hxK')⟩⟩
+  intros M _i1 _i2 _i3 _i4 h
+  obtain ⟨I, hI₁ : (I : LieSubalgebra R K') = LieSubalgebra.ofLe hKK'⟩ :=
+    LieSubalgebra.exists_nested_lie_ideal_of_le_normalizer hKK' hK'
+  have hI₂ : (R∙(⟨x, hxK'⟩ : K'))⊔I = ⊤ := by
+    rw [← LieIdeal.coe_to_lie_subalgebra_to_submodule R K' I, hI₁]
+    apply Submodule.map_injective_of_injective (K' : Submodule R L).injective_subtype
+    simpa
+  have e : K ≃ₗ⁅R⁆ I :=
+    (LieSubalgebra.equivOfLe hKK').trans (LieEquiv.ofEq _ _ ((LieSubalgebra.coe_set_eq _ _).mpr hI₁.symm))
+  have hI₃ : LieAlgebra.IsEngelian R I := e.is_engelian_iff.mp hK₁
+  exact LieSubmodule.is_nilpotent_of_is_nilpotent_span_sup_eq_top hI₂ (h _) (hI₃ _ fun x => h x)
 
-local attribute [instance] lie_subalgebra.subsingleton_bot
+attribute [local instance] LieSubalgebra.subsingleton_bot
 
-variables [is_noetherian R L]
+variable [IsNoetherian R L]
 
 /-- *Engel's theorem*.
 
 Note that this implies all traditional forms of Engel's theorem via
 `lie_module.nontrivial_max_triv_of_is_nilpotent`, `lie_module.is_nilpotent_iff_forall`,
 `lie_algebra.is_nilpotent_iff_forall`. -/
-lemma lie_algebra.is_engelian_of_is_noetherian : lie_algebra.is_engelian R L :=
-begin
-  introsI M _i1 _i2 _i3 _i4 h,
-  rw ← is_nilpotent_range_to_endomorphism_iff,
-  let L' := (to_endomorphism R L M).range,
-  replace h : ∀ (y : L'), is_nilpotent (y : module.End R M),
-  { rintros ⟨-, ⟨y, rfl⟩⟩,
-    simp [h], },
-  change lie_module.is_nilpotent R L' M,
-  let s := { K : lie_subalgebra R L' | lie_algebra.is_engelian R K },
-  have hs : s.nonempty := ⟨⊥, lie_algebra.is_engelian_of_subsingleton⟩,
-  suffices : ⊤ ∈ s,
-  { rw ← is_nilpotent_of_top_iff,
-    apply this M,
-    simp [lie_subalgebra.to_endomorphism_eq, h], },
-  have : ∀ (K ∈ s), K ≠ ⊤ → ∃ (K' ∈ s), K < K',
-  { rintros K (hK₁ : lie_algebra.is_engelian R K) hK₂,
-    apply lie_algebra.exists_engelian_lie_subalgebra_of_lt_normalizer hK₁,
-    apply lt_of_le_of_ne K.le_normalizer,
-    rw [ne.def, eq_comm, K.normalizer_eq_self_iff, ← ne.def,
-      ← lie_submodule.nontrivial_iff_ne_bot R K],
-    haveI : nontrivial (L' ⧸ K.to_lie_submodule),
-    { replace hK₂ : K.to_lie_submodule ≠ ⊤ :=
-        by rwa [ne.def, ← lie_submodule.coe_to_submodule_eq_iff, K.coe_to_lie_submodule,
-          lie_submodule.top_coe_submodule, ← lie_subalgebra.top_coe_submodule,
-          K.coe_to_submodule_eq_iff],
-      exact submodule.quotient.nontrivial_of_lt_top _ hK₂.lt_top, },
-    haveI : lie_module.is_nilpotent R K (L' ⧸ K.to_lie_submodule),
-    { refine hK₁ _ (λ x, _),
-      have hx := lie_algebra.is_nilpotent_ad_of_is_nilpotent (h x),
-      exact module.End.is_nilpotent.mapq _ hx, },
-    exact nontrivial_max_triv_of_is_nilpotent R K (L' ⧸ K.to_lie_submodule), },
-  haveI _i5 : is_noetherian R L' :=
-    is_noetherian_of_surjective L _ (linear_map.range_range_restrict (to_endomorphism R L M)),
-  obtain ⟨K, hK₁, hK₂⟩ :=
-    well_founded.well_founded_iff_has_max'.mp (lie_subalgebra.well_founded_of_noetherian R L') s hs,
-  have hK₃ : K = ⊤,
-  { by_contra contra,
-    obtain ⟨K', hK'₁, hK'₂⟩ := this K hK₁ contra,
-    specialize hK₂ K' hK'₁ (le_of_lt hK'₂),
-    replace hK'₂ := (ne_of_lt hK'₂).symm,
-    contradiction, },
-  exact hK₃ ▸ hK₁,
-end
+theorem LieAlgebra.is_engelian_of_is_noetherian : LieAlgebra.IsEngelian R L := by
+  intros M _i1 _i2 _i3 _i4 h
+  rw [← is_nilpotent_range_to_endomorphism_iff]
+  let L' := (to_endomorphism R L M).range
+  replace h : ∀ y : L', IsNilpotent (y : Module.End R M)
+  · rintro ⟨-, ⟨y, rfl⟩⟩
+    simp [h]
+    
+  change LieModule.IsNilpotent R L' M
+  let s := { K : LieSubalgebra R L' | LieAlgebra.IsEngelian R K }
+  have hs : s.nonempty := ⟨⊥, LieAlgebra.is_engelian_of_subsingleton⟩
+  suffices ⊤ ∈ s by
+    rw [← is_nilpotent_of_top_iff]
+    apply this M
+    simp [LieSubalgebra.to_endomorphism_eq, h]
+  have : ∀, ∀ K ∈ s, ∀, K ≠ ⊤ → ∃ K' ∈ s, K < K' := by
+    rintro K (hK₁ : LieAlgebra.IsEngelian R K) hK₂
+    apply LieAlgebra.exists_engelian_lie_subalgebra_of_lt_normalizer hK₁
+    apply lt_of_le_of_neₓ K.le_normalizer
+    rw [Ne.def, eq_comm, K.normalizer_eq_self_iff, ← Ne.def, ← LieSubmodule.nontrivial_iff_ne_bot R K]
+    have : Nontrivial (L' ⧸ K.to_lie_submodule) := by
+      replace hK₂ : K.to_lie_submodule ≠ ⊤ := by
+        rwa [Ne.def, ← LieSubmodule.coe_to_submodule_eq_iff, K.coe_to_lie_submodule, LieSubmodule.top_coe_submodule, ←
+          LieSubalgebra.top_coe_submodule, K.coe_to_submodule_eq_iff]
+      exact Submodule.Quotient.nontrivial_of_lt_top _ hK₂.lt_top
+    have : LieModule.IsNilpotent R K (L' ⧸ K.to_lie_submodule) := by
+      refine' hK₁ _ fun x => _
+      have hx := LieAlgebra.is_nilpotent_ad_of_is_nilpotent (h x)
+      exact Module.End.IsNilpotent.mapq _ hx
+    exact nontrivial_max_triv_of_is_nilpotent R K (L' ⧸ K.to_lie_submodule)
+  have _i5 : IsNoetherian R L' :=
+    is_noetherian_of_surjective L _ (LinearMap.range_range_restrict (to_endomorphism R L M))
+  obtain ⟨K, hK₁, hK₂⟩ := well_founded.well_founded_iff_has_max'.mp (LieSubalgebra.well_founded_of_noetherian R L') s hs
+  have hK₃ : K = ⊤ := by
+    by_contra contra
+    obtain ⟨K', hK'₁, hK'₂⟩ := this K hK₁ contra
+    specialize hK₂ K' hK'₁ (le_of_ltₓ hK'₂)
+    replace hK'₂ := (ne_of_ltₓ hK'₂).symm
+    contradiction
+  exact hK₃ ▸ hK₁
 
 /-- Engel's theorem. -/
-lemma lie_module.is_nilpotent_iff_forall :
-  lie_module.is_nilpotent R L M ↔ ∀ x, is_nilpotent $ to_endomorphism R L M x :=
-⟨begin
-  introsI h,
-  obtain ⟨k, hk⟩ := nilpotent_endo_of_nilpotent_module R L M,
-  exact λ x, ⟨k, hk x⟩,
-end,
-λ h, lie_algebra.is_engelian_of_is_noetherian M h⟩
+theorem LieModule.is_nilpotent_iff_forall : LieModule.IsNilpotent R L M ↔ ∀ x, IsNilpotent <| toEndomorphism R L M x :=
+  ⟨by
+    intros h
+    obtain ⟨k, hk⟩ := nilpotent_endo_of_nilpotent_module R L M
+    exact fun x => ⟨k, hk x⟩, fun h => LieAlgebra.is_engelian_of_is_noetherian M h⟩
 
 /-- Engel's theorem. -/
-lemma lie_algebra.is_nilpotent_iff_forall :
-  lie_algebra.is_nilpotent R L ↔ ∀ x, is_nilpotent $ lie_algebra.ad R L x :=
-lie_module.is_nilpotent_iff_forall
+theorem LieAlgebra.is_nilpotent_iff_forall : LieAlgebra.IsNilpotent R L ↔ ∀ x, IsNilpotent <| LieAlgebra.ad R L x :=
+  LieModule.is_nilpotent_iff_forall
 
-end lie_algebra
+end LieAlgebra
+

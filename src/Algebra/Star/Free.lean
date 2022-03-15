@@ -3,8 +3,8 @@ Copyright (c) 2020 Eric Weiser. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Eric Weiser
 -/
-import algebra.star.basic
-import algebra.free_algebra
+import Mathbin.Algebra.Star.Basic
+import Mathbin.Algebra.FreeAlgebra
 
 /-!
 # A *-algebra structure on the free algebra.
@@ -16,47 +16,56 @@ We have this in a separate file, rather than in `algebra.free_monoid` and `algeb
 to avoid importing `algebra.star.basic` into the entire hierarchy.
 -/
 
-namespace free_monoid
-variables {α : Type*}
 
-instance : star_semigroup (free_monoid α) :=
-{ star := list.reverse,
-  star_involutive := list.reverse_reverse,
-  star_mul := list.reverse_append, }
+namespace FreeMonoid
+
+variable {α : Type _}
+
+instance : StarSemigroup (FreeMonoid α) where
+  star := List.reverse
+  star_involutive := List.reverse_reverse
+  star_mul := List.reverse_append
 
 @[simp]
-lemma star_of (x : α) : star (of x) = of x := rfl
+theorem star_of (x : α) : star (of x) = of x :=
+  rfl
 
 /-- Note that `star_one` is already a global simp lemma, but this one works with dsimp too -/
 @[simp]
-lemma star_one : star (1 : free_monoid α) = 1 := rfl
+theorem star_one : star (1 : FreeMonoid α) = 1 :=
+  rfl
 
-end free_monoid
+end FreeMonoid
 
-namespace free_algebra
-variables {R : Type*} [comm_semiring R] {X : Type*}
+namespace FreeAlgebra
+
+variable {R : Type _} [CommSemiringₓ R] {X : Type _}
 
 /-- The star ring formed by reversing the elements of products -/
-instance : star_ring (free_algebra R X) :=
-{ star := mul_opposite.unop ∘ lift R (mul_opposite.op ∘ ι R),
-  star_involutive := λ x, by
-  { unfold has_star.star,
-    simp only [function.comp_apply],
-    refine free_algebra.induction R X _ _ _ _ x; intros; simp [*] },
-  star_mul := λ a b, by simp,
-  star_add := λ a b, by simp }
+instance : StarRing (FreeAlgebra R X) where
+  star := MulOpposite.unop ∘ lift R (MulOpposite.op ∘ ι R)
+  star_involutive := fun x => by
+    unfold HasStar.star
+    simp only [Function.comp_applyₓ]
+    refine' FreeAlgebra.induction R X _ _ _ _ x <;> intros <;> simp [*]
+  star_mul := fun a b => by
+    simp
+  star_add := fun a b => by
+    simp
 
 @[simp]
-lemma star_ι (x : X) : star (ι R x) = (ι R x) :=
-by simp [star, has_star.star]
+theorem star_ι (x : X) : star (ι R x) = ι R x := by
+  simp [star, HasStar.star]
 
 @[simp]
-lemma star_algebra_map (r : R) : star (algebra_map R (free_algebra R X) r) = (algebra_map R _ r) :=
-by simp [star, has_star.star]
+theorem star_algebra_map (r : R) : star (algebraMap R (FreeAlgebra R X) r) = algebraMap R _ r := by
+  simp [star, HasStar.star]
 
 /-- `star` as an `alg_equiv` -/
-def star_hom : free_algebra R X ≃ₐ[R] (free_algebra R X)ᵐᵒᵖ :=
-{ commutes' := λ r, by simp [star_algebra_map],
-  ..star_ring_equiv }
+def starHom : FreeAlgebra R X ≃ₐ[R] (FreeAlgebra R X)ᵐᵒᵖ :=
+  { starRingEquiv with
+    commutes' := fun r => by
+      simp [star_algebra_map] }
 
-end free_algebra
+end FreeAlgebra
+

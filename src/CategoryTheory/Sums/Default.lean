@@ -1,1 +1,2 @@
-import category_theory.sums.associator
+import Mathbin.CategoryTheory.Sums.Associator
+

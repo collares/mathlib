@@ -1,2 +1,3 @@
-import category_theory.monad.limits
-import category_theory.monad.types
+import Mathbin.CategoryTheory.Monad.Limits
+import Mathbin.CategoryTheory.Monad.Types
+

@@ -3,8 +3,8 @@ Copyright (c) 2021 Yaël Dillies, Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yaël Dillies, Bhavik Mehta
 -/
-import algebra.big_operators.basic
-import data.finset.sym
+import Mathbin.Algebra.BigOperators.Basic
+import Mathbin.Data.Finset.Sym
 
 /-!
 # Stars and bars
@@ -36,89 +36,81 @@ Prove the general case of stars and bars.
 stars and bars
 -/
 
-open finset fintype
 
-namespace sym2
-variables {α : Type*} [decidable_eq α]
+open Finset Fintype
+
+namespace Sym2
+
+variable {α : Type _} [DecidableEq α]
 
 /-- The `diag` of `s : finset α` is sent on a finset of `sym2 α` of card `s.card`. -/
-lemma card_image_diag (s : finset α) : (s.diag.image quotient.mk).card = s.card :=
-begin
-  rw [card_image_of_inj_on, diag_card],
-  rintro ⟨x₀, x₁⟩ hx _ _ h,
-  cases quotient.eq.1 h,
-  { refl },
-  { simp only [mem_coe, mem_diag] at hx,
-    rw hx.2 }
-end
+theorem card_image_diag (s : Finset α) : (s.diag.Image Quotientₓ.mk).card = s.card := by
+  rw [card_image_of_inj_on, diag_card]
+  rintro ⟨x₀, x₁⟩ hx _ _ h
+  cases Quotientₓ.eq.1 h
+  · rfl
+    
+  · simp only [mem_coe, mem_diag] at hx
+    rw [hx.2]
+    
 
-lemma two_mul_card_image_off_diag (s : finset α) :
-  2 * (s.off_diag.image quotient.mk).card = s.off_diag.card :=
-begin
-  rw [card_eq_sum_card_fiberwise
-    (λ x, mem_image_of_mem _ : ∀ x ∈ s.off_diag, quotient.mk x ∈ s.off_diag.image quotient.mk),
-    sum_const_nat (quotient.ind _), mul_comm],
-  rintro ⟨x, y⟩ hxy,
-  simp_rw [mem_image, exists_prop, mem_off_diag, quotient.eq] at hxy,
-  obtain ⟨a, ⟨ha₁, ha₂, ha⟩, h⟩ := hxy,
-  obtain ⟨hx, hy, hxy⟩ : x ∈ s ∧ y ∈ s ∧ x ≠ y,
-  { cases h; have := ha.symm; exact ⟨‹_›, ‹_›, ‹_›⟩ },
-  have hxy' : y ≠ x := hxy.symm,
-  have : s.off_diag.filter (λ z, ⟦z⟧ = ⟦(x, y)⟧) = ({(x, y), (y, x)} : finset _),
-  { ext ⟨x₁, y₁⟩,
-    rw [mem_filter, mem_insert, mem_singleton, sym2.eq_iff, prod.mk.inj_iff, prod.mk.inj_iff,
-      and_iff_right_iff_imp],
-    rintro (⟨rfl, rfl⟩ | ⟨rfl, rfl⟩); rw mem_off_diag; exact ⟨‹_›, ‹_›, ‹_›⟩ }, -- hxy' is used here
-  rw [this, card_insert_of_not_mem, card_singleton],
-  simp only [not_and, prod.mk.inj_iff, mem_singleton],
-  exact λ _, hxy',
-end
+theorem two_mul_card_image_off_diag (s : Finset α) : 2 * (s.offDiag.Image Quotientₓ.mk).card = s.offDiag.card := by
+  rw
+    [card_eq_sum_card_fiberwise
+      (fun x => mem_image_of_mem _ : ∀, ∀ x ∈ s.off_diag, ∀, Quotientₓ.mk x ∈ s.off_diag.image Quotientₓ.mk),
+    sum_const_nat (Quotientₓ.ind _), mul_comm]
+  rintro ⟨x, y⟩ hxy
+  simp_rw [mem_image, exists_prop, mem_off_diag, Quotientₓ.eq]  at hxy
+  obtain ⟨a, ⟨ha₁, ha₂, ha⟩, h⟩ := hxy
+  obtain ⟨hx, hy, hxy⟩ : x ∈ s ∧ y ∈ s ∧ x ≠ y := by
+    cases h <;> have := ha.symm <;> exact ⟨‹_›, ‹_›, ‹_›⟩
+  have hxy' : y ≠ x := hxy.symm
+  have : (s.off_diag.filter fun z => ⟦z⟧ = ⟦(x, y)⟧) = ({(x, y), (y, x)} : Finset _) := by
+    ext ⟨x₁, y₁⟩
+    rw [mem_filter, mem_insert, mem_singleton, Sym2.eq_iff, Prod.mk.inj_iffₓ, Prod.mk.inj_iffₓ, and_iff_right_iff_imp]
+    rintro (⟨rfl, rfl⟩ | ⟨rfl, rfl⟩) <;> rw [mem_off_diag] <;> exact ⟨‹_›, ‹_›, ‹_›⟩
+  -- hxy' is used here
+  rw [this, card_insert_of_not_mem, card_singleton]
+  simp only [not_and, Prod.mk.inj_iffₓ, mem_singleton]
+  exact fun _ => hxy'
 
 /-- The `off_diag` of `s : finset α` is sent on a finset of `sym2 α` of card `s.off_diag.card / 2`.
 This is because every element `⟦(x, y)⟧` of `sym2 α` not on the diagonal comes from exactly two
 pairs: `(x, y)` and `(y, x)`. -/
-lemma card_image_off_diag (s : finset α) :
-  (s.off_diag.image quotient.mk).card = s.card.choose 2 :=
-by rw [nat.choose_two_right, mul_tsub, mul_one, ←off_diag_card,
-  nat.div_eq_of_eq_mul_right zero_lt_two (two_mul_card_image_off_diag s).symm]
+theorem card_image_off_diag (s : Finset α) : (s.offDiag.Image Quotientₓ.mk).card = s.card.choose 2 := by
+  rw [Nat.choose_two_right, mul_tsub, mul_oneₓ, ← off_diag_card,
+    Nat.div_eq_of_eq_mul_rightₓ zero_lt_two (two_mul_card_image_off_diag s).symm]
 
-lemma card_subtype_diag [fintype α] :
-  card {a : sym2 α // a.is_diag} = card α :=
-begin
-  convert card_image_diag (univ : finset α),
-  rw [fintype.card_of_subtype, ←filter_image_quotient_mk_is_diag],
-  rintro x,
-  rw [mem_filter, univ_product_univ, mem_image],
-  obtain ⟨a, ha⟩ := quotient.exists_rep x,
-  exact and_iff_right ⟨a, mem_univ _, ha⟩,
-end
+theorem card_subtype_diag [Fintype α] : card { a : Sym2 α // a.IsDiag } = card α := by
+  convert card_image_diag (univ : Finset α)
+  rw [Fintype.card_of_subtype, ← filter_image_quotient_mk_is_diag]
+  rintro x
+  rw [mem_filter, univ_product_univ, mem_image]
+  obtain ⟨a, ha⟩ := Quotientₓ.exists_rep x
+  exact and_iff_right ⟨a, mem_univ _, ha⟩
 
-lemma card_subtype_not_diag [fintype α] :
-  card {a : sym2 α // ¬a.is_diag} = (card α).choose 2 :=
-begin
-  convert card_image_off_diag (univ : finset α),
-  rw [fintype.card_of_subtype, ←filter_image_quotient_mk_not_is_diag],
-  rintro x,
-  rw [mem_filter, univ_product_univ, mem_image],
-  obtain ⟨a, ha⟩ := quotient.exists_rep x,
-  exact and_iff_right ⟨a, mem_univ _, ha⟩,
-end
+theorem card_subtype_not_diag [Fintype α] : card { a : Sym2 α // ¬a.IsDiag } = (card α).choose 2 := by
+  convert card_image_off_diag (univ : Finset α)
+  rw [Fintype.card_of_subtype, ← filter_image_quotient_mk_not_is_diag]
+  rintro x
+  rw [mem_filter, univ_product_univ, mem_image]
+  obtain ⟨a, ha⟩ := Quotientₓ.exists_rep x
+  exact and_iff_right ⟨a, mem_univ _, ha⟩
 
 /-- Finset **stars and bars** for the case `n = 2`. -/
-lemma _root_.finset.card_sym2 (s : finset α) : s.sym2.card = s.card * (s.card + 1) / 2 :=
-begin
-  rw [←image_diag_union_image_off_diag, card_union_eq, sym2.card_image_diag,
-    sym2.card_image_off_diag, nat.choose_two_right, add_comm, ←nat.triangle_succ, nat.succ_sub_one,
-    mul_comm],
-  rintro m he,
-  rw [inf_eq_inter, mem_inter, mem_image, mem_image] at he,
-  obtain ⟨⟨a, ha, rfl⟩, b, hb, hab⟩ := he,
-  refine not_is_diag_mk_of_mem_off_diag hb _,
-  rw hab,
-  exact is_diag_mk_of_mem_diag ha,
-end
+theorem _root_.finset.card_sym2 (s : Finset α) : s.Sym2.card = s.card * (s.card + 1) / 2 := by
+  rw [← image_diag_union_image_off_diag, card_union_eq, Sym2.card_image_diag, Sym2.card_image_off_diag,
+    Nat.choose_two_right, add_commₓ, ← Nat.triangle_succ, Nat.succ_sub_one, mul_comm]
+  rintro m he
+  rw [inf_eq_inter, mem_inter, mem_image, mem_image] at he
+  obtain ⟨⟨a, ha, rfl⟩, b, hb, hab⟩ := he
+  refine' not_is_diag_mk_of_mem_off_diag hb _
+  rw [hab]
+  exact is_diag_mk_of_mem_diag ha
 
 /-- Type **stars and bars** for the case `n = 2`. -/
-protected lemma card [fintype α] : card (sym2 α) = card α * (card α + 1) / 2 := finset.card_sym2 _
+protected theorem card [Fintype α] : card (Sym2 α) = card α * (card α + 1) / 2 :=
+  Finset.card_sym2 _
 
-end sym2
+end Sym2
+

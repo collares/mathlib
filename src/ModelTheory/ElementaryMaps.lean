@@ -3,9 +3,9 @@ Copyright (c) 2022 Aaron Anderson. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Aaron Anderson
 -/
-import data.fintype.basic
-import model_theory.substructures
-import model_theory.terms_and_formulas
+import Mathbin.Data.Fintype.Basic
+import Mathbin.ModelTheory.Substructures
+import Mathbin.ModelTheory.TermsAndFormulas
 
 /-!
 # Elementary Maps Between First-Order Structures
@@ -18,214 +18,233 @@ import model_theory.terms_and_formulas
 
   -/
 
-open_locale first_order
-namespace first_order
-namespace language
+
+open_locale FirstOrder
+
+namespace FirstOrder
+
+namespace Language
+
 open Structure
 
-variables (L : language) (M : Type*) (N : Type*) {P : Type*} {Q : Type*}
-variables [L.Structure M] [L.Structure N] [L.Structure P] [L.Structure Q]
+variable (L : Language) (M : Type _) (N : Type _) {P : Type _} {Q : Type _}
+
+variable [L.Structure M] [L.Structure N] [L.Structure P] [L.Structure Q]
 
 /-- An elementary embedding of first-order structures is an embedding that commutes with the
   realizations of formulas. -/
-structure elementary_embedding :=
-(to_fun : M → N)
-(map_formula' : ∀{n} (φ : L.formula (fin n)) (x : fin n → M),
-  φ.realize (to_fun ∘ x) ↔ φ.realize x . obviously)
+structure ElementaryEmbedding where
+  toFun : M → N
+  map_formula' : ∀ {n} φ : L.Formula (Finₓ n) x : Finₓ n → M, φ.realize (to_fun ∘ x) ↔ φ.realize x := by
+    run_tac
+      obviously
 
-localized "notation A ` ↪ₑ[`:25 L `] ` B := L.elementary_embedding A B" in first_order
+-- mathport name: «expr ↪ₑ[ ] »
+localized [FirstOrder] notation:25 A " ↪ₑ[" L "] " B => L.ElementaryEmbedding A B
 
-variables {L} {M} {N}
+variable {L} {M} {N}
 
-namespace elementary_embedding
+namespace ElementaryEmbedding
 
-instance has_coe_to_fun : has_coe_to_fun (M ↪ₑ[L] N) (λ _, M → N) :=
-⟨λ f, f.to_fun⟩
-
-@[simp] lemma map_formula (f : M ↪ₑ[L] N) {α : Type} [fintype α] (φ : L.formula α) (x : α → M) :
-  φ.realize (f ∘ x) ↔ φ.realize x :=
-begin
-  have g := fintype.equiv_fin α,
-  have h := f.map_formula' (φ.relabel g) (x ∘ g.symm),
-  rw [formula.realize_relabel, formula.realize_relabel, function.comp.assoc x g.symm g,
-    g.symm_comp_self, function.comp.right_id] at h,
-  rw [← h, iff_eq_eq],
-  congr,
-  ext y,
-  simp,
-end
-
-@[simp] lemma map_fun (φ : M ↪ₑ[L] N) {n : ℕ} (f : L.functions n) (x : fin n → M) :
-  φ (fun_map f x) = fun_map f (φ ∘ x) :=
-begin
-  have h := φ.map_formula (formula.graph f) (fin.cons (fun_map f x) x),
-  rw [formula.realize_graph, fin.comp_cons, formula.realize_graph] at h,
-  rw [eq_comm, h]
-end
-
-@[simp] lemma map_constants (φ : M ↪ₑ[L] N) (c : L.constants) : φ c = c :=
-(φ.map_fun c default).trans fun_map_eq_coe_constants
-
-@[simp] lemma map_rel (φ : M ↪ₑ[L] N) {n : ℕ} (r : L.relations n) (x : fin n → M) :
-  rel_map r (φ ∘ x) ↔ rel_map r x :=
-begin
-  have h := φ.map_formula (r.formula var) x,
-  exact h
-end
-
-@[simp] lemma injective (φ : M ↪ₑ[L] N) :
-  function.injective φ :=
-begin
-  intros x y,
-  have h := φ.map_formula ((var 0).equal (var 1) : L.formula (fin 2)) (λ i, if i = 0 then x else y),
-  rw [formula.realize_equal, formula.realize_equal] at h,
-  simp only [nat.one_ne_zero, term.realize, fin.one_eq_zero_iff, if_true, eq_self_iff_true,
-    function.comp_app, if_false] at h,
-  exact h.1,
-end
-
-/-- An elementary embedding is also a first-order embedding. -/
-def to_embedding (f : M ↪ₑ[L] N) : M ↪[L] N :=
-{ to_fun := f,
-  inj' := f.injective, }
-
-/-- An elementary embedding is also a first-order homomorphism. -/
-def to_hom (f : M ↪ₑ[L] N) : M →[L] N :=
-{ to_fun := f }
-
-@[simp] lemma to_embedding_to_hom (f : M ↪ₑ[L] N) : f.to_embedding.to_hom = f.to_hom := rfl
+instance hasCoeToFun : CoeFun (M ↪ₑ[L] N) fun _ => M → N :=
+  ⟨fun f => f.toFun⟩
 
 @[simp]
-lemma coe_to_hom {f : M ↪ₑ[L] N} : (f.to_hom : M → N) = (f : M → N) := rfl
+theorem map_formula (f : M ↪ₑ[L] N) {α : Type} [Fintype α] (φ : L.Formula α) (x : α → M) :
+    φ.realize (f ∘ x) ↔ φ.realize x := by
+  have g := Fintype.equivFin α
+  have h := f.map_formula' (φ.relabel g) (x ∘ g.symm)
+  rw [formula.realize_relabel, formula.realize_relabel, Function.comp.assoc x g.symm g, g.symm_comp_self,
+    Function.comp.right_id] at h
+  rw [← h, iff_eq_eq]
+  congr
+  ext y
+  simp
 
-@[simp] lemma coe_to_embedding (f : M ↪ₑ[L] N) : (f.to_embedding : M → N) = (f : M → N) := rfl
+@[simp]
+theorem map_fun (φ : M ↪ₑ[L] N) {n : ℕ} (f : L.Functions n) (x : Finₓ n → M) : φ (funMap f x) = funMap f (φ ∘ x) := by
+  have h := φ.map_formula (formula.graph f) (Finₓ.cons (fun_map f x) x)
+  rw [formula.realize_graph, Finₓ.comp_cons, formula.realize_graph] at h
+  rw [eq_comm, h]
 
-lemma coe_injective : @function.injective (M ↪ₑ[L] N) (M → N) coe_fn
-| f g h :=
-begin
-  cases f,
-  cases g,
-  simp only,
-  ext x,
-  exact function.funext_iff.1 h x,
-end
+@[simp]
+theorem map_constants (φ : M ↪ₑ[L] N) (c : L.Constants) : φ c = c :=
+  (φ.map_fun c default).trans fun_map_eq_coe_constants
+
+@[simp]
+theorem map_rel (φ : M ↪ₑ[L] N) {n : ℕ} (r : L.Relations n) (x : Finₓ n → M) : RelMap r (φ ∘ x) ↔ RelMap r x :=
+  have h := φ.map_formula (r.formula var) x
+  h
+
+@[simp]
+theorem injective (φ : M ↪ₑ[L] N) : Function.Injective φ := by
+  intro x y
+  have h := φ.map_formula ((var 0).equal (var 1) : L.formula (Finₓ 2)) fun i => if i = 0 then x else y
+  rw [formula.realize_equal, formula.realize_equal] at h
+  simp only [Nat.one_ne_zero, term.realize, Finₓ.one_eq_zero_iff, if_true, eq_self_iff_true, Function.comp_app,
+    if_false] at h
+  exact h.1
+
+/-- An elementary embedding is also a first-order embedding. -/
+def toEmbedding (f : M ↪ₑ[L] N) : M ↪[L] N where
+  toFun := f
+  inj' := f.Injective
+
+/-- An elementary embedding is also a first-order homomorphism. -/
+def toHom (f : M ↪ₑ[L] N) : M →[L] N where
+  toFun := f
+
+@[simp]
+theorem to_embedding_to_hom (f : M ↪ₑ[L] N) : f.toEmbedding.toHom = f.toHom :=
+  rfl
+
+@[simp]
+theorem coe_to_hom {f : M ↪ₑ[L] N} : (f.toHom : M → N) = (f : M → N) :=
+  rfl
+
+@[simp]
+theorem coe_to_embedding (f : M ↪ₑ[L] N) : (f.toEmbedding : M → N) = (f : M → N) :=
+  rfl
+
+theorem coe_injective : @Function.Injective (M ↪ₑ[L] N) (M → N) coeFn
+  | f, g, h => by
+    cases f
+    cases g
+    simp only
+    ext x
+    exact Function.funext_iffₓ.1 h x
 
 @[ext]
-lemma ext ⦃f g : M ↪ₑ[L] N⦄ (h : ∀ x, f x = g x) : f = g :=
-coe_injective (funext h)
+theorem ext ⦃f g : M ↪ₑ[L] N⦄ (h : ∀ x, f x = g x) : f = g :=
+  coe_injective (funext h)
 
-lemma ext_iff {f g : M ↪ₑ[L] N} : f = g ↔ ∀ x, f x = g x :=
-⟨λ h x, h ▸ rfl, λ h, ext h⟩
+theorem ext_iff {f g : M ↪ₑ[L] N} : f = g ↔ ∀ x, f x = g x :=
+  ⟨fun h x => h ▸ rfl, fun h => ext h⟩
 
-variables (L) (M)
+variable (L) (M)
+
 /-- The identity elementary embedding from a structure to itself -/
-@[refl] def refl : M ↪ₑ[L] M :=
-{ to_fun := id }
+@[refl]
+def refl : M ↪ₑ[L] M where
+  toFun := id
 
-variables {L} {M}
+variable {L} {M}
 
-instance : inhabited (M ↪ₑ[L] M) := ⟨refl L M⟩
+instance : Inhabited (M ↪ₑ[L] M) :=
+  ⟨refl L M⟩
 
-@[simp] lemma refl_apply (x : M) :
-  refl L M x = x := rfl
+@[simp]
+theorem refl_apply (x : M) : refl L M x = x :=
+  rfl
 
 /-- Composition of elementary embeddings -/
-@[trans] def comp (hnp : N ↪ₑ[L] P) (hmn : M ↪ₑ[L] N) : M ↪ₑ[L] P :=
-{ to_fun := hnp ∘ hmn }
+@[trans]
+def comp (hnp : N ↪ₑ[L] P) (hmn : M ↪ₑ[L] N) : M ↪ₑ[L] P where
+  toFun := hnp ∘ hmn
 
-@[simp] lemma comp_apply (g : N ↪ₑ[L] P) (f : M ↪ₑ[L] N) (x : M) :
-  g.comp f x = g (f x) := rfl
+@[simp]
+theorem comp_apply (g : N ↪ₑ[L] P) (f : M ↪ₑ[L] N) (x : M) : g.comp f x = g (f x) :=
+  rfl
 
 /-- Composition of elementary embeddings is associative. -/
-lemma comp_assoc (f : M ↪ₑ[L] N) (g : N ↪ₑ[L] P) (h : P ↪ₑ[L] Q) :
-  (h.comp g).comp f = h.comp (g.comp f) := rfl
+theorem comp_assoc (f : M ↪ₑ[L] N) (g : N ↪ₑ[L] P) (h : P ↪ₑ[L] Q) : (h.comp g).comp f = h.comp (g.comp f) :=
+  rfl
 
-end elementary_embedding
+end ElementaryEmbedding
 
-namespace equiv
+namespace Equivₓ
 
 /-- A first-order equivalence is also an elementary embedding. -/
-def to_elementary_embedding (f : M ≃[L] N) : M ↪ₑ[L] N :=
-{ to_fun := f }
+def toElementaryEmbedding (f : M ≃[L] N) : M ↪ₑ[L] N where
+  toFun := f
 
-@[simp] lemma to_elementary_embedding_to_embedding (f : M ≃[L] N) :
-  f.to_elementary_embedding.to_embedding = f.to_embedding := rfl
+@[simp]
+theorem to_elementary_embedding_to_embedding (f : M ≃[L] N) : f.toElementaryEmbedding.toEmbedding = f.toEmbedding :=
+  rfl
 
-@[simp] lemma coe_to_elementary_embedding (f : M ≃[L] N) :
-  (f.to_elementary_embedding : M → N) = (f : M → N) := rfl
+@[simp]
+theorem coe_to_elementary_embedding (f : M ≃[L] N) : (f.toElementaryEmbedding : M → N) = (f : M → N) :=
+  rfl
 
-end equiv
+end Equivₓ
 
-@[simp] lemma realize_term_substructure {α : Type*} {S : L.substructure M} (v : α → S)
-  (t : L.term α) :
-  t.realize (coe ∘ v) = (↑(t.realize v) : M) :=
-S.subtype.realize_term t
+@[simp]
+theorem realize_term_substructure {α : Type _} {S : L.Substructure M} (v : α → S) (t : L.Term α) :
+    t.realize (coe ∘ v) = (↑(t.realize v) : M) :=
+  S.Subtype.realize_term t
 
-namespace substructure
+namespace Substructure
 
-@[simp] lemma realize_bounded_formula_top {α : Type*} {n : ℕ} {φ : L.bounded_formula α n}
-  {v : α → (⊤ : L.substructure M)} {xs : fin n → (⊤ : L.substructure M)} :
-  φ.realize v xs ↔ φ.realize ((coe : _ → M) ∘ v) (coe ∘ xs) :=
-begin
-  rw ← substructure.top_equiv.realize_bounded_formula φ,
-  simp,
-end
+@[simp]
+theorem realize_bounded_formula_top {α : Type _} {n : ℕ} {φ : L.BoundedFormula α n} {v : α → (⊤ : L.Substructure M)}
+    {xs : Finₓ n → (⊤ : L.Substructure M)} : φ.realize v xs ↔ φ.realize ((coe : _ → M) ∘ v) (coe ∘ xs) := by
+  rw [← substructure.top_equiv.realize_bounded_formula φ]
+  simp
 
-@[simp] lemma realize_formula_top {α : Type*} {φ : L.formula α} {v : α → (⊤ : L.substructure M)} :
-  φ.realize v ↔ φ.realize ((coe : (⊤ : L.substructure M) → M) ∘ v) :=
-begin
-  rw ← substructure.top_equiv.realize_formula φ,
-  simp,
-end
+@[simp]
+theorem realize_formula_top {α : Type _} {φ : L.Formula α} {v : α → (⊤ : L.Substructure M)} :
+    φ.realize v ↔ φ.realize ((coe : (⊤ : L.Substructure M) → M) ∘ v) := by
+  rw [← substructure.top_equiv.realize_formula φ]
+  simp
 
 /-- A substructure is elementary when every formula applied to a tuple in the subtructure
   agrees with its value in the overall structure. -/
-def is_elementary (S : L.substructure M) : Prop :=
-∀{n} (φ : L.formula (fin n)) (x : fin n → S), φ.realize ((coe : _ → M) ∘ x) ↔ φ.realize x
+def IsElementary (S : L.Substructure M) : Prop :=
+  ∀ {n} φ : L.Formula (Finₓ n) x : Finₓ n → S, φ.realize ((coe : _ → M) ∘ x) ↔ φ.realize x
 
-end substructure
+end Substructure
 
-variables (L) (M)
+variable (L) (M)
+
 /-- An elementary substructure is one in which every formula applied to a tuple in the subtructure
   agrees with its value in the overall structure. -/
-structure elementary_substructure :=
-(to_substructure : L.substructure M)
-(is_elementary' : to_substructure.is_elementary)
+structure ElementarySubstructure where
+  toSubstructure : L.Substructure M
+  is_elementary' : to_substructure.IsElementary
 
-variables {L} {M}
+variable {L} {M}
 
-namespace elementary_substructure
+namespace ElementarySubstructure
 
-instance : has_coe (L.elementary_substructure M) (L.substructure M) :=
-⟨elementary_substructure.to_substructure⟩
+instance : Coe (L.ElementarySubstructure M) (L.Substructure M) :=
+  ⟨ElementarySubstructure.toSubstructure⟩
 
-instance : set_like (L.elementary_substructure M) M :=
-⟨λ x, x.to_substructure.carrier, λ ⟨⟨s, hs1⟩, hs2⟩ ⟨⟨t, ht1⟩, ht2⟩ h, begin
-  congr,
-  exact h,
-end⟩
+instance : SetLike (L.ElementarySubstructure M) M :=
+  ⟨fun x => x.toSubstructure.Carrier, fun h => by
+    congr
+    exact h⟩
 
-@[simp] lemma is_elementary (S : L.elementary_substructure M) :
-  (S : L.substructure M).is_elementary := S.is_elementary'
+@[simp]
+theorem is_elementary (S : L.ElementarySubstructure M) : (S : L.Substructure M).IsElementary :=
+  S.is_elementary'
 
 /-- The natural embedding of an `L.substructure` of `M` into `M`. -/
-def subtype (S : L.elementary_substructure M) : S ↪ₑ[L] M :=
-{ to_fun := coe,
-  map_formula' := λ n, S.is_elementary }
+def subtype (S : L.ElementarySubstructure M) : S ↪ₑ[L] M where
+  toFun := coe
+  map_formula' := fun n => S.IsElementary
 
-@[simp] theorem coe_subtype {S : L.elementary_substructure M} : ⇑S.subtype = coe := rfl
+@[simp]
+theorem coe_subtype {S : L.ElementarySubstructure M} : ⇑S.Subtype = coe :=
+  rfl
 
 /-- The substructure `M` of the structure `M` is elementary. -/
-instance : has_top (L.elementary_substructure M) :=
-⟨⟨⊤, λ n φ x, substructure.realize_formula_top.symm⟩⟩
+instance : HasTop (L.ElementarySubstructure M) :=
+  ⟨⟨⊤, fun n φ x => Substructure.realize_formula_top.symm⟩⟩
 
-instance : inhabited (L.elementary_substructure M) := ⟨⊤⟩
+instance : Inhabited (L.ElementarySubstructure M) :=
+  ⟨⊤⟩
 
-@[simp] lemma mem_top (x : M) : x ∈ (⊤ : L.elementary_substructure M) := set.mem_univ x
+@[simp]
+theorem mem_top (x : M) : x ∈ (⊤ : L.ElementarySubstructure M) :=
+  Set.mem_univ x
 
-@[simp] lemma coe_top : ((⊤ : L.elementary_substructure M) : set M) = set.univ := rfl
+@[simp]
+theorem coe_top : ((⊤ : L.ElementarySubstructure M) : Set M) = Set.Univ :=
+  rfl
 
-end elementary_substructure
+end ElementarySubstructure
 
-end language
-end first_order
+end Language
+
+end FirstOrder
+

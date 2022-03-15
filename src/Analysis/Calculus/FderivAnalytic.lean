@@ -3,8 +3,8 @@ Copyright (c) 2021 Yury Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury Kudryashov
 -/
-import analysis.calculus.deriv
-import analysis.analytic.basic
+import Mathbin.Analysis.Calculus.Deriv
+import Mathbin.Analysis.Analytic.Basic
 
 /-!
 # Frechet derivatives of analytic functions.
@@ -13,68 +13,67 @@ A function expressible as a power series at a point has a Frechet derivative the
 Also the special case in terms of `deriv` when the domain is 1-dimensional.
 -/
 
-open filter asymptotics
-open_locale ennreal
 
-variables {𝕜 : Type*} [nondiscrete_normed_field 𝕜]
-variables {E : Type*} [normed_group E] [normed_space 𝕜 E]
-variables {F : Type*} [normed_group F] [normed_space 𝕜 F]
+open Filter Asymptotics
+
+open_locale Ennreal
+
+variable {𝕜 : Type _} [NondiscreteNormedField 𝕜]
+
+variable {E : Type _} [NormedGroup E] [NormedSpace 𝕜 E]
+
+variable {F : Type _} [NormedGroup F] [NormedSpace 𝕜 F]
 
 section fderiv
 
-variables {p : formal_multilinear_series 𝕜 E F} {r : ℝ≥0∞}
-variables {f : E → F} {x : E} {s : set E}
+variable {p : FormalMultilinearSeries 𝕜 E F} {r : ℝ≥0∞}
 
-lemma has_fpower_series_at.has_strict_fderiv_at (h : has_fpower_series_at f p x) :
-  has_strict_fderiv_at f (continuous_multilinear_curry_fin1 𝕜 E F (p 1)) x :=
-begin
-  refine h.is_O_image_sub_norm_mul_norm_sub.trans_is_o (is_o.of_norm_right _),
-  refine is_o_iff_exists_eq_mul.2 ⟨λ y, ∥y - (x, x)∥, _, eventually_eq.rfl⟩,
-  refine (continuous_id.sub continuous_const).norm.tendsto' _ _ _,
+variable {f : E → F} {x : E} {s : Set E}
+
+theorem HasFpowerSeriesAt.has_strict_fderiv_at (h : HasFpowerSeriesAt f p x) :
+    HasStrictFderivAt f (continuousMultilinearCurryFin1 𝕜 E F (p 1)) x := by
+  refine' h.is_O_image_sub_norm_mul_norm_sub.trans_is_o (is_o.of_norm_right _)
+  refine' is_o_iff_exists_eq_mul.2 ⟨fun y => ∥y - (x, x)∥, _, eventually_eq.rfl⟩
+  refine' (continuous_id.sub continuous_const).norm.tendsto' _ _ _
   rw [_root_.id, sub_self, norm_zero]
-end
 
-lemma has_fpower_series_at.has_fderiv_at (h : has_fpower_series_at f p x) :
-  has_fderiv_at f (continuous_multilinear_curry_fin1 𝕜 E F (p 1)) x :=
-h.has_strict_fderiv_at.has_fderiv_at
+theorem HasFpowerSeriesAt.has_fderiv_at (h : HasFpowerSeriesAt f p x) :
+    HasFderivAt f (continuousMultilinearCurryFin1 𝕜 E F (p 1)) x :=
+  h.HasStrictFderivAt.HasFderivAt
 
-lemma has_fpower_series_at.differentiable_at (h : has_fpower_series_at f p x) :
-  differentiable_at 𝕜 f x :=
-h.has_fderiv_at.differentiable_at
+theorem HasFpowerSeriesAt.differentiable_at (h : HasFpowerSeriesAt f p x) : DifferentiableAt 𝕜 f x :=
+  h.HasFderivAt.DifferentiableAt
 
-lemma analytic_at.differentiable_at : analytic_at 𝕜 f x → differentiable_at 𝕜 f x
-| ⟨p, hp⟩ := hp.differentiable_at
+theorem AnalyticAt.differentiable_at : AnalyticAt 𝕜 f x → DifferentiableAt 𝕜 f x
+  | ⟨p, hp⟩ => hp.DifferentiableAt
 
-lemma analytic_at.differentiable_within_at (h : analytic_at 𝕜 f x) :
-  differentiable_within_at 𝕜 f s x :=
-h.differentiable_at.differentiable_within_at
+theorem AnalyticAt.differentiable_within_at (h : AnalyticAt 𝕜 f x) : DifferentiableWithinAt 𝕜 f s x :=
+  h.DifferentiableAt.DifferentiableWithinAt
 
-lemma has_fpower_series_at.fderiv (h : has_fpower_series_at f p x) :
-  fderiv 𝕜 f x = continuous_multilinear_curry_fin1 𝕜 E F (p 1) :=
-h.has_fderiv_at.fderiv
+theorem HasFpowerSeriesAt.fderiv (h : HasFpowerSeriesAt f p x) :
+    fderiv 𝕜 f x = continuousMultilinearCurryFin1 𝕜 E F (p 1) :=
+  h.HasFderivAt.fderiv
 
-lemma has_fpower_series_on_ball.differentiable_on [complete_space F]
-  (h : has_fpower_series_on_ball f p x r) :
-  differentiable_on 𝕜 f (emetric.ball x r) :=
-λ y hy, (h.analytic_at_of_mem hy).differentiable_within_at
+theorem HasFpowerSeriesOnBall.differentiable_on [CompleteSpace F] (h : HasFpowerSeriesOnBall f p x r) :
+    DifferentiableOn 𝕜 f (Emetric.Ball x r) := fun y hy => (h.analytic_at_of_mem hy).DifferentiableWithinAt
 
 end fderiv
 
 section deriv
 
-variables {p : formal_multilinear_series 𝕜 𝕜 F} {r : ℝ≥0∞}
-variables {f : 𝕜 → F} {x : 𝕜}
+variable {p : FormalMultilinearSeries 𝕜 𝕜 F} {r : ℝ≥0∞}
 
-protected lemma has_fpower_series_at.has_strict_deriv_at (h : has_fpower_series_at f p x) :
-  has_strict_deriv_at f (p 1 (λ _, 1)) x :=
-h.has_strict_fderiv_at.has_strict_deriv_at
+variable {f : 𝕜 → F} {x : 𝕜}
 
-protected lemma has_fpower_series_at.has_deriv_at (h : has_fpower_series_at f p x) :
-  has_deriv_at f (p 1 (λ _, 1)) x :=
-h.has_strict_deriv_at.has_deriv_at
+protected theorem HasFpowerSeriesAt.has_strict_deriv_at (h : HasFpowerSeriesAt f p x) :
+    HasStrictDerivAt f (p 1 fun _ => 1) x :=
+  h.HasStrictFderivAt.HasStrictDerivAt
 
-protected lemma has_fpower_series_at.deriv (h : has_fpower_series_at f p x) :
-  deriv f x = p 1 (λ _, 1) :=
-h.has_deriv_at.deriv
+protected theorem HasFpowerSeriesAt.has_deriv_at (h : HasFpowerSeriesAt f p x) : HasDerivAt f (p 1 fun _ => 1) x :=
+  h.HasStrictDerivAt.HasDerivAt
+
+protected theorem HasFpowerSeriesAt.deriv (h : HasFpowerSeriesAt f p x) : deriv f x = p 1 fun _ => 1 :=
+  h.HasDerivAt.deriv
 
 end deriv
+

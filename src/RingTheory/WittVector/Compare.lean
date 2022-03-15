@@ -3,10 +3,9 @@ Copyright (c) 2020 Johan Commelin. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johan Commelin, Robert Y. Lewis
 -/
-
-import ring_theory.witt_vector.truncated
-import ring_theory.witt_vector.identities
-import number_theory.padics.ring_homs
+import Mathbin.RingTheory.WittVector.Truncated
+import Mathbin.RingTheory.WittVector.Identities
+import Mathbin.NumberTheory.Padics.RingHoms
 
 /-!
 
@@ -28,61 +27,63 @@ of the inverse limit of `zmod (p^n)`.
 * [Commelin and Lewis, *Formalizing the Ring of Witt Vectors*][CL21]
 -/
 
-noncomputable theory
 
-variables {p : ℕ} [hp : fact p.prime]
+noncomputable section
 
-local notation `𝕎` := witt_vector p
+variable {p : ℕ} [hp : Fact p.Prime]
+
+-- mathport name: «expr𝕎»
+local notation "𝕎" => WittVector p
 
 include hp
 
-namespace truncated_witt_vector
+namespace TruncatedWittVector
 
-variables (p) (n : ℕ) (R : Type*) [comm_ring R]
+variable (p) (n : ℕ) (R : Type _) [CommRingₓ R]
 
-lemma eq_of_le_of_cast_pow_eq_zero [char_p R p] (i : ℕ) (hin : i ≤ n)
-  (hpi : (p ^ i : truncated_witt_vector p n R) = 0) :
-  i = n :=
-begin
-  contrapose! hpi,
-  replace hin := lt_of_le_of_ne hin hpi, clear hpi,
-  have : (↑p ^ i : truncated_witt_vector p n R) = witt_vector.truncate n (↑p ^ i),
-  { rw [ring_hom.map_pow, map_nat_cast] },
-  rw [this, ext_iff, not_forall], clear this,
-  use ⟨i, hin⟩,
-  rw [witt_vector.coeff_truncate, coeff_zero, fin.coe_mk, witt_vector.coeff_p_pow],
-  haveI : nontrivial R := char_p.nontrivial_of_char_ne_one hp.1.ne_one,
+theorem eq_of_le_of_cast_pow_eq_zero [CharP R p] (i : ℕ) (hin : i ≤ n) (hpi : (p ^ i : TruncatedWittVector p n R) = 0) :
+    i = n := by
+  contrapose! hpi
+  replace hin := lt_of_le_of_neₓ hin hpi
+  clear hpi
+  have : (↑p ^ i : TruncatedWittVector p n R) = WittVector.truncate n (↑p ^ i) := by
+    rw [RingHom.map_pow, map_nat_cast]
+  rw [this, ext_iff, not_forall]
+  clear this
+  use ⟨i, hin⟩
+  rw [WittVector.coeff_truncate, coeff_zero, Finₓ.coe_mk, WittVector.coeff_p_pow]
+  have : Nontrivial R := CharP.nontrivial_of_char_ne_one hp.1.ne_one
   exact one_ne_zero
-end
 
-section iso
+section Iso
 
-variables (p n) {R}
+variable (p n) {R}
 
-lemma card_zmod : fintype.card (truncated_witt_vector p n (zmod p)) = p ^ n :=
-by rw [card, zmod.card]
+theorem card_zmod : Fintype.card (TruncatedWittVector p n (Zmod p)) = p ^ n := by
+  rw [card, Zmod.card]
 
-lemma char_p_zmod : char_p (truncated_witt_vector p n (zmod p)) (p ^ n) :=
-char_p_of_prime_pow_injective _ _ _ (card_zmod _ _)
-    (eq_of_le_of_cast_pow_eq_zero p n (zmod p))
+theorem char_p_zmod : CharP (TruncatedWittVector p n (Zmod p)) (p ^ n) :=
+  char_p_of_prime_pow_injective _ _ _ (card_zmod _ _) (eq_of_le_of_cast_pow_eq_zero p n (Zmod p))
 
-local attribute [instance] char_p_zmod
+attribute [local instance] char_p_zmod
 
-/--
-The unique isomorphism between `zmod p^n` and `truncated_witt_vector p n (zmod p)`.
+/-- The unique isomorphism between `zmod p^n` and `truncated_witt_vector p n (zmod p)`.
 
 This isomorphism exists, because `truncated_witt_vector p n (zmod p)` is a finite ring
 with characteristic and cardinality `p^n`.
 -/
-def zmod_equiv_trunc : zmod (p^n) ≃+* truncated_witt_vector p n (zmod p) :=
-zmod.ring_equiv (truncated_witt_vector p n (zmod p)) (card_zmod _ _)
+def zmodEquivTrunc : Zmod (p ^ n) ≃+* TruncatedWittVector p n (Zmod p) :=
+  Zmod.ringEquiv (TruncatedWittVector p n (Zmod p)) (card_zmod _ _)
 
-lemma zmod_equiv_trunc_apply {x : zmod (p^n)} :
-  zmod_equiv_trunc p n x = zmod.cast_hom (by refl) (truncated_witt_vector p n (zmod p)) x :=
-rfl
+theorem zmod_equiv_trunc_apply {x : Zmod (p ^ n)} :
+    zmodEquivTrunc p n x =
+      Zmod.castHom
+        (by
+          rfl)
+        (TruncatedWittVector p n (Zmod p)) x :=
+  rfl
 
-/--
-The following diagram commutes:
+/-- The following diagram commutes:
 ```text
           zmod (p^n) ----------------------------> zmod (p^m)
             |                                        |
@@ -94,28 +95,23 @@ Here the vertical arrows are `truncated_witt_vector.zmod_equiv_trunc`,
 the horizontal arrow at the top is `zmod.cast_hom`,
 and the horizontal arrow at the bottom is `truncated_witt_vector.truncate`.
 -/
-lemma commutes {m : ℕ} (hm : n ≤ m) :
-  (truncate hm).comp (zmod_equiv_trunc p m).to_ring_hom =
-    (zmod_equiv_trunc p n).to_ring_hom.comp (zmod.cast_hom (pow_dvd_pow p hm) _) :=
-ring_hom.ext_zmod _ _
+theorem commutes {m : ℕ} (hm : n ≤ m) :
+    (truncate hm).comp (zmodEquivTrunc p m).toRingHom =
+      (zmodEquivTrunc p n).toRingHom.comp (Zmod.castHom (pow_dvd_pow p hm) _) :=
+  RingHom.ext_zmod _ _
 
-lemma commutes' {m : ℕ} (hm : n ≤ m) (x : zmod (p^m)) :
-  truncate hm (zmod_equiv_trunc p m x) =
-    zmod_equiv_trunc p n (zmod.cast_hom (pow_dvd_pow p hm) _ x) :=
-show (truncate hm).comp (zmod_equiv_trunc p m).to_ring_hom x = _,
-by rw commutes _ _ hm; refl
+theorem commutes' {m : ℕ} (hm : n ≤ m) (x : Zmod (p ^ m)) :
+    truncate hm (zmodEquivTrunc p m x) = zmodEquivTrunc p n (Zmod.castHom (pow_dvd_pow p hm) _ x) :=
+  show (truncate hm).comp (zmodEquivTrunc p m).toRingHom x = _ by
+    rw [commutes _ _ hm] <;> rfl
 
-lemma commutes_symm' {m : ℕ} (hm : n ≤ m) (x : truncated_witt_vector p m (zmod p)) :
-  (zmod_equiv_trunc p n).symm (truncate hm x) =
-    zmod.cast_hom (pow_dvd_pow p hm) _ ((zmod_equiv_trunc p m).symm x) :=
-begin
-  apply (zmod_equiv_trunc p n).injective,
-  rw ← commutes',
+theorem commutes_symm' {m : ℕ} (hm : n ≤ m) (x : TruncatedWittVector p m (Zmod p)) :
+    (zmodEquivTrunc p n).symm (truncate hm x) = Zmod.castHom (pow_dvd_pow p hm) _ ((zmodEquivTrunc p m).symm x) := by
+  apply (zmod_equiv_trunc p n).Injective
+  rw [← commutes']
   simp
-end
 
-/--
-The following diagram commutes:
+/-- The following diagram commutes:
 ```text
 truncated_witt_vector p n (zmod p) ----> truncated_witt_vector p m (zmod p)
             |                                        |
@@ -127,98 +123,90 @@ Here the vertical arrows are `(truncated_witt_vector.zmod_equiv_trunc p _).symm`
 the horizontal arrow at the top is `zmod.cast_hom`,
 and the horizontal arrow at the bottom is `truncated_witt_vector.truncate`.
 -/
-lemma commutes_symm {m : ℕ} (hm : n ≤ m) :
-  (zmod_equiv_trunc p n).symm.to_ring_hom.comp (truncate hm) =
-    (zmod.cast_hom (pow_dvd_pow p hm) _).comp (zmod_equiv_trunc p m).symm.to_ring_hom :=
-by ext; apply commutes_symm'
+theorem commutes_symm {m : ℕ} (hm : n ≤ m) :
+    (zmodEquivTrunc p n).symm.toRingHom.comp (truncate hm) =
+      (Zmod.castHom (pow_dvd_pow p hm) _).comp (zmodEquivTrunc p m).symm.toRingHom :=
+  by
+  ext <;> apply commutes_symm'
 
-end iso
+end Iso
 
-end truncated_witt_vector
+end TruncatedWittVector
 
-namespace witt_vector
-open truncated_witt_vector
+namespace WittVector
 
-variables (p)
+open TruncatedWittVector
 
-/--
-`to_zmod_pow` is a family of compatible ring homs. We get this family by composing
+variable (p)
+
+/-- `to_zmod_pow` is a family of compatible ring homs. We get this family by composing
 `truncated_witt_vector.zmod_equiv_trunc` (in right-to-left direction)
 with `witt_vector.truncate`.
 -/
-def to_zmod_pow (k : ℕ) : 𝕎 (zmod p) →+* zmod (p ^ k) :=
-(zmod_equiv_trunc p k).symm.to_ring_hom.comp (truncate k)
+def toZmodPow (k : ℕ) : 𝕎 (Zmod p) →+* Zmod (p ^ k) :=
+  (zmodEquivTrunc p k).symm.toRingHom.comp (truncate k)
 
-lemma to_zmod_pow_compat (m n : ℕ) (h : m ≤ n) :
-  (zmod.cast_hom (pow_dvd_pow p h) (zmod (p ^ m))).comp (to_zmod_pow p n) = to_zmod_pow p m :=
-calc (zmod.cast_hom _ (zmod (p ^ m))).comp
-      ((zmod_equiv_trunc p n).symm.to_ring_hom.comp (truncate n)) =
-  ((zmod_equiv_trunc p m).symm.to_ring_hom.comp
-    (truncated_witt_vector.truncate h)).comp (truncate n) :
-  by rw [commutes_symm, ring_hom.comp_assoc]
-... = (zmod_equiv_trunc p m).symm.to_ring_hom.comp (truncate m) :
-  by rw [ring_hom.comp_assoc, truncate_comp_witt_vector_truncate]
+theorem to_zmod_pow_compat (m n : ℕ) (h : m ≤ n) :
+    (Zmod.castHom (pow_dvd_pow p h) (Zmod (p ^ m))).comp (toZmodPow p n) = toZmodPow p m :=
+  calc
+    (Zmod.castHom _ (Zmod (p ^ m))).comp ((zmodEquivTrunc p n).symm.toRingHom.comp (truncate n)) =
+        ((zmodEquivTrunc p m).symm.toRingHom.comp (TruncatedWittVector.truncate h)).comp (truncate n) :=
+      by
+      rw [commutes_symm, RingHom.comp_assoc]
+    _ = (zmodEquivTrunc p m).symm.toRingHom.comp (truncate m) := by
+      rw [RingHom.comp_assoc, truncate_comp_witt_vector_truncate]
+    
 
-/--
-`to_padic_int` lifts `to_zmod_pow : 𝕎 (zmod p) →+* zmod (p ^ k)` to a ring hom to `ℤ_[p]`
+/-- `to_padic_int` lifts `to_zmod_pow : 𝕎 (zmod p) →+* zmod (p ^ k)` to a ring hom to `ℤ_[p]`
 using `padic_int.lift`, the universal property of `ℤ_[p]`.
 -/
-def to_padic_int : 𝕎 (zmod p) →+* ℤ_[p] := padic_int.lift $ to_zmod_pow_compat p
+def toPadicInt : 𝕎 (Zmod p) →+* ℤ_[p] :=
+  PadicInt.lift <| to_zmod_pow_compat p
 
-lemma zmod_equiv_trunc_compat (k₁ k₂ : ℕ) (hk : k₁ ≤ k₂) :
-    (truncated_witt_vector.truncate hk).comp
-        ((zmod_equiv_trunc p k₂).to_ring_hom.comp
-           (padic_int.to_zmod_pow k₂)) =
-      (zmod_equiv_trunc p k₁).to_ring_hom.comp (padic_int.to_zmod_pow k₁) :=
-by rw [← ring_hom.comp_assoc, commutes, ring_hom.comp_assoc, padic_int.zmod_cast_comp_to_zmod_pow]
+theorem zmod_equiv_trunc_compat (k₁ k₂ : ℕ) (hk : k₁ ≤ k₂) :
+    (TruncatedWittVector.truncate hk).comp ((zmodEquivTrunc p k₂).toRingHom.comp (PadicInt.toZmodPow k₂)) =
+      (zmodEquivTrunc p k₁).toRingHom.comp (PadicInt.toZmodPow k₁) :=
+  by
+  rw [← RingHom.comp_assoc, commutes, RingHom.comp_assoc, PadicInt.zmod_cast_comp_to_zmod_pow]
 
-/--
-`from_padic_int` uses `witt_vector.lift` to lift `truncated_witt_vector.zmod_equiv_trunc`
+/-- `from_padic_int` uses `witt_vector.lift` to lift `truncated_witt_vector.zmod_equiv_trunc`
 composed with `padic_int.to_zmod_pow` to a ring hom `ℤ_[p] →+* 𝕎 (zmod p)`.
 -/
-def from_padic_int : ℤ_[p] →+* 𝕎 (zmod p) :=
-witt_vector.lift (λ k, (zmod_equiv_trunc p k).to_ring_hom.comp (padic_int.to_zmod_pow k)) $
-  zmod_equiv_trunc_compat _
+def fromPadicInt : ℤ_[p] →+* 𝕎 (Zmod p) :=
+  (WittVector.lift fun k => (zmodEquivTrunc p k).toRingHom.comp (PadicInt.toZmodPow k)) <| zmod_equiv_trunc_compat _
 
-lemma to_padic_int_comp_from_padic_int :
-  (to_padic_int p).comp (from_padic_int p) = ring_hom.id ℤ_[p] :=
-begin
-  rw ← padic_int.to_zmod_pow_eq_iff_ext,
-  intro n,
-  rw [← ring_hom.comp_assoc, to_padic_int, padic_int.lift_spec],
-  simp only [from_padic_int, to_zmod_pow, ring_hom.comp_id],
-  rw [ring_hom.comp_assoc, truncate_comp_lift, ← ring_hom.comp_assoc],
-  simp only [ring_equiv.symm_to_ring_hom_comp_to_ring_hom, ring_hom.id_comp]
-end
+theorem to_padic_int_comp_from_padic_int : (toPadicInt p).comp (fromPadicInt p) = RingHom.id ℤ_[p] := by
+  rw [← PadicInt.to_zmod_pow_eq_iff_ext]
+  intro n
+  rw [← RingHom.comp_assoc, to_padic_int, PadicInt.lift_spec]
+  simp only [from_padic_int, to_zmod_pow, RingHom.comp_id]
+  rw [RingHom.comp_assoc, truncate_comp_lift, ← RingHom.comp_assoc]
+  simp only [RingEquiv.symm_to_ring_hom_comp_to_ring_hom, RingHom.id_comp]
 
-lemma to_padic_int_comp_from_padic_int_ext (x) :
-  (to_padic_int p).comp (from_padic_int p) x = ring_hom.id ℤ_[p] x :=
-by rw to_padic_int_comp_from_padic_int
+theorem to_padic_int_comp_from_padic_int_ext x : (toPadicInt p).comp (fromPadicInt p) x = RingHom.id ℤ_[p] x := by
+  rw [to_padic_int_comp_from_padic_int]
 
-lemma from_padic_int_comp_to_padic_int :
-  (from_padic_int p).comp (to_padic_int p) = ring_hom.id (𝕎 (zmod p)) :=
-begin
-  apply witt_vector.hom_ext,
-  intro n,
-  rw [from_padic_int, ← ring_hom.comp_assoc, truncate_comp_lift, ring_hom.comp_assoc],
-  simp only [to_padic_int, to_zmod_pow, ring_hom.comp_id, padic_int.lift_spec, ring_hom.id_comp,
-    ← ring_hom.comp_assoc, ring_equiv.to_ring_hom_comp_symm_to_ring_hom]
-end
+theorem from_padic_int_comp_to_padic_int : (fromPadicInt p).comp (toPadicInt p) = RingHom.id (𝕎 (Zmod p)) := by
+  apply WittVector.hom_ext
+  intro n
+  rw [from_padic_int, ← RingHom.comp_assoc, truncate_comp_lift, RingHom.comp_assoc]
+  simp only [to_padic_int, to_zmod_pow, RingHom.comp_id, PadicInt.lift_spec, RingHom.id_comp, ← RingHom.comp_assoc,
+    RingEquiv.to_ring_hom_comp_symm_to_ring_hom]
 
-lemma from_padic_int_comp_to_padic_int_ext (x) :
-  (from_padic_int p).comp (to_padic_int p) x = ring_hom.id (𝕎 (zmod p)) x :=
-by rw from_padic_int_comp_to_padic_int
+theorem from_padic_int_comp_to_padic_int_ext x : (fromPadicInt p).comp (toPadicInt p) x = RingHom.id (𝕎 (Zmod p)) x :=
+  by
+  rw [from_padic_int_comp_to_padic_int]
 
-/--
-The ring of Witt vectors over `zmod p` is isomorphic to the ring of `p`-adic integers. This
+/-- The ring of Witt vectors over `zmod p` is isomorphic to the ring of `p`-adic integers. This
 equivalence is witnessed by `witt_vector.to_padic_int` with inverse `witt_vector.from_padic_int`.
 -/
-def equiv : 𝕎 (zmod p) ≃+* ℤ_[p] :=
-{ to_fun := to_padic_int p,
-  inv_fun := from_padic_int p,
-  left_inv := from_padic_int_comp_to_padic_int_ext _,
-  right_inv := to_padic_int_comp_from_padic_int_ext _,
-  map_mul' := ring_hom.map_mul _,
-  map_add' := ring_hom.map_add _ }
+def equiv : 𝕎 (Zmod p) ≃+* ℤ_[p] where
+  toFun := toPadicInt p
+  invFun := fromPadicInt p
+  left_inv := from_padic_int_comp_to_padic_int_ext _
+  right_inv := to_padic_int_comp_from_padic_int_ext _
+  map_mul' := RingHom.map_mul _
+  map_add' := RingHom.map_add _
 
-end witt_vector
+end WittVector
+

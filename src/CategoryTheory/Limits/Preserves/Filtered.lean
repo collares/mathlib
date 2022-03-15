@@ -3,8 +3,8 @@ Copyright (c) 2021 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison, Justus Springer
 -/
-import category_theory.limits.preserves.basic
-import category_theory.filtered
+import Mathbin.CategoryTheory.Limits.Preserves.Basic
+import Mathbin.CategoryTheory.Filtered
 
 /-!
 # Preservation of filtered colimits and cofiltered limits.
@@ -12,58 +12,55 @@ Typically forgetful functors from algebraic categories preserve filtered colimit
 (although not general colimits). See e.g. `algebra/category/Mon/filtered_colimits`.
 -/
 
-open category_theory
-open category_theory.functor
 
-namespace category_theory.limits
+open CategoryTheory
 
-universes v u₁ u₂ u₃ -- declare the `v`'s first; see `category_theory.category` for an explanation
+open CategoryTheory.Functor
 
-variables {C : Type u₁} [category.{v} C]
-variables {D : Type u₂} [category.{v} D]
-variables {E : Type u₃} [category.{v} E]
+namespace CategoryTheory.Limits
 
-variables {J : Type v} [small_category J] {K : J ⥤ C}
+universe v u₁ u₂ u₃
 
-/--
-A functor is said to preserve filtered colimits, if it preserves all colimits of shape `J`, where
+-- declare the `v`'s first; see `category_theory.category` for an explanation
+variable {C : Type u₁} [Category.{v} C]
+
+variable {D : Type u₂} [Category.{v} D]
+
+variable {E : Type u₃} [Category.{v} E]
+
+variable {J : Type v} [SmallCategory J] {K : J ⥤ C}
+
+/-- A functor is said to preserve filtered colimits, if it preserves all colimits of shape `J`, where
 `J` is a filtered category.
 -/
-class preserves_filtered_colimits (F : C ⥤ D) : Type (max u₁ u₂ (v+1)) :=
-(preserves_filtered_colimits : Π (J : Type v) [small_category J] [is_filtered J],
-  preserves_colimits_of_shape J F)
+class PreservesFilteredColimits (F : C ⥤ D) : Type max u₁ u₂ (v + 1) where
+  PreservesFilteredColimits : ∀ J : Type v [SmallCategory J] [IsFiltered J], PreservesColimitsOfShape J F
 
-attribute [instance, priority 100] preserves_filtered_colimits.preserves_filtered_colimits
+attribute [instance] preserves_filtered_colimits.preserves_filtered_colimits
 
-@[priority 100]
-instance preserves_colimits.preserves_filtered_colimits (F : C ⥤ D) [preserves_colimits F] :
-  preserves_filtered_colimits F :=
-{ preserves_filtered_colimits := infer_instance }
+instance (priority := 100) PreservesColimits.preservesFilteredColimits (F : C ⥤ D) [PreservesColimits F] :
+    PreservesFilteredColimits F where
+  PreservesFilteredColimits := inferInstance
 
-instance comp_preserves_filtered_colimits (F : C ⥤ D) (G : D ⥤ E)
-  [preserves_filtered_colimits F] [preserves_filtered_colimits G] :
-  preserves_filtered_colimits (F ⋙ G) :=
-{ preserves_filtered_colimits := λ J _ _, by exactI infer_instance }
+instance compPreservesFilteredColimits (F : C ⥤ D) (G : D ⥤ E) [PreservesFilteredColimits F]
+    [PreservesFilteredColimits G] : PreservesFilteredColimits (F ⋙ G) where
+  PreservesFilteredColimits := fun J _ _ => inferInstance
 
-/--
-A functor is said to preserve cofiltered limits, if it preserves all limits of shape `J`, where
+/-- A functor is said to preserve cofiltered limits, if it preserves all limits of shape `J`, where
 `J` is a cofiltered category.
 -/
-class preserves_cofiltered_limits (F : C ⥤ D) : Type (max u₁ u₂ (v+1)) :=
-(preserves_cofiltered_limits : Π (J : Type v) [small_category J] [is_cofiltered J],
-  preserves_limits_of_shape J F)
+class PreservesCofilteredLimits (F : C ⥤ D) : Type max u₁ u₂ (v + 1) where
+  PreservesCofilteredLimits : ∀ J : Type v [SmallCategory J] [IsCofiltered J], PreservesLimitsOfShape J F
 
-attribute [instance, priority 100] preserves_cofiltered_limits.preserves_cofiltered_limits
+attribute [instance] preserves_cofiltered_limits.preserves_cofiltered_limits
 
-@[priority 100]
-instance preserves_limits.preserves_cofiltered_limits (F : C ⥤ D) [preserves_limits F] :
-  preserves_cofiltered_limits F :=
-{ preserves_cofiltered_limits := infer_instance }
+instance (priority := 100) PreservesLimits.preservesCofilteredLimits (F : C ⥤ D) [PreservesLimits F] :
+    PreservesCofilteredLimits F where
+  PreservesCofilteredLimits := inferInstance
 
-instance comp_preserves_cofiltered_limits (F : C ⥤ D) (G : D ⥤ E)
-  [preserves_cofiltered_limits F] [preserves_cofiltered_limits G] :
-  preserves_cofiltered_limits (F ⋙ G) :=
-{ preserves_cofiltered_limits := λ J _ _, by exactI infer_instance }
+instance compPreservesCofilteredLimits (F : C ⥤ D) (G : D ⥤ E) [PreservesCofilteredLimits F]
+    [PreservesCofilteredLimits G] : PreservesCofilteredLimits (F ⋙ G) where
+  PreservesCofilteredLimits := fun J _ _ => inferInstance
 
+end CategoryTheory.Limits
 
-end category_theory.limits

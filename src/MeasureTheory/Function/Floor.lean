@@ -3,7 +3,7 @@ Copyright (c) 2021 Yury G. Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury G. Kudryashov
 -/
-import measure_theory.constructions.borel_space
+import Mathbin.MeasureTheory.Constructions.BorelSpace
 
 /-!
 # Measurability of `⌊x⌋` etc
@@ -12,67 +12,66 @@ In this file we prove that `int.floor`, `int.ceil`, `int.fract`, `nat.floor`, an
 measurable under some assumptions on the (semi)ring.
 -/
 
-open set
 
-section floor_ring
+open Set
 
-variables {α R : Type*} [measurable_space α] [linear_ordered_ring R] [floor_ring R]
-  [topological_space R] [order_topology R] [measurable_space R]
+section FloorRing
 
-lemma int.measurable_floor [opens_measurable_space R] :
-  measurable (int.floor : R → ℤ) :=
-measurable_to_encodable $ λ x, by simpa only [int.preimage_floor_singleton]
-  using measurable_set_Ico
+variable {α R : Type _} [MeasurableSpace α] [LinearOrderedRing R] [FloorRing R] [TopologicalSpace R] [OrderTopology R]
+  [MeasurableSpace R]
 
-@[measurability] lemma measurable.floor [opens_measurable_space R]
-  {f : α → R} (hf : measurable f) : measurable (λ x, ⌊f x⌋) :=
-int.measurable_floor.comp hf
+theorem Int.measurable_floor [OpensMeasurableSpace R] : Measurable (Int.floor : R → ℤ) :=
+  measurable_to_encodable fun x => by
+    simpa only [Int.preimage_floor_singleton] using measurable_set_Ico
 
-lemma int.measurable_ceil [opens_measurable_space R] :
-  measurable (int.ceil : R → ℤ) :=
-measurable_to_encodable $ λ x,
-  by simpa only [int.preimage_ceil_singleton] using measurable_set_Ioc
+@[measurability]
+theorem Measurable.floor [OpensMeasurableSpace R] {f : α → R} (hf : Measurable f) : Measurable fun x => ⌊f x⌋ :=
+  Int.measurable_floor.comp hf
 
-@[measurability] lemma measurable.ceil [opens_measurable_space R]
-  {f : α → R} (hf : measurable f) : measurable (λ x, ⌈f x⌉) :=
-int.measurable_ceil.comp hf
+theorem Int.measurable_ceil [OpensMeasurableSpace R] : Measurable (Int.ceil : R → ℤ) :=
+  measurable_to_encodable fun x => by
+    simpa only [Int.preimage_ceil_singleton] using measurable_set_Ioc
 
-lemma measurable_fract [borel_space R] : measurable (int.fract : R → R) :=
-begin
-  intros s hs,
-  rw int.preimage_fract,
-  exact measurable_set.Union (λ z, measurable_id.sub_const _ (hs.inter measurable_set_Ico))
-end
+@[measurability]
+theorem Measurable.ceil [OpensMeasurableSpace R] {f : α → R} (hf : Measurable f) : Measurable fun x => ⌈f x⌉ :=
+  Int.measurable_ceil.comp hf
 
-@[measurability] lemma measurable.fract [borel_space R]
-  {f : α → R} (hf : measurable f) : measurable (λ x, int.fract (f x)) :=
-measurable_fract.comp hf
+theorem measurable_fract [BorelSpace R] : Measurable (Int.fract : R → R) := by
+  intro s hs
+  rw [Int.preimage_fract]
+  exact MeasurableSet.Union fun z => measurable_id.sub_const _ (hs.inter measurable_set_Ico)
 
-lemma measurable_set.image_fract [borel_space R] {s : set R} (hs : measurable_set s) :
-  measurable_set (int.fract '' s) :=
-begin
-  simp only [int.image_fract, sub_eq_add_neg, image_add_right'],
-  exact measurable_set.Union (λ m, (measurable_add_const _ hs).inter measurable_set_Ico)
-end
+@[measurability]
+theorem Measurable.fract [BorelSpace R] {f : α → R} (hf : Measurable f) : Measurable fun x => Int.fract (f x) :=
+  measurable_fract.comp hf
 
-end floor_ring
+theorem MeasurableSet.image_fract [BorelSpace R] {s : Set R} (hs : MeasurableSet s) : MeasurableSet (Int.fract '' s) :=
+  by
+  simp only [Int.image_fract, sub_eq_add_neg, image_add_right']
+  exact MeasurableSet.Union fun m => (measurable_add_const _ hs).inter measurable_set_Ico
 
-section floor_semiring
+end FloorRing
 
-variables {α R : Type*} [measurable_space α] [linear_ordered_semiring R] [floor_semiring R]
-  [topological_space R] [order_topology R] [measurable_space R] [opens_measurable_space R]
-  {f : α → R}
+section FloorSemiring
 
-lemma nat.measurable_floor : measurable (nat.floor : R → ℕ) :=
-measurable_to_encodable $ λ n, by cases eq_or_ne ⌊n⌋₊ 0; simp [*, nat.preimage_floor_of_ne_zero]
+variable {α R : Type _} [MeasurableSpace α] [LinearOrderedSemiring R] [FloorSemiring R] [TopologicalSpace R]
+  [OrderTopology R] [MeasurableSpace R] [OpensMeasurableSpace R] {f : α → R}
 
-@[measurability] lemma measurable.nat_floor (hf : measurable f) : measurable (λ x, ⌊f x⌋₊) :=
-nat.measurable_floor.comp hf
+theorem Nat.measurable_floor : Measurable (Nat.floor : R → ℕ) :=
+  measurable_to_encodable fun n => by
+    cases eq_or_ne ⌊n⌋₊ 0 <;> simp [*, Nat.preimage_floor_of_ne_zero]
 
-lemma nat.measurable_ceil : measurable (nat.ceil : R → ℕ) :=
-measurable_to_encodable $ λ n, by cases eq_or_ne ⌈n⌉₊ 0; simp [*, nat.preimage_ceil_of_ne_zero]
+@[measurability]
+theorem Measurable.nat_floor (hf : Measurable f) : Measurable fun x => ⌊f x⌋₊ :=
+  Nat.measurable_floor.comp hf
 
-@[measurability] lemma measurable.nat_ceil (hf : measurable f) : measurable (λ x, ⌈f x⌉₊) :=
-nat.measurable_ceil.comp hf
+theorem Nat.measurable_ceil : Measurable (Nat.ceil : R → ℕ) :=
+  measurable_to_encodable fun n => by
+    cases eq_or_ne ⌈n⌉₊ 0 <;> simp [*, Nat.preimage_ceil_of_ne_zero]
 
-end floor_semiring
+@[measurability]
+theorem Measurable.nat_ceil (hf : Measurable f) : Measurable fun x => ⌈f x⌉₊ :=
+  Nat.measurable_ceil.comp hf
+
+end FloorSemiring
+

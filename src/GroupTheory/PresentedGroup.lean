@@ -3,8 +3,8 @@ Copyright (c) 2019 Michael Howes. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Michael Howes
 -/
-import group_theory.free_group
-import group_theory.quotient_group
+import Mathbin.GroupTheory.FreeGroup
+import Mathbin.GroupTheory.QuotientGroup
 
 /-!
 # Defining a group given by generators and relations
@@ -25,57 +25,60 @@ given by generators `x : α` and relations `r ∈ rels`.
 generators, relations, group presentations
 -/
 
-variables {α : Type}
+
+variable {α : Type}
 
 /-- Given a set of relations, rels, over a type `α`, presented_group constructs the group with
 generators `x : α` and relations `rels` as a quotient of free_group `α`.-/
-def presented_group (rels : set (free_group α)) : Type :=
-free_group α ⧸ subgroup.normal_closure rels
+def PresentedGroup (rels : Set (FreeGroup α)) : Type :=
+  FreeGroup α ⧸ Subgroup.normalClosure rels
 
-namespace presented_group
+namespace PresentedGroup
 
-instance (rels : set (free_group α)) : group (presented_group (rels)) :=
-quotient_group.quotient.group _
+instance (rels : Set (FreeGroup α)) : Groupₓ (PresentedGroup rels) :=
+  QuotientGroup.Quotient.group _
 
 /-- `of` is the canonical map from `α` to a presented group with generators `x : α`. The term `x` is
 mapped to the equivalence class of the image of `x` in `free_group α`. -/
-def of {rels : set (free_group α)} (x : α) : presented_group rels :=
-quotient_group.mk (free_group.of x)
+def of {rels : Set (FreeGroup α)} (x : α) : PresentedGroup rels :=
+  QuotientGroup.mk (FreeGroup.of x)
 
-section to_group
+section ToGroup
 
 /-
 Presented groups satisfy a universal property. If `G` is a group and `f : α → G` is a map such that
 the images of `f` satisfy all the given relations, then `f` extends uniquely to a group homomorphism
 from `presented_group rels` to `G`.
 -/
+variable {G : Type} [Groupₓ G] {f : α → G} {rels : Set (FreeGroup α)}
 
-variables {G : Type} [group G] {f : α → G} {rels : set (free_group α)}
+-- mathport name: «exprF»
+local notation "F" => FreeGroup.lift f
 
-local notation `F` := free_group.lift f
+variable (h : ∀, ∀ r ∈ rels, ∀, F r = 1)
 
-variable (h : ∀ r ∈ rels, F r = 1)
+theorem closure_rels_subset_ker : Subgroup.normalClosure rels ≤ MonoidHom.ker F :=
+  Subgroup.normal_closure_le_normal fun x w => (MonoidHom.mem_ker _).2 (h x w)
 
-lemma closure_rels_subset_ker : subgroup.normal_closure rels ≤ monoid_hom.ker F :=
-subgroup.normal_closure_le_normal (λ x w, (monoid_hom.mem_ker _).2 (h x w))
-
-lemma to_group_eq_one_of_mem_closure : ∀ x ∈ subgroup.normal_closure rels, F x = 1 :=
-λ x w, (monoid_hom.mem_ker _).1 $ closure_rels_subset_ker h w
+theorem to_group_eq_one_of_mem_closure : ∀, ∀ x ∈ Subgroup.normalClosure rels, ∀, F x = 1 := fun x w =>
+  (MonoidHom.mem_ker _).1 <| closure_rels_subset_ker h w
 
 /-- The extension of a map `f : α → G` that satisfies the given relations to a group homomorphism
 from `presented_group rels → G`. -/
-def to_group : presented_group rels →* G :=
-quotient_group.lift (subgroup.normal_closure rels) F (to_group_eq_one_of_mem_closure h)
+def toGroup : PresentedGroup rels →* G :=
+  QuotientGroup.lift (Subgroup.normalClosure rels) F (to_group_eq_one_of_mem_closure h)
 
-@[simp] lemma to_group.of {x : α} : to_group h (of x) = f x := free_group.lift.of
+@[simp]
+theorem toGroup.of {x : α} : toGroup h (of x) = f x :=
+  FreeGroup.lift.of
 
-theorem to_group.unique (g : presented_group rels →* G)
-  (hg : ∀ x : α, g (of x) = f x) : ∀ {x}, g x = to_group h x :=
-λ x, quotient_group.induction_on x
-    (λ _, free_group.lift.unique (g.comp (quotient_group.mk' _)) hg)
+theorem toGroup.unique (g : PresentedGroup rels →* G) (hg : ∀ x : α, g (of x) = f x) : ∀ {x}, g x = toGroup h x :=
+  fun x => QuotientGroup.induction_on x fun _ => FreeGroup.lift.unique (g.comp (QuotientGroup.mk' _)) hg
 
-end to_group
+end ToGroup
 
-instance (rels : set (free_group α)) : inhabited (presented_group rels) := ⟨1⟩
+instance (rels : Set (FreeGroup α)) : Inhabited (PresentedGroup rels) :=
+  ⟨1⟩
 
-end presented_group
+end PresentedGroup
+

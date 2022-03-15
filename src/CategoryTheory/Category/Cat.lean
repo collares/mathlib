@@ -3,10 +3,10 @@ Copyright (c) 2019 Yury Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury Kudryashov
 -/
-import category_theory.concrete_category.bundled
-import category_theory.discrete_category
-import category_theory.types
-import category_theory.bicategory.strict
+import Mathbin.CategoryTheory.ConcreteCategory.Bundled
+import Mathbin.CategoryTheory.DiscreteCategory
+import Mathbin.CategoryTheory.Types
+import Mathbin.CategoryTheory.Bicategory.Strict
 
 /-!
 # Category of categories
@@ -21,84 +21,104 @@ Though `Cat` is not a concrete category, we use `bundled` to define
 its carrier type.
 -/
 
-universes v u
 
-namespace category_theory
+universe v u
+
+namespace CategoryTheory
 
 /-- Category of categories. -/
-@[nolint check_univs] -- intended to be used with explicit universe parameters
-def Cat := bundled category.{v u}
+-- intended to be used with explicit universe parameters
+@[nolint check_univs]
+def Cat :=
+  Bundled Category.{v, u}
 
 namespace Cat
 
-instance : inhabited Cat := ⟨⟨Type u, category_theory.types⟩⟩
+instance : Inhabited Cat :=
+  ⟨⟨Type u, CategoryTheory.types⟩⟩
 
-instance : has_coe_to_sort Cat (Type u) := ⟨bundled.α⟩
+instance : CoeSort Cat (Type u) :=
+  ⟨Bundled.α⟩
 
-instance str (C : Cat.{v u}) : category.{v u} C := C.str
+instance str (C : Cat.{v, u}) : Category.{v, u} C :=
+  C.str
 
 /-- Construct a bundled `Cat` from the underlying type and the typeclass. -/
-def of (C : Type u) [category.{v} C] : Cat.{v u} := bundled.of C
+def of (C : Type u) [Category.{v} C] : Cat.{v, u} :=
+  Bundled.of C
 
 /-- Bicategory structure on `Cat` -/
-instance bicategory : bicategory.{(max v u) (max v u)} Cat.{v u} :=
-{ hom := λ C D, C ⥤ D,
-  id := λ C, 𝟭 C,
-  comp := λ C D E F G, F ⋙ G,
-  hom_category := λ C D, functor.category C D,
-  whisker_left := λ C D E F G H η, whisker_left F η,
-  whisker_right := λ C D E F G η H, whisker_right η H,
-  associator := λ A B C D, functor.associator,
-  left_unitor :=  λ A B, functor.left_unitor,
-  right_unitor := λ A B, functor.right_unitor,
-  pentagon' := λ A B C D E, functor.pentagon,
-  triangle' := λ A B C, functor.triangle }
+instance bicategory : Bicategory.{max v u, max v u} Cat.{v, u} where
+  Hom := fun C D => C ⥤ D
+  id := fun C => 𝟭 C
+  comp := fun C D E F G => F ⋙ G
+  homCategory := fun C D => Functor.category C D
+  whiskerLeft := fun C D E F G H η => whiskerLeft F η
+  whiskerRight := fun C D E F G η H => whiskerRight η H
+  associator := fun A B C D => Functor.associator
+  leftUnitor := fun A B => Functor.leftUnitor
+  rightUnitor := fun A B => Functor.rightUnitor
+  pentagon' := fun A B C D E => Functor.pentagon
+  triangle' := fun A B C => Functor.triangle
 
 /-- `Cat` is a strict bicategory. -/
-instance bicategory.strict : bicategory.strict Cat.{v u} :=
-{ id_comp' := λ C D F, by cases F; refl,
-  comp_id' := λ C D F, by cases F; refl,
-  assoc' := by intros; refl }
+instance bicategory.strict : Bicategory.Strict Cat.{v, u} where
+  id_comp' := fun C D F => by
+    cases F <;> rfl
+  comp_id' := fun C D F => by
+    cases F <;> rfl
+  assoc' := by
+    intros <;> rfl
 
 /-- Category structure on `Cat` -/
-instance category : large_category.{max v u} Cat.{v u} := strict_bicategory.category Cat.{v u}
+instance category : LargeCategory.{max v u} Cat.{v, u} :=
+  StrictBicategory.category Cat.{v, u}
 
 /-- Functor that gets the set of objects of a category. It is not
 called `forget`, because it is not a faithful functor. -/
-def objects : Cat.{v u} ⥤ Type u :=
-{ obj := λ C, C,
-  map := λ C D F, F.obj }
+def objects : Cat.{v, u} ⥤ Type u where
+  obj := fun C => C
+  map := fun C D F => F.obj
 
 /-- Any isomorphism in `Cat` induces an equivalence of the underlying categories. -/
-def equiv_of_iso {C D : Cat} (γ : C ≅ D) : C ≌ D :=
-{ functor := γ.hom,
-  inverse := γ.inv,
-  unit_iso := eq_to_iso $ eq.symm γ.hom_inv_id,
-  counit_iso := eq_to_iso γ.inv_hom_id }
+def equivOfIso {C D : Cat} (γ : C ≅ D) : C ≌ D where
+  Functor := γ.Hom
+  inverse := γ.inv
+  unitIso := eq_to_iso <| Eq.symm γ.hom_inv_id
+  counitIso := eqToIso γ.inv_hom_id
 
 end Cat
 
-/--
-Embedding `Type` into `Cat` as discrete categories.
+/-- Embedding `Type` into `Cat` as discrete categories.
 
 This ought to be modelled as a 2-functor!
 -/
 @[simps]
-def Type_to_Cat : Type u ⥤ Cat :=
-{ obj := λ X, Cat.of (discrete X),
-  map := λ X Y f, discrete.functor f,
-  map_id' := λ X, begin apply functor.ext, tidy, end,
-  map_comp' := λ X Y Z f g, begin apply functor.ext, tidy, end }
+def typeToCat : Type u ⥤ Cat where
+  obj := fun X => Cat.of (Discrete X)
+  map := fun X Y f => Discrete.functor f
+  map_id' := fun X => by
+    apply Functor.ext
+    tidy
+  map_comp' := fun X Y Z f g => by
+    apply Functor.ext
+    tidy
 
-instance : faithful Type_to_Cat.{u} := {}
-instance : full Type_to_Cat.{u} :=
-{ preimage := λ X Y F, F.obj,
-  witness' :=
-  begin
-    intros X Y F,
-    apply functor.ext,
-    { intros x y f, dsimp, ext, },
-    { intros x, refl, }
-  end }
+instance : Faithful typeToCat.{u} :=
+  {  }
 
-end category_theory
+instance : Full typeToCat.{u} where
+  Preimage := fun X Y F => F.obj
+  witness' := by
+    intro X Y F
+    apply Functor.ext
+    · intro x y f
+      dsimp
+      ext
+      
+    · intro x
+      rfl
+      
+
+end CategoryTheory
+

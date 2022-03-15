@@ -3,7 +3,7 @@ Copyright (c) 2022 Yaël Dillies. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yaël Dillies
 -/
-import order.category.Lattice
+import Mathbin.Order.Category.Lattice
 
 /-!
 # The category of distributive lattices
@@ -15,51 +15,70 @@ correspond to `DistribLattice` as we don't require bottom or top elements. Inste
 corresponds to `BoundedDistribLattice`.
 -/
 
-universes u
 
-open category_theory
+universe u
+
+open CategoryTheory
 
 /-- The category of distributive lattices. -/
-def DistribLattice := bundled distrib_lattice
+def DistribLatticeₓ :=
+  Bundled DistribLattice
 
-namespace DistribLattice
+namespace DistribLatticeₓ
 
-instance : has_coe_to_sort DistribLattice Type* := bundled.has_coe_to_sort
-instance (X : DistribLattice) : distrib_lattice X := X.str
+instance : CoeSort DistribLatticeₓ (Type _) :=
+  bundled.has_coe_to_sort
+
+instance (X : DistribLatticeₓ) : DistribLattice X :=
+  X.str
 
 /-- Construct a bundled `DistribLattice` from a `distrib_lattice` underlying type and typeclass. -/
-def of (α : Type*) [distrib_lattice α] : DistribLattice := bundled.of α
+def of (α : Type _) [DistribLattice α] : DistribLatticeₓ :=
+  Bundled.of α
 
-@[simp] lemma coe_of (α : Type*) [distrib_lattice α] : ↥(of α) = α := rfl
+@[simp]
+theorem coe_of (α : Type _) [DistribLattice α] : ↥(of α) = α :=
+  rfl
 
-instance : inhabited DistribLattice := ⟨of punit⟩
+instance : Inhabited DistribLatticeₓ :=
+  ⟨of PUnit⟩
 
-instance : bundled_hom.parent_projection @distrib_lattice.to_lattice := ⟨⟩
+instance : BundledHom.ParentProjection @DistribLattice.toLattice :=
+  ⟨⟩
 
-attribute [derive [large_category, concrete_category]] DistribLattice
+deriving instance LargeCategory, ConcreteCategory for DistribLatticeₓ
 
-instance has_forget_to_Lattice : has_forget₂ DistribLattice Lattice := bundled_hom.forget₂ _ _
+instance hasForgetToLattice : HasForget₂ DistribLatticeₓ Latticeₓ :=
+  BundledHom.forget₂ _ _
 
 /-- Constructs an equivalence between distributive lattices from an order isomorphism between them.
 -/
-@[simps] def iso.mk {α β : DistribLattice.{u}} (e : α ≃o β) : α ≅ β :=
-{ hom := e,
-  inv := e.symm,
-  hom_inv_id' := by { ext, exact e.symm_apply_apply _ },
-  inv_hom_id' := by { ext, exact e.apply_symm_apply _ } }
+@[simps]
+def Iso.mk {α β : DistribLatticeₓ.{u}} (e : α ≃o β) : α ≅ β where
+  Hom := e
+  inv := e.symm
+  hom_inv_id' := by
+    ext
+    exact e.symm_apply_apply _
+  inv_hom_id' := by
+    ext
+    exact e.apply_symm_apply _
 
 /-- `order_dual` as a functor. -/
-@[simps] def dual : DistribLattice ⥤ DistribLattice :=
-{ obj := λ X, of (order_dual X), map := λ X Y, lattice_hom.dual }
+@[simps]
+def dual : DistribLatticeₓ ⥤ DistribLatticeₓ where
+  obj := fun X => of (OrderDual X)
+  map := fun X Y => LatticeHom.dual
 
 /-- The equivalence between `DistribLattice` and itself induced by `order_dual` both ways. -/
-@[simps functor inverse] def dual_equiv : DistribLattice ≌ DistribLattice :=
-equivalence.mk dual dual
-  (nat_iso.of_components (λ X, iso.mk $ order_iso.dual_dual X) $ λ X Y f, rfl)
-  (nat_iso.of_components (λ X, iso.mk $ order_iso.dual_dual X) $ λ X Y f, rfl)
+@[simps Functor inverse]
+def dualEquiv : DistribLatticeₓ ≌ DistribLatticeₓ :=
+  Equivalence.mk dual dual ((NatIso.ofComponents fun X => iso.mk <| OrderIso.dualDual X) fun X Y f => rfl)
+    ((NatIso.ofComponents fun X => iso.mk <| OrderIso.dualDual X) fun X Y f => rfl)
 
-end DistribLattice
+end DistribLatticeₓ
 
-lemma DistribLattice_dual_comp_forget_to_Lattice :
-  DistribLattice.dual ⋙ forget₂ DistribLattice Lattice =
-    forget₂ DistribLattice Lattice ⋙ Lattice.dual := rfl
+theorem DistribLattice_dual_comp_forget_to_Lattice :
+    DistribLatticeₓ.dual ⋙ forget₂ DistribLatticeₓ Latticeₓ = forget₂ DistribLatticeₓ Latticeₓ ⋙ Latticeₓ.dual :=
+  rfl
+

@@ -3,10 +3,9 @@ Copyright (c) 2021 Eric Wieser. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Eric Wieser, Kevin Buzzard, Jujian Zhang
 -/
-
-import algebra.algebra.operations
-import algebra.algebra.subalgebra.basic
-import algebra.direct_sum.algebra
+import Mathbin.Algebra.Algebra.Operations
+import Mathbin.Algebra.Algebra.Subalgebra.Basic
+import Mathbin.Algebra.DirectSum.Algebra
 
 /-!
 # Internally graded rings and algebras
@@ -40,193 +39,175 @@ mapping `⨁ i, A i →+ ⨆ i, A i` can be obtained as
 internally graded ring
 -/
 
-open_locale direct_sum big_operators
 
-variables {ι : Type*} {S R : Type*}
+open_locale DirectSum BigOperators
 
-section direct_sum
-variables [decidable_eq ι]
+variable {ι : Type _} {S R : Type _}
+
+section DirectSum
+
+variable [DecidableEq ι]
 
 /-! #### From `add_submonoid`s -/
 
-namespace add_submonoid
+
+namespace AddSubmonoid
 
 /-- Build a `gsemiring` instance for a collection of `add_submonoid`s. -/
-instance gsemiring [add_monoid ι] [semiring R]
-  (A : ι → add_submonoid R) [set_like.graded_monoid A] :
-  direct_sum.gsemiring (λ i, A i) :=
-{ mul_zero := λ i j _, subtype.ext (mul_zero _),
-  zero_mul := λ i j _, subtype.ext (zero_mul _),
-  mul_add := λ i j _ _ _, subtype.ext (mul_add _ _ _),
-  add_mul := λ i j _ _ _, subtype.ext (add_mul _ _ _),
-  ..set_like.gmonoid A }
+instance gsemiring [AddMonoidₓ ι] [Semiringₓ R] (A : ι → AddSubmonoid R) [SetLike.GradedMonoid A] :
+    DirectSum.Gsemiring fun i => A i :=
+  { SetLike.gmonoid A with mul_zero := fun i j _ => Subtype.ext (mul_zero _),
+    zero_mul := fun i j _ => Subtype.ext (zero_mul _), mul_add := fun i j _ _ _ => Subtype.ext (mul_addₓ _ _ _),
+    add_mul := fun i j _ _ _ => Subtype.ext (add_mulₓ _ _ _) }
 
 /-- Build a `gcomm_semiring` instance for a collection of `add_submonoid`s. -/
-instance gcomm_semiring [add_comm_monoid ι] [comm_semiring R]
-  (A : ι → add_submonoid R) [set_like.graded_monoid A] :
-  direct_sum.gcomm_semiring (λ i, A i) :=
-{ ..set_like.gcomm_monoid A,
-  ..add_submonoid.gsemiring A, }
+instance gcommSemiring [AddCommMonoidₓ ι] [CommSemiringₓ R] (A : ι → AddSubmonoid R) [SetLike.GradedMonoid A] :
+    DirectSum.GcommSemiring fun i => A i :=
+  { SetLike.gcommMonoid A, AddSubmonoid.gsemiring A with }
 
-end add_submonoid
+end AddSubmonoid
 
 /-- The canonical ring isomorphism between `⨁ i, A i` and `R`-/
-def direct_sum.submonoid_coe_ring_hom [add_monoid ι] [semiring R]
-  (A : ι → add_submonoid R) [h : set_like.graded_monoid A] : (⨁ i, A i) →+* R :=
-direct_sum.to_semiring (λ i, (A i).subtype) rfl (λ _ _ _ _, rfl)
+def DirectSum.submonoidCoeRingHom [AddMonoidₓ ι] [Semiringₓ R] (A : ι → AddSubmonoid R) [h : SetLike.GradedMonoid A] :
+    (⨁ i, A i) →+* R :=
+  DirectSum.toSemiring (fun i => (A i).Subtype) rfl fun _ _ _ _ => rfl
 
 /-- The canonical ring isomorphism between `⨁ i, A i` and `R`-/
-@[simp] lemma direct_sum.submonoid_coe_ring_hom_of [add_monoid ι] [semiring R]
-  (A : ι → add_submonoid R) [h : set_like.graded_monoid A] (i : ι) (x : A i) :
-  direct_sum.submonoid_coe_ring_hom A (direct_sum.of (λ i, A i) i x) = x :=
-direct_sum.to_semiring_of _ _ _ _ _
+@[simp]
+theorem DirectSum.submonoid_coe_ring_hom_of [AddMonoidₓ ι] [Semiringₓ R] (A : ι → AddSubmonoid R)
+    [h : SetLike.GradedMonoid A] (i : ι) (x : A i) :
+    DirectSum.submonoidCoeRingHom A (DirectSum.of (fun i => A i) i x) = x :=
+  DirectSum.to_semiring_of _ _ _ _ _
 
-lemma direct_sum.coe_mul_apply_add_submonoid [add_monoid ι] [semiring R]
-  (A : ι → add_submonoid R) [set_like.graded_monoid A]
-  [Π (i : ι) (x : A i), decidable (x ≠ 0)] (r r' : ⨁ i, A i) (i : ι) :
-  ((r * r') i : R) =
-    ∑ ij in finset.filter (λ ij : ι × ι, ij.1 + ij.2 = i) (r.support.product r'.support),
-      r ij.1 * r' ij.2 :=
-begin
-  rw [direct_sum.mul_eq_sum_support_ghas_mul, dfinsupp.finset_sum_apply,
-    add_submonoid.coe_finset_sum],
-  simp_rw [direct_sum.coe_of_add_submonoid_apply, ←finset.sum_filter, set_like.coe_ghas_mul],
-end
+theorem DirectSum.coe_mul_apply_add_submonoid [AddMonoidₓ ι] [Semiringₓ R] (A : ι → AddSubmonoid R)
+    [SetLike.GradedMonoid A] [∀ i : ι x : A i, Decidable (x ≠ 0)] (r r' : ⨁ i, A i) (i : ι) :
+    ((r * r') i : R) =
+      ∑ ij in Finset.filter (fun ij : ι × ι => ij.1 + ij.2 = i) (r.support.product r'.support), r ij.1 * r' ij.2 :=
+  by
+  rw [DirectSum.mul_eq_sum_support_ghas_mul, Dfinsupp.finset_sum_apply, AddSubmonoid.coe_finset_sum]
+  simp_rw [DirectSum.coe_of_add_submonoid_apply, ← Finset.sum_filter, SetLike.coe_ghas_mul]
 
 /-! #### From `add_subgroup`s -/
 
-namespace add_subgroup
+
+namespace AddSubgroup
 
 /-- Build a `gsemiring` instance for a collection of `add_subgroup`s. -/
-instance gsemiring [add_monoid ι] [ring R]
-  (A : ι → add_subgroup R) [h : set_like.graded_monoid A] :
-  direct_sum.gsemiring (λ i, A i) :=
-have i' : set_like.graded_monoid (λ i, (A i).to_add_submonoid) := {..h},
-by exactI add_submonoid.gsemiring (λ i, (A i).to_add_submonoid)
+instance gsemiring [AddMonoidₓ ι] [Ringₓ R] (A : ι → AddSubgroup R) [h : SetLike.GradedMonoid A] :
+    DirectSum.Gsemiring fun i => A i :=
+  have i' : SetLike.GradedMonoid fun i => (A i).toAddSubmonoid := { h with }
+  AddSubmonoid.gsemiring fun i => (A i).toAddSubmonoid
 
 /-- Build a `gcomm_semiring` instance for a collection of `add_subgroup`s. -/
-instance gcomm_semiring [add_comm_group ι] [comm_ring R]
-  (A : ι → add_subgroup R) [h : set_like.graded_monoid A] :
-  direct_sum.gsemiring (λ i, A i) :=
-have i' : set_like.graded_monoid (λ i, (A i).to_add_submonoid) := {..h},
-by exactI add_submonoid.gsemiring (λ i, (A i).to_add_submonoid)
+instance gcommSemiring [AddCommGroupₓ ι] [CommRingₓ R] (A : ι → AddSubgroup R) [h : SetLike.GradedMonoid A] :
+    DirectSum.Gsemiring fun i => A i :=
+  have i' : SetLike.GradedMonoid fun i => (A i).toAddSubmonoid := { h with }
+  AddSubmonoid.gsemiring fun i => (A i).toAddSubmonoid
 
-end add_subgroup
+end AddSubgroup
 
 /-- The canonical ring isomorphism between `⨁ i, A i` and `R`. -/
-def direct_sum.subgroup_coe_ring_hom [add_monoid ι] [ring R]
-  (A : ι → add_subgroup R) [set_like.graded_monoid A] : (⨁ i, A i) →+* R :=
-direct_sum.to_semiring (λ i, (A i).subtype) rfl (λ _ _ _ _, rfl)
+def DirectSum.subgroupCoeRingHom [AddMonoidₓ ι] [Ringₓ R] (A : ι → AddSubgroup R) [SetLike.GradedMonoid A] :
+    (⨁ i, A i) →+* R :=
+  DirectSum.toSemiring (fun i => (A i).Subtype) rfl fun _ _ _ _ => rfl
 
-@[simp] lemma direct_sum.subgroup_coe_ring_hom_of [add_monoid ι] [ring R]
-  (A : ι → add_subgroup R) [set_like.graded_monoid A] (i : ι) (x : A i) :
-  direct_sum.subgroup_coe_ring_hom A (direct_sum.of (λ i, A i) i x) = x :=
-direct_sum.to_semiring_of _ _ _ _ _
+@[simp]
+theorem DirectSum.subgroup_coe_ring_hom_of [AddMonoidₓ ι] [Ringₓ R] (A : ι → AddSubgroup R) [SetLike.GradedMonoid A]
+    (i : ι) (x : A i) : DirectSum.subgroupCoeRingHom A (DirectSum.of (fun i => A i) i x) = x :=
+  DirectSum.to_semiring_of _ _ _ _ _
 
-lemma direct_sum.coe_mul_apply_add_subgroup [add_monoid ι] [ring R]
-  (A : ι → add_subgroup R) [set_like.graded_monoid A] [Π (i : ι) (x : A i), decidable (x ≠ 0)]
-  (r r' : ⨁ i, A i) (i : ι) :
-  ((r * r') i : R) =
-    ∑ ij in finset.filter (λ ij : ι × ι, ij.1 + ij.2 = i) (r.support.product r'.support),
-      r ij.1 * r' ij.2 :=
-begin
-  rw [direct_sum.mul_eq_sum_support_ghas_mul, dfinsupp.finset_sum_apply,
-    add_subgroup.coe_finset_sum],
-  simp_rw [direct_sum.coe_of_add_subgroup_apply, ←finset.sum_filter, set_like.coe_ghas_mul],
-end
+theorem DirectSum.coe_mul_apply_add_subgroup [AddMonoidₓ ι] [Ringₓ R] (A : ι → AddSubgroup R) [SetLike.GradedMonoid A]
+    [∀ i : ι x : A i, Decidable (x ≠ 0)] (r r' : ⨁ i, A i) (i : ι) :
+    ((r * r') i : R) =
+      ∑ ij in Finset.filter (fun ij : ι × ι => ij.1 + ij.2 = i) (r.support.product r'.support), r ij.1 * r' ij.2 :=
+  by
+  rw [DirectSum.mul_eq_sum_support_ghas_mul, Dfinsupp.finset_sum_apply, AddSubgroup.coe_finset_sum]
+  simp_rw [DirectSum.coe_of_add_subgroup_apply, ← Finset.sum_filter, SetLike.coe_ghas_mul]
 
 /-! #### From `submodules`s -/
 
-namespace submodule
+
+namespace Submodule
 
 /-- Build a `gsemiring` instance for a collection of `submodule`s. -/
-instance gsemiring [add_monoid ι]
-  [comm_semiring S] [semiring R] [algebra S R]
-  (A : ι → submodule S R) [h : set_like.graded_monoid A] :
-  direct_sum.gsemiring (λ i, A i) :=
-have i' : set_like.graded_monoid (λ i, (A i).to_add_submonoid) := {..h},
-by exactI add_submonoid.gsemiring (λ i, (A i).to_add_submonoid)
+instance gsemiring [AddMonoidₓ ι] [CommSemiringₓ S] [Semiringₓ R] [Algebra S R] (A : ι → Submodule S R)
+    [h : SetLike.GradedMonoid A] : DirectSum.Gsemiring fun i => A i :=
+  have i' : SetLike.GradedMonoid fun i => (A i).toAddSubmonoid := { h with }
+  AddSubmonoid.gsemiring fun i => (A i).toAddSubmonoid
 
 /-- Build a `gsemiring` instance for a collection of `submodule`s. -/
-instance gcomm_semiring [add_comm_monoid ι]
-  [comm_semiring S] [comm_semiring R] [algebra S R]
-  (A : ι → submodule S R) [h : set_like.graded_monoid A] :
-  direct_sum.gcomm_semiring (λ i, A i) :=
-have i' : set_like.graded_monoid (λ i, (A i).to_add_submonoid) := {..h},
-by exactI add_submonoid.gcomm_semiring (λ i, (A i).to_add_submonoid)
+instance gcommSemiring [AddCommMonoidₓ ι] [CommSemiringₓ S] [CommSemiringₓ R] [Algebra S R] (A : ι → Submodule S R)
+    [h : SetLike.GradedMonoid A] : DirectSum.GcommSemiring fun i => A i :=
+  have i' : SetLike.GradedMonoid fun i => (A i).toAddSubmonoid := { h with }
+  AddSubmonoid.gcommSemiring fun i => (A i).toAddSubmonoid
 
 /-- Build a `galgebra` instance for a collection of `submodule`s. -/
-instance galgebra [add_monoid ι]
-  [comm_semiring S] [semiring R] [algebra S R]
-  (A : ι → submodule S R) [h : set_like.graded_monoid A] :
-  direct_sum.galgebra S (λ i, A i) :=
-{ to_fun := begin
-    refine ((algebra.linear_map S R).cod_restrict (A 0) $ λ r, _).to_add_monoid_hom,
-    exact submodule.one_le.mpr set_like.has_graded_one.one_mem (submodule.algebra_map_mem _),
-  end,
-  map_one := subtype.ext $ by exact (algebra_map S R).map_one,
-  map_mul := λ x y, sigma.subtype_ext (add_zero 0).symm $ (algebra_map S R).map_mul _ _,
-  commutes := λ r ⟨i, xi⟩,
-    sigma.subtype_ext ((zero_add i).trans (add_zero i).symm) $ algebra.commutes _ _,
-  smul_def := λ r ⟨i, xi⟩, sigma.subtype_ext (zero_add i).symm $ algebra.smul_def _ _ }
+instance galgebra [AddMonoidₓ ι] [CommSemiringₓ S] [Semiringₓ R] [Algebra S R] (A : ι → Submodule S R)
+    [h : SetLike.GradedMonoid A] : DirectSum.Galgebra S fun i => A i where
+  toFun := by
+    refine' (((Algebra.linearMap S R).codRestrict (A 0)) fun r => _).toAddMonoidHom
+    exact submodule.one_le.mpr SetLike.HasGradedOne.one_mem (Submodule.algebra_map_mem _)
+  map_one := Subtype.ext <| (algebraMap S R).map_one
+  map_mul := fun x y => Sigma.subtype_ext (add_zeroₓ 0).symm <| (algebraMap S R).map_mul _ _
+  commutes := fun r ⟨i, xi⟩ => Sigma.subtype_ext ((zero_addₓ i).trans (add_zeroₓ i).symm) <| Algebra.commutes _ _
+  smul_def := fun r ⟨i, xi⟩ => Sigma.subtype_ext (zero_addₓ i).symm <| Algebra.smul_def _ _
 
-@[simp] lemma set_like.coe_galgebra_to_fun [add_monoid ι]
-  [comm_semiring S] [semiring R] [algebra S R]
-  (A : ι → submodule S R) [h : set_like.graded_monoid A] (s : S) :
-    ↑(@direct_sum.galgebra.to_fun _ S (λ i, A i) _ _ _ _ _ _ _ s) = (algebra_map S R s : R) := rfl
+@[simp]
+theorem setLike.coe_galgebra_to_fun [AddMonoidₓ ι] [CommSemiringₓ S] [Semiringₓ R] [Algebra S R] (A : ι → Submodule S R)
+    [h : SetLike.GradedMonoid A] (s : S) :
+    ↑(@DirectSum.Galgebra.toFun _ S (fun i => A i) _ _ _ _ _ _ _ s) = (algebraMap S R s : R) :=
+  rfl
 
 /-- A direct sum of powers of a submodule of an algebra has a multiplicative structure. -/
-instance nat_power_graded_monoid
-  [comm_semiring S] [semiring R] [algebra S R] (p : submodule S R) :
-  set_like.graded_monoid (λ i : ℕ, p ^ i) :=
-{ one_mem := by { rw [←one_le, pow_zero], exact le_rfl },
-  mul_mem := λ i j p q hp hq, by { rw pow_add, exact submodule.mul_mem_mul hp hq } }
+instance nat_power_graded_monoid [CommSemiringₓ S] [Semiringₓ R] [Algebra S R] (p : Submodule S R) :
+    SetLike.GradedMonoid fun i : ℕ => p ^ i where
+  one_mem := by
+    rw [← one_le, pow_zeroₓ]
+    exact le_rfl
+  mul_mem := fun i j p q hp hq => by
+    rw [pow_addₓ]
+    exact Submodule.mul_mem_mul hp hq
 
-end submodule
+end Submodule
 
 /-- The canonical algebra isomorphism between `⨁ i, A i` and `R`. -/
-def direct_sum.submodule_coe_alg_hom [add_monoid ι]
-  [comm_semiring S] [semiring R] [algebra S R]
-  (A : ι → submodule S R) [h : set_like.graded_monoid A] : (⨁ i, A i) →ₐ[S] R :=
-direct_sum.to_algebra S _ (λ i, (A i).subtype) rfl (λ _ _ _ _, rfl) (λ _, rfl)
+def DirectSum.submoduleCoeAlgHom [AddMonoidₓ ι] [CommSemiringₓ S] [Semiringₓ R] [Algebra S R] (A : ι → Submodule S R)
+    [h : SetLike.GradedMonoid A] : (⨁ i, A i) →ₐ[S] R :=
+  DirectSum.toAlgebra S _ (fun i => (A i).Subtype) rfl (fun _ _ _ _ => rfl) fun _ => rfl
 
 /-- The supremum of submodules that form a graded monoid is a subalgebra, and equal to the range of
 `direct_sum.submodule_coe_alg_hom`. -/
-lemma submodule.supr_eq_to_submodule_range [add_monoid ι]
-  [comm_semiring S] [semiring R] [algebra S R] (A : ι → submodule S R) [set_like.graded_monoid A] :
-  (⨆ i, A i) = (direct_sum.submodule_coe_alg_hom A).range.to_submodule :=
-(submodule.supr_eq_range_dfinsupp_lsum A).trans $ set_like.coe_injective rfl
+theorem Submodule.supr_eq_to_submodule_range [AddMonoidₓ ι] [CommSemiringₓ S] [Semiringₓ R] [Algebra S R]
+    (A : ι → Submodule S R) [SetLike.GradedMonoid A] :
+    (⨆ i, A i) = (DirectSum.submoduleCoeAlgHom A).range.toSubmodule :=
+  (Submodule.supr_eq_range_dfinsupp_lsum A).trans <| SetLike.coe_injective rfl
 
-@[simp] lemma direct_sum.submodule_coe_alg_hom_of [add_monoid ι]
-  [comm_semiring S] [semiring R] [algebra S R]
-  (A : ι → submodule S R) [h : set_like.graded_monoid A] (i : ι) (x : A i) :
-  direct_sum.submodule_coe_alg_hom A (direct_sum.of (λ i, A i) i x) = x :=
-direct_sum.to_semiring_of _ rfl (λ _ _ _ _, rfl) _ _
+@[simp]
+theorem DirectSum.submodule_coe_alg_hom_of [AddMonoidₓ ι] [CommSemiringₓ S] [Semiringₓ R] [Algebra S R]
+    (A : ι → Submodule S R) [h : SetLike.GradedMonoid A] (i : ι) (x : A i) :
+    DirectSum.submoduleCoeAlgHom A (DirectSum.of (fun i => A i) i x) = x :=
+  DirectSum.to_semiring_of _ rfl (fun _ _ _ _ => rfl) _ _
 
-lemma direct_sum.coe_mul_apply_submodule [add_monoid ι]
-  [comm_semiring S] [semiring R] [algebra S R]
-  (A : ι → submodule S R) [Π (i : ι) (x : A i), decidable (x ≠ 0)]
-  [set_like.graded_monoid A] (r r' : ⨁ i, A i) (i : ι) :
-  ((r * r') i : R) =
-    ∑ ij in finset.filter (λ ij : ι × ι, ij.1 + ij.2 = i) (r.support.product r'.support),
-      r ij.1 * r' ij.2 :=
-begin
-  rw [direct_sum.mul_eq_sum_support_ghas_mul, dfinsupp.finset_sum_apply, submodule.coe_sum],
-  simp_rw [direct_sum.coe_of_submodule_apply, ←finset.sum_filter, set_like.coe_ghas_mul],
-end
+theorem DirectSum.coe_mul_apply_submodule [AddMonoidₓ ι] [CommSemiringₓ S] [Semiringₓ R] [Algebra S R]
+    (A : ι → Submodule S R) [∀ i : ι x : A i, Decidable (x ≠ 0)] [SetLike.GradedMonoid A] (r r' : ⨁ i, A i) (i : ι) :
+    ((r * r') i : R) =
+      ∑ ij in Finset.filter (fun ij : ι × ι => ij.1 + ij.2 = i) (r.support.product r'.support), r ij.1 * r' ij.2 :=
+  by
+  rw [DirectSum.mul_eq_sum_support_ghas_mul, Dfinsupp.finset_sum_apply, Submodule.coe_sum]
+  simp_rw [DirectSum.coe_of_submodule_apply, ← Finset.sum_filter, SetLike.coe_ghas_mul]
 
-end direct_sum
+end DirectSum
 
-section homogeneous_element
+section HomogeneousElement
 
-lemma set_like.is_homogeneous_zero_submodule [has_zero ι]
-  [semiring S] [add_comm_monoid R] [module S R]
-  (A : ι → submodule S R) : set_like.is_homogeneous A (0 : R) :=
-⟨0, submodule.zero_mem _⟩
+theorem SetLike.is_homogeneous_zero_submodule [Zero ι] [Semiringₓ S] [AddCommMonoidₓ R] [Module S R]
+    (A : ι → Submodule S R) : SetLike.IsHomogeneous A (0 : R) :=
+  ⟨0, Submodule.zero_mem _⟩
 
-lemma set_like.is_homogeneous.smul [comm_semiring S] [semiring R] [algebra S R]
-  {A : ι → submodule S R} {s : S}
-  {r : R} (hr : set_like.is_homogeneous A r) : set_like.is_homogeneous A (s • r) :=
-let ⟨i, hi⟩ := hr in ⟨i, submodule.smul_mem _ _ hi⟩
+theorem SetLike.IsHomogeneous.smul [CommSemiringₓ S] [Semiringₓ R] [Algebra S R] {A : ι → Submodule S R} {s : S} {r : R}
+    (hr : SetLike.IsHomogeneous A r) : SetLike.IsHomogeneous A (s • r) :=
+  let ⟨i, hi⟩ := hr
+  ⟨i, Submodule.smul_mem _ _ hi⟩
 
-end homogeneous_element
+end HomogeneousElement
+

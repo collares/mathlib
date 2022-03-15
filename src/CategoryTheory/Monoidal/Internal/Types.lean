@@ -3,9 +3,9 @@ Copyright (c) 2020 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import algebra.category.Mon.basic
-import category_theory.monoidal.CommMon_
-import category_theory.monoidal.types
+import Mathbin.Algebra.Category.Mon.Basic
+import Mathbin.CategoryTheory.Monoidal.CommMon_
+import Mathbin.CategoryTheory.Monoidal.Types
 
 /-!
 # `Mon_ (Type u) ≌ Mon.{u}`
@@ -16,119 +16,128 @@ is equivalent to the category of "native" bundled monoids.
 Moreover, this equivalence is compatible with the forgetful functors to `Type`.
 -/
 
-universes v u
 
-open category_theory
+universe v u
 
-namespace Mon_Type_equivalence_Mon
+open CategoryTheory
 
-instance Mon_monoid (A : Mon_ (Type u)) : monoid (A.X) :=
-{ one := A.one punit.star,
-  mul := λ x y, A.mul (x, y),
-  one_mul := λ x, by convert congr_fun A.one_mul (punit.star, x),
-  mul_one := λ x, by convert congr_fun A.mul_one (x, punit.star),
-  mul_assoc := λ x y z, by convert congr_fun A.mul_assoc ((x, y), z), }
+namespace monTypeEquivalenceMon
 
-/--
-Converting a monoid object in `Type` to a bundled monoid.
+instance monMonoid (A : Mon_ (Type u)) : Monoidₓ A.x where
+  one := A.one PUnit.unit
+  mul := fun x y => A.mul (x, y)
+  one_mul := fun x => by
+    convert congr_funₓ A.one_mul (PUnit.unit, x)
+  mul_one := fun x => by
+    convert congr_funₓ A.mul_one (x, PUnit.unit)
+  mul_assoc := fun x y z => by
+    convert congr_funₓ A.mul_assoc ((x, y), z)
+
+/-- Converting a monoid object in `Type` to a bundled monoid.
 -/
-def functor : Mon_ (Type u) ⥤ Mon.{u} :=
-{ obj := λ A, ⟨A.X⟩,
-  map := λ A B f,
-  { to_fun := f.hom,
-    map_one' := congr_fun f.one_hom punit.star,
-    map_mul' := λ x y, congr_fun f.mul_hom (x, y), }, }
+def functor : Mon_ (Type u) ⥤ Mon.{u} where
+  obj := fun A => ⟨A.x⟩
+  map := fun A B f =>
+    { toFun := f.Hom, map_one' := congr_funₓ f.OneHom PUnit.unit, map_mul' := fun x y => congr_funₓ f.MulHom (x, y) }
 
-/--
-Converting a bundled monoid to a monoid object in `Type`.
+/-- Converting a bundled monoid to a monoid object in `Type`.
 -/
-def inverse : Mon.{u} ⥤ Mon_ (Type u) :=
-{ obj := λ A,
-  { X := A,
-    one := λ _, 1,
-    mul := λ p, p.1 * p.2,
-    mul_assoc' := by { ext ⟨⟨x, y⟩, z⟩, simp [mul_assoc], }, },
-  map := λ A B f,
-  { hom := f, }, }
+def inverse : Mon.{u} ⥤ Mon_ (Type u) where
+  obj := fun A =>
+    { x := A, one := fun _ => 1, mul := fun p => p.1 * p.2,
+      mul_assoc' := by
+        ext ⟨⟨x, y⟩, z⟩
+        simp [mul_assoc] }
+  map := fun A B f => { Hom := f }
 
-end Mon_Type_equivalence_Mon
+end monTypeEquivalenceMon
 
-open Mon_Type_equivalence_Mon
+open monTypeEquivalenceMon
 
-/--
-The category of internal monoid objects in `Type`
+/-- The category of internal monoid objects in `Type`
 is equivalent to the category of "native" bundled monoids.
 -/
-def Mon_Type_equivalence_Mon : Mon_ (Type u) ≌ Mon.{u} :=
-{ functor := functor,
-  inverse := inverse,
-  unit_iso := nat_iso.of_components
-    (λ A, { hom := { hom := 𝟙 _, }, inv := { hom := 𝟙 _, }, })
-    (by tidy),
-  counit_iso := nat_iso.of_components (λ A,
-  { hom := { to_fun := id, map_one' := rfl, map_mul' := λ x y, rfl, },
-    inv := { to_fun := id, map_one' := rfl, map_mul' := λ x y, rfl, }, }) (by tidy), }
+def monTypeEquivalenceMon : Mon_ (Type u) ≌ Mon.{u} where
+  Functor := Functor
+  inverse := inverse
+  unitIso :=
+    NatIso.ofComponents (fun A => { Hom := { Hom := 𝟙 _ }, inv := { Hom := 𝟙 _ } })
+      (by
+        tidy)
+  counitIso :=
+    NatIso.ofComponents
+      (fun A =>
+        { Hom := { toFun := id, map_one' := rfl, map_mul' := fun x y => rfl },
+          inv := { toFun := id, map_one' := rfl, map_mul' := fun x y => rfl } })
+      (by
+        tidy)
 
-/--
-The equivalence `Mon_ (Type u) ≌ Mon.{u}`
+/-- The equivalence `Mon_ (Type u) ≌ Mon.{u}`
 is naturally compatible with the forgetful functors to `Type u`.
 -/
-def Mon_Type_equivalence_Mon_forget :
-  Mon_Type_equivalence_Mon.functor ⋙ forget Mon ≅ Mon_.forget (Type u) :=
-nat_iso.of_components (λ A, iso.refl _) (by tidy)
+def monTypeEquivalenceMonForget : MonTypeEquivalenceMon.functor ⋙ forget Mon ≅ Mon_.forget (Type u) :=
+  NatIso.ofComponents (fun A => Iso.refl _)
+    (by
+      tidy)
 
-instance Mon_Type_inhabited : inhabited (Mon_ (Type u)) :=
-⟨Mon_Type_equivalence_Mon.inverse.obj (Mon.of punit)⟩
+instance monTypeInhabited : Inhabited (Mon_ (Type u)) :=
+  ⟨MonTypeEquivalenceMon.inverse.obj (Mon.of PUnit)⟩
 
+namespace commMonTypeEquivalenceCommMon
 
-namespace CommMon_Type_equivalence_CommMon
+instance commMonCommMonoid (A : CommMon_ (Type u)) : CommMonoidₓ A.x :=
+  { MonTypeEquivalenceMon.monMonoid A.toMon_ with
+    mul_comm := fun x y => by
+      convert congr_funₓ A.mul_comm (y, x) }
 
-instance CommMon_comm_monoid (A : CommMon_ (Type u)) : comm_monoid (A.X) :=
-{ mul_comm := λ x y, by convert congr_fun A.mul_comm (y, x),
-  ..Mon_Type_equivalence_Mon.Mon_monoid A.to_Mon_ }
-
-/--
-Converting a commutative monoid object in `Type` to a bundled commutative monoid.
+/-- Converting a commutative monoid object in `Type` to a bundled commutative monoid.
 -/
-def functor : CommMon_ (Type u) ⥤ CommMon.{u} :=
-{ obj := λ A, ⟨A.X⟩,
-  map := λ A B f, Mon_Type_equivalence_Mon.functor.map f, }
+def functor : CommMon_ (Type u) ⥤ CommMon.{u} where
+  obj := fun A => ⟨A.x⟩
+  map := fun A B f => MonTypeEquivalenceMon.functor.map f
 
-/--
-Converting a bundled commutative monoid to a commutative monoid object in `Type`.
+/-- Converting a bundled commutative monoid to a commutative monoid object in `Type`.
 -/
-def inverse : CommMon.{u} ⥤ CommMon_ (Type u) :=
-{ obj := λ A,
-  { mul_comm' := by { ext ⟨x, y⟩, exact comm_monoid.mul_comm y x, },
-    ..Mon_Type_equivalence_Mon.inverse.obj ((forget₂ CommMon Mon).obj A), },
-  map := λ A B f, Mon_Type_equivalence_Mon.inverse.map f, }
+def inverse : CommMon.{u} ⥤ CommMon_ (Type u) where
+  obj := fun A =>
+    { MonTypeEquivalenceMon.inverse.obj ((forget₂ CommMon Mon).obj A) with
+      mul_comm' := by
+        ext ⟨x, y⟩
+        exact CommMonoidₓ.mul_comm y x }
+  map := fun A B f => MonTypeEquivalenceMon.inverse.map f
 
-end CommMon_Type_equivalence_CommMon
+end commMonTypeEquivalenceCommMon
 
-open CommMon_Type_equivalence_CommMon
+open commMonTypeEquivalenceCommMon
 
-/--
-The category of internal commutative monoid objects in `Type`
+/-- The category of internal commutative monoid objects in `Type`
 is equivalent to the category of "native" bundled commutative monoids.
 -/
-def CommMon_Type_equivalence_CommMon : CommMon_ (Type u) ≌ CommMon.{u} :=
-{ functor := functor,
-  inverse := inverse,
-  unit_iso := nat_iso.of_components
-    (λ A, { hom := { hom := 𝟙 _, }, inv := { hom := 𝟙 _, }, })
-    (by tidy),
-  counit_iso := nat_iso.of_components (λ A,
-  { hom := { to_fun := id, map_one' := rfl, map_mul' := λ x y, rfl, },
-    inv := { to_fun := id, map_one' := rfl, map_mul' := λ x y, rfl, }, }) (by tidy), }
+def commMonTypeEquivalenceCommMon : CommMon_ (Type u) ≌ CommMon.{u} where
+  Functor := Functor
+  inverse := inverse
+  unitIso :=
+    NatIso.ofComponents (fun A => { Hom := { Hom := 𝟙 _ }, inv := { Hom := 𝟙 _ } })
+      (by
+        tidy)
+  counitIso :=
+    NatIso.ofComponents
+      (fun A =>
+        { Hom := { toFun := id, map_one' := rfl, map_mul' := fun x y => rfl },
+          inv := { toFun := id, map_one' := rfl, map_mul' := fun x y => rfl } })
+      (by
+        tidy)
 
-/--
-The equivalences `Mon_ (Type u) ≌ Mon.{u}` and `CommMon_ (Type u) ≌ CommMon.{u}`
+/-- The equivalences `Mon_ (Type u) ≌ Mon.{u}` and `CommMon_ (Type u) ≌ CommMon.{u}`
 are naturally compatible with the forgetful functors to `Mon` and `Mon_ (Type u)`.
 -/
-def CommMon_Type_equivalence_CommMon_forget :
-  CommMon_Type_equivalence_CommMon.functor ⋙ forget₂ CommMon Mon ≅
-  CommMon_.forget₂_Mon_ (Type u) ⋙ Mon_Type_equivalence_Mon.functor :=
-nat_iso.of_components (λ A, iso.refl _) (by tidy)
+def commMonTypeEquivalenceCommMonForget :
+    CommMonTypeEquivalenceCommMon.functor ⋙ forget₂ CommMon Mon ≅
+      CommMon_.forget₂Mon_ (Type u) ⋙ MonTypeEquivalenceMon.functor :=
+  NatIso.ofComponents (fun A => Iso.refl _)
+    (by
+      tidy)
 
-instance CommMon_Type_inhabited : inhabited (CommMon_ (Type u)) :=
-⟨CommMon_Type_equivalence_CommMon.inverse.obj (CommMon.of punit)⟩
+instance commMonTypeInhabited : Inhabited (CommMon_ (Type u)) :=
+  ⟨CommMonTypeEquivalenceCommMon.inverse.obj (CommMon.of PUnit)⟩
+

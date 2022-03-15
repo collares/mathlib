@@ -3,8 +3,8 @@ Copyright (c) 2020 Jannis Limperg. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jannis Limperg
 -/
-import data.bool.basic
-import tactic.core
+import Mathbin.Data.Bool.Basic
+import Mathbin.Tactic.Core
 
 /-!
 # Better `clear` tactics
@@ -25,7 +25,8 @@ dependencies between hypotheses. This implementation strategy was suggested by
 Simon Hudon.
 -/
 
-open native tactic interactive lean.parser
+
+open Native Tactic Interactive Lean.Parser
 
 /-- Clears all the hypotheses in `hyps`. The tactic fails if any of the `hyps`
 is not a local or if the target depends on any of the `hyps`. It also fails if
@@ -34,33 +35,33 @@ is not a local or if the target depends on any of the `hyps`. It also fails if
 If there are local hypotheses or definitions, say `H`, which are not in `hyps`
 but depend on one of the `hyps`, what we do depends on `clear_dependent`. If it
 is true, `H` is implicitly also cleared. If it is false, `clear'` fails. -/
-meta def tactic.clear' (clear_dependent : bool) (hyps : list expr) : tactic unit := do
-tgt ← target,
--- Check if the target depends on any of the hyps. Doing this (instead of
--- letting one of the later tactics fail) lets us give a much more informative
--- error message.
-hyps.mmap' (λ h, do
-  dep ← kdepends_on tgt h,
-  when dep $ fail $
-    format!"Cannot clear hypothesis {h} since the target depends on it."),
-n ← revert_lst hyps,
--- If revert_lst reverted more hypotheses than we wanted to clear, there must
--- have been other hypotheses dependent on some of the hyps.
-when (! clear_dependent && (n ≠ hyps.length)) $ fail $ format.join
-  [ "Some of the following hypotheses cannot be cleared because other "
-  , "hypotheses depend on (some of) them:\n"
-  , format.intercalate ", " (hyps.map to_fmt)
-  ],
-v ← mk_meta_var tgt,
-intron n,
-exact v,
-gs ← get_goals,
-set_goals $ v :: gs
+unsafe def tactic.clear' (clear_dependent : Bool) (hyps : List expr) : tactic Unit := do
+  let tgt ← target
+  -- Check if the target depends on any of the hyps. Doing this (instead of
+      -- letting one of the later tactics fail) lets us give a much more informative
+      -- error message.
+      hyps
+      fun h => do
+      let dep ← kdepends_on tgt h
+      when dep <| fail <| f! "Cannot clear hypothesis {h} since the target depends on it."
+  let n ← revert_lst hyps
+  -- If revert_lst reverted more hypotheses than we wanted to clear, there must
+        -- have been other hypotheses dependent on some of the hyps.
+        when
+        (!clear_dependent && n ≠ hyps) <|
+      fail <|
+        format.join
+          ["Some of the following hypotheses cannot be cleared because other ",
+            "hypotheses depend on (some of) them:\n", format.intercalate ", " (hyps to_fmt)]
+  let v ← mk_meta_var tgt
+  intron n
+  exact v
+  let gs ← get_goals
+  set_goals <| v :: gs
 
-namespace tactic.interactive
+namespace Tactic.Interactive
 
-/--
-An improved version of the standard `clear` tactic. `clear` is sensitive to the
+/-- An improved version of the standard `clear` tactic. `clear` is sensitive to the
 order of its arguments: `clear x y` may fail even though both `x` and `y` could
 be cleared (if the type of `y` depends on `x`). `clear'` lifts this limitation.
 
@@ -73,12 +74,11 @@ begin
 end
 ```
 -/
-meta def clear' (p : parse (many ident)) : tactic unit := do
-hyps ← p.mmap get_local,
-tactic.clear' false hyps
+unsafe def clear' (p : parse (many ident)) : tactic Unit := do
+  let hyps ← p.mmap get_local
+  tactic.clear' False hyps
 
-/--
-A variant of `clear'` which clears not only the given hypotheses, but also any
+/-- A variant of `clear'` which clears not only the given hypotheses, but also any
 other hypotheses depending on them.
 
 ```lean
@@ -90,15 +90,14 @@ begin
 end
 ```
  -/
-meta def clear_dependent (p : parse (many ident)) : tactic unit := do
-hyps ← p.mmap get_local,
-tactic.clear' true hyps
+unsafe def clear_dependent (p : parse (many ident)) : tactic Unit := do
+  let hyps ← p.mmap get_local
+  tactic.clear' True hyps
 
 add_tactic_doc
-{ name       := "clear'",
-  category   := doc_category.tactic,
-  decl_names := [`tactic.interactive.clear', `tactic.interactive.clear_dependent],
-  tags       := ["context management"],
-  inherit_description_from := `tactic.interactive.clear' }
+  { Name := "clear'", category := DocCategory.tactic,
+    declNames := [`tactic.interactive.clear', `tactic.interactive.clear_dependent], tags := ["context management"],
+    inheritDescriptionFrom := `tactic.interactive.clear' }
 
-end tactic.interactive
+end Tactic.Interactive
+

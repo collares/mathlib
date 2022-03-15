@@ -3,10 +3,10 @@ Copyright (c) 2018 Simon Hudon. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Simon Hudon, Patrick Massot
 -/
-import algebra.module.basic
-import algebra.regular.smul
-import algebra.ring.pi
-import group_theory.group_action.pi
+import Mathbin.Algebra.Module.Basic
+import Mathbin.Algebra.Regular.Smul
+import Mathbin.Algebra.Ring.Pi
+import Mathbin.GroupTheory.GroupAction.Pi
 
 /-!
 # Pi instances for modules
@@ -14,64 +14,62 @@ import group_theory.group_action.pi
 This file defines instances for module and related structures on Pi Types
 -/
 
-universes u v w
-variable {I : Type u}     -- The indexing type
-variable {f : I → Type v} -- The family of types already equipped with instances
-variables (x y : Π i, f i) (i : I)
 
-namespace pi
+universe u v w
 
-lemma _root_.is_smul_regular.pi {α : Type*} [Π i, has_scalar α $ f i] {k : α}
-  (hk : Π i, is_smul_regular (f i) k) : is_smul_regular (Π i, f i) k :=
-λ _ _ h, funext $ λ i, hk i (congr_fun h i : _)
+variable {I : Type u}
 
-instance smul_with_zero (α) [has_zero α]
-  [Π i, has_zero (f i)] [Π i, smul_with_zero α (f i)] :
-  smul_with_zero α (Π i, f i) :=
-{ smul_zero := λ _, funext $ λ _, smul_zero' (f _) _,
-  zero_smul := λ _, funext $ λ _, zero_smul _ _,
-  ..pi.has_scalar }
+-- The indexing type
+variable {f : I → Type v}
 
-instance smul_with_zero' {g : I → Type*} [Π i, has_zero (g i)]
-  [Π i, has_zero (f i)] [Π i, smul_with_zero (g i) (f i)] :
-  smul_with_zero (Π i, g i) (Π i, f i) :=
-{ smul_zero := λ _, funext $ λ _, smul_zero' (f _) _,
-  zero_smul := λ _, funext $ λ _, zero_smul _ _,
-  ..pi.has_scalar' }
+-- The family of types already equipped with instances
+variable (x y : ∀ i, f i) (i : I)
 
-instance mul_action_with_zero (α) [monoid_with_zero α]
-  [Π i, has_zero (f i)] [Π i, mul_action_with_zero α (f i)] :
-  mul_action_with_zero α (Π i, f i) :=
-{ ..pi.mul_action _,
-  ..pi.smul_with_zero _ }
+namespace Pi
 
-instance mul_action_with_zero' {g : I → Type*} [Π i, monoid_with_zero (g i)]
-  [Π i, has_zero (f i)] [Π i, mul_action_with_zero (g i) (f i)] :
-  mul_action_with_zero (Π i, g i) (Π i, f i) :=
-{ ..pi.mul_action',
-  ..pi.smul_with_zero' }
+theorem _root_.is_smul_regular.pi {α : Type _} [∀ i, HasScalar α <| f i] {k : α} (hk : ∀ i, IsSmulRegular (f i) k) :
+    IsSmulRegular (∀ i, f i) k := fun _ _ h => funext fun i => hk i (congr_funₓ h i : _)
 
-variables (I f)
+instance smulWithZero α [Zero α] [∀ i, Zero (f i)] [∀ i, SmulWithZero α (f i)] : SmulWithZero α (∀ i, f i) :=
+  { Pi.hasScalar with smul_zero := fun _ => funext fun _ => smul_zero' (f _) _,
+    zero_smul := fun _ => funext fun _ => zero_smul _ _ }
 
-instance module (α) {r : semiring α} {m : ∀ i, add_comm_monoid $ f i}
-  [∀ i, module α $ f i] :
-  @module α (Π i : I, f i) r (@pi.add_comm_monoid I f m) :=
-{ add_smul := λ c f g, funext $ λ i, add_smul _ _ _,
-  zero_smul := λ f, funext $ λ i, zero_smul α _,
-  ..pi.distrib_mul_action _ }
+instance smulWithZero' {g : I → Type _} [∀ i, Zero (g i)] [∀ i, Zero (f i)] [∀ i, SmulWithZero (g i) (f i)] :
+    SmulWithZero (∀ i, g i) (∀ i, f i) :=
+  { Pi.hasScalar' with smul_zero := fun _ => funext fun _ => smul_zero' (f _) _,
+    zero_smul := fun _ => funext fun _ => zero_smul _ _ }
 
-variables {I f}
+instance mulActionWithZero α [MonoidWithZeroₓ α] [∀ i, Zero (f i)] [∀ i, MulActionWithZero α (f i)] :
+    MulActionWithZero α (∀ i, f i) :=
+  { Pi.mulAction _, Pi.smulWithZero _ with }
 
-instance module' {g : I → Type*} {r : Π i, semiring (f i)} {m : Π i, add_comm_monoid (g i)}
-  [Π i, module (f i) (g i)] :
-  module (Π i, f i) (Π i, g i) :=
-{ add_smul := by { intros, ext1, apply add_smul },
-  zero_smul := by { intros, ext1, apply zero_smul } }
+instance mulActionWithZero' {g : I → Type _} [∀ i, MonoidWithZeroₓ (g i)] [∀ i, Zero (f i)]
+    [∀ i, MulActionWithZero (g i) (f i)] : MulActionWithZero (∀ i, g i) (∀ i, f i) :=
+  { Pi.mulAction', Pi.smulWithZero' with }
 
-instance (α) {r : semiring α} {m : Π i, add_comm_monoid $ f i}
-  [Π i, module α $ f i] [∀ i, no_zero_smul_divisors α $ f i] :
-  no_zero_smul_divisors α (Π i : I, f i) :=
-⟨λ c x h, or_iff_not_imp_left.mpr (λ hc, funext
-  (λ i, (smul_eq_zero.mp (congr_fun h i)).resolve_left hc))⟩
+variable (I f)
 
-end pi
+instance module α {r : Semiringₓ α} {m : ∀ i, AddCommMonoidₓ <| f i} [∀ i, Module α <| f i] :
+    @Module α (∀ i : I, f i) r (@Pi.addCommMonoid I f m) :=
+  { Pi.distribMulAction _ with add_smul := fun c f g => funext fun i => add_smul _ _ _,
+    zero_smul := fun f => funext fun i => zero_smul α _ }
+
+variable {I f}
+
+instance module' {g : I → Type _} {r : ∀ i, Semiringₓ (f i)} {m : ∀ i, AddCommMonoidₓ (g i)} [∀ i, Module (f i) (g i)] :
+    Module (∀ i, f i) (∀ i, g i) where
+  add_smul := by
+    intros
+    ext1
+    apply add_smul
+  zero_smul := by
+    intros
+    ext1
+    apply zero_smul
+
+instance α {r : Semiringₓ α} {m : ∀ i, AddCommMonoidₓ <| f i} [∀ i, Module α <| f i]
+    [∀ i, NoZeroSmulDivisors α <| f i] : NoZeroSmulDivisors α (∀ i : I, f i) :=
+  ⟨fun c x h => or_iff_not_imp_left.mpr fun hc => funext fun i => (smul_eq_zero.mp (congr_funₓ h i)).resolve_left hc⟩
+
+end Pi
+

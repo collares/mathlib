@@ -3,8 +3,7 @@ Copyright (c) 2020 Jannis Limperg. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jannis Limperg
 -/
-
-import tactic.core
+import Mathbin.Tactic.Core
 
 /-!
 # A tactic for type-based naming of variables
@@ -29,21 +28,21 @@ local attribute [instance, priority 1000] foo
 ```
 -/
 
-universes u v
 
-/--
-Type class for associating a type `α` with typical variable names for elements
+universe u v
+
+/-- Type class for associating a type `α` with typical variable names for elements
 of `α`. See `tactic.typical_variable_names`.
 -/
-class has_variable_names (α : Sort u) : Type :=
-(names : list name)
-(names_nonempty : 0 < names.length . tactic.exact_dec_trivial)
+class HasVariableNames (α : Sort u) : Type where
+  names : List Name
+  names_nonempty : 0 < names.length := by
+    run_tac
+      tactic.exact_dec_trivial
 
+namespace Tactic
 
-namespace tactic
-
-/--
-`typical_variable_names t` obtains typical names for variables of type `t`.
+/-- `typical_variable_names t` obtains typical names for variables of type `t`.
 The returned list is guaranteed to be nonempty. Fails if there is no instance
 `has_typical_variable_names t`.
 
@@ -51,124 +50,118 @@ The returned list is guaranteed to be nonempty. Fails if there is no instance
 typical_variable_names `(ℕ) = [`n, `m, `o]
 ```
 -/
-meta def typical_variable_names (t : expr) : tactic (list name) :=
-(do
-  names ← to_expr ``(has_variable_names.names %%t),
-  eval_expr (list name) names)
-<|> fail! "typical_variable_names: unable to get typical variable names for type {t}"
+unsafe def typical_variable_names (t : expr) : tactic (List Name) :=
+  (do
+      let names ← to_expr (pquote.1 (HasVariableNames.names (%%ₓt)))
+      eval_expr (List Name) names) <|>
+    throwError "typical_variable_names: unable to get typical variable names for type {← t}"
 
-end tactic
+end Tactic
 
+namespace HasVariableNames
 
-namespace has_variable_names
-
-/--
-`@make_listlike_instance α _ β` creates an instance `has_variable_names β` from
+/-- `@make_listlike_instance α _ β` creates an instance `has_variable_names β` from
 an instance `has_variable_names α`. If `α` has associated names `a`, `b`, ...,
 the generated instance for `β` has names `as`, `bs`, ... This can be used to
 create instances for 'containers' such as lists or sets.
 -/
-def make_listlike_instance (α : Sort u) [has_variable_names α]
-  {β : Sort v} : has_variable_names β :=
-⟨ (names α).map $ λ n, n.append_suffix "s",
-  by simp [names_nonempty] ⟩
+def makeListlikeInstance (α : Sort u) [HasVariableNames α] {β : Sort v} : HasVariableNames β :=
+  ⟨(names α).map fun n => n.appendSuffix "s", by
+    simp [names_nonempty]⟩
 
-/--
-`@make_inheriting_instance α _ β` creates an instance `has_variable_names β`
+/-- `@make_inheriting_instance α _ β` creates an instance `has_variable_names β`
 from an instance `has_variable_names α`. The generated instance contains the
 same variable names as that of `α`. This can be used to create instances for
 'wrapper' types like `option` and `subtype`.
 -/
-def make_inheriting_instance (α : Sort u) [has_variable_names α]
-  {β : Sort v} : has_variable_names β :=
-⟨names α, names_nonempty⟩
+def makeInheritingInstance (α : Sort u) [HasVariableNames α] {β : Sort v} : HasVariableNames β :=
+  ⟨names α, names_nonempty⟩
 
-end has_variable_names
+end HasVariableNames
 
-open has_variable_names
+open HasVariableNames
 
+instance {n α} [HasVariableNames α] : HasVariableNames (DArray n fun _ => α) :=
+  makeListlikeInstance α
 
-instance {n α} [has_variable_names α] : has_variable_names (d_array n (λ _, α)) :=
-make_listlike_instance α
+instance : HasVariableNames Bool :=
+  ⟨[`b]⟩
 
-instance : has_variable_names bool :=
-⟨[`b]⟩
+instance : HasVariableNames Charₓ :=
+  ⟨[`c]⟩
 
-instance : has_variable_names char :=
-⟨[`c]⟩
+instance {n} : HasVariableNames (Finₓ n) :=
+  ⟨[`n, `m, `o]⟩
 
-instance {n} : has_variable_names (fin n):=
-⟨[`n, `m, `o]⟩
+instance : HasVariableNames ℤ :=
+  ⟨[`n, `m, `o]⟩
 
-instance : has_variable_names ℤ :=
-⟨[`n, `m, `o]⟩
+instance {α} [HasVariableNames α] : HasVariableNames (List α) :=
+  makeListlikeInstance α
 
-instance {α} [has_variable_names α] : has_variable_names (list α) :=
-make_listlike_instance α
+instance : HasVariableNames ℕ :=
+  ⟨[`n, `m, `o]⟩
 
-instance : has_variable_names ℕ :=
-⟨[`n, `m, `o]⟩
+instance Prop.hasVariableNames : HasVariableNames Prop :=
+  ⟨[`P, `Q, `R]⟩
 
-instance Prop.has_variable_names : has_variable_names Prop :=
-⟨[`P, `Q, `R]⟩
+instance {α} [HasVariableNames α] : HasVariableNames (Thunkₓ α) :=
+  makeInheritingInstance α
 
-instance {α} [has_variable_names α] : has_variable_names (thunk α) :=
-make_inheriting_instance α
+instance {α β} : HasVariableNames (Prod α β) :=
+  ⟨[`p]⟩
 
-instance {α β} : has_variable_names (prod α β) :=
-⟨[`p]⟩
+instance {α β} : HasVariableNames (PProd α β) :=
+  ⟨[`p]⟩
 
-instance {α β} : has_variable_names (pprod α β) :=
-⟨[`p]⟩
+instance {α} {β : α → Type _} : HasVariableNames (Sigma β) :=
+  ⟨[`p]⟩
 
-instance {α} {β : α → Type*} : has_variable_names (sigma β) :=
-⟨[`p]⟩
+instance {α} {β : α → Sort _} : HasVariableNames (PSigma β) :=
+  ⟨[`p]⟩
 
-instance {α} {β : α → Sort*} : has_variable_names (psigma β) :=
-⟨[`p]⟩
+instance {α} [HasVariableNames α] {p : α → Prop} : HasVariableNames (Subtype p) :=
+  makeInheritingInstance α
 
-instance {α} [has_variable_names α] {p : α → Prop} : has_variable_names (subtype p) :=
-make_inheriting_instance α
+instance {α} [HasVariableNames α] : HasVariableNames (Option α) :=
+  makeInheritingInstance α
 
-instance {α} [has_variable_names α] : has_variable_names (option α) :=
-make_inheriting_instance α
+instance {α} : HasVariableNames (BinTree α) :=
+  ⟨[`t]⟩
 
-instance {α} : has_variable_names (bin_tree α) :=
-⟨[`t]⟩
+instance {α} [HasVariableNames α] {lt : α → α → Prop} : HasVariableNames (Rbtree α lt) :=
+  makeListlikeInstance α
 
-instance {α} [has_variable_names α] {lt : α → α → Prop} :
-  has_variable_names (rbtree α lt) :=
-make_listlike_instance α
+unsafe instance {α} [HasVariableNames α] : HasVariableNames (native.rb_set α) :=
+  makeListlikeInstance α
 
-meta instance {α} [has_variable_names α] : has_variable_names (native.rb_set α) :=
-make_listlike_instance α
+instance {α} [HasVariableNames α] : HasVariableNames (Set α) :=
+  makeListlikeInstance α
 
-instance {α} [has_variable_names α] : has_variable_names (set α) :=
-make_listlike_instance α
+instance : HasVariableNames Stringₓ :=
+  ⟨[`s]⟩
 
-instance : has_variable_names string :=
-⟨[`s]⟩
+instance : HasVariableNames Unsigned :=
+  ⟨[`n, `m, `o]⟩
 
-instance : has_variable_names unsigned :=
-⟨[`n, `m, `o]⟩
+instance {α} {β : α → Sort _} : HasVariableNames (∀ a : α, β a) :=
+  ⟨[`f, `g, `h]⟩
 
-instance {α} {β : α → Sort*} : has_variable_names (Π a : α, β a) :=
-⟨[`f, `g, `h]⟩
+instance : HasVariableNames Name :=
+  ⟨[`n]⟩
 
-instance : has_variable_names name :=
-⟨[`n]⟩
+unsafe instance {α} : HasVariableNames (tactic α) :=
+  ⟨[`t]⟩
 
-meta instance {α} : has_variable_names (tactic α) :=
-⟨[`t]⟩
+unsafe instance : HasVariableNames expr :=
+  ⟨[`e]⟩
 
-meta instance : has_variable_names expr :=
-⟨[`e]⟩
+unsafe instance : HasVariableNames pexpr :=
+  ⟨[`e]⟩
 
-meta instance : has_variable_names pexpr :=
-⟨[`e]⟩
+unsafe instance : HasVariableNames level :=
+  ⟨[`u, `v, `w]⟩
 
-meta instance : has_variable_names level :=
-⟨[`u, `v, `w]⟩
+instance : HasVariableNames BinderInfo :=
+  ⟨[`bi]⟩
 
-instance : has_variable_names binder_info :=
-⟨[`bi]⟩

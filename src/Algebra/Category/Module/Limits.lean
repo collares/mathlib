@@ -3,9 +3,9 @@ Copyright (c) 2020 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import algebra.category.Module.basic
-import algebra.category.Group.limits
-import algebra.direct_limit
+import Mathbin.Algebra.Category.Module.Basic
+import Mathbin.Algebra.Category.Group.Limits
+import Mathbin.Algebra.DirectLimit
 
 /-!
 # The category of R-modules has all limits
@@ -14,187 +14,186 @@ Further, these limits are preserved by the forgetful functor --- that is,
 the underlying types are just the limits in the category of types.
 -/
 
-open category_theory
-open category_theory.limits
 
-universes u v
+open CategoryTheory
 
-noncomputable theory
+open CategoryTheory.Limits
 
-namespace Module
+universe u v
 
-variables {R : Type u} [ring R]
-variables {J : Type v} [small_category J]
+noncomputable section
 
-instance add_comm_group_obj (F : J ⥤ Module.{v} R) (j) :
-  add_comm_group ((F ⋙ forget (Module R)).obj j) :=
-by { change add_comm_group (F.obj j), apply_instance }
+namespace ModuleCat
 
-instance module_obj (F : J ⥤ Module.{v} R) (j) :
-  module R ((F ⋙ forget (Module R)).obj j) :=
-by { change module R (F.obj j), apply_instance }
+variable {R : Type u} [Ringₓ R]
 
-/--
-The flat sections of a functor into `Module R` form a submodule of all sections.
+variable {J : Type v} [SmallCategory J]
+
+instance addCommGroupObj (F : J ⥤ ModuleCat.{v} R) j : AddCommGroupₓ ((F ⋙ forget (ModuleCat R)).obj j) := by
+  change AddCommGroupₓ (F.obj j)
+  infer_instance
+
+instance moduleObj (F : J ⥤ ModuleCat.{v} R) j : Module R ((F ⋙ forget (ModuleCat R)).obj j) := by
+  change Module R (F.obj j)
+  infer_instance
+
+/-- The flat sections of a functor into `Module R` form a submodule of all sections.
 -/
-def sections_submodule (F : J ⥤ Module R) :
-  submodule R (Π j, F.obj j) :=
-{ carrier := (F ⋙ forget (Module R)).sections,
-  smul_mem' := λ r s sh j j' f,
-  begin
-    simp only [forget_map_eq_coe, functor.comp_map, pi.smul_apply, linear_map.map_smul],
-    dsimp [functor.sections] at sh,
-    rw sh f,
-  end,
-  ..(AddGroup.sections_add_subgroup
-          (F ⋙ forget₂ (Module R) AddCommGroup.{v} ⋙ forget₂ AddCommGroup AddGroup.{v})) }
+def sectionsSubmodule (F : J ⥤ ModuleCat R) : Submodule R (∀ j, F.obj j) :=
+  { AddGroupₓₓ.sectionsAddSubgroup
+      (F ⋙ forget₂ (ModuleCat R) AddCommGroupₓₓ.{v} ⋙ forget₂ AddCommGroupₓₓ AddGroupₓₓ.{v}) with
+    Carrier := (F ⋙ forget (ModuleCat R)).sections,
+    smul_mem' := fun r s sh j j' f => by
+      simp only [forget_map_eq_coe, functor.comp_map, Pi.smul_apply, LinearMap.map_smul]
+      dsimp [functor.sections]  at sh
+      rw [sh f] }
 
 -- Adding the following instance speeds up `limit_module` noticeably,
 -- by preventing a bad unfold of `limit_add_comm_group`.
-instance limit_add_comm_monoid (F : J ⥤ Module R) :
-  add_comm_monoid (types.limit_cone (F ⋙ forget (Module.{v} R))).X :=
-show add_comm_monoid (sections_submodule F), by apply_instance
+instance limitAddCommMonoid (F : J ⥤ ModuleCat R) : AddCommMonoidₓ (Types.limitCone (F ⋙ forget (ModuleCat.{v} R))).x :=
+  show AddCommMonoidₓ (sectionsSubmodule F) by
+    infer_instance
 
-instance limit_add_comm_group (F : J ⥤ Module R) :
-  add_comm_group (types.limit_cone (F ⋙ forget (Module.{v} R))).X :=
-show add_comm_group (sections_submodule F), by apply_instance
+instance limitAddCommGroup (F : J ⥤ ModuleCat R) : AddCommGroupₓ (Types.limitCone (F ⋙ forget (ModuleCat.{v} R))).x :=
+  show AddCommGroupₓ (sectionsSubmodule F) by
+    infer_instance
 
-instance limit_module (F : J ⥤ Module R) :
-  module R (types.limit_cone (F ⋙ forget (Module.{v} R))).X :=
-show module R (sections_submodule F), by apply_instance
+instance limitModule (F : J ⥤ ModuleCat R) : Module R (Types.limitCone (F ⋙ forget (ModuleCat.{v} R))).x :=
+  show Module R (sectionsSubmodule F) by
+    infer_instance
 
 /-- `limit.π (F ⋙ forget Ring) j` as a `ring_hom`. -/
-def limit_π_linear_map (F : J ⥤ Module R) (j) :
-  (types.limit_cone (F ⋙ forget (Module.{v} R))).X →ₗ[R] (F ⋙ forget (Module R)).obj j :=
-{ to_fun := (types.limit_cone (F ⋙ forget (Module R))).π.app j,
-  map_smul' := λ x y, rfl,
-  map_add' := λ x y, rfl }
+def limitπLinearMap (F : J ⥤ ModuleCat R) j :
+    (Types.limitCone (F ⋙ forget (ModuleCat.{v} R))).x →ₗ[R] (F ⋙ forget (ModuleCat R)).obj j where
+  toFun := (Types.limitCone (F ⋙ forget (ModuleCat R))).π.app j
+  map_smul' := fun x y => rfl
+  map_add' := fun x y => rfl
 
-namespace has_limits
+namespace HasLimits
+
+/-- Construction of a limit cone in `Module R`.
+(Internal use only; use the limits API.)
+-/
 -- The next two definitions are used in the construction of `has_limits (Module R)`.
 -- After that, the limits should be constructed using the generic limits API,
 -- e.g. `limit F`, `limit.cone F`, and `limit.is_limit F`.
-
-/--
-Construction of a limit cone in `Module R`.
-(Internal use only; use the limits API.)
--/
-def limit_cone (F : J ⥤ Module.{v} R) : cone F :=
-{ X := Module.of R (types.limit_cone (F ⋙ forget _)).X,
+def limitCone (F : J ⥤ ModuleCat.{v} R) : Cone F where
+  x := ModuleCat.of R (Types.limitCone (F ⋙ forget _)).x
   π :=
-  { app := limit_π_linear_map F,
-    naturality' := λ j j' f,
-      linear_map.coe_injective ((types.limit_cone (F ⋙ forget _)).π.naturality f) } }
+    { app := limitπLinearMap F,
+      naturality' := fun j j' f => LinearMap.coe_injective ((Types.limitCone (F ⋙ forget _)).π.naturality f) }
 
-/--
-Witness that the limit cone in `Module R` is a limit cone.
+/-- Witness that the limit cone in `Module R` is a limit cone.
 (Internal use only; use the limits API.)
 -/
-def limit_cone_is_limit (F : J ⥤ Module R) : is_limit (limit_cone F) :=
-by refine is_limit.of_faithful
-      (forget (Module R)) (types.limit_cone_is_limit _)
-      (λ s, ⟨_, _, _⟩) (λ s, rfl);
-    intros;
-    ext j;
-    simp only [subtype.coe_mk, functor.map_cone_π_app, forget_map_eq_coe,
-         linear_map.map_add, linear_map.map_smul];
-    refl
+def limitConeIsLimit (F : J ⥤ ModuleCat R) : IsLimit (limitCone F) := by
+  refine'
+      is_limit.of_faithful (forget (ModuleCat R)) (types.limit_cone_is_limit _) (fun s => ⟨_, _, _⟩) fun s => rfl <;>
+    intros <;>
+      ext j <;>
+        simp only [Subtype.coe_mk, functor.map_cone_π_app, forget_map_eq_coe, LinearMap.map_add, LinearMap.map_smul] <;>
+          rfl
 
-end has_limits
+end HasLimits
 
-open has_limits
+open HasLimits
 
+-- ././Mathport/Syntax/Translate/Basic.lean:1201:38: unsupported irreducible non-definition
 /-- The category of R-modules has all limits. -/
-@[irreducible]
-instance has_limits : has_limits (Module.{v} R) :=
-{ has_limits_of_shape := λ J 𝒥, by exactI
-  { has_limit := λ F, has_limit.mk
-    { cone     := limit_cone F,
-      is_limit := limit_cone_is_limit F } } }
+irreducible_def has_limits : HasLimits (ModuleCat.{v} R) :=
+  { HasLimitsOfShape := fun J 𝒥 =>
+      { HasLimit := fun F => has_limit.mk { Cone := limit_cone F, IsLimit := limit_cone_is_limit F } } }
 
-/--
-An auxiliary declaration to speed up typechecking.
+/-- An auxiliary declaration to speed up typechecking.
 -/
-def forget₂_AddCommGroup_preserves_limits_aux (F : J ⥤ Module R) :
-  is_limit ((forget₂ (Module R) AddCommGroup).map_cone (limit_cone F)) :=
-AddCommGroup.limit_cone_is_limit (F ⋙ forget₂ (Module R) AddCommGroup)
+def forget₂AddCommGroupPreservesLimitsAux (F : J ⥤ ModuleCat R) :
+    IsLimit ((forget₂ (ModuleCat R) AddCommGroupₓₓ).mapCone (limitCone F)) :=
+  AddCommGroupₓₓ.limitConeIsLimit (F ⋙ forget₂ (ModuleCat R) AddCommGroupₓₓ)
 
-/--
-The forgetful functor from R-modules to abelian groups preserves all limits.
+/-- The forgetful functor from R-modules to abelian groups preserves all limits.
 -/
-instance forget₂_AddCommGroup_preserves_limits :
-  preserves_limits (forget₂ (Module R) AddCommGroup.{v}) :=
-{ preserves_limits_of_shape := λ J 𝒥, by exactI
-  { preserves_limit := λ F, preserves_limit_of_preserves_limit_cone
-      (limit_cone_is_limit F) (forget₂_AddCommGroup_preserves_limits_aux F) } }
+instance forget₂AddCommGroupPreservesLimits : PreservesLimits (forget₂ (ModuleCat R) AddCommGroupₓₓ.{v}) where
+  PreservesLimitsOfShape := fun J 𝒥 =>
+    { PreservesLimit := fun F =>
+        preserves_limit_of_preserves_limit_cone (limit_cone_is_limit F) (forget₂_AddCommGroup_preserves_limits_aux F) }
 
-/--
-The forgetful functor from R-modules to types preserves all limits.
+/-- The forgetful functor from R-modules to types preserves all limits.
 -/
-instance forget_preserves_limits : preserves_limits (forget (Module R)) :=
-{ preserves_limits_of_shape := λ J 𝒥, by exactI
-  { preserves_limit := λ F, preserves_limit_of_preserves_limit_cone
-    (limit_cone_is_limit F) (types.limit_cone_is_limit (F ⋙ forget _)) } }
+instance forgetPreservesLimits : PreservesLimits (forget (ModuleCat R)) where
+  PreservesLimitsOfShape := fun J 𝒥 =>
+    { PreservesLimit := fun F =>
+        preserves_limit_of_preserves_limit_cone (limit_cone_is_limit F) (types.limit_cone_is_limit (F ⋙ forget _)) }
 
-section direct_limit
-open module
+section DirectLimit
 
-variables {ι : Type v}
-variables [dec_ι : decidable_eq ι] [preorder ι]
-variables (G : ι → Type v)
-variables [Π i, add_comm_group (G i)] [Π i, module R (G i)]
-variables (f : Π i j, i ≤ j → G i →ₗ[R] G j) [directed_system G (λ i j h, f i j h)]
+open Module
+
+variable {ι : Type v}
+
+variable [dec_ι : DecidableEq ι] [Preorderₓ ι]
+
+variable (G : ι → Type v)
+
+variable [∀ i, AddCommGroupₓ (G i)] [∀ i, Module R (G i)]
+
+variable (f : ∀ i j, i ≤ j → G i →ₗ[R] G j) [DirectedSystem G fun i j h => f i j h]
 
 /-- The diagram (in the sense of `category_theory`)
  of an unbundled `direct_limit` of modules. -/
 @[simps]
-def direct_limit_diagram : ι ⥤ Module R :=
-{ obj := λ i, Module.of R (G i),
-  map := λ i j hij, f i j hij.le,
-  map_id' := λ i, by { apply linear_map.ext, intro x, apply module.directed_system.map_self },
-  map_comp' := λ i j k hij hjk,
-  begin
-    apply linear_map.ext,
-    intro x,
-    symmetry,
-    apply module.directed_system.map_map
-  end }
+def directLimitDiagram : ι ⥤ ModuleCat R where
+  obj := fun i => ModuleCat.of R (G i)
+  map := fun i j hij => f i j hij.le
+  map_id' := fun i => by
+    apply LinearMap.ext
+    intro x
+    apply Module.DirectedSystem.map_self
+  map_comp' := fun i j k hij hjk => by
+    apply LinearMap.ext
+    intro x
+    symm
+    apply Module.DirectedSystem.map_map
 
-variables [decidable_eq ι]
+variable [DecidableEq ι]
 
 /-- The `cocone` on `direct_limit_diagram` corresponding to
 the unbundled `direct_limit` of modules.
 
 In `direct_limit_is_colimit` we show that it is a colimit cocone. -/
 @[simps]
-def direct_limit_cocone : cocone (direct_limit_diagram G f) :=
-{ X := Module.of R $ direct_limit G f,
-  ι := { app := module.direct_limit.of R ι G f,
-         naturality' := λ i j hij, by { apply linear_map.ext, intro x, exact direct_limit.of_f } } }
+def directLimitCocone : Cocone (directLimitDiagram G f) where
+  x := ModuleCat.of R <| DirectLimit G f
+  ι :=
+    { app := Module.DirectLimit.of R ι G f,
+      naturality' := fun i j hij => by
+        apply LinearMap.ext
+        intro x
+        exact direct_limit.of_f }
 
 /-- The unbundled `direct_limit` of modules is a colimit
 in the sense of `category_theory`. -/
 @[simps]
-def direct_limit_is_colimit [nonempty ι] [is_directed ι (≤)] :
-  is_colimit (direct_limit_cocone G f) :=
-{ desc := λ s, direct_limit.lift R ι G f s.ι.app $ λ i j h x, by { rw [←s.w (hom_of_le h)], refl },
-  fac' := λ s i,
-  begin
-    apply linear_map.ext,
-    intro x,
-    dsimp,
-    exact direct_limit.lift_of s.ι.app _ x,
-  end,
-  uniq' := λ s m h,
-  begin
-    have : s.ι.app = λ i, linear_map.comp m (direct_limit.of R ι (λ i, G i) (λ i j H, f i j H) i),
-    { funext i, rw ← h, refl },
-    apply linear_map.ext,
-    intro x,
-    simp only [this],
-    apply module.direct_limit.lift_unique
-  end }
+def directLimitIsColimit [Nonempty ι] [IsDirected ι (· ≤ ·)] : IsColimit (directLimitCocone G f) where
+  desc := fun s =>
+    (DirectLimit.lift R ι G f s.ι.app) fun i j h x => by
+      rw [← s.w (hom_of_le h)]
+      rfl
+  fac' := fun s i => by
+    apply LinearMap.ext
+    intro x
+    dsimp
+    exact direct_limit.lift_of s.ι.app _ x
+  uniq' := fun s m h => by
+    have : s.ι.app = fun i => LinearMap.comp m (direct_limit.of R ι (fun i => G i) (fun i j H => f i j H) i) := by
+      funext i
+      rw [← h]
+      rfl
+    apply LinearMap.ext
+    intro x
+    simp only [this]
+    apply Module.DirectLimit.lift_unique
 
-end direct_limit
+end DirectLimit
 
-end Module
+end ModuleCat
+

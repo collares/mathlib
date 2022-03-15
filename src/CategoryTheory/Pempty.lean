@@ -3,7 +3,7 @@ Copyright (c) 2018 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison, Bhavik Mehta
 -/
-import category_theory.discrete_category
+import Mathbin.CategoryTheory.DiscreteCategory
 
 /-!
 # The empty category
@@ -11,42 +11,47 @@ import category_theory.discrete_category
 Defines a category structure on `pempty`, and the unique functor `pempty ⥤ C` for any category `C`.
 -/
 
-universes w v u -- morphism levels before object levels. See note [category_theory universes].
 
-namespace category_theory
-namespace functor
+universe w v u
 
-variables (C : Type u) [category.{v} C]
+-- morphism levels before object levels. See note [category_theory universes].
+namespace CategoryTheory
+
+namespace Functor
+
+variable (C : Type u) [Category.{v} C]
 
 /-- Equivalence between two empty categories. -/
-def empty_equivalence : discrete.{w} pempty ≌ discrete.{v} pempty :=
-equivalence.mk
-{ obj := pempty.elim, map := λ x, x.elim }
-{ obj := pempty.elim, map := λ x, x.elim }
-(by tidy) (by tidy)
+def emptyEquivalence : Discrete.{w} Pempty ≌ Discrete.{v} Pempty :=
+  Equivalence.mk { obj := Pempty.elimₓ, map := fun x => x.elim } { obj := Pempty.elimₓ, map := fun x => x.elim }
+    (by
+      tidy)
+    (by
+      tidy)
 
 /-- The canonical functor out of the empty category. -/
-def empty : discrete.{w} pempty ⥤ C := discrete.functor pempty.elim
+def empty : Discrete.{w} Pempty ⥤ C :=
+  Discrete.functor Pempty.elimₓ
 
 variable {C}
-/-- Any two functors out of the empty category are isomorphic. -/
-def empty_ext (F G : discrete.{w} pempty ⥤ C) : F ≅ G :=
-discrete.nat_iso (λ x, pempty.elim x)
 
-/--
-Any functor out of the empty category is isomorphic to the canonical functor from the empty
+/-- Any two functors out of the empty category are isomorphic. -/
+def emptyExt (F G : Discrete.{w} Pempty ⥤ C) : F ≅ G :=
+  Discrete.natIso fun x => Pempty.elimₓ x
+
+/-- Any functor out of the empty category is isomorphic to the canonical functor from the empty
 category.
 -/
-def unique_from_empty (F : discrete.{w} pempty ⥤ C) : F ≅ empty C :=
-empty_ext _ _
+def uniqueFromEmpty (F : Discrete.{w} Pempty ⥤ C) : F ≅ empty C :=
+  emptyExt _ _
 
-/--
-Any two functors out of the empty category are *equal*. You probably want to use
+/-- Any two functors out of the empty category are *equal*. You probably want to use
 `empty_ext` instead of this.
 -/
-lemma empty_ext' (F G : discrete.{w} pempty ⥤ C) : F = G :=
-functor.ext (λ x, x.elim) (λ x _ _, x.elim)
+theorem empty_ext' (F G : Discrete.{w} Pempty ⥤ C) : F = G :=
+  Functor.ext (fun x => x.elim) fun x _ _ => x.elim
 
-end functor
+end Functor
 
-end category_theory
+end CategoryTheory
+

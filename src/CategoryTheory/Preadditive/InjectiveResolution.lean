@@ -3,8 +3,8 @@ Copyright (c) 2022 Jujian Zhang. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jujian Zhang, Scott Morrison
 -/
-import category_theory.preadditive.injective
-import algebra.homology.single
+import Mathbin.CategoryTheory.Preadditive.Injective
+import Mathbin.Algebra.Homology.Single
 
 /-!
 # Injective resolutions
@@ -22,22 +22,24 @@ I⁰ ---> I¹ ---> ... ----> Iⁿ ---> ...
 ```
 -/
 
-noncomputable theory
 
-open category_theory
-open category_theory.limits
+noncomputable section
 
-universes v u
+open CategoryTheory
 
-namespace category_theory
-variables {C : Type u} [category.{v} C]
+open CategoryTheory.Limits
 
-open injective
+universe v u
 
-variables [has_zero_object C] [has_zero_morphisms C] [has_equalizers C] [has_images C]
+namespace CategoryTheory
 
-/--
-An `InjectiveResolution Z` consists of a bundled `ℕ`-indexed cochain complex of injective objects,
+variable {C : Type u} [Category.{v} C]
+
+open Injective
+
+variable [HasZeroObject C] [HasZeroMorphisms C] [HasEqualizers C] [HasImages C]
+
+/-- An `InjectiveResolution Z` consists of a bundled `ℕ`-indexed cochain complex of injective objects,
 along with a quasi-isomorphism to the complex consisting of just `Z` supported in degree `0`.
 
 Except in situations where you want to provide a particular injective resolution
@@ -50,57 +52,73 @@ you will not typically need to use this bundled object, and will instead use
   and when the category is `abelian` we will show `ι` is a quasi-iso).
 -/
 @[nolint has_inhabited_instance]
-structure InjectiveResolution (Z : C) :=
-(cocomplex : cochain_complex C ℕ)
-(ι: ((cochain_complex.single₀ C).obj Z) ⟶ cocomplex)
-(injective : ∀ n, injective (cocomplex.X n) . tactic.apply_instance)
-(exact₀ : exact (ι.f 0) (cocomplex.d 0 1) . tactic.apply_instance)
-(exact : ∀ n, exact (cocomplex.d n (n+1)) (cocomplex.d (n+1) (n+2)) . tactic.apply_instance)
-(mono : mono (ι.f 0) . tactic.apply_instance)
+structure InjectiveResolution (Z : C) where
+  cocomplex : CochainComplex C ℕ
+  ι : (CochainComplex.single₀ C).obj Z ⟶ cocomplex
+  Injective : ∀ n, Injective (cocomplex.x n) := by
+    run_tac
+      tactic.apply_instance
+  exact₀ : Exact (ι.f 0) (cocomplex.d 0 1) := by
+    run_tac
+      tactic.apply_instance
+  exact : ∀ n, Exact (cocomplex.d n (n + 1)) (cocomplex.d (n + 1) (n + 2)) := by
+    run_tac
+      tactic.apply_instance
+  mono : Mono (ι.f 0) := by
+    run_tac
+      tactic.apply_instance
 
-attribute [instance] InjectiveResolution.injective InjectiveResolution.exact₀
-  InjectiveResolution.exact InjectiveResolution.mono
+attribute [instance]
+  InjectiveResolution.injective InjectiveResolution.exact₀ InjectiveResolution.exact InjectiveResolution.mono
 
 /-- An object admits a injective resolution. -/
-class has_injective_resolution (Z : C) : Prop :=
-(out [] : nonempty (InjectiveResolution Z))
+class HasInjectiveResolution (Z : C) : Prop where
+  out {} : Nonempty (InjectiveResolution Z)
 
 section
-variables (C)
+
+variable (C)
 
 /-- You will rarely use this typeclass directly: it is implied by the combination
 `[enough_injectives C]` and `[abelian C]`. -/
-class has_injective_resolutions : Prop :=
-(out : ∀ Z : C, has_injective_resolution Z)
+class HasInjectiveResolutions : Prop where
+  out : ∀ Z : C, HasInjectiveResolution Z
 
-attribute [instance, priority 100] has_injective_resolutions.out
+attribute [instance] has_injective_resolutions.out
 
 end
 
 namespace InjectiveResolution
 
-@[simp] lemma ι_f_succ {Z : C} (I : InjectiveResolution Z) (n : ℕ) :
-  I.ι.f (n+1) = 0 :=
-begin
-  apply zero_of_source_iso_zero,
-  dsimp, refl,
-end
+@[simp]
+theorem ι_f_succ {Z : C} (I : InjectiveResolution Z) (n : ℕ) : I.ι.f (n + 1) = 0 := by
+  apply zero_of_source_iso_zero
+  dsimp
+  rfl
 
-instance {Z : C} (I : InjectiveResolution Z) (n : ℕ) : category_theory.mono (I.ι.f n) :=
-by cases n; apply_instance
+instance {Z : C} (I : InjectiveResolution Z) (n : ℕ) : CategoryTheory.Mono (I.ι.f n) := by
+  cases n <;> infer_instance
 
 /-- An injective object admits a trivial injective resolution: itself in degree 0. -/
-def self (Z : C) [category_theory.injective Z] : InjectiveResolution Z :=
-{ cocomplex := (cochain_complex.single₀ C).obj Z,
-  ι := 𝟙 ((cochain_complex.single₀ C).obj Z),
-  injective := λ n, begin
-    cases n;
-    { dsimp, apply_instance },
-  end,
-  exact₀ := by { dsimp, apply_instance },
-  exact := λ n, by { dsimp, apply_instance, },
-  mono := by { dsimp, apply_instance, }, }
+def self (Z : C) [CategoryTheory.Injective Z] : InjectiveResolution Z where
+  cocomplex := (CochainComplex.single₀ C).obj Z
+  ι := 𝟙 ((CochainComplex.single₀ C).obj Z)
+  Injective := fun n => by
+    cases n <;>
+      · dsimp
+        infer_instance
+        
+  exact₀ := by
+    dsimp
+    infer_instance
+  exact := fun n => by
+    dsimp
+    infer_instance
+  mono := by
+    dsimp
+    infer_instance
 
 end InjectiveResolution
 
-end category_theory
+end CategoryTheory
+

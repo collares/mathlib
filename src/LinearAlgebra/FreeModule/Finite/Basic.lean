@@ -3,10 +3,9 @@ Copyright (c) 2021 Riccardo Brasca. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Riccardo Brasca
 -/
-
-import linear_algebra.free_module.basic
-import linear_algebra.matrix.to_lin
-import ring_theory.finiteness
+import Mathbin.LinearAlgebra.FreeModule.Basic
+import Mathbin.LinearAlgebra.Matrix.ToLin
+import Mathbin.RingTheory.Finiteness
 
 /-!
 # Finite and free modules
@@ -23,76 +22,68 @@ We provide some instances for finite and free modules.
   is finite.
 -/
 
-universes u v w
 
-variables (R : Type u) (M : Type v) (N : Type w)
+universe u v w
 
-namespace module.free
+variable (R : Type u) (M : Type v) (N : Type w)
 
-section ring
+namespace Module.Free
 
-variables [ring R] [add_comm_group M] [module R M] [module.free R M]
+section Ringₓ
+
+variable [Ringₓ R] [AddCommGroupₓ M] [Module R M] [Module.Free R M]
 
 /-- If a free module is finite, then any basis is finite. -/
-noncomputable
-instance [nontrivial R] [module.finite R M] :
-  fintype (module.free.choose_basis_index R M) :=
-begin
-  obtain ⟨h⟩ := id ‹module.finite R M›,
-  choose s hs using h,
-  exact basis_fintype_of_finite_spans ↑s hs (choose_basis _ _),
-end
+noncomputable instance [Nontrivial R] [Module.Finite R M] : Fintype (Module.Free.ChooseBasisIndex R M) := by
+  obtain ⟨h⟩ := id ‹Module.Finite R M›
+  choose s hs using h
+  exact basisFintypeOfFiniteSpans (↑s) hs (choose_basis _ _)
 
-end ring
+end Ringₓ
 
-section comm_ring
+section CommRingₓ
 
-variables [comm_ring R] [add_comm_group M] [module R M] [module.free R M]
-variables [add_comm_group N] [module R N] [module.free R N]
+variable [CommRingₓ R] [AddCommGroupₓ M] [Module R M] [Module.Free R M]
 
-instance [nontrivial R] [module.finite R M] [module.finite R N] : module.free R (M →ₗ[R] N) :=
-begin
-  classical,
-  exact of_equiv
-    (linear_map.to_matrix (module.free.choose_basis R M) (module.free.choose_basis R N)).symm,
-end
+variable [AddCommGroupₓ N] [Module R N] [Module.Free R N]
 
-variables {R M}
+instance [Nontrivial R] [Module.Finite R M] [Module.Finite R N] : Module.Free R (M →ₗ[R] N) := by
+  classical
+  exact of_equiv (LinearMap.toMatrix (Module.Free.chooseBasis R M) (Module.Free.chooseBasis R N)).symm
+
+variable {R M}
 
 /-- A free module with a basis indexed by a `fintype` is finite. -/
-lemma _root_.module.finite.of_basis {R : Type*} {M : Type*} {ι : Type*} [comm_ring R]
-  [add_comm_group M] [module R M] [fintype ι] (b : basis ι R M) : module.finite R M :=
-begin
-  classical,
-  refine ⟨⟨finset.univ.image b, _⟩⟩,
-  simp only [set.image_univ, finset.coe_univ, finset.coe_image, basis.span_eq],
-end
+theorem _root_.module.finite.of_basis {R : Type _} {M : Type _} {ι : Type _} [CommRingₓ R] [AddCommGroupₓ M]
+    [Module R M] [Fintype ι] (b : Basis ι R M) : Module.Finite R M := by
+  classical
+  refine' ⟨⟨finset.univ.image b, _⟩⟩
+  simp only [Set.image_univ, Finset.coe_univ, Finset.coe_image, Basis.span_eq]
 
-instance _root_.module.finite.matrix {ι₁ : Type*} [fintype ι₁] {ι₂ : Type*} [fintype ι₂] :
-  module.finite R (matrix ι₁ ι₂ R) :=
-module.finite.of_basis $ pi.basis $ λ i, pi.basis_fun R _
+instance _root_.module.finite.matrix {ι₁ : Type _} [Fintype ι₁] {ι₂ : Type _} [Fintype ι₂] :
+    Module.Finite R (Matrix ι₁ ι₂ R) :=
+  Module.Finite.of_basis <| Pi.basis fun i => Pi.basisFun R _
 
-instance [nontrivial R] [module.finite R M] [module.finite R N] :
-  module.finite R (M →ₗ[R] N) :=
-begin
-  classical,
-  have f := (linear_map.to_matrix (choose_basis R M) (choose_basis R N)).symm,
-  exact module.finite.of_surjective f.to_linear_map (linear_equiv.surjective f),
-end
+instance [Nontrivial R] [Module.Finite R M] [Module.Finite R N] : Module.Finite R (M →ₗ[R] N) := by
+  classical
+  have f := (LinearMap.toMatrix (choose_basis R M) (choose_basis R N)).symm
+  exact Module.Finite.of_surjective f.to_linear_map (LinearEquiv.surjective f)
 
-end comm_ring
+end CommRingₓ
 
-section integer
+section Integer
 
-variables [add_comm_group M] [module.finite ℤ M] [module.free ℤ M]
-variables [add_comm_group N] [module.finite ℤ N] [module.free ℤ N]
+variable [AddCommGroupₓ M] [Module.Finite ℤ M] [Module.Free ℤ M]
 
-instance : module.finite ℤ (M →+ N) :=
-module.finite.equiv (add_monoid_hom_lequiv_int ℤ).symm
+variable [AddCommGroupₓ N] [Module.Finite ℤ N] [Module.Free ℤ N]
 
-instance : module.free ℤ (M →+ N) :=
-module.free.of_equiv (add_monoid_hom_lequiv_int ℤ).symm
+instance : Module.Finite ℤ (M →+ N) :=
+  Module.Finite.equiv (addMonoidHomLequivInt ℤ).symm
 
-end integer
+instance : Module.Free ℤ (M →+ N) :=
+  Module.Free.of_equiv (addMonoidHomLequivInt ℤ).symm
 
-end module.free
+end Integer
+
+end Module.Free
+

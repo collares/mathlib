@@ -3,9 +3,9 @@ Copyright (c) 2018 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison, Johannes Hölzl, Yury Kudryashov
 -/
-import algebra.category.Group.basic
-import category_theory.concrete_category.reflects_isomorphisms
-import data.equiv.ring
+import Mathbin.Algebra.Category.Group.Basic
+import Mathbin.CategoryTheory.ConcreteCategory.ReflectsIsomorphisms
+import Mathbin.Data.Equiv.Ring
 
 /-!
 # Category instances for semiring, ring, comm_semiring, and comm_ring.
@@ -18,239 +18,285 @@ We introduce the bundled categories:
 along with the relevant forgetful functors between them.
 -/
 
-universes u v
 
-open category_theory
+universe u v
+
+open CategoryTheory
 
 /-- The category of semirings. -/
-def SemiRing : Type (u+1) := bundled semiring
+def SemiRing : Type (u + 1) :=
+  Bundled Semiringₓ
 
 namespace SemiRing
 
 /-- `ring_hom` doesn't actually assume associativity. This alias is needed to make the category
 theory machinery work. We use the same trick in `category_theory.Mon.assoc_monoid_hom`. -/
-abbreviation assoc_ring_hom (M N : Type*) [semiring M] [semiring N] := ring_hom M N
+abbrev AssocRingHom (M N : Type _) [Semiringₓ M] [Semiringₓ N] :=
+  RingHom M N
 
-instance bundled_hom : bundled_hom assoc_ring_hom :=
-⟨λ M N [semiring M] [semiring N], by exactI @ring_hom.to_fun M N _ _,
- λ M [semiring M], by exactI @ring_hom.id M _,
- λ M N P [semiring M] [semiring N] [semiring P], by exactI @ring_hom.comp M N P _ _ _,
- λ M N [semiring M] [semiring N], by exactI @ring_hom.coe_inj M N _ _⟩
+instance bundledHom : BundledHom AssocRingHom :=
+  ⟨fun [Semiringₓ N] => @RingHom.toFun M N _ _, fun [Semiringₓ M] => @RingHom.id M _, fun [Semiringₓ P] =>
+    @RingHom.comp M N P _ _ _, fun [Semiringₓ N] => @RingHom.coe_inj M N _ _⟩
 
-attribute [derive [large_category, concrete_category]] SemiRing
+deriving instance LargeCategory, ConcreteCategory for SemiRing
 
-instance : has_coe_to_sort SemiRing Type* := bundled.has_coe_to_sort
+instance : CoeSort SemiRing (Type _) :=
+  bundled.has_coe_to_sort
 
 /-- Construct a bundled SemiRing from the underlying type and typeclass. -/
-def of (R : Type u) [semiring R] : SemiRing := bundled.of R
+def of (R : Type u) [Semiringₓ R] : SemiRing :=
+  Bundled.of R
 
 /-- Typecheck a `ring_hom` as a morphism in `SemiRing`. -/
-def of_hom {R S : Type u} [semiring R] [semiring S] (f : R →+* S) : of R ⟶ of S := f
+def ofHom {R S : Type u} [Semiringₓ R] [Semiringₓ S] (f : R →+* S) : of R ⟶ of S :=
+  f
 
-instance : inhabited SemiRing := ⟨of punit⟩
+instance : Inhabited SemiRing :=
+  ⟨of PUnit⟩
 
-instance (R : SemiRing) : semiring R := R.str
+instance (R : SemiRing) : Semiringₓ R :=
+  R.str
 
-@[simp] lemma coe_of (R : Type u) [semiring R] : (SemiRing.of R : Type u) = R := rfl
+@[simp]
+theorem coe_of (R : Type u) [Semiringₓ R] : (SemiRing.of R : Type u) = R :=
+  rfl
 
-instance has_forget_to_Mon : has_forget₂ SemiRing Mon :=
-bundled_hom.mk_has_forget₂
-  (λ R hR, @monoid_with_zero.to_monoid R (@semiring.to_monoid_with_zero R hR))
-  (λ R₁ R₂, ring_hom.to_monoid_hom) (λ _ _ _, rfl)
+instance hasForgetToMon : HasForget₂ SemiRing Mon :=
+  BundledHom.mkHasForget₂ (fun R hR => @MonoidWithZeroₓ.toMonoid R (@Semiringₓ.toMonoidWithZero R hR))
+    (fun R₁ R₂ => RingHom.toMonoidHom) fun _ _ _ => rfl
 
-instance has_forget_to_AddCommMon : has_forget₂ SemiRing AddCommMon :=
--- can't use bundled_hom.mk_has_forget₂, since AddCommMon is an induced category
-{ forget₂ :=
-  { obj := λ R, AddCommMon.of R,
-    map := λ R₁ R₂ f, ring_hom.to_add_monoid_hom f } }
+instance hasForgetToAddCommMon : HasForget₂ SemiRing AddCommMon where
+  -- can't use bundled_hom.mk_has_forget₂, since AddCommMon is an induced category
+  forget₂ := { obj := fun R => AddCommMon.of R, map := fun R₁ R₂ f => RingHom.toAddMonoidHom f }
 
 end SemiRing
 
 /-- The category of rings. -/
-def Ring : Type (u+1) := bundled ring
+def Ringₓₓ : Type (u + 1) :=
+  Bundled Ringₓ
 
-namespace Ring
+namespace Ringₓₓ
 
-instance : bundled_hom.parent_projection @ring.to_semiring := ⟨⟩
+instance : BundledHom.ParentProjection @Ringₓ.toSemiring :=
+  ⟨⟩
 
-attribute [derive [(λ Ring, has_coe_to_sort Ring Type*), large_category, concrete_category]] Ring
+-- ././Mathport/Syntax/Translate/Basic.lean:980:9: unsupported derive handler λ Ring, has_coe_to_sort Ring (Type*)
+deriving instance [anonymous], LargeCategory, ConcreteCategory for Ringₓₓ
 
 /-- Construct a bundled Ring from the underlying type and typeclass. -/
-def of (R : Type u) [ring R] : Ring := bundled.of R
+def of (R : Type u) [Ringₓ R] : Ringₓₓ :=
+  Bundled.of R
 
 /-- Typecheck a `ring_hom` as a morphism in `Ring`. -/
-def of_hom {R S : Type u} [ring R] [ring S] (f : R →+* S) : of R ⟶ of S := f
+def ofHom {R S : Type u} [Ringₓ R] [Ringₓ S] (f : R →+* S) : of R ⟶ of S :=
+  f
 
-instance : inhabited Ring := ⟨of punit⟩
+instance : Inhabited Ringₓₓ :=
+  ⟨of PUnit⟩
 
-instance (R : Ring) : ring R := R.str
+instance (R : Ringₓₓ) : Ringₓ R :=
+  R.str
 
-@[simp] lemma coe_of (R : Type u) [ring R] : (Ring.of R : Type u) = R := rfl
+@[simp]
+theorem coe_of (R : Type u) [Ringₓ R] : (Ringₓₓ.of R : Type u) = R :=
+  rfl
 
-instance has_forget_to_SemiRing : has_forget₂ Ring SemiRing := bundled_hom.forget₂ _ _
-instance has_forget_to_AddCommGroup : has_forget₂ Ring AddCommGroup :=
--- can't use bundled_hom.mk_has_forget₂, since AddCommGroup is an induced category
-{ forget₂ :=
-  { obj := λ R, AddCommGroup.of R,
-    map := λ R₁ R₂ f, ring_hom.to_add_monoid_hom f } }
+instance hasForgetToSemiRing : HasForget₂ Ringₓₓ SemiRing :=
+  BundledHom.forget₂ _ _
 
-end Ring
+instance hasForgetToAddCommGroup : HasForget₂ Ringₓₓ AddCommGroupₓₓ where
+  -- can't use bundled_hom.mk_has_forget₂, since AddCommGroup is an induced category
+  forget₂ := { obj := fun R => AddCommGroupₓₓ.of R, map := fun R₁ R₂ f => RingHom.toAddMonoidHom f }
+
+end Ringₓₓ
 
 /-- The category of commutative semirings. -/
-def CommSemiRing : Type (u+1) := bundled comm_semiring
+def CommSemiRing : Type (u + 1) :=
+  Bundled CommSemiringₓ
 
 namespace CommSemiRing
 
-instance : bundled_hom.parent_projection @comm_semiring.to_semiring := ⟨⟩
+instance : BundledHom.ParentProjection @CommSemiringₓ.toSemiring :=
+  ⟨⟩
 
-attribute [derive [large_category, concrete_category]] CommSemiRing
+deriving instance LargeCategory, ConcreteCategory for CommSemiRing
 
-instance : has_coe_to_sort CommSemiRing Type* := bundled.has_coe_to_sort
+instance : CoeSort CommSemiRing (Type _) :=
+  bundled.has_coe_to_sort
 
 /-- Construct a bundled CommSemiRing from the underlying type and typeclass. -/
-def of (R : Type u) [comm_semiring R] : CommSemiRing := bundled.of R
+def of (R : Type u) [CommSemiringₓ R] : CommSemiRing :=
+  Bundled.of R
 
 /-- Typecheck a `ring_hom` as a morphism in `CommSemiRing`. -/
-def of_hom {R S : Type u} [comm_semiring R] [comm_semiring S] (f : R →+* S) : of R ⟶ of S := f
+def ofHom {R S : Type u} [CommSemiringₓ R] [CommSemiringₓ S] (f : R →+* S) : of R ⟶ of S :=
+  f
 
-instance : inhabited CommSemiRing := ⟨of punit⟩
+instance : Inhabited CommSemiRing :=
+  ⟨of PUnit⟩
 
-instance (R : CommSemiRing) : comm_semiring R := R.str
+instance (R : CommSemiRing) : CommSemiringₓ R :=
+  R.str
 
-@[simp] lemma coe_of (R : Type u) [comm_semiring R] : (CommSemiRing.of R : Type u) = R := rfl
+@[simp]
+theorem coe_of (R : Type u) [CommSemiringₓ R] : (CommSemiRing.of R : Type u) = R :=
+  rfl
 
-instance has_forget_to_SemiRing : has_forget₂ CommSemiRing SemiRing := bundled_hom.forget₂ _ _
+instance hasForgetToSemiRing : HasForget₂ CommSemiRing SemiRing :=
+  BundledHom.forget₂ _ _
 
 /-- The forgetful functor from commutative rings to (multiplicative) commutative monoids. -/
-instance has_forget_to_CommMon : has_forget₂ CommSemiRing CommMon :=
-has_forget₂.mk'
-  (λ R : CommSemiRing, CommMon.of R) (λ R, rfl)
-  (λ R₁ R₂ f, f.to_monoid_hom) (by tidy)
+instance hasForgetToCommMon : HasForget₂ CommSemiRing CommMon :=
+  HasForget₂.mk' (fun R : CommSemiRing => CommMon.of R) (fun R => rfl) (fun R₁ R₂ f => f.toMonoidHom)
+    (by
+      tidy)
 
 end CommSemiRing
 
 /-- The category of commutative rings. -/
-def CommRing : Type (u+1) := bundled comm_ring
+def CommRingₓₓ : Type (u + 1) :=
+  Bundled CommRingₓ
 
-namespace CommRing
+namespace CommRingₓₓ
 
-instance : bundled_hom.parent_projection @comm_ring.to_ring := ⟨⟩
+instance : BundledHom.ParentProjection @CommRingₓ.toRing :=
+  ⟨⟩
 
-attribute [derive [large_category, concrete_category]] CommRing
+deriving instance LargeCategory, ConcreteCategory for CommRingₓₓ
 
-instance : has_coe_to_sort CommRing Type* := bundled.has_coe_to_sort
+instance : CoeSort CommRingₓₓ (Type _) :=
+  bundled.has_coe_to_sort
 
 /-- Construct a bundled CommRing from the underlying type and typeclass. -/
-def of (R : Type u) [comm_ring R] : CommRing := bundled.of R
+def of (R : Type u) [CommRingₓ R] : CommRingₓₓ :=
+  Bundled.of R
 
 /-- Typecheck a `ring_hom` as a morphism in `CommRing`. -/
-def of_hom {R S : Type u} [comm_ring R] [comm_ring S] (f : R →+* S) : of R ⟶ of S := f
+def ofHom {R S : Type u} [CommRingₓ R] [CommRingₓ S] (f : R →+* S) : of R ⟶ of S :=
+  f
 
-instance : inhabited CommRing := ⟨of punit⟩
+instance : Inhabited CommRingₓₓ :=
+  ⟨of PUnit⟩
 
-instance (R : CommRing) : comm_ring R := R.str
+instance (R : CommRingₓₓ) : CommRingₓ R :=
+  R.str
 
-@[simp] lemma coe_of (R : Type u) [comm_ring R] : (CommRing.of R : Type u) = R := rfl
+@[simp]
+theorem coe_of (R : Type u) [CommRingₓ R] : (CommRingₓₓ.of R : Type u) = R :=
+  rfl
 
-instance has_forget_to_Ring : has_forget₂ CommRing Ring := bundled_hom.forget₂ _ _
+instance hasForgetToRing : HasForget₂ CommRingₓₓ Ringₓₓ :=
+  BundledHom.forget₂ _ _
 
 /-- The forgetful functor from commutative rings to (multiplicative) commutative monoids. -/
-instance has_forget_to_CommSemiRing : has_forget₂ CommRing CommSemiRing :=
-has_forget₂.mk' (λ R : CommRing, CommSemiRing.of R) (λ R, rfl) (λ R₁ R₂ f, f) (by tidy)
+instance hasForgetToCommSemiRing : HasForget₂ CommRingₓₓ CommSemiRing :=
+  HasForget₂.mk' (fun R : CommRingₓₓ => CommSemiRing.of R) (fun R => rfl) (fun R₁ R₂ f => f)
+    (by
+      tidy)
 
-instance : full (forget₂ CommRing CommSemiRing) :=
-{ preimage := λ X Y f, f, }
+instance : Full (forget₂ CommRingₓₓ CommSemiRing) where
+  Preimage := fun X Y f => f
 
-end CommRing
+end CommRingₓₓ
 
 -- This example verifies an improvement possible in Lean 3.8.
 -- Before that, to have `add_ring_hom.map_zero` usable by `simp` here,
 -- we had to mark all the concrete category `has_coe_to_sort` instances reducible.
 -- Now, it just works.
-example {R S : CommRing} (i : R ⟶ S) (r : R) (h : r = 0) : i r = 0 :=
-by simp [h]
+example {R S : CommRingₓₓ} (i : R ⟶ S) (r : R) (h : r = 0) : i r = 0 := by
+  simp [h]
 
-namespace ring_equiv
+namespace RingEquiv
 
-variables {X Y : Type u}
+variable {X Y : Type u}
 
 /-- Build an isomorphism in the category `Ring` from a `ring_equiv` between `ring`s. -/
-@[simps] def to_Ring_iso [ring X] [ring Y] (e : X ≃+* Y) : Ring.of X ≅ Ring.of Y :=
-{ hom := e.to_ring_hom,
-  inv := e.symm.to_ring_hom }
+@[simps]
+def toRingIso [Ringₓ X] [Ringₓ Y] (e : X ≃+* Y) : Ringₓₓ.of X ≅ Ringₓₓ.of Y where
+  Hom := e.toRingHom
+  inv := e.symm.toRingHom
 
 /-- Build an isomorphism in the category `CommRing` from a `ring_equiv` between `comm_ring`s. -/
-@[simps] def to_CommRing_iso [comm_ring X] [comm_ring Y] (e : X ≃+* Y) :
-  CommRing.of X ≅ CommRing.of Y :=
-{ hom := e.to_ring_hom,
-  inv := e.symm.to_ring_hom }
+@[simps]
+def toCommRingIso [CommRingₓ X] [CommRingₓ Y] (e : X ≃+* Y) : CommRingₓₓ.of X ≅ CommRingₓₓ.of Y where
+  Hom := e.toRingHom
+  inv := e.symm.toRingHom
 
-end ring_equiv
+end RingEquiv
 
-namespace category_theory.iso
+namespace CategoryTheory.Iso
 
 /-- Build a `ring_equiv` from an isomorphism in the category `Ring`. -/
-def Ring_iso_to_ring_equiv {X Y : Ring} (i : X ≅ Y) : X ≃+* Y :=
-{ to_fun    := i.hom,
-  inv_fun   := i.inv,
-  left_inv  := by tidy,
-  right_inv := by tidy,
-  map_add'  := by tidy,
-  map_mul'  := by tidy }.
+def ringIsoToRingEquiv {X Y : Ringₓₓ} (i : X ≅ Y) : X ≃+* Y where
+  toFun := i.Hom
+  invFun := i.inv
+  left_inv := by
+    tidy
+  right_inv := by
+    tidy
+  map_add' := by
+    tidy
+  map_mul' := by
+    tidy
 
 /-- Build a `ring_equiv` from an isomorphism in the category `CommRing`. -/
-def CommRing_iso_to_ring_equiv {X Y : CommRing} (i : X ≅ Y) : X ≃+* Y :=
-{ to_fun    := i.hom,
-  inv_fun   := i.inv,
-  left_inv  := by tidy,
-  right_inv := by tidy,
-  map_add'  := by tidy,
-  map_mul'  := by tidy }.
+def commRingIsoToRingEquiv {X Y : CommRingₓₓ} (i : X ≅ Y) : X ≃+* Y where
+  toFun := i.Hom
+  invFun := i.inv
+  left_inv := by
+    tidy
+  right_inv := by
+    tidy
+  map_add' := by
+    tidy
+  map_mul' := by
+    tidy
 
 @[simp]
-lemma CommRing_iso_to_ring_equiv_to_ring_hom {X Y : CommRing} (i : X ≅ Y) :
-  i.CommRing_iso_to_ring_equiv.to_ring_hom = i.hom := by { ext, refl }
+theorem CommRing_iso_to_ring_equiv_to_ring_hom {X Y : CommRingₓₓ} (i : X ≅ Y) :
+    i.commRingIsoToRingEquiv.toRingHom = i.Hom := by
+  ext
+  rfl
 
 @[simp]
-lemma CommRing_iso_to_ring_equiv_symm_to_ring_hom {X Y : CommRing} (i : X ≅ Y) :
-  i.CommRing_iso_to_ring_equiv.symm.to_ring_hom = i.inv := by { ext, refl }
+theorem CommRing_iso_to_ring_equiv_symm_to_ring_hom {X Y : CommRingₓₓ} (i : X ≅ Y) :
+    i.commRingIsoToRingEquiv.symm.toRingHom = i.inv := by
+  ext
+  rfl
 
-end category_theory.iso
+end CategoryTheory.Iso
 
 /-- Ring equivalences between `ring`s are the same as (isomorphic to) isomorphisms in `Ring`. -/
-def ring_equiv_iso_Ring_iso {X Y : Type u} [ring X] [ring Y] :
-  (X ≃+* Y) ≅ (Ring.of X ≅ Ring.of Y) :=
-{ hom := λ e, e.to_Ring_iso,
-  inv := λ i, i.Ring_iso_to_ring_equiv, }
+def ringEquivIsoRingIso {X Y : Type u} [Ringₓ X] [Ringₓ Y] : X ≃+* Y ≅ Ringₓₓ.of X ≅ Ringₓₓ.of Y where
+  Hom := fun e => e.toRingIso
+  inv := fun i => i.ringIsoToRingEquiv
 
 /-- Ring equivalences between `comm_ring`s are the same as (isomorphic to) isomorphisms
 in `CommRing`. -/
-def ring_equiv_iso_CommRing_iso {X Y : Type u} [comm_ring X] [comm_ring Y] :
-  (X ≃+* Y) ≅ (CommRing.of X ≅ CommRing.of Y) :=
-{ hom := λ e, e.to_CommRing_iso,
-  inv := λ i, i.CommRing_iso_to_ring_equiv, }
+def ringEquivIsoCommRingIso {X Y : Type u} [CommRingₓ X] [CommRingₓ Y] :
+    X ≃+* Y ≅ CommRingₓₓ.of X ≅ CommRingₓₓ.of Y where
+  Hom := fun e => e.toCommRingIso
+  inv := fun i => i.commRingIsoToRingEquiv
 
-instance Ring.forget_reflects_isos : reflects_isomorphisms (forget Ring.{u}) :=
-{ reflects := λ X Y f _,
-  begin
-    resetI,
-    let i := as_iso ((forget Ring).map f),
-    let e : X ≃+* Y := { ..f, ..i.to_equiv },
-    exact ⟨(is_iso.of_iso e.to_Ring_iso).1⟩,
-  end }
+instance Ringₓₓ.forget_reflects_isos : ReflectsIsomorphisms (forget Ringₓₓ.{u}) where
+  reflects := fun X Y f _ => by
+    skip
+    let i := as_iso ((forget Ringₓₓ).map f)
+    let e : X ≃+* Y := { f, i.to_equiv with }
+    exact ⟨(is_iso.of_iso e.to_Ring_iso).1⟩
 
-instance CommRing.forget_reflects_isos : reflects_isomorphisms (forget CommRing.{u}) :=
-{ reflects := λ X Y f _,
-  begin
-    resetI,
-    let i := as_iso ((forget CommRing).map f),
-    let e : X ≃+* Y := { ..f, ..i.to_equiv },
-    exact ⟨(is_iso.of_iso e.to_CommRing_iso).1⟩,
-  end }
+instance CommRingₓₓ.forget_reflects_isos : ReflectsIsomorphisms (forget CommRingₓₓ.{u}) where
+  reflects := fun X Y f _ => by
+    skip
+    let i := as_iso ((forget CommRingₓₓ).map f)
+    let e : X ≃+* Y := { f, i.to_equiv with }
+    exact ⟨(is_iso.of_iso e.to_CommRing_iso).1⟩
 
 -- It would be nice if we could have the following,
 -- but it requires making `reflects_isomorphisms_forget₂` an instance,
 -- which can cause typeclass loops:
+attribute [local instance] reflects_isomorphisms_forget₂
 
-local attribute [priority 50,instance] reflects_isomorphisms_forget₂
-example : reflects_isomorphisms (forget₂ Ring AddCommGroup) := by apply_instance
+example : ReflectsIsomorphisms (forget₂ Ringₓₓ AddCommGroupₓₓ) := by
+  infer_instance
+

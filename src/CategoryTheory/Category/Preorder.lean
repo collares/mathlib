@@ -3,9 +3,8 @@ Copyright (c) 2017 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Stephen Morgan, Scott Morrison, Johannes Hölzl, Reid Barton
 -/
-
-import category_theory.category.Cat
-import order.category.Preorder
+import Mathbin.CategoryTheory.Category.Cat
+import Mathbin.Order.Category.Preorder
 
 /-!
 
@@ -27,14 +26,14 @@ categories. Furthermore, galois connections correspond to adjoint functors.
 
 -/
 
-universes u v
 
-namespace preorder
+universe u v
 
-open category_theory
+namespace Preorderₓ
 
-/--
-The category structure coming from a preorder. There is a morphism `X ⟶ Y` if and only if `X ≤ Y`.
+open CategoryTheory
+
+/-- The category structure coming from a preorder. There is a morphism `X ⟶ Y` if and only if `X ≤ Y`.
 
 Because we don't allow morphisms to live in `Prop`,
 we have to define `X ⟶ Y` as `ulift (plift (X ≤ Y))`.
@@ -42,141 +41,164 @@ See `category_theory.hom_of_le` and `category_theory.le_of_hom`.
 
 See https://stacks.math.columbia.edu/tag/00D3.
 -/
-@[priority 100] -- see Note [lower instance priority]
-instance small_category (α : Type u) [preorder α] : small_category α :=
-{ hom  := λ U V, ulift (plift (U ≤ V)),
-  id   := λ X, ⟨ ⟨ le_refl X ⟩ ⟩,
-  comp := λ X Y Z f g, ⟨ ⟨ le_trans _ _ _ f.down.down g.down.down ⟩ ⟩ }
+-- see Note [lower instance priority]
+instance (priority := 100) smallCategory (α : Type u) [Preorderₓ α] : SmallCategory α where
+  Hom := fun U V => ULift (Plift (U ≤ V))
+  id := fun X => ⟨⟨le_refl X⟩⟩
+  comp := fun X Y Z f g => ⟨⟨le_trans _ _ _ f.down.down g.down.down⟩⟩
 
-end preorder
+end Preorderₓ
 
-namespace category_theory
+namespace CategoryTheory
 
-open opposite
+open Opposite
 
-variables {X : Type u} [preorder X]
+variable {X : Type u} [Preorderₓ X]
 
-/--
-Express an inequality as a morphism in the corresponding preorder category.
+/-- Express an inequality as a morphism in the corresponding preorder category.
 -/
-def hom_of_le {x y : X} (h : x ≤ y) : x ⟶ y := ulift.up (plift.up h)
+def homOfLe {x y : X} (h : x ≤ y) : x ⟶ y :=
+  ULift.up (Plift.up h)
 
-alias hom_of_le ← has_le.le.hom
+alias hom_of_le ← LE.le.hom
 
-@[simp] lemma hom_of_le_refl {x : X} : (le_refl x).hom = 𝟙 x := rfl
-@[simp] lemma hom_of_le_comp {x y z : X} (h : x ≤ y) (k : y ≤ z) :
-  h.hom ≫ k.hom = (h.trans k).hom := rfl
+@[simp]
+theorem hom_of_le_refl {x : X} : (le_reflₓ x).Hom = 𝟙 x :=
+  rfl
 
-/--
-Extract the underlying inequality from a morphism in a preorder category.
+@[simp]
+theorem hom_of_le_comp {x y z : X} (h : x ≤ y) (k : y ≤ z) : h.Hom ≫ k.Hom = (h.trans k).Hom :=
+  rfl
+
+/-- Extract the underlying inequality from a morphism in a preorder category.
 -/
-lemma le_of_hom {x y : X} (h : x ⟶ y) : x ≤ y := h.down.down
+theorem le_of_hom {x y : X} (h : x ⟶ y) : x ≤ y :=
+  h.down.down
 
-alias le_of_hom ← quiver.hom.le
+alias le_of_hom ← Quiver.Hom.le
 
-@[simp] lemma le_of_hom_hom_of_le {x y : X} (h : x ≤ y) : h.hom.le = h := rfl
-@[simp] lemma hom_of_le_le_of_hom {x y : X} (h : x ⟶ y) : h.le.hom = h :=
-by { cases h, cases h, refl, }
+@[simp]
+theorem le_of_hom_hom_of_le {x y : X} (h : x ≤ y) : h.Hom.le = h :=
+  rfl
+
+@[simp]
+theorem hom_of_le_le_of_hom {x y : X} (h : x ⟶ y) : h.le.Hom = h := by
+  cases h
+  cases h
+  rfl
 
 /-- Construct a morphism in the opposite of a preorder category from an inequality. -/
-def op_hom_of_le {x y : Xᵒᵖ} (h : unop x ≤ unop y) : y ⟶ x := h.hom.op
+def opHomOfLe {x y : Xᵒᵖ} (h : unop x ≤ unop y) : y ⟶ x :=
+  h.Hom.op
 
-lemma le_of_op_hom {x y : Xᵒᵖ} (h : x ⟶ y) : unop y ≤ unop x := h.unop.le
+theorem le_of_op_hom {x y : Xᵒᵖ} (h : x ⟶ y) : unop y ≤ unop x :=
+  h.unop.le
 
-instance unique_to_top [order_top X] {x : X} : unique (x ⟶ ⊤) := by tidy
-instance unique_from_bot [order_bot X] {x : X} : unique (⊥ ⟶ x) := by tidy
+instance uniqueToTop [OrderTop X] {x : X} : Unique (x ⟶ ⊤) := by
+  tidy
 
-end category_theory
+instance uniqueFromBot [OrderBot X] {x : X} : Unique (⊥ ⟶ x) := by
+  tidy
+
+end CategoryTheory
 
 section
 
-variables {X : Type u} {Y : Type v} [preorder X] [preorder Y]
+variable {X : Type u} {Y : Type v} [Preorderₓ X] [Preorderₓ Y]
 
-/--
-A monotone function between preorders induces a functor between the associated categories.
+/-- A monotone function between preorders induces a functor between the associated categories.
 -/
-def monotone.functor {f : X → Y} (h : monotone f) : X ⥤ Y :=
-{ obj := f,
-  map := λ x₁ x₂ g, (h g.le).hom }
+def Monotone.functor {f : X → Y} (h : Monotone f) : X ⥤ Y where
+  obj := f
+  map := fun x₁ x₂ g => (h g.le).Hom
 
-@[simp] lemma monotone.functor_obj {f : X → Y} (h : monotone f) : h.functor.obj = f := rfl
+@[simp]
+theorem Monotone.functor_obj {f : X → Y} (h : Monotone f) : h.Functor.obj = f :=
+  rfl
 
-/--
-A galois connection between preorders induces an adjunction between the associated categories.
+/-- A galois connection between preorders induces an adjunction between the associated categories.
 -/
-def galois_connection.adjunction {l : X → Y} {u : Y → X} (gc : galois_connection l u) :
-  gc.monotone_l.functor ⊣ gc.monotone_u.functor :=
-category_theory.adjunction.mk_of_hom_equiv
-{ hom_equiv := λ X Y, ⟨λ f, (gc.le_u f.le).hom, λ f, (gc.l_le f.le).hom, by tidy, by tidy⟩ }
+def GaloisConnection.adjunction {l : X → Y} {u : Y → X} (gc : GaloisConnection l u) :
+    gc.monotone_l.Functor ⊣ gc.monotone_u.Functor :=
+  CategoryTheory.Adjunction.mkOfHomEquiv
+    { homEquiv := fun X Y =>
+        ⟨fun f => (gc.le_u f.le).Hom, fun f => (gc.l_le f.le).Hom, by
+          tidy, by
+          tidy⟩ }
 
 end
 
-namespace category_theory
+namespace CategoryTheory
 
-section preorder
+section Preorderₓ
 
-variables {X : Type u} {Y : Type v} [preorder X] [preorder Y]
+variable {X : Type u} {Y : Type v} [Preorderₓ X] [Preorderₓ Y]
 
-/--
-A functor between preorder categories is monotone.
+/-- A functor between preorder categories is monotone.
 -/
-@[mono] lemma functor.monotone (f : X ⥤ Y) : monotone f.obj :=
-λ x y hxy, (f.map hxy.hom).le
+@[mono]
+theorem Functor.monotone (f : X ⥤ Y) : Monotone f.obj := fun x y hxy => (f.map hxy.Hom).le
 
-/--
-An adjunction between preorder categories induces a galois connection.
+/-- An adjunction between preorder categories induces a galois connection.
 -/
-lemma adjunction.gc {L : X ⥤ Y} {R : Y ⥤ X} (adj : L ⊣ R) :
-  galois_connection L.obj R.obj :=
-λ x y, ⟨λ h, ((adj.hom_equiv x y).to_fun h.hom).le, λ h, ((adj.hom_equiv x y).inv_fun h.hom).le⟩
+theorem Adjunction.gc {L : X ⥤ Y} {R : Y ⥤ X} (adj : L ⊣ R) : GaloisConnection L.obj R.obj := fun x y =>
+  ⟨fun h => ((adj.homEquiv x y).toFun h.Hom).le, fun h => ((adj.homEquiv x y).invFun h.Hom).le⟩
 
-/--
-The embedding of `Preorder` into `Cat`.
+/-- The embedding of `Preorder` into `Cat`.
 -/
 @[simps]
-def Preorder_to_Cat : Preorder.{u} ⥤ Cat :=
-{ obj := λ X, Cat.of X.1,
-  map := λ X Y f, f.monotone.functor,
-  map_id' := λ X, begin apply category_theory.functor.ext, tidy end,
-  map_comp' := λ X Y Z f g, begin apply category_theory.functor.ext, tidy end }
+def preorderToCat : Preorderₓₓ.{u} ⥤ Cat where
+  obj := fun X => Cat.of X.1
+  map := fun X Y f => f.Monotone.Functor
+  map_id' := fun X => by
+    apply CategoryTheory.Functor.ext
+    tidy
+  map_comp' := fun X Y Z f g => by
+    apply CategoryTheory.Functor.ext
+    tidy
 
-instance : faithful Preorder_to_Cat.{u} :=
-{ map_injective' := λ X Y f g h, begin ext x, exact functor.congr_obj h x end }
+instance : Faithful preorderToCat.{u} where
+  map_injective' := fun X Y f g h => by
+    ext x
+    exact functor.congr_obj h x
 
-instance : full Preorder_to_Cat.{u} :=
-{ preimage := λ X Y f, ⟨f.obj, f.monotone⟩,
-  witness' := λ X Y f, begin apply category_theory.functor.ext, tidy end }
+instance : Full preorderToCat.{u} where
+  Preimage := fun X Y f => ⟨f.obj, f.Monotone⟩
+  witness' := fun X Y f => by
+    apply CategoryTheory.Functor.ext
+    tidy
 
-end preorder
+end Preorderₓ
 
-section partial_order
+section PartialOrderₓ
 
-variables {X : Type u} {Y : Type v} [partial_order X] [partial_order Y]
+variable {X : Type u} {Y : Type v} [PartialOrderₓ X] [PartialOrderₓ Y]
 
-lemma iso.to_eq {x y : X} (f : x ≅ y) : x = y := le_antisymm f.hom.le f.inv.le
+theorem Iso.to_eq {x y : X} (f : x ≅ y) : x = y :=
+  le_antisymmₓ f.Hom.le f.inv.le
 
-/--
-A categorical equivalence between partial orders is just an order isomorphism.
+/-- A categorical equivalence between partial orders is just an order isomorphism.
 -/
-def equivalence.to_order_iso (e : X ≌ Y) : X ≃o Y :=
-{ to_fun := e.functor.obj,
-  inv_fun := e.inverse.obj,
-  left_inv := λ a, (e.unit_iso.app a).to_eq.symm,
-  right_inv := λ b, (e.counit_iso.app b).to_eq,
-  map_rel_iff' := λ a a',
-    ⟨λ h, ((equivalence.unit e).app a ≫ e.inverse.map h.hom ≫ (equivalence.unit_inv e).app a').le,
-     λ (h : a ≤ a'), (e.functor.map h.hom).le⟩, }
+def Equivalence.toOrderIso (e : X ≌ Y) : X ≃o Y where
+  toFun := e.Functor.obj
+  invFun := e.inverse.obj
+  left_inv := fun a => (e.unitIso.app a).to_eq.symm
+  right_inv := fun b => (e.counitIso.app b).to_eq
+  map_rel_iff' := fun a a' =>
+    ⟨fun h => ((Equivalence.unit e).app a ≫ e.inverse.map h.Hom ≫ (Equivalence.unitInv e).app a').le, fun h : a ≤ a' =>
+      (e.Functor.map h.Hom).le⟩
 
 -- `@[simps]` on `equivalence.to_order_iso` produces lemmas that fail the `simp_nf` linter,
 -- so we provide them by hand:
 @[simp]
-lemma equivalence.to_order_iso_apply (e : X ≌ Y) (x : X) :
-  e.to_order_iso x = e.functor.obj x := rfl
+theorem Equivalence.to_order_iso_apply (e : X ≌ Y) (x : X) : e.toOrderIso x = e.Functor.obj x :=
+  rfl
 
 @[simp]
-lemma equivalence.to_order_iso_symm_apply (e : X ≌ Y) (y : Y) :
-  e.to_order_iso.symm y = e.inverse.obj y := rfl
+theorem Equivalence.to_order_iso_symm_apply (e : X ≌ Y) (y : Y) : e.toOrderIso.symm y = e.inverse.obj y :=
+  rfl
 
-end partial_order
+end PartialOrderₓ
 
-end category_theory
+end CategoryTheory
+

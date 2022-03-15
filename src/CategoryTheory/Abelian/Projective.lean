@@ -3,8 +3,8 @@ Copyright (c) 2020 Markus Himmel. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Markus Himmel, Scott Morrison
 -/
-import category_theory.abelian.exact
-import category_theory.preadditive.projective_resolution
+import Mathbin.CategoryTheory.Abelian.Exact
+import Mathbin.CategoryTheory.Preadditive.ProjectiveResolution
 
 /-!
 # Abelian categories with enough projectives have projective resolutions
@@ -14,28 +14,33 @@ Hence, starting from an epimorphism `P ⟶ X`, where `P` is projective,
 we can apply `projective.d` repeatedly to obtain a projective resolution of `X`.
 -/
 
-noncomputable theory
 
-open category_theory
-open category_theory.limits
+noncomputable section
 
-universes v u
+open CategoryTheory
 
-namespace category_theory
+open CategoryTheory.Limits
 
-open category_theory.projective
+universe v u
 
-variables {C : Type u} [category.{v} C]
+namespace CategoryTheory
+
+open CategoryTheory.Projective
+
+variable {C : Type u} [Category.{v} C]
 
 section
-variables [enough_projectives C] [abelian C]
 
-/--
-When `C` is abelian, `projective.d f` and `f` are exact.
+variable [EnoughProjectives C] [Abelian C]
+
+/-- When `C` is abelian, `projective.d f` and `f` are exact.
 -/
-lemma exact_d_f {X Y : C} (f : X ⟶ Y) : exact (d f) f :=
-(abelian.exact_iff _ _).2 $
-  ⟨by simp, zero_of_epi_comp (π _) $ by rw [←category.assoc, cokernel.condition]⟩
+theorem exact_d_f {X Y : C} (f : X ⟶ Y) : Exact (d f) f :=
+  (Abelian.exact_iff _ _).2 <|
+    ⟨by
+      simp ,
+      zero_of_epi_comp (π _) <| by
+        rw [← category.assoc, cokernel.condition]⟩
 
 end
 
@@ -50,37 +55,47 @@ applied to the previously constructed morphism,
 and the map to the `n`-th object as `projective.d`.
 -/
 
-variables [abelian C] [enough_projectives C]
+
+variable [Abelian C] [EnoughProjectives C]
 
 /-- Auxiliary definition for `ProjectiveResolution.of`. -/
 @[simps]
-def of_complex (Z : C) : chain_complex C ℕ :=
-chain_complex.mk'
-  (projective.over Z) (projective.syzygies (projective.π Z)) (projective.d (projective.π Z))
-  (λ ⟨X, Y, f⟩, ⟨projective.syzygies f, projective.d f, (exact_d_f f).w⟩)
+def ofComplex (Z : C) : ChainComplex C ℕ :=
+  ChainComplex.mk' (Projective.over Z) (Projective.syzygies (Projective.π Z)) (Projective.d (Projective.π Z))
+    fun ⟨X, Y, f⟩ => ⟨Projective.syzygies f, Projective.d f, (exact_d_f f).w⟩
 
-/--
-In any abelian category with enough projectives,
+/-- In any abelian category with enough projectives,
 `ProjectiveResolution.of Z` constructs a projective resolution of the object `Z`.
 -/
-@[irreducible] def of (Z : C) : ProjectiveResolution Z :=
-{ complex := of_complex Z,
-  π := chain_complex.mk_hom _ _ (projective.π Z) 0
-    (by { simp, exact (exact_d_f (projective.π Z)).w.symm, })
-    (λ n _, ⟨0, by ext⟩),
-  projective := by { rintros (_|_|_|n); apply projective.projective_over, },
-  exact₀ := by simpa using exact_d_f (projective.π Z),
-  exact := by { rintros (_|n); { simp, apply exact_d_f, }, },
-  epi := projective.π_epi Z, }
+irreducible_def of (Z : C) : ProjectiveResolution Z :=
+  { complex := ofComplex Z,
+    π :=
+      ChainComplex.mkHom _ _ (Projective.π Z) 0
+        (by
+          simp
+          exact (exact_d_f (projective.π Z)).w.symm)
+        fun n _ =>
+        ⟨0, by
+          ext⟩,
+    Projective := by
+      rintro (_ | _ | _ | n) <;> apply projective.projective_over,
+    exact₀ := by
+      simpa using exact_d_f (projective.π Z),
+    exact := by
+      rintro (_ | n) <;>
+        · simp
+          apply exact_d_f
+          ,
+    Epi := Projective.π_epi Z }
 
-@[priority 100]
-instance (Z : C) : has_projective_resolution Z :=
-{ out := ⟨of Z⟩ }
+instance (priority := 100) (Z : C) : HasProjectiveResolution Z where
+  out := ⟨of Z⟩
 
-@[priority 100]
-instance : has_projective_resolutions C :=
-{ out := λ Z, by apply_instance }
+instance (priority := 100) : HasProjectiveResolutions C where
+  out := fun Z => by
+    infer_instance
 
 end ProjectiveResolution
 
-end category_theory
+end CategoryTheory
+

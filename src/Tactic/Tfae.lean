@@ -3,8 +3,8 @@ Copyright (c) 2018 Johan Commelin. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johan Commelin, Reid Barton, Simon Hudon
 -/
-import data.list.tfae
-import tactic.scc
+import Mathbin.Data.List.Tfae
+import Mathbin.Tactic.Scc
 
 /-!
 # The Following Are Equivalent (TFAE)
@@ -13,86 +13,87 @@ This file provides the tactics `tfae_have` and `tfae_finish` for proving the pai
 propositions in a set using various implications between them.
 -/
 
-namespace tactic
 
-export list (tfae)
+namespace Tactic
 
-namespace tfae
+export List (Tfae)
 
-@[derive has_reflect, derive inhabited]
-inductive arrow : Type
-| right      : arrow
-| left_right : arrow
-| left       : arrow
+namespace Tfae
 
-meta def mk_implication : Π (re : arrow) (e₁ e₂ : expr), pexpr
-| arrow.right      e₁ e₂ := ``(%%e₁ → %%e₂)
-| arrow.left_right e₁ e₂ := ``(%%e₁ ↔ %%e₂)
-| arrow.left       e₁ e₂ := ``(%%e₂ → %%e₁)
+inductive Arrow : Type
+  | right : arrow
+  | left_right : arrow
+  | left : arrow
+  deriving has_reflect, Inhabited
 
-meta def mk_name : Π (re : arrow) (i₁ i₂ : nat), name
-| arrow.right      i₁ i₂ := ("tfae_" ++ to_string i₁ ++ "_to_"  ++ to_string i₂ : string)
-| arrow.left_right i₁ i₂ := ("tfae_" ++ to_string i₁ ++ "_iff_" ++ to_string i₂ : string)
-| arrow.left       i₁ i₂ := ("tfae_" ++ to_string i₂ ++ "_to_"  ++ to_string i₁ : string)
+unsafe def mk_implication : ∀ re : Arrow e₁ e₂ : expr, pexpr
+  | arrow.right, e₁, e₂ => pquote.1 ((%%ₓe₁) → %%ₓe₂)
+  | arrow.left_right, e₁, e₂ => pquote.1 ((%%ₓe₁) ↔ %%ₓe₂)
+  | arrow.left, e₁, e₂ => pquote.1 ((%%ₓe₂) → %%ₓe₁)
 
-end tfae
+unsafe def mk_name : ∀ re : Arrow i₁ i₂ : Nat, Name
+  | arrow.right, i₁, i₂ => ("tfae_" ++ toString i₁ ++ "_to_" ++ toString i₂ : Stringₓ)
+  | arrow.left_right, i₁, i₂ => ("tfae_" ++ toString i₁ ++ "_iff_" ++ toString i₂ : Stringₓ)
+  | arrow.left, i₁, i₂ => ("tfae_" ++ toString i₂ ++ "_to_" ++ toString i₁ : Stringₓ)
 
-namespace interactive
+end Tfae
+
+namespace Interactive
 
 setup_tactic_parser
-open tactic.tfae list
 
-meta def parse_list : expr → option (list expr)
-| `([]) := pure []
-| `(%%e :: %%es) := (::) e <$> parse_list es
-| _ := none
+open Tactic.Tfae List
+
+unsafe def parse_list : expr → Option (List expr)
+  | quote.1 [] => pure []
+  | quote.1 ((%%ₓe) :: %%ₓes) => (· :: ·) e <$> parse_list es
+  | _ => none
 
 /-- In a goal of the form `tfae [a₀, a₁, a₂]`,
 `tfae_have : i → j` creates the assertion `aᵢ → aⱼ`. The other possible
 notations are `tfae_have : i ← j` and `tfae_have : i ↔ j`. The user can
 also provide a label for the assertion, as with `have`: `tfae_have h : i ↔ j`.
 -/
-meta def tfae_have
-  (h : parse $ optional ident <* tk ":")
-  (i₁ : parse (with_desc "i" small_nat))
-  (re : parse (((tk "→" <|> tk "->")  *> return arrow.right)      <|>
-               ((tk "↔" <|> tk "<->") *> return arrow.left_right) <|>
-               ((tk "←" <|> tk "<-")  *> return arrow.left)))
-  (i₂ : parse (with_desc "j" small_nat)) :
-  tactic unit := do
-    `(tfae %%l) <- target,
-    l ← parse_list l,
-    e₁ ← list.nth l (i₁ - 1) <|> fail format!"index {i₁} is not between 1 and {l.length}",
-    e₂ ← list.nth l (i₂ - 1) <|> fail format!"index {i₂} is not between 1 and {l.length}",
-    type ← to_expr (tfae.mk_implication re e₁ e₂),
-    let h := h.get_or_else (mk_name re i₁ i₂),
-    tactic.assert h type,
-    return ()
+unsafe def tfae_have (h : parse <| optionalₓ ident <* tk ":") (i₁ : parse (with_desc "i" small_nat))
+    (re :
+      parse
+        ((tk "→" <|> tk "->") *> return Arrow.right <|>
+          (tk "↔" <|> tk "<->") *> return Arrow.left_right <|> (tk "←" <|> tk "<-") *> return Arrow.left))
+    (i₂ : parse (with_desc "j" small_nat)) : tactic Unit := do
+  let quote.1 (Tfae (%%ₓl)) ← target
+  let l ← parse_list l
+  let e₁ ← List.nth l (i₁ - 1) <|> fail f! "index {i₁ } is not between 1 and {l.length}"
+  let e₂ ← List.nth l (i₂ - 1) <|> fail f! "index {i₂ } is not between 1 and {l.length}"
+  let type ← to_expr (tfae.mk_implication re e₁ e₂)
+  let h := h.getOrElse (mk_name re i₁ i₂)
+  tactic.assert h type
+  return ()
 
 /-- Finds all implications and equivalences in the context
 to prove a goal of the form `tfae [...]`.
 -/
-meta def tfae_finish : tactic unit :=
-applyc ``tfae_nil <|>
-closure.with_new_closure (λ cl,
-do impl_graph.mk_scc cl,
-   `(tfae %%l) ← target,
-   l ← parse_list l,
-   (_,r,_) ← cl.root l.head,
-   refine ``(tfae_of_forall %%r _ _),
-   thm ← mk_const ``forall_mem_cons,
-   l.mmap' (λ e,
-     do rewrite_target thm, split,
-        (_,r',p) ← cl.root e,
-        tactic.exact p ),
-   applyc ``forall_mem_nil,
-   pure ())
+unsafe def tfae_finish : tactic Unit :=
+  applyc `` tfae_nil <|>
+    closure.with_new_closure fun cl => do
+      impl_graph.mk_scc cl
+      let quote.1 (Tfae (%%ₓl)) ← target
+      let l ← parse_list l
+      let (_, r, _) ← cl.root l.head
+      refine (pquote.1 (tfae_of_forall (%%ₓr) _ _))
+      let thm ← mk_const `` forall_mem_cons
+      l fun e => do
+          rewrite_target thm
+          split
+          let (_, r', p) ← cl e
+          tactic.exact p
+      applyc `` forall_mem_nil
+      pure ()
 
-end interactive
-end tactic
+end Interactive
 
-/--
-The `tfae` tactic suite is a set of tactics that help with proving that certain
+end Tactic
+
+/-- The `tfae` tactic suite is a set of tactics that help with proving that certain
 propositions are equivalent.
 In `data/list/basic.lean` there is a section devoted to propositions of the
 form
@@ -141,8 +142,7 @@ end
 ```
 -/
 add_tactic_doc
-{ name := "tfae",
-  category                 := doc_category.tactic,
-  decl_names               := [`tactic.interactive.tfae_have, `tactic.interactive.tfae_finish],
-  tags                     := ["logic"],
-  inherit_description_from := `tactic.interactive.tfae_finish }
+  { Name := "tfae", category := DocCategory.tactic,
+    declNames := [`tactic.interactive.tfae_have, `tactic.interactive.tfae_finish], tags := ["logic"],
+    inheritDescriptionFrom := `tactic.interactive.tfae_finish }
+

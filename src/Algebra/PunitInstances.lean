@@ -3,11 +3,10 @@ Copyright (c) 2019 Kenny Lau. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau
 -/
-
-import algebra.module.basic
-import algebra.gcd_monoid.basic
-import algebra.group_ring_action
-import group_theory.group_action.defs
+import Mathbin.Algebra.Module.Basic
+import Mathbin.Algebra.GcdMonoid.Basic
+import Mathbin.Algebra.GroupRingAction
+import Mathbin.GroupTheory.GroupAction.Defs
 
 /-!
 # Instances on punit
@@ -16,135 +15,162 @@ This file collects facts about algebraic structures on the one-element type, e.g
 commutative ring.
 -/
 
-universes u
 
-namespace punit
-variables {R S : Type*} (x y : punit.{u+1}) (s : set punit.{u+1})
+universe u
+
+namespace PUnit
+
+variable {R S : Type _} (x y : PUnit.{u + 1}) (s : Set PUnit.{u + 1})
 
 @[to_additive]
-instance : comm_group punit :=
-by refine_struct
-{ mul := λ _ _, star,
-  one := star,
-  inv := λ _, star,
-  div := λ _ _, star,
-  npow := λ _ _, star,
-  zpow := λ _ _, star,
-  .. };
-intros; exact subsingleton.elim _ _
+instance : CommGroupₓ PUnit := by
+  refine_struct
+      { mul := fun _ _ => star, one := star, inv := fun _ => star, div := fun _ _ => star, npow := fun _ _ => star,
+        zpow := fun _ _ => star, .. } <;>
+    intros <;> exact Subsingleton.elimₓ _ _
 
-@[simp, to_additive] lemma one_eq : (1 : punit) = star := rfl
-@[simp, to_additive] lemma mul_eq : x * y = star := rfl
-@[simp, to_additive] lemma div_eq : x / y = star := rfl
-@[simp, to_additive] lemma inv_eq : x⁻¹ = star := rfl
+@[simp, to_additive]
+theorem one_eq : (1 : PUnit) = star :=
+  rfl
 
-instance : comm_ring punit :=
-by refine
-{ .. punit.comm_group,
-  .. punit.add_comm_group,
-  .. };
-intros; exact subsingleton.elim _ _
+@[simp, to_additive]
+theorem mul_eq : x * y = star :=
+  rfl
 
-instance : cancel_comm_monoid_with_zero punit :=
-by refine
-{ .. punit.comm_ring,
-  .. };
-intros; exact subsingleton.elim _ _
+@[simp, to_additive]
+theorem div_eq : x / y = star :=
+  rfl
 
-instance : normalized_gcd_monoid punit :=
-by refine
-{ gcd := λ _ _, star,
-  lcm := λ _ _, star,
-  norm_unit := λ x, 1,
-  gcd_dvd_left := λ _ _, ⟨star, subsingleton.elim _ _⟩,
-  gcd_dvd_right := λ _ _, ⟨star, subsingleton.elim _ _⟩,
-  dvd_gcd := λ _ _ _ _ _, ⟨star, subsingleton.elim _ _⟩,
-  gcd_mul_lcm := λ _ _, ⟨1, subsingleton.elim _ _⟩,
-  .. };
-intros; exact subsingleton.elim _ _
+@[simp, to_additive]
+theorem inv_eq : x⁻¹ = star :=
+  rfl
 
-@[simp] lemma gcd_eq : gcd x y = star := rfl
-@[simp] lemma lcm_eq : lcm x y = star := rfl
-@[simp] lemma norm_unit_eq : norm_unit x = 1 := rfl
+instance : CommRingₓ PUnit := by
+  refine' { PUnit.commGroup, PUnit.addCommGroup with .. } <;> intros <;> exact Subsingleton.elimₓ _ _
 
-instance : complete_boolean_algebra punit :=
-by refine
-{ le := λ _ _, true,
-  le_antisymm := λ _ _ _ _, subsingleton.elim _ _,
-  lt := λ _ _, false,
-  lt_iff_le_not_le := λ _ _, iff_of_false not_false (λ H, H.2 trivial),
-  top := star,
-  bot := star,
-  sup := λ _ _, star,
-  inf := λ _ _, star,
-  Sup := λ _, star,
-  Inf := λ _, star,
-  compl := λ _, star,
-  sdiff := λ _ _, star,
-  .. };
-intros; trivial <|> simp only [eq_iff_true_of_subsingleton]
+instance : CancelCommMonoidWithZero PUnit := by
+  refine' { PUnit.commRing with .. } <;> intros <;> exact Subsingleton.elimₓ _ _
 
-@[simp] lemma top_eq : (⊤ : punit) = star := rfl
-@[simp] lemma bot_eq : (⊥ : punit) = star := rfl
-@[simp] lemma sup_eq : x ⊔ y = star := rfl
-@[simp] lemma inf_eq : x ⊓ y = star := rfl
-@[simp] lemma Sup_eq : Sup s = star := rfl
-@[simp] lemma Inf_eq : Inf s = star := rfl
-@[simp] lemma compl_eq : xᶜ = star := rfl
-@[simp] lemma sdiff_eq : x \ y = star := rfl
-@[simp] protected lemma le : x ≤ y := trivial
-@[simp] lemma not_lt : ¬(x < y) := not_false
+instance : NormalizedGcdMonoid PUnit := by
+  refine'
+      { gcd := fun _ _ => star, lcm := fun _ _ => star, normUnit := fun x => 1,
+        gcd_dvd_left := fun _ _ => ⟨star, Subsingleton.elimₓ _ _⟩,
+        gcd_dvd_right := fun _ _ => ⟨star, Subsingleton.elimₓ _ _⟩,
+        dvd_gcd := fun _ _ _ _ _ => ⟨star, Subsingleton.elimₓ _ _⟩,
+        gcd_mul_lcm := fun _ _ => ⟨1, Subsingleton.elimₓ _ _⟩, .. } <;>
+    intros <;> exact Subsingleton.elimₓ _ _
 
-instance : canonically_ordered_add_monoid punit :=
-by refine
-{ le_iff_exists_add := λ _ _, iff_of_true _ ⟨star, subsingleton.elim _ _⟩,
-  .. punit.comm_ring, .. punit.complete_boolean_algebra, .. };
-intros; trivial
+@[simp]
+theorem gcd_eq : gcd x y = star :=
+  rfl
 
-instance : linear_ordered_cancel_add_comm_monoid punit :=
-{ add_left_cancel := λ _ _ _ _, subsingleton.elim _ _,
-  le_of_add_le_add_left := λ _ _ _ _, trivial,
-  le_total := λ _ _, or.inl trivial,
-  decidable_le := λ _ _, decidable.true,
-  decidable_eq := punit.decidable_eq,
-  decidable_lt := λ _ _, decidable.false,
-  .. punit.canonically_ordered_add_monoid }
+@[simp]
+theorem lcm_eq : lcm x y = star :=
+  rfl
 
-instance : has_scalar R punit :=
-{ smul := λ _ _, star }
+@[simp]
+theorem norm_unit_eq : normUnit x = 1 :=
+  rfl
 
-@[simp] lemma smul_eq (r : R) : r • y = star := rfl
+instance : CompleteBooleanAlgebra PUnit := by
+  refine'
+      { le := fun _ _ => True, le_antisymm := fun _ _ _ _ => Subsingleton.elimₓ _ _, lt := fun _ _ => False,
+        lt_iff_le_not_le := fun _ _ => iff_of_false not_false fun H => H.2 trivialₓ, top := star, bot := star,
+        sup := fun _ _ => star, inf := fun _ _ => star, sup := fun _ => star, inf := fun _ => star,
+        Compl := fun _ => star, sdiff := fun _ _ => star, .. } <;>
+    intros <;>
+      first |
+        trivial|
+        simp only [eq_iff_true_of_subsingleton]
 
-instance : is_central_scalar R punit := ⟨λ _ _, rfl⟩
+@[simp]
+theorem top_eq : (⊤ : PUnit) = star :=
+  rfl
 
-instance : smul_comm_class R S punit := ⟨λ _ _ _, subsingleton.elim _ _⟩
+@[simp]
+theorem bot_eq : (⊥ : PUnit) = star :=
+  rfl
 
-instance [has_scalar R S] : is_scalar_tower R S punit := ⟨λ _ _ _, subsingleton.elim _ _⟩
+@[simp]
+theorem sup_eq : x⊔y = star :=
+  rfl
 
-instance [has_zero R] : smul_with_zero R punit :=
-by refine { ..punit.has_scalar, .. };
-intros; exact subsingleton.elim _ _
+@[simp]
+theorem inf_eq : x⊓y = star :=
+  rfl
 
-instance [monoid R] : mul_action R punit :=
-by refine { ..punit.has_scalar, .. };
-intros; exact subsingleton.elim _ _
+@[simp]
+theorem Sup_eq : sup s = star :=
+  rfl
 
-instance [monoid R] : distrib_mul_action R punit :=
-by refine { ..punit.mul_action, .. };
-intros; exact subsingleton.elim _ _
+@[simp]
+theorem Inf_eq : inf s = star :=
+  rfl
 
-instance [monoid R] : mul_distrib_mul_action R punit :=
-by refine { ..punit.mul_action, .. };
-intros; exact subsingleton.elim _ _
+@[simp]
+theorem compl_eq : xᶜ = star :=
+  rfl
 
-instance [semiring R] : mul_semiring_action R punit :=
-{ ..punit.distrib_mul_action, ..punit.mul_distrib_mul_action }
+@[simp]
+theorem sdiff_eq : x \ y = star :=
+  rfl
 
-instance [monoid_with_zero R] : mul_action_with_zero R punit :=
-{ .. punit.mul_action, .. punit.smul_with_zero }
+@[simp]
+protected theorem le : x ≤ y :=
+  trivialₓ
 
-instance [semiring R] : module R punit :=
-by refine { .. punit.distrib_mul_action, .. };
-intros; exact subsingleton.elim _ _
+@[simp]
+theorem not_lt : ¬x < y :=
+  not_false
 
-end punit
+instance : CanonicallyOrderedAddMonoid PUnit := by
+  refine'
+      { PUnit.commRing, PUnit.completeBooleanAlgebra with
+        le_iff_exists_add := fun _ _ => iff_of_true _ ⟨star, Subsingleton.elimₓ _ _⟩, .. } <;>
+    intros <;> trivial
+
+instance : LinearOrderedCancelAddCommMonoid PUnit :=
+  { PUnit.canonicallyOrderedAddMonoid with add_left_cancel := fun _ _ _ _ => Subsingleton.elimₓ _ _,
+    le_of_add_le_add_left := fun _ _ _ _ => trivialₓ, le_total := fun _ _ => Or.inl trivialₓ,
+    decidableLe := fun _ _ => Decidable.true, DecidableEq := PUnit.decidableEq,
+    decidableLt := fun _ _ => Decidable.false }
+
+instance : HasScalar R PUnit where
+  smul := fun _ _ => unit
+
+@[simp]
+theorem smul_eq (r : R) : r • y = star :=
+  rfl
+
+instance : IsCentralScalar R PUnit :=
+  ⟨fun _ _ => rfl⟩
+
+instance : SmulCommClass R S PUnit :=
+  ⟨fun _ _ _ => Subsingleton.elimₓ _ _⟩
+
+instance [HasScalar R S] : IsScalarTower R S PUnit :=
+  ⟨fun _ _ _ => Subsingleton.elimₓ _ _⟩
+
+instance [Zero R] : SmulWithZero R PUnit := by
+  refine' { PUnit.hasScalar with .. } <;> intros <;> exact Subsingleton.elimₓ _ _
+
+instance [Monoidₓ R] : MulAction R PUnit := by
+  refine' { PUnit.hasScalar with .. } <;> intros <;> exact Subsingleton.elimₓ _ _
+
+instance [Monoidₓ R] : DistribMulAction R PUnit := by
+  refine' { PUnit.mulAction with .. } <;> intros <;> exact Subsingleton.elimₓ _ _
+
+instance [Monoidₓ R] : MulDistribMulAction R PUnit := by
+  refine' { PUnit.mulAction with .. } <;> intros <;> exact Subsingleton.elimₓ _ _
+
+instance [Semiringₓ R] : MulSemiringAction R PUnit :=
+  { PUnit.distribMulAction, PUnit.mulDistribMulAction with }
+
+instance [MonoidWithZeroₓ R] : MulActionWithZero R PUnit :=
+  { PUnit.mulAction, PUnit.smulWithZero with }
+
+instance [Semiringₓ R] : Module R PUnit := by
+  refine' { PUnit.distribMulAction with .. } <;> intros <;> exact Subsingleton.elimₓ _ _
+
+end PUnit
+

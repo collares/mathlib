@@ -30,22 +30,26 @@ absolute
 -/
 
 
-/--
-Absolute value is a unary operator with properties similar to the absolute value of a real number.
+/-- Absolute value is a unary operator with properties similar to the absolute value of a real number.
 -/
-class has_abs (α : Type*) := (abs : α → α)
-export has_abs (abs)
+class HasAbs (α : Type _) where
+  abs : α → α
 
-/--
-The positive part of an element admiting a decomposition into positive and negative parts.
+export HasAbs (abs)
+
+/-- The positive part of an element admiting a decomposition into positive and negative parts.
 -/
-class has_pos_part (α : Type*) := (pos : α → α)
+class HasPosPart (α : Type _) where
+  Pos : α → α
 
-/--
-The negative part of an element admiting a decomposition into positive and negative parts.
+/-- The negative part of an element admiting a decomposition into positive and negative parts.
 -/
-class has_neg_part (α : Type*) := (neg : α → α)
+class HasNegPart (α : Type _) where
+  neg : α → α
 
-notation `|`a`|` := abs a
-postfix `⁺`:1000 := has_pos_part.pos
-postfix `⁻`:1000 := has_neg_part.neg
+-- mathport name: «expr ⁺»
+postfix:1000 "⁺" => HasPosPart.pos
+
+-- mathport name: «expr ⁻»
+postfix:1000 "⁻" => HasNegPart.neg
+

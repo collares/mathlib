@@ -3,47 +3,62 @@ Copyright (c) 2021 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison, Adam Topaz
 -/
-import category_theory.preadditive
-import category_theory.preadditive.additive_functor
-import data.equiv.transfer_instance
+import Mathbin.CategoryTheory.Preadditive.Default
+import Mathbin.CategoryTheory.Preadditive.AdditiveFunctor
+import Mathbin.Data.Equiv.TransferInstance
 
 /-!
 # If `C` is preadditive, `Cᵒᵖ` has a natural preadditive structure.
 
 -/
 
-open opposite
 
-namespace category_theory
+open Opposite
 
-variables (C : Type*) [category C] [preadditive C]
+namespace CategoryTheory
 
-instance : preadditive Cᵒᵖ :=
-{ hom_group := λ X Y, equiv.add_comm_group (op_equiv X Y),
-  add_comp' := λ X Y Z f f' g,
-    congr_arg quiver.hom.op (preadditive.comp_add _ _ _ g.unop f.unop f'.unop),
-  comp_add' := λ X Y Z f g g',
-    congr_arg quiver.hom.op (preadditive.add_comp _ _ _ g.unop g'.unop f.unop), }
+variable (C : Type _) [Category C] [Preadditive C]
 
-instance module_End_left {X : Cᵒᵖ} {Y : C} : module (End X) (unop X ⟶ Y) :=
-{ smul_add := λ r f g, preadditive.comp_add _ _ _ _ _ _,
-  smul_zero := λ r, limits.comp_zero,
-  add_smul := λ r s f, preadditive.add_comp _ _ _ _ _ _,
-  zero_smul := λ f, limits.zero_comp }
+instance : Preadditive Cᵒᵖ where
+  homGroup := fun X Y => Equivₓ.addCommGroup (opEquiv X Y)
+  add_comp' := fun X Y Z f f' g => congr_argₓ Quiver.Hom.op (Preadditive.comp_add _ _ _ g.unop f.unop f'.unop)
+  comp_add' := fun X Y Z f g g' => congr_argₓ Quiver.Hom.op (Preadditive.add_comp _ _ _ g.unop g'.unop f.unop)
 
-@[simp] lemma unop_zero (X Y : Cᵒᵖ) : (0 : X ⟶ Y).unop = 0 := rfl
-@[simp] lemma unop_add {X Y : Cᵒᵖ} (f g : X ⟶ Y) : (f + g).unop = f.unop + g.unop := rfl
-@[simp] lemma op_zero (X Y : C) : (0 : X ⟶ Y).op = 0 := rfl
-@[simp] lemma op_add {X Y : C} (f g : X ⟶ Y) : (f + g).op = f.op + g.op := rfl
+instance moduleEndLeft {X : Cᵒᵖ} {Y : C} : Module (End X) (unop X ⟶ Y) where
+  smul_add := fun r f g => Preadditive.comp_add _ _ _ _ _ _
+  smul_zero := fun r => Limits.comp_zero
+  add_smul := fun r s f => Preadditive.add_comp _ _ _ _ _ _
+  zero_smul := fun f => Limits.zero_comp
 
-variables {C} {D : Type*} [category D] [preadditive D]
+@[simp]
+theorem unop_zero (X Y : Cᵒᵖ) : (0 : X ⟶ Y).unop = 0 :=
+  rfl
 
-instance functor.op_additive (F : C ⥤ D) [F.additive] : F.op.additive := {}
+@[simp]
+theorem unop_add {X Y : Cᵒᵖ} (f g : X ⟶ Y) : (f + g).unop = f.unop + g.unop :=
+  rfl
 
-instance functor.right_op_additive (F : Cᵒᵖ ⥤ D) [F.additive] : F.right_op.additive := {}
+@[simp]
+theorem op_zero (X Y : C) : (0 : X ⟶ Y).op = 0 :=
+  rfl
 
-instance functor.left_op_additive (F : C ⥤ Dᵒᵖ) [F.additive] : F.left_op.additive := {}
+@[simp]
+theorem op_add {X Y : C} (f g : X ⟶ Y) : (f + g).op = f.op + g.op :=
+  rfl
 
-instance functor.unop_additive (F : Cᵒᵖ ⥤ Dᵒᵖ) [F.additive] : F.unop.additive := {}
+variable {C} {D : Type _} [Category D] [Preadditive D]
 
-end category_theory
+instance Functor.op_additive (F : C ⥤ D) [F.Additive] : F.op.Additive :=
+  {  }
+
+instance Functor.right_op_additive (F : Cᵒᵖ ⥤ D) [F.Additive] : F.rightOp.Additive :=
+  {  }
+
+instance Functor.left_op_additive (F : C ⥤ Dᵒᵖ) [F.Additive] : F.leftOp.Additive :=
+  {  }
+
+instance Functor.unop_additive (F : Cᵒᵖ ⥤ Dᵒᵖ) [F.Additive] : F.unop.Additive :=
+  {  }
+
+end CategoryTheory
+

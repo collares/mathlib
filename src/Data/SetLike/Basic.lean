@@ -3,8 +3,8 @@ Copyright (c) 2021 Eric Wieser. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Eric Wieser
 -/
-import data.set.basic
-import tactic.monotonicity.basic
+import Mathbin.Data.Set.Basic
+import Mathbin.Tactic.Monotonicity.Basic
 
 /-!
 # Typeclass for types with a set-like extensionality property
@@ -69,6 +69,7 @@ While this is equivalent, `set_like` conveniently uses a carrier set projection 
 subobjects
 -/
 
+
 /-- A class to indicate that there is a canonical injection between `A` and `set B`.
 
 This has the effect of giving terms of `A` elements of type `B` (through a `has_mem`
@@ -81,83 +82,110 @@ Note: if `set_like.coe` is a projection, implementers should create a simp lemma
 to normalize terms.
 -/
 @[protect_proj]
-class set_like (A : Type*) (B : out_param $ Type*) :=
-(coe : A → set B)
-(coe_injective' : function.injective coe)
+class SetLike (A : Type _) (B : outParam <| Type _) where
+  coe : A → Set B
+  coe_injective' : Function.Injective coe
 
-namespace set_like
+namespace SetLike
 
-variables {A : Type*} {B : Type*} [i : set_like A B]
+variable {A : Type _} {B : Type _} [i : SetLike A B]
 
 include i
 
-instance : has_coe_t A (set B) := ⟨set_like.coe⟩
+instance : CoeTₓ A (Set B) :=
+  ⟨SetLike.Coe⟩
 
-@[priority 100]
-instance : has_mem B A := ⟨λ x p, x ∈ (p : set B)⟩
+instance (priority := 100) : HasMem B A :=
+  ⟨fun x p => x ∈ (p : Set B)⟩
 
 -- `dangerous_instance` does not know that `B` is used only as an `out_param`
-@[nolint dangerous_instance, priority 100]
-instance : has_coe_to_sort A Type* := ⟨λ p, {x : B // x ∈ p}⟩
+@[nolint dangerous_instance]
+instance (priority := 100) : CoeSort A (Type _) :=
+  ⟨fun p => { x : B // x ∈ p }⟩
 
-variables (p q : A)
+variable (p q : A)
 
-@[simp, norm_cast] theorem coe_sort_coe : ((p : set B) : Type*) = p := rfl
+@[simp, norm_cast]
+theorem coe_sort_coe : ((p : Set B) : Type _) = p :=
+  rfl
 
-variables {p q}
+variable {p q}
 
-protected theorem «exists» {q : p → Prop} :
-  (∃ x, q x) ↔ (∃ x ∈ p, q ⟨x, ‹_›⟩) := set_coe.exists
+protected theorem exists {q : p → Prop} : (∃ x, q x) ↔ ∃ x ∈ p, q ⟨x, ‹_›⟩ :=
+  SetCoe.exists
 
-protected theorem «forall» {q : p → Prop} :
-  (∀ x, q x) ↔ (∀ x ∈ p, q ⟨x, ‹_›⟩) := set_coe.forall
+protected theorem forall {q : p → Prop} : (∀ x, q x) ↔ ∀, ∀ x ∈ p, ∀, q ⟨x, ‹_›⟩ :=
+  SetCoe.forall
 
-theorem coe_injective : function.injective (coe : A → set B) :=
-λ x y h, set_like.coe_injective' h
+theorem coe_injective : Function.Injective (coe : A → Set B) := fun x y h => SetLike.coe_injective' h
 
-@[simp, norm_cast] theorem coe_set_eq : (p : set B) = q ↔ p = q := coe_injective.eq_iff
+@[simp, norm_cast]
+theorem coe_set_eq : (p : Set B) = q ↔ p = q :=
+  coe_injective.eq_iff
 
-theorem ext' (h : (p : set B) = q) : p = q := coe_injective h
+theorem ext' (h : (p : Set B) = q) : p = q :=
+  coe_injective h
 
-theorem ext'_iff : p = q ↔ (p : set B) = q := coe_set_eq.symm
+theorem ext'_iff : p = q ↔ (p : Set B) = q :=
+  coe_set_eq.symm
 
 /-- Note: implementers of `set_like` must copy this lemma in order to tag it with `@[ext]`. -/
-theorem ext (h : ∀ x, x ∈ p ↔ x ∈ q) : p = q := coe_injective $ set.ext h
+theorem ext (h : ∀ x, x ∈ p ↔ x ∈ q) : p = q :=
+  coe_injective <| Set.ext h
 
-theorem ext_iff : p = q ↔ (∀ x, x ∈ p ↔ x ∈ q) := coe_injective.eq_iff.symm.trans set.ext_iff
+theorem ext_iff : p = q ↔ ∀ x, x ∈ p ↔ x ∈ q :=
+  coe_injective.eq_iff.symm.trans Set.ext_iff
 
-@[simp] theorem mem_coe {x : B} : x ∈ (p : set B) ↔ x ∈ p := iff.rfl
+@[simp]
+theorem mem_coe {x : B} : x ∈ (p : Set B) ↔ x ∈ p :=
+  Iff.rfl
 
-@[simp, norm_cast] lemma coe_eq_coe {x y : p} : (x : B) = y ↔ x = y := subtype.ext_iff_val.symm
+@[simp, norm_cast]
+theorem coe_eq_coe {x y : p} : (x : B) = y ↔ x = y :=
+  Subtype.ext_iff_val.symm
 
-@[simp, norm_cast] lemma coe_mk (x : B) (hx : x ∈ p) : ((⟨x, hx⟩ : p) : B) = x := rfl
-@[simp] lemma coe_mem (x : p) : (x : B) ∈ p := x.2
+@[simp, norm_cast]
+theorem coe_mk (x : B) (hx : x ∈ p) : ((⟨x, hx⟩ : p) : B) = x :=
+  rfl
 
-@[simp] protected lemma eta (x : p) (hx : (x : B) ∈ p) : (⟨x, hx⟩ : p) = x := subtype.eta x hx
+@[simp]
+theorem coe_mem (x : p) : (x : B) ∈ p :=
+  x.2
+
+@[simp]
+protected theorem eta (x : p) (hx : (x : B) ∈ p) : (⟨x, hx⟩ : p) = x :=
+  Subtype.eta x hx
 
 -- `dangerous_instance` does not know that `B` is used only as an `out_param`
-@[nolint dangerous_instance, priority 100]
-instance : partial_order A :=
-{ le := λ H K, ∀ ⦃x⦄, x ∈ H → x ∈ K,
-  .. partial_order.lift (coe : A → set B) coe_injective }
+@[nolint dangerous_instance]
+instance (priority := 100) : PartialOrderₓ A :=
+  { PartialOrderₓ.lift (coe : A → Set B) coe_injective with le := fun H K => ∀ ⦃x⦄, x ∈ H → x ∈ K }
 
-lemma le_def {S T : A} : S ≤ T ↔ ∀ ⦃x : B⦄, x ∈ S → x ∈ T := iff.rfl
-
-@[simp, norm_cast]
-lemma coe_subset_coe {S T : A} : (S : set B) ⊆ T ↔ S ≤ T := iff.rfl
-
-@[mono] lemma coe_mono : monotone (coe : A → set B) := λ a b, coe_subset_coe.mpr
+theorem le_def {S T : A} : S ≤ T ↔ ∀ ⦃x : B⦄, x ∈ S → x ∈ T :=
+  Iff.rfl
 
 @[simp, norm_cast]
-lemma coe_ssubset_coe {S T : A} : (S : set B) ⊂ T ↔ S < T := iff.rfl
+theorem coe_subset_coe {S T : A} : (S : Set B) ⊆ T ↔ S ≤ T :=
+  Iff.rfl
 
-@[mono] lemma coe_strict_mono : strict_mono (coe : A → set B) := λ a b, coe_ssubset_coe.mpr
+@[mono]
+theorem coe_mono : Monotone (coe : A → Set B) := fun a b => coe_subset_coe.mpr
 
-lemma not_le_iff_exists : ¬(p ≤ q) ↔ ∃ x ∈ p, x ∉ q := set.not_subset
+@[simp, norm_cast]
+theorem coe_ssubset_coe {S T : A} : (S : Set B) ⊂ T ↔ S < T :=
+  Iff.rfl
 
-lemma exists_of_lt : p < q → ∃ x ∈ q, x ∉ p := set.exists_of_ssubset
+@[mono]
+theorem coe_strict_mono : StrictMono (coe : A → Set B) := fun a b => coe_ssubset_coe.mpr
 
-lemma lt_iff_le_and_exists : p < q ↔ p ≤ q ∧ ∃ x ∈ q, x ∉ p :=
-by rw [lt_iff_le_not_le, not_le_iff_exists]
+theorem not_le_iff_exists : ¬p ≤ q ↔ ∃ x ∈ p, x ∉ q :=
+  Set.not_subset
 
-end set_like
+theorem exists_of_lt : p < q → ∃ x ∈ q, x ∉ p :=
+  Set.exists_of_ssubset
+
+theorem lt_iff_le_and_exists : p < q ↔ p ≤ q ∧ ∃ x ∈ q, x ∉ p := by
+  rw [lt_iff_le_not_leₓ, not_le_iff_exists]
+
+end SetLike
+

@@ -3,7 +3,7 @@ Copyright (c) 2021 Chris Hughes. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chris Hughes
 -/
-import data.mv_polynomial.variables
+import Mathbin.Data.MvPolynomial.Variables
 
 /-!
 # Polynomials supported by a set of variables
@@ -19,108 +19,116 @@ This file contains the definition and lemmas about `mv_polynomial.supported`.
 ## Tags
 variables, polynomial, vars
 -/
-universes u v w
 
-namespace mv_polynomial
-variables {σ τ : Type*} {R : Type u} {S : Type v} {r : R} {e : ℕ} {n m : σ}
 
-section comm_semiring
-variables [comm_semiring R] {p q : mv_polynomial σ R}
+universe u v w
 
-variables (R)
+namespace MvPolynomial
+
+variable {σ τ : Type _} {R : Type u} {S : Type v} {r : R} {e : ℕ} {n m : σ}
+
+section CommSemiringₓ
+
+variable [CommSemiringₓ R] {p q : MvPolynomial σ R}
+
+variable (R)
 
 /-- The set of polynomials whose variables are contained in `s` as a `subalgebra` over `R`. -/
-noncomputable def supported (s : set σ) : subalgebra R (mv_polynomial σ R) :=
-algebra.adjoin R (X '' s)
+noncomputable def supported (s : Set σ) : Subalgebra R (MvPolynomial σ R) :=
+  Algebra.adjoin R (X '' s)
 
-variables {σ R}
+variable {σ R}
 
-open_locale classical
-open algebra
+open_locale Classical
 
-lemma supported_eq_range_rename (s : set σ) :
-  supported R s = (rename (coe : s → σ)).range :=
-by rw [supported, set.image_eq_range, adjoin_range_eq_range_aeval, rename]
+open Algebra
 
-/--The isomorphism between the subalgebra of polynomials supported by `s` and `mv_polynomial s R`-/
-noncomputable def supported_equiv_mv_polynomial (s : set σ) :
-  supported R s ≃ₐ[R] mv_polynomial s R :=
-(subalgebra.equiv_of_eq _ _ (supported_eq_range_rename s)).trans
-(alg_equiv.of_injective (rename (coe : s → σ))
-  (rename_injective _ subtype.val_injective)).symm
+theorem supported_eq_range_rename (s : Set σ) : supported R s = (rename (coe : s → σ)).range := by
+  rw [supported, Set.image_eq_range, adjoin_range_eq_range_aeval, rename]
 
-@[simp] lemma supported_equiv_mv_polynomial_symm_C (s : set σ) (x : R) :
-  (supported_equiv_mv_polynomial s).symm (C x) = algebra_map R (supported R s) x :=
-begin
-  ext1,
-  simp [supported_equiv_mv_polynomial, mv_polynomial.algebra_map_eq],
-end
+/-- The isomorphism between the subalgebra of polynomials supported by `s` and `mv_polynomial s R`-/
+noncomputable def supportedEquivMvPolynomial (s : Set σ) : supported R s ≃ₐ[R] MvPolynomial s R :=
+  (Subalgebra.equivOfEq _ _ (supported_eq_range_rename s)).trans
+    (AlgEquiv.ofInjective (rename (coe : s → σ)) (rename_injective _ Subtype.val_injective)).symm
 
-@[simp] lemma supported_equiv_mv_polynomial_symm_X (s : set σ) (i : s) :
-  (↑((supported_equiv_mv_polynomial s).symm (X i : mv_polynomial s R)) : mv_polynomial σ R) = X i :=
-by simp [supported_equiv_mv_polynomial]
+@[simp]
+theorem supported_equiv_mv_polynomial_symm_C (s : Set σ) (x : R) :
+    (supportedEquivMvPolynomial s).symm (c x) = algebraMap R (supported R s) x := by
+  ext1
+  simp [supported_equiv_mv_polynomial, MvPolynomial.algebra_map_eq]
 
-variables {s t : set σ}
+@[simp]
+theorem supported_equiv_mv_polynomial_symm_X (s : Set σ) (i : s) :
+    (↑((supportedEquivMvPolynomial s).symm (x i : MvPolynomial s R)) : MvPolynomial σ R) = x i := by
+  simp [supported_equiv_mv_polynomial]
 
-lemma mem_supported : p ∈ (supported R s) ↔ ↑p.vars ⊆ s :=
-begin
-  rw [supported_eq_range_rename, alg_hom.mem_range],
-  split,
-  { rintros ⟨p, rfl⟩,
-    refine trans (finset.coe_subset.2 (vars_rename _ _)) _,
-    simp },
-  { intros hs,
-    exact exists_rename_eq_of_vars_subset_range p (coe : s → σ) subtype.val_injective (by simpa) }
-end
+variable {s t : Set σ}
 
-lemma supported_eq_vars_subset : (supported R s : set (mv_polynomial σ R)) = {p | ↑p.vars ⊆ s} :=
-set.ext $ λ _, mem_supported
+theorem mem_supported : p ∈ supported R s ↔ ↑p.vars ⊆ s := by
+  rw [supported_eq_range_rename, AlgHom.mem_range]
+  constructor
+  · rintro ⟨p, rfl⟩
+    refine' trans (Finset.coe_subset.2 (vars_rename _ _)) _
+    simp
+    
+  · intro hs
+    exact
+      exists_rename_eq_of_vars_subset_range p (coe : s → σ) Subtype.val_injective
+        (by
+          simpa)
+    
 
-@[simp] lemma mem_supported_vars (p : mv_polynomial σ R) : p ∈ supported R (↑p.vars : set σ) :=
-by rw [mem_supported]
+theorem supported_eq_vars_subset : (supported R s : Set (MvPolynomial σ R)) = { p | ↑p.vars ⊆ s } :=
+  Set.ext fun _ => mem_supported
+
+@[simp]
+theorem mem_supported_vars (p : MvPolynomial σ R) : p ∈ supported R (↑p.vars : Set σ) := by
+  rw [mem_supported]
 
 variable (s)
 
-lemma supported_eq_adjoin_X : supported R s = algebra.adjoin R (X '' s) := rfl
+theorem supported_eq_adjoin_X : supported R s = Algebra.adjoin R (X '' s) :=
+  rfl
 
-@[simp] lemma supported_univ : supported R (set.univ : set σ) = ⊤ :=
-by simp [algebra.eq_top_iff, mem_supported]
+@[simp]
+theorem supported_univ : supported R (Set.Univ : Set σ) = ⊤ := by
+  simp [Algebra.eq_top_iff, mem_supported]
 
-@[simp] lemma supported_empty : supported R (∅ : set σ) = ⊥ :=
-by simp [supported_eq_adjoin_X]
+@[simp]
+theorem supported_empty : supported R (∅ : Set σ) = ⊥ := by
+  simp [supported_eq_adjoin_X]
 
-variables {s}
+variable {s}
 
-lemma supported_mono (st : s ⊆ t) : supported R s ≤ supported R t :=
-algebra.adjoin_mono (set.image_subset _ st)
+theorem supported_mono (st : s ⊆ t) : supported R s ≤ supported R t :=
+  Algebra.adjoin_mono (Set.image_subset _ st)
 
-@[simp] lemma X_mem_supported [nontrivial R] {i : σ} : (X i) ∈ supported R s ↔ i ∈ s :=
-by simp [mem_supported]
+@[simp]
+theorem X_mem_supported [Nontrivial R] {i : σ} : x i ∈ supported R s ↔ i ∈ s := by
+  simp [mem_supported]
 
-@[simp] lemma supported_le_supported_iff [nontrivial R] :
-  supported R s ≤ supported R t ↔ s ⊆ t :=
-begin
-  split,
-  { intros h i,
-    simpa using @h (X i) },
-  { exact supported_mono }
-end
+@[simp]
+theorem supported_le_supported_iff [Nontrivial R] : supported R s ≤ supported R t ↔ s ⊆ t := by
+  constructor
+  · intro h i
+    simpa using @h (X i)
+    
+  · exact supported_mono
+    
 
-lemma supported_strict_mono [nontrivial R] :
-  strict_mono (supported R : set σ → subalgebra R (mv_polynomial σ R)) :=
-strict_mono_of_le_iff_le (λ _ _, supported_le_supported_iff.symm)
+theorem supported_strict_mono [Nontrivial R] : StrictMono (supported R : Set σ → Subalgebra R (MvPolynomial σ R)) :=
+  strict_mono_of_le_iff_le fun _ _ => supported_le_supported_iff.symm
 
-lemma exists_restrict_to_vars (R : Type*) [comm_ring R] {F : mv_polynomial σ ℤ} (hF : ↑F.vars ⊆ s) :
-  ∃ f : (s → R) → R, ∀ x : σ → R, f (x ∘ coe : s → R) = aeval x F :=
-begin
-  classical,
-  rw [← mem_supported, supported_eq_range_rename, alg_hom.mem_range] at hF,
-  cases hF with F' hF',
-  use λ z, aeval z F',
-  intro x,
-  simp only [←hF', aeval_rename],
-end
+theorem exists_restrict_to_vars (R : Type _) [CommRingₓ R] {F : MvPolynomial σ ℤ} (hF : ↑F.vars ⊆ s) :
+    ∃ f : (s → R) → R, ∀ x : σ → R, f (x ∘ coe : s → R) = aeval x F := by
+  classical
+  rw [← mem_supported, supported_eq_range_rename, AlgHom.mem_range] at hF
+  cases' hF with F' hF'
+  use fun z => aeval z F'
+  intro x
+  simp only [← hF', aeval_rename]
 
-end comm_semiring
+end CommSemiringₓ
 
-end mv_polynomial
+end MvPolynomial
+

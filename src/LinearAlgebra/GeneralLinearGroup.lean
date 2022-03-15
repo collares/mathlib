@@ -3,8 +3,8 @@ Copyright (c) 2021 Chris Birkbeck. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chris Birkbeck
 -/
-import linear_algebra.matrix.nonsingular_inverse
-import linear_algebra.special_linear_group
+import Mathbin.LinearAlgebra.Matrix.NonsingularInverse
+import Mathbin.LinearAlgebra.SpecialLinearGroup
 
 /-!
 # The General Linear group $GL(n, R)$
@@ -23,201 +23,215 @@ consisting of all invertible `n` by `n` `R`-matrices.
 matrix group, group, matrix inverse
 -/
 
-namespace matrix
-universes u v
-open_locale matrix
-open linear_map
+
+namespace Matrix
+
+universe u v
+
+open_locale Matrix
+
+open LinearMap
 
 -- disable this instance so we do not accidentally use it in lemmas.
-local attribute [-instance] special_linear_group.has_coe_to_fun
+attribute [-instance] special_linear_group.has_coe_to_fun
 
 /-- `GL n R` is the group of `n` by `n` `R`-matrices with unit determinant.
 Defined as a subtype of matrices-/
-abbreviation general_linear_group (n : Type u) (R : Type v)
-  [decidable_eq n] [fintype n] [comm_ring R] : Type* := (matrix n n R)ˣ
+abbrev GeneralLinearGroup (n : Type u) (R : Type v) [DecidableEq n] [Fintype n] [CommRingₓ R] : Type _ :=
+  (Matrix n n R)ˣ
 
-notation `GL` := general_linear_group
+-- mathport name: «exprGL»
+notation "GL" => GeneralLinearGroup
 
-namespace general_linear_group
+namespace GeneralLinearGroup
 
-variables {n : Type u} [decidable_eq n] [fintype n] {R : Type v} [comm_ring R]
+variable {n : Type u} [DecidableEq n] [Fintype n] {R : Type v} [CommRingₓ R]
 
 /-- The determinant of a unit matrix is itself a unit. -/
 @[simps]
-def det : GL n R →* Rˣ :=
-{ to_fun := λ A,
-  { val := (↑A : matrix n n R).det,
-    inv := (↑(A⁻¹) : matrix n n R).det,
-    val_inv := by rw [←det_mul, ←mul_eq_mul, A.mul_inv, det_one],
-    inv_val := by rw [←det_mul, ←mul_eq_mul, A.inv_mul, det_one]},
-  map_one' := units.ext det_one,
-  map_mul' := λ A B, units.ext $ det_mul _ _ }
+def det : GL n R →* Rˣ where
+  toFun := fun A =>
+    { val := (↑A : Matrix n n R).det, inv := (↑A⁻¹ : Matrix n n R).det,
+      val_inv := by
+        rw [← det_mul, ← mul_eq_mul, A.mul_inv, det_one],
+      inv_val := by
+        rw [← det_mul, ← mul_eq_mul, A.inv_mul, det_one] }
+  map_one' := Units.ext det_one
+  map_mul' := fun A B => Units.ext <| det_mul _ _
 
-/--The `GL n R` and `general_linear_group R n` groups are multiplicatively equivalent-/
-def to_lin : (GL n R) ≃* (linear_map.general_linear_group R (n → R)) :=
-units.map_equiv to_lin_alg_equiv'.to_mul_equiv
+/-- The `GL n R` and `general_linear_group R n` groups are multiplicatively equivalent-/
+def toLin : GL n R ≃* LinearMap.GeneralLinearGroup R (n → R) :=
+  Units.mapEquiv toLinAlgEquiv'.toMulEquiv
 
-/--Given a matrix with invertible determinant we get an element of `GL n R`-/
-def mk' (A : matrix n n R) (h : invertible (matrix.det A)) : GL n R :=
-unit_of_det_invertible A
+/-- Given a matrix with invertible determinant we get an element of `GL n R`-/
+def mk' (A : Matrix n n R) (h : Invertible (Matrix.det A)) : GL n R :=
+  unitOfDetInvertible A
 
-/--Given a matrix with unit determinant we get an element of `GL n R`-/
-noncomputable def mk'' (A : matrix n n R) (h : is_unit (matrix.det A)) : GL n R :=
-nonsing_inv_unit A h
+/-- Given a matrix with unit determinant we get an element of `GL n R`-/
+noncomputable def mk'' (A : Matrix n n R) (h : IsUnit (Matrix.det A)) : GL n R :=
+  nonsingInvUnit A h
 
-/--Given a matrix with non-zero determinant over a field, we get an element of `GL n K`-/
-def mk_of_det_ne_zero {K : Type*} [field K] (A : matrix n n K) (h : matrix.det A ≠ 0) :
-  GL n K :=
-mk' A (invertible_of_nonzero h)
+/-- Given a matrix with non-zero determinant over a field, we get an element of `GL n K`-/
+def mkOfDetNeZero {K : Type _} [Field K] (A : Matrix n n K) (h : Matrix.det A ≠ 0) : GL n K :=
+  mk' A (invertibleOfNonzero h)
 
-lemma ext_iff (A B : GL n R) : A = B ↔ (∀ i j, (A : matrix n n R) i j = (B : matrix n n R) i j) :=
-units.ext_iff.trans matrix.ext_iff.symm
+theorem ext_iff (A B : GL n R) : A = B ↔ ∀ i j, (A : Matrix n n R) i j = (B : Matrix n n R) i j :=
+  Units.ext_iff.trans Matrix.ext_iff.symm
 
 /-- Not marked `@[ext]` as the `ext` tactic already solves this. -/
-lemma ext ⦃A B : GL n R⦄ (h : ∀ i j, (A : matrix n n R) i j = (B : matrix n n R) i j) :
-  A = B :=
-units.ext $ matrix.ext h
+theorem ext ⦃A B : GL n R⦄ (h : ∀ i j, (A : Matrix n n R) i j = (B : Matrix n n R) i j) : A = B :=
+  Units.ext <| Matrix.ext h
 
-section coe_lemmas
+section CoeLemmas
 
-variables (A B : GL n R)
+variable (A B : GL n R)
 
-@[simp] lemma coe_mul : ↑(A * B) = (↑A : matrix n n R) ⬝ (↑B : matrix n n R) := rfl
+@[simp]
+theorem coe_mul : ↑(A * B) = (↑A : Matrix n n R) ⬝ (↑B : Matrix n n R) :=
+  rfl
 
-@[simp] lemma coe_one : ↑(1 : GL n R) = (1 : matrix n n R) := rfl
+@[simp]
+theorem coe_one : ↑(1 : GL n R) = (1 : Matrix n n R) :=
+  rfl
 
-lemma coe_inv : ↑(A⁻¹) = (↑A : matrix n n R)⁻¹ :=
-begin
-  letI := A.invertible,
-  exact inv_of_eq_nonsing_inv (↑A : matrix n n R),
-end
+theorem coe_inv : ↑A⁻¹ = (↑A : Matrix n n R)⁻¹ := by
+  let this' := A.invertible
+  exact inv_of_eq_nonsing_inv (↑A : Matrix n n R)
 
 /-- An element of the matrix general linear group on `(n) [fintype n]` can be considered as an
 element of the endomorphism general linear group on `n → R`. -/
-def to_linear : general_linear_group n R ≃* linear_map.general_linear_group R (n → R) :=
-units.map_equiv matrix.to_lin_alg_equiv'.to_ring_equiv.to_mul_equiv
+def toLinear : GeneralLinearGroup n R ≃* LinearMap.GeneralLinearGroup R (n → R) :=
+  Units.mapEquiv Matrix.toLinAlgEquiv'.toRingEquiv.toMulEquiv
 
 -- Note that without the `@` and `‹_›`, lean infers `λ a b, _inst_1 a b` instead of `_inst_1` as the
 -- decidability argument, which prevents `simp` from obtaining the instance by unification.
 -- These `λ a b, _inst a b` terms also appear in the type of `A`, but simp doesn't get confused by
 -- them so for now we do not care.
-@[simp] lemma coe_to_linear :
-  (@to_linear n ‹_› ‹_› _ _ A : (n → R) →ₗ[R] (n → R)) = matrix.mul_vec_lin A :=
-rfl
+@[simp]
+theorem coe_to_linear : (@toLinear n ‹_› ‹_› _ _ A : (n → R) →ₗ[R] n → R) = Matrix.mulVecLin A :=
+  rfl
 
-@[simp] lemma to_linear_apply (v : n → R) :
-  (@to_linear n ‹_› ‹_› _ _ A) v = matrix.mul_vec_lin ↑A v :=
-rfl
+@[simp]
+theorem to_linear_apply (v : n → R) : (@toLinear n ‹_› ‹_› _ _ A) v = Matrix.mulVecLin (↑A) v :=
+  rfl
 
-end coe_lemmas
+end CoeLemmas
 
-end general_linear_group
+end GeneralLinearGroup
 
-namespace special_linear_group
+namespace SpecialLinearGroup
 
-variables {n : Type u} [decidable_eq n] [fintype n] {R : Type v} [comm_ring R]
+variable {n : Type u} [DecidableEq n] [Fintype n] {R : Type v} [CommRingₓ R]
 
-instance has_coe_to_general_linear_group : has_coe (special_linear_group n R) (GL n R) :=
-⟨λ A, ⟨↑A, ↑(A⁻¹), congr_arg coe (mul_right_inv A), congr_arg coe (mul_left_inv A)⟩⟩
+instance hasCoeToGeneralLinearGroup : Coe (SpecialLinearGroup n R) (GL n R) :=
+  ⟨fun A => ⟨↑A, ↑A⁻¹, congr_argₓ coe (mul_right_invₓ A), congr_argₓ coe (mul_left_invₓ A)⟩⟩
 
-end special_linear_group
+end SpecialLinearGroup
+
+section
+
+variable {n : Type u} {R : Type v} [DecidableEq n] [Fintype n] [LinearOrderedCommRing R]
 
 section
 
-variables {n : Type u} {R : Type v} [decidable_eq n] [fintype n] [linear_ordered_comm_ring R ]
-
-section
-variables (n R)
+variable (n R)
 
 /-- This is the subgroup of `nxn` matrices with entries over a
 linear ordered ring and positive determinant. -/
-def GL_pos : subgroup (GL n R) :=
-(units.pos_subgroup R).comap general_linear_group.det
+def gLPos : Subgroup (GL n R) :=
+  (Units.posSubgroup R).comap GeneralLinearGroup.det
+
 end
 
-@[simp] lemma mem_GL_pos (A : GL n R) : A ∈ GL_pos n R ↔ 0 < (A.det : R) := iff.rfl
+@[simp]
+theorem mem_GL_pos (A : GL n R) : A ∈ gLPos n R ↔ 0 < (A.det : R) :=
+  Iff.rfl
+
 end
 
-section has_neg
+section Neg
 
-variables {n : Type u} {R : Type v} [decidable_eq n] [fintype n] [linear_ordered_comm_ring R ]
-[fact (even (fintype.card n))]
+variable {n : Type u} {R : Type v} [DecidableEq n] [Fintype n] [LinearOrderedCommRing R] [Fact (Even (Fintype.card n))]
 
 /-- Formal operation of negation on general linear group on even cardinality `n` given by negating
 each element. -/
-instance : has_neg (GL_pos n R) :=
-⟨λ g, ⟨-g, begin
-    rw [mem_GL_pos, general_linear_group.coe_det_apply, units.coe_neg, det_neg,
-      nat.neg_one_pow_of_even (fact.out (even (fintype.card n))), one_mul],
-    exact g.prop,
-  end⟩⟩
+instance : Neg (gLPos n R) :=
+  ⟨fun g =>
+    ⟨-g, by
+      rw [mem_GL_pos, general_linear_group.coe_det_apply, Units.coe_neg, det_neg,
+        Nat.neg_one_pow_of_even (Fact.out (Even (Fintype.card n))), one_mulₓ]
+      exact g.prop⟩⟩
 
-instance : has_distrib_neg (GL_pos n R) :=
-{ neg := has_neg.neg,
-  neg_neg := λ x, subtype.ext $ neg_neg _,
-  neg_mul := λ x y, subtype.ext $ neg_mul _ _,
-  mul_neg := λ x y, subtype.ext $ mul_neg _ _ }
+instance : HasDistribNeg (gLPos n R) where
+  neg := Neg.neg
+  neg_neg := fun x => Subtype.ext <| neg_negₓ _
+  neg_mul := fun x y => Subtype.ext <| neg_mul _ _
+  mul_neg := fun x y => Subtype.ext <| mul_neg _ _
 
-@[simp] lemma GL_pos.coe_neg (g : GL_pos n R) : ↑(- g) = - (↑g : matrix n n R) :=
-rfl
+@[simp]
+theorem gLPos.coe_neg (g : gLPos n R) : ↑(-g) = -(↑g : Matrix n n R) :=
+  rfl
 
-@[simp] lemma GL_pos.coe_neg_apply (g : GL_pos n R) (i j : n) :
-  (↑(-g) : matrix n n R) i j = -((↑g : matrix n n R) i j) :=
-rfl
+@[simp]
+theorem gLPos.coe_neg_apply (g : gLPos n R) (i j : n) : (↑(-g) : Matrix n n R) i j = -(↑g : Matrix n n R) i j :=
+  rfl
 
-end has_neg
+end Neg
 
-namespace special_linear_group
+namespace SpecialLinearGroup
 
-variables {n : Type u} [decidable_eq n] [fintype n] {R : Type v} [linear_ordered_comm_ring R]
+variable {n : Type u} [DecidableEq n] [Fintype n] {R : Type v} [LinearOrderedCommRing R]
 
 /-- `special_linear_group n R` embeds into `GL_pos n R` -/
-def to_GL_pos : special_linear_group n R →* GL_pos n R :=
-{ to_fun := λ A, ⟨(A : GL n R), show 0 < (↑A : matrix n n R).det, from A.prop.symm ▸ zero_lt_one⟩,
-  map_one' := subtype.ext $ units.ext $ rfl,
-  map_mul' := λ A₁ A₂, subtype.ext $ units.ext $ rfl }
+def toGLPos : SpecialLinearGroup n R →* gLPos n R where
+  toFun := fun A => ⟨(A : GL n R), show 0 < (↑A : Matrix n n R).det from A.Prop.symm ▸ zero_lt_one⟩
+  map_one' := Subtype.ext <| Units.ext <| rfl
+  map_mul' := fun A₁ A₂ => Subtype.ext <| Units.ext <| rfl
 
-instance : has_coe (special_linear_group n R) (GL_pos n R) := ⟨to_GL_pos⟩
+instance : Coe (SpecialLinearGroup n R) (gLPos n R) :=
+  ⟨toGLPos⟩
 
-lemma coe_eq_to_GL_pos : (coe : special_linear_group n R → GL_pos n R) = to_GL_pos := rfl
+theorem coe_eq_to_GL_pos : (coe : SpecialLinearGroup n R → gLPos n R) = to_GL_pos :=
+  rfl
 
-lemma to_GL_pos_injective :
-  function.injective (to_GL_pos : special_linear_group n R → GL_pos n R) :=
-(show function.injective ((coe : GL_pos n R → matrix n n R) ∘ to_GL_pos),
- from subtype.coe_injective).of_comp
+theorem to_GL_pos_injective : Function.Injective (toGLPos : SpecialLinearGroup n R → gLPos n R) :=
+  (show Function.Injective ((coe : gLPos n R → Matrix n n R) ∘ to_GL_pos) from Subtype.coe_injective).of_comp
 
-end special_linear_group
+end SpecialLinearGroup
 
-section examples
+section Examples
 
 /-- The matrix [a, b; -b, a] (inspired by multiplication by a complex number); it is an element of
 $GL_2(R)$ if `a ^ 2 + b ^ 2` is nonzero. -/
-@[simps coe {fully_applied := ff}]
-def plane_conformal_matrix {R} [field R] (a b : R) (hab : a ^ 2 + b ^ 2 ≠ 0) :
-  matrix.general_linear_group (fin 2) R :=
-general_linear_group.mk_of_det_ne_zero ![![a, -b], ![b, a]]
-  (by simpa [det_fin_two, sq] using hab)
+@[simps (config := { fullyApplied := false }) coe]
+def planeConformalMatrix {R} [Field R] (a b : R) (hab : a ^ 2 + b ^ 2 ≠ 0) : Matrix.GeneralLinearGroup (Finₓ 2) R :=
+  GeneralLinearGroup.mkOfDetNeZero ![![a, -b], ![b, a]]
+    (by
+      simpa [det_fin_two, sq] using hab)
 
 /- TODO: Add Iwasawa matrices `n_x=![![1,x],![0,1]]`, `a_t=![![exp(t/2),0],![0,exp(-t/2)]]` and
   `k_θ==![![cos θ, sin θ],![-sin θ, cos θ]]`
 -/
+end Examples
 
-end examples
+namespace GeneralLinearGroup
 
-namespace general_linear_group
-variables {n : Type u} [decidable_eq n] [fintype n] {R : Type v} [comm_ring R]
+variable {n : Type u} [DecidableEq n] [Fintype n] {R : Type v} [CommRingₓ R]
 
 -- this section should be last to ensure we do not use it in lemmas
-section coe_fn_instance
+section CoeFnInstance
 
 /-- This instance is here for convenience, but is not the simp-normal form. -/
-instance : has_coe_to_fun (GL n R) (λ _, n → n → R) :=
-{ coe := λ A, A.val }
+instance : CoeFun (GL n R) fun _ => n → n → R where
+  coe := fun A => A.val
 
-@[simp] lemma coe_fn_eq_coe (A : GL n R) : ⇑A = (↑A : matrix n n R) := rfl
+@[simp]
+theorem coe_fn_eq_coe (A : GL n R) : ⇑A = (↑A : Matrix n n R) :=
+  rfl
 
-end coe_fn_instance
+end CoeFnInstance
 
-end general_linear_group
+end GeneralLinearGroup
 
-end matrix
+end Matrix
+

@@ -3,10 +3,9 @@ Copyright (c) 2021 Anne Baanen. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Anne Baanen
 -/
-
-import logic.function.basic
-import tactic.lint
-import tactic.norm_cast
+import Mathbin.Logic.Function.Basic
+import Mathbin.Tactic.Lint.Default
+import Mathbin.Tactic.NormCast
 
 /-!
 # Typeclass for a type `F` with an injective map to `A → B`
@@ -115,9 +114,10 @@ instead of linearly increasing the work per `my_hom`-related declaration.
 
 -/
 
+
 -- This instance should have low priority, to ensure we follow the chain
 -- `fun_like → has_coe_to_fun`
-attribute [instance, priority 10] coe_fn_trans
+attribute [instance] coeFnTrans
 
 /-- The class `fun_like F α β` expresses that terms of type `F` have an
 injective coercion to functions from `α` to `β`.
@@ -125,76 +125,84 @@ injective coercion to functions from `α` to `β`.
 This typeclass is used in the definition of the homomorphism typeclasses,
 such as `zero_hom_class`, `mul_hom_class`, `monoid_hom_class`, ....
 -/
-class fun_like (F : Sort*) (α : out_param Sort*) (β : out_param $ α → Sort*) :=
-(coe : F → Π a : α, β a)
-(coe_injective' : function.injective coe)
+class FunLike (F : Sort _) (α : outParam (Sort _)) (β : outParam <| α → Sort _) where
+  coe : F → ∀ a : α, β a
+  coe_injective' : Function.Injective coe
 
-section dependent
+section Dependent
 
 /-! ### `fun_like F α β` where `β` depends on `a : α` -/
 
-variables (F α : Sort*) (β : α → Sort*)
 
-namespace fun_like
+variable (F α : Sort _) (β : α → Sort _)
 
-variables {F α β} [i : fun_like F α β]
+namespace FunLike
+
+variable {F α β} [i : FunLike F α β]
 
 include i
 
-@[priority 100, -- Give this a priority between `coe_fn_trans` and the default priority
-  nolint dangerous_instance] -- `α` and `β` are out_params, so this instance should not be dangerous
-instance : has_coe_to_fun F (λ _, Π a : α, β a) := { coe := fun_like.coe }
+-- Give this a priority between `coe_fn_trans` and the default priority
+-- `α` and `β` are out_params, so this instance should not be dangerous
+@[nolint dangerous_instance]
+instance (priority := 100) : CoeFun F fun _ => ∀ a : α, β a where
+  coe := FunLike.coe
 
-@[simp] lemma coe_eq_coe_fn : (fun_like.coe : F → Π a : α, β a) = coe_fn := rfl
+@[simp]
+theorem coe_eq_coe_fn : (FunLike.coe : F → ∀ a : α, β a) = coeFn :=
+  rfl
 
-theorem coe_injective : function.injective (coe_fn : F → Π a : α, β a) :=
-fun_like.coe_injective'
+theorem coe_injective : Function.Injective (coeFn : F → ∀ a : α, β a) :=
+  FunLike.coe_injective'
 
 @[simp, norm_cast]
-theorem coe_fn_eq {f g : F} : (f : Π a : α, β a) = (g : Π a : α, β a) ↔ f = g :=
-⟨λ h, @coe_injective _ _ _ i _ _ h, λ h, by cases h; refl⟩
+theorem coe_fn_eq {f g : F} : (f : ∀ a : α, β a) = (g : ∀ a : α, β a) ↔ f = g :=
+  ⟨fun h => @coe_injective _ _ _ i _ _ h, fun h => by
+    cases h <;> rfl⟩
 
-theorem ext' {f g : F} (h : (f : Π a : α, β a) = (g : Π a : α, β a)) : f = g :=
-coe_injective h
+theorem ext' {f g : F} (h : (f : ∀ a : α, β a) = (g : ∀ a : α, β a)) : f = g :=
+  coe_injective h
 
-theorem ext'_iff {f g : F} : f = g ↔ ((f : Π a : α, β a) = (g : Π a : α, β a)) :=
-coe_fn_eq.symm
+theorem ext'_iff {f g : F} : f = g ↔ (f : ∀ a : α, β a) = (g : ∀ a : α, β a) :=
+  coe_fn_eq.symm
 
-theorem ext (f g : F) (h : ∀ (x : α), f x = g x) : f = g :=
-coe_injective (funext h)
+theorem ext (f g : F) (h : ∀ x : α, f x = g x) : f = g :=
+  coe_injective (funext h)
 
-theorem ext_iff {f g : F} : f = g ↔ (∀ x, f x = g x) :=
-coe_fn_eq.symm.trans function.funext_iff
+theorem ext_iff {f g : F} : f = g ↔ ∀ x, f x = g x :=
+  coe_fn_eq.symm.trans Function.funext_iffₓ
 
-protected lemma congr_fun {f g : F} (h₁ : f = g) (x : α) : f x = g x :=
-congr_fun (congr_arg _ h₁) x
+protected theorem congr_fun {f g : F} (h₁ : f = g) (x : α) : f x = g x :=
+  congr_funₓ (congr_argₓ _ h₁) x
 
-lemma ne_iff {f g : F} : f ≠ g ↔ ∃ a, f a ≠ g a :=
-ext_iff.not.trans not_forall
+theorem ne_iff {f g : F} : f ≠ g ↔ ∃ a, f a ≠ g a :=
+  ext_iff.Not.trans not_forall
 
-lemma exists_ne {f g : F} (h : f ≠ g) : ∃ x, f x ≠ g x :=
-ne_iff.mp h
+theorem exists_ne {f g : F} (h : f ≠ g) : ∃ x, f x ≠ g x :=
+  ne_iff.mp h
 
-end fun_like
+end FunLike
 
-end dependent
+end Dependent
 
-section non_dependent
+section NonDependent
 
 /-! ### `fun_like F α (λ _, β)` where `β` does not depend on `a : α` -/
 
-variables {F α β : Sort*} [i : fun_like F α (λ _, β)]
+
+variable {F α β : Sort _} [i : FunLike F α fun _ => β]
 
 include i
 
-namespace fun_like
+namespace FunLike
 
-protected lemma congr {f g : F} {x y : α} (h₁ : f = g) (h₂ : x = y) : f x = g y :=
-congr (congr_arg _ h₁) h₂
+protected theorem congr {f g : F} {x y : α} (h₁ : f = g) (h₂ : x = y) : f x = g y :=
+  congr (congr_argₓ _ h₁) h₂
 
-protected lemma congr_arg (f : F) {x y : α} (h₂ : x = y) : f x = f y :=
-congr_arg _ h₂
+protected theorem congr_arg (f : F) {x y : α} (h₂ : x = y) : f x = f y :=
+  congr_argₓ _ h₂
 
-end fun_like
+end FunLike
 
-end non_dependent
+end NonDependent
+

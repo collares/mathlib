@@ -3,8 +3,7 @@ Copyright (c) 2020 Johan Commelin. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johan Commelin, Robert Y. Lewis
 -/
-
-import ring_theory.witt_vector.structure_polynomial
+import Mathbin.RingTheory.WittVector.StructurePolynomial
 
 /-!
 # Witt vectors
@@ -36,7 +35,8 @@ We use notation `𝕎 R`, entered `\bbW`, for the Witt vectors over `R`.
 * [Commelin and Lewis, *Formalizing the Ring of Witt Vectors*][CL21]
 -/
 
-noncomputable theory
+
+noncomputable section
 
 /-- `witt_vector p R` is the ring of `p`-typical Witt vectors over the commutative ring `R`,
 where `p` is a prime number.
@@ -45,109 +45,112 @@ If `p` is invertible in `R`, this ring is isomorphic to `ℕ → R` (the product
 If `R` is a ring of characteristic `p`, then `witt_vector p R` is a ring of characteristic `0`.
 The canonical example is `witt_vector p (zmod p)`,
 which is isomorphic to the `p`-adic integers `ℤ_[p]`. -/
-structure witt_vector (p : ℕ) (R : Type*) :=
-mk [] :: (coeff : ℕ → R)
+structure WittVector (p : ℕ) (R : Type _) where mk {} ::
+  coeff : ℕ → R
 
-variables {p : ℕ}
+variable {p : ℕ}
 
+-- mathport name: «expr𝕎»
 /- We cannot make this `localized` notation, because the `p` on the RHS doesn't occur on the left
 Hiding the `p` in the notation is very convenient, so we opt for repeating the `local notation`
 in other files that use Witt vectors. -/
-local notation `𝕎` := witt_vector p -- type as `\bbW`
+local notation "𝕎" => WittVector p
 
-namespace witt_vector
+-- type as `\bbW`
+namespace WittVector
 
-variables (p) {R : Type*}
+variable (p) {R : Type _}
 
 /-- Construct a Witt vector `mk p x : 𝕎 R` from a sequence `x` of elements of `R`. -/
-add_decl_doc witt_vector.mk
+add_decl_doc WittVector.mk
 
-/--
-`x.coeff n` is the `n`th coefficient of the Witt vector `x`.
+/-- `x.coeff n` is the `n`th coefficient of the Witt vector `x`.
 
 This concept does not have a standard name in the literature.
 -/
-add_decl_doc witt_vector.coeff
+add_decl_doc WittVector.coeff
 
-@[ext] lemma ext {x y : 𝕎 R} (h : ∀ n, x.coeff n = y.coeff n) : x = y :=
-begin
-  cases x,
-  cases y,
-  simp only at h,
-  simp [function.funext_iff, h]
-end
+@[ext]
+theorem ext {x y : 𝕎 R} (h : ∀ n, x.coeff n = y.coeff n) : x = y := by
+  cases x
+  cases y
+  simp only at h
+  simp [Function.funext_iffₓ, h]
 
-lemma ext_iff {x y : 𝕎 R} : x = y ↔ ∀ n, x.coeff n = y.coeff n :=
-⟨λ h n, by rw h, ext⟩
+theorem ext_iff {x y : 𝕎 R} : x = y ↔ ∀ n, x.coeff n = y.coeff n :=
+  ⟨fun h n => by
+    rw [h], ext⟩
 
-lemma coeff_mk (x : ℕ → R) :
-  (mk p x).coeff = x := rfl
+theorem coeff_mk (x : ℕ → R) : (mk p x).coeff = x :=
+  rfl
 
 /- These instances are not needed for the rest of the development,
 but it is interesting to establish early on that `witt_vector p` is a lawful functor. -/
-instance : functor (witt_vector p) :=
-{ map := λ α β f v, mk p (f ∘ v.coeff),
-  map_const := λ α β a v, mk p (λ _, a) }
+instance : Functor (WittVector p) where
+  map := fun α β f v => mk p (f ∘ v.coeff)
+  mapConst := fun α β a v => mk p fun _ => a
 
-instance : is_lawful_functor (witt_vector p) :=
-{ map_const_eq := λ α β, rfl,
-  id_map := λ α ⟨v, _⟩, rfl,
-  comp_map := λ α β γ f g v, rfl }
+instance : IsLawfulFunctor (WittVector p) where
+  map_const_eq := fun α β => rfl
+  id_map := fun α ⟨v, _⟩ => rfl
+  comp_map := fun α β γ f g v => rfl
 
-variables (p) [hp : fact p.prime] [comm_ring R]
+variable (p) [hp : Fact p.Prime] [CommRingₓ R]
+
 include hp
-open mv_polynomial
 
-section ring_operations
+open MvPolynomial
+
+section RingOperations
 
 /-- The polynomials used for defining the element `0` of the ring of Witt vectors. -/
-def witt_zero : ℕ → mv_polynomial (fin 0 × ℕ) ℤ :=
-witt_structure_int p 0
+def wittZero : ℕ → MvPolynomial (Finₓ 0 × ℕ) ℤ :=
+  wittStructureInt p 0
 
 /-- The polynomials used for defining the element `1` of the ring of Witt vectors. -/
-def witt_one : ℕ → mv_polynomial (fin 0 × ℕ) ℤ :=
-witt_structure_int p 1
+def wittOne : ℕ → MvPolynomial (Finₓ 0 × ℕ) ℤ :=
+  wittStructureInt p 1
 
 /-- The polynomials used for defining the addition of the ring of Witt vectors. -/
-def witt_add : ℕ → mv_polynomial (fin 2 × ℕ) ℤ :=
-witt_structure_int p (X 0 + X 1)
+def wittAdd : ℕ → MvPolynomial (Finₓ 2 × ℕ) ℤ :=
+  wittStructureInt p (x 0 + x 1)
 
 /-- The polynomials used for defining repeated addition of the ring of Witt vectors. -/
-def witt_nsmul (n : ℕ) : ℕ → mv_polynomial (fin 1 × ℕ) ℤ :=
-witt_structure_int p (n • X 0)
+def wittNsmul (n : ℕ) : ℕ → MvPolynomial (Finₓ 1 × ℕ) ℤ :=
+  wittStructureInt p (n • x 0)
 
 /-- The polynomials used for defining repeated addition of the ring of Witt vectors. -/
-def witt_zsmul (n : ℤ) : ℕ → mv_polynomial (fin 1 × ℕ) ℤ :=
-witt_structure_int p (n • X 0)
+def wittZsmul (n : ℤ) : ℕ → MvPolynomial (Finₓ 1 × ℕ) ℤ :=
+  wittStructureInt p (n • x 0)
 
 /-- The polynomials used for describing the subtraction of the ring of Witt vectors. -/
-def witt_sub : ℕ → mv_polynomial (fin 2 × ℕ) ℤ :=
-witt_structure_int p (X 0 - X 1)
+def wittSub : ℕ → MvPolynomial (Finₓ 2 × ℕ) ℤ :=
+  wittStructureInt p (x 0 - x 1)
 
 /-- The polynomials used for defining the multiplication of the ring of Witt vectors. -/
-def witt_mul : ℕ → mv_polynomial (fin 2 × ℕ) ℤ :=
-witt_structure_int p (X 0 * X 1)
+def wittMul : ℕ → MvPolynomial (Finₓ 2 × ℕ) ℤ :=
+  wittStructureInt p (x 0 * x 1)
 
 /-- The polynomials used for defining the negation of the ring of Witt vectors. -/
-def witt_neg : ℕ → mv_polynomial (fin 1 × ℕ) ℤ :=
-witt_structure_int p (-X 0)
+def wittNeg : ℕ → MvPolynomial (Finₓ 1 × ℕ) ℤ :=
+  wittStructureInt p (-x 0)
 
 /-- The polynomials used for defining repeated addition of the ring of Witt vectors. -/
-def witt_pow (n : ℕ) : ℕ → mv_polynomial (fin 1 × ℕ) ℤ :=
-witt_structure_int p (X 0 ^ n)
+def wittPow (n : ℕ) : ℕ → MvPolynomial (Finₓ 1 × ℕ) ℤ :=
+  wittStructureInt p (x 0 ^ n)
 
 variable {p}
+
 omit hp
 
 /-- An auxiliary definition used in `witt_vector.eval`.
 Evaluates a polynomial whose variables come from the disjoint union of `k` copies of `ℕ`,
 with a curried evaluation `x`.
 This can be defined more generally but we use only a specific instance here. -/
-def peval {k : ℕ} (φ : mv_polynomial (fin k × ℕ) ℤ) (x : fin k → ℕ → R) : R :=
-aeval (function.uncurry x) φ
+def peval {k : ℕ} (φ : MvPolynomial (Finₓ k × ℕ) ℤ) (x : Finₓ k → ℕ → R) : R :=
+  aeval (Function.uncurry x) φ
 
-/--
-Let `φ` be a family of polynomials, indexed by natural numbers, whose variables come from the
+/-- Let `φ` be a family of polynomials, indexed by natural numbers, whose variables come from the
 disjoint union of `k` copies of `ℕ`, and let `xᵢ` be a Witt vector for `0 ≤ i < k`.
 
 `eval φ x` evaluates `φ` mapping the variable `X_(i, n)` to the `n`th coefficient of `xᵢ`.
@@ -156,242 +159,216 @@ Instantiating `φ` with certain polynomials defined in `structure_polynomial.lea
 ring operations on `𝕎 R`. For example, `witt_vector.witt_add` is such a `φ` with `k = 2`;
 evaluating this at `(x₀, x₁)` gives us the sum of two Witt vectors `x₀ + x₁`.
 -/
-def eval {k : ℕ} (φ : ℕ → mv_polynomial (fin k × ℕ) ℤ) (x : fin k → 𝕎 R) : 𝕎 R :=
-mk p $ λ n, peval (φ n) $ λ i, (x i).coeff
+def eval {k : ℕ} (φ : ℕ → MvPolynomial (Finₓ k × ℕ) ℤ) (x : Finₓ k → 𝕎 R) : 𝕎 R :=
+  (mk p) fun n => (peval (φ n)) fun i => (x i).coeff
 
-variables (R) [fact p.prime]
+variable (R) [Fact p.Prime]
 
-instance : has_zero (𝕎 R) :=
-⟨eval (witt_zero p) ![]⟩
+instance : Zero (𝕎 R) :=
+  ⟨eval (wittZero p) ![]⟩
 
-instance : inhabited (𝕎 R) := ⟨0⟩
+instance : Inhabited (𝕎 R) :=
+  ⟨0⟩
 
-instance : has_one (𝕎 R) :=
-⟨eval (witt_one p) ![]⟩
+instance : One (𝕎 R) :=
+  ⟨eval (wittOne p) ![]⟩
 
-instance : has_add (𝕎 R) :=
-⟨λ x y, eval (witt_add p) ![x, y]⟩
+instance : Add (𝕎 R) :=
+  ⟨fun x y => eval (wittAdd p) ![x, y]⟩
 
-instance : has_sub (𝕎 R) :=
-⟨λ x y, eval (witt_sub p) ![x, y]⟩
+instance : Sub (𝕎 R) :=
+  ⟨fun x y => eval (wittSub p) ![x, y]⟩
 
-instance has_nat_scalar : has_scalar ℕ (𝕎 R) :=
-⟨λ n x, eval (witt_nsmul p n) ![x]⟩
+instance hasNatScalar : HasScalar ℕ (𝕎 R) :=
+  ⟨fun n x => eval (wittNsmul p n) ![x]⟩
 
-instance has_int_scalar : has_scalar ℤ (𝕎 R) :=
-⟨λ n x, eval (witt_zsmul p n) ![x]⟩
+instance hasIntScalar : HasScalar ℤ (𝕎 R) :=
+  ⟨fun n x => eval (wittZsmul p n) ![x]⟩
 
-instance : has_mul (𝕎 R) :=
-⟨λ x y, eval (witt_mul p) ![x, y]⟩
+instance : Mul (𝕎 R) :=
+  ⟨fun x y => eval (wittMul p) ![x, y]⟩
 
-instance : has_neg (𝕎 R) :=
-⟨λ x, eval (witt_neg p) ![x]⟩
+instance : Neg (𝕎 R) :=
+  ⟨fun x => eval (wittNeg p) ![x]⟩
 
-instance has_nat_pow : has_pow (𝕎 R) ℕ :=
-⟨λ x n, eval (witt_pow p n) ![x]⟩
+instance hasNatPow : Pow (𝕎 R) ℕ :=
+  ⟨fun x n => eval (wittPow p n) ![x]⟩
 
-end ring_operations
+end RingOperations
 
-section witt_structure_simplifications
+section WittStructureSimplifications
 
-@[simp] lemma witt_zero_eq_zero (n : ℕ) : witt_zero p n = 0 :=
-begin
-  apply mv_polynomial.map_injective (int.cast_ring_hom ℚ) int.cast_injective,
-  simp only [witt_zero, witt_structure_rat, bind₁, aeval_zero',
-    constant_coeff_X_in_terms_of_W, ring_hom.map_zero,
-    alg_hom.map_zero, map_witt_structure_int],
-end
+@[simp]
+theorem witt_zero_eq_zero (n : ℕ) : wittZero p n = 0 := by
+  apply MvPolynomial.map_injective (Int.castRingHom ℚ) Int.cast_injective
+  simp only [witt_zero, wittStructureRat, bind₁, aeval_zero', constant_coeff_X_in_terms_of_W, RingHom.map_zero,
+    AlgHom.map_zero, map_witt_structure_int]
 
-@[simp] lemma witt_one_zero_eq_one : witt_one p 0 = 1 :=
-begin
-  apply mv_polynomial.map_injective (int.cast_ring_hom ℚ) int.cast_injective,
-  simp only [witt_one, witt_structure_rat, X_in_terms_of_W_zero, alg_hom.map_one,
-    ring_hom.map_one, bind₁_X_right, map_witt_structure_int]
-end
+@[simp]
+theorem witt_one_zero_eq_one : wittOne p 0 = 1 := by
+  apply MvPolynomial.map_injective (Int.castRingHom ℚ) Int.cast_injective
+  simp only [witt_one, wittStructureRat, X_in_terms_of_W_zero, AlgHom.map_one, RingHom.map_one, bind₁_X_right,
+    map_witt_structure_int]
 
-@[simp] lemma witt_one_pos_eq_zero (n : ℕ) (hn : 0 < n) : witt_one p n = 0 :=
-begin
-  apply mv_polynomial.map_injective (int.cast_ring_hom ℚ) int.cast_injective,
-  simp only [witt_one, witt_structure_rat, ring_hom.map_zero, alg_hom.map_one,
-    ring_hom.map_one, map_witt_structure_int],
-  revert hn, apply nat.strong_induction_on n, clear n,
-  intros n IH hn,
-  rw X_in_terms_of_W_eq,
-  simp only [alg_hom.map_mul, alg_hom.map_sub, alg_hom.map_sum, alg_hom.map_pow,
-    bind₁_X_right, bind₁_C_right],
-  rw [sub_mul, one_mul],
-  rw [finset.sum_eq_single 0],
-  { simp only [inv_of_eq_inv, one_mul, inv_pow₀, tsub_zero, ring_hom.map_one, pow_zero],
-    simp only [one_pow, one_mul, X_in_terms_of_W_zero, sub_self, bind₁_X_right] },
-  { intros i hin hi0,
-    rw [finset.mem_range] at hin,
-    rw [IH _ hin (nat.pos_of_ne_zero hi0), zero_pow (pow_pos hp.1.pos _), mul_zero], },
-  { rw finset.mem_range, intro, contradiction }
-end
+@[simp]
+theorem witt_one_pos_eq_zero (n : ℕ) (hn : 0 < n) : wittOne p n = 0 := by
+  apply MvPolynomial.map_injective (Int.castRingHom ℚ) Int.cast_injective
+  simp only [witt_one, wittStructureRat, RingHom.map_zero, AlgHom.map_one, RingHom.map_one, map_witt_structure_int]
+  revert hn
+  apply Nat.strong_induction_onₓ n
+  clear n
+  intro n IH hn
+  rw [X_in_terms_of_W_eq]
+  simp only [AlgHom.map_mul, AlgHom.map_sub, AlgHom.map_sum, AlgHom.map_pow, bind₁_X_right, bind₁_C_right]
+  rw [sub_mul, one_mulₓ]
+  rw [Finset.sum_eq_single 0]
+  · simp only [inv_of_eq_inv, one_mulₓ, inv_pow₀, tsub_zero, RingHom.map_one, pow_zeroₓ]
+    simp only [one_pow, one_mulₓ, X_in_terms_of_W_zero, sub_self, bind₁_X_right]
+    
+  · intro i hin hi0
+    rw [Finset.mem_range] at hin
+    rw [IH _ hin (Nat.pos_of_ne_zeroₓ hi0), zero_pow (pow_pos hp.1.Pos _), mul_zero]
+    
+  · rw [Finset.mem_range]
+    intro
+    contradiction
+    
 
-@[simp] lemma witt_add_zero : witt_add p 0 = X (0,0) + X (1,0) :=
-begin
-  apply mv_polynomial.map_injective (int.cast_ring_hom ℚ) int.cast_injective,
-  simp only [witt_add, witt_structure_rat, alg_hom.map_add, ring_hom.map_add,
-    rename_X, X_in_terms_of_W_zero, map_X,
-     witt_polynomial_zero, bind₁_X_right, map_witt_structure_int],
-end
+@[simp]
+theorem witt_add_zero : wittAdd p 0 = x (0, 0) + x (1, 0) := by
+  apply MvPolynomial.map_injective (Int.castRingHom ℚ) Int.cast_injective
+  simp only [witt_add, wittStructureRat, AlgHom.map_add, RingHom.map_add, rename_X, X_in_terms_of_W_zero, map_X,
+    witt_polynomial_zero, bind₁_X_right, map_witt_structure_int]
 
-@[simp] lemma witt_sub_zero : witt_sub p 0 = X (0,0) - X (1,0) :=
-begin
-  apply mv_polynomial.map_injective (int.cast_ring_hom ℚ) int.cast_injective,
-  simp only [witt_sub, witt_structure_rat, alg_hom.map_sub, ring_hom.map_sub,
-    rename_X, X_in_terms_of_W_zero, map_X,
-     witt_polynomial_zero, bind₁_X_right, map_witt_structure_int],
-end
+@[simp]
+theorem witt_sub_zero : wittSub p 0 = x (0, 0) - x (1, 0) := by
+  apply MvPolynomial.map_injective (Int.castRingHom ℚ) Int.cast_injective
+  simp only [witt_sub, wittStructureRat, AlgHom.map_sub, RingHom.map_sub, rename_X, X_in_terms_of_W_zero, map_X,
+    witt_polynomial_zero, bind₁_X_right, map_witt_structure_int]
 
-@[simp] lemma witt_mul_zero : witt_mul p 0 = X (0,0) * X (1,0) :=
-begin
-  apply mv_polynomial.map_injective (int.cast_ring_hom ℚ) int.cast_injective,
-  simp only [witt_mul, witt_structure_rat, rename_X, X_in_terms_of_W_zero, map_X,
-    witt_polynomial_zero, ring_hom.map_mul,
-    bind₁_X_right, alg_hom.map_mul, map_witt_structure_int]
-end
+@[simp]
+theorem witt_mul_zero : wittMul p 0 = x (0, 0) * x (1, 0) := by
+  apply MvPolynomial.map_injective (Int.castRingHom ℚ) Int.cast_injective
+  simp only [witt_mul, wittStructureRat, rename_X, X_in_terms_of_W_zero, map_X, witt_polynomial_zero, RingHom.map_mul,
+    bind₁_X_right, AlgHom.map_mul, map_witt_structure_int]
 
-@[simp] lemma witt_neg_zero : witt_neg p 0 = - X (0,0) :=
-begin
-  apply mv_polynomial.map_injective (int.cast_ring_hom ℚ) int.cast_injective,
-  simp only [witt_neg, witt_structure_rat, rename_X, X_in_terms_of_W_zero, map_X,
-    witt_polynomial_zero, ring_hom.map_neg,
-   alg_hom.map_neg, bind₁_X_right, map_witt_structure_int]
-end
+@[simp]
+theorem witt_neg_zero : wittNeg p 0 = -x (0, 0) := by
+  apply MvPolynomial.map_injective (Int.castRingHom ℚ) Int.cast_injective
+  simp only [witt_neg, wittStructureRat, rename_X, X_in_terms_of_W_zero, map_X, witt_polynomial_zero, RingHom.map_neg,
+    AlgHom.map_neg, bind₁_X_right, map_witt_structure_int]
 
-@[simp] lemma constant_coeff_witt_add (n : ℕ) :
-  constant_coeff (witt_add p n) = 0 :=
-begin
-  apply constant_coeff_witt_structure_int p _ _ n,
-  simp only [add_zero, ring_hom.map_add, constant_coeff_X],
-end
+@[simp]
+theorem constant_coeff_witt_add (n : ℕ) : constantCoeff (wittAdd p n) = 0 := by
+  apply constant_coeff_witt_structure_int p _ _ n
+  simp only [add_zeroₓ, RingHom.map_add, constant_coeff_X]
 
-@[simp] lemma constant_coeff_witt_sub (n : ℕ) :
-  constant_coeff (witt_sub p n) = 0 :=
-begin
-  apply constant_coeff_witt_structure_int p _ _ n,
-  simp only [sub_zero, ring_hom.map_sub, constant_coeff_X],
-end
+@[simp]
+theorem constant_coeff_witt_sub (n : ℕ) : constantCoeff (wittSub p n) = 0 := by
+  apply constant_coeff_witt_structure_int p _ _ n
+  simp only [sub_zero, RingHom.map_sub, constant_coeff_X]
 
-@[simp] lemma constant_coeff_witt_mul (n : ℕ) :
-  constant_coeff (witt_mul p n) = 0 :=
-begin
-  apply constant_coeff_witt_structure_int p _ _ n,
-  simp only [mul_zero, ring_hom.map_mul, constant_coeff_X],
-end
+@[simp]
+theorem constant_coeff_witt_mul (n : ℕ) : constantCoeff (wittMul p n) = 0 := by
+  apply constant_coeff_witt_structure_int p _ _ n
+  simp only [mul_zero, RingHom.map_mul, constant_coeff_X]
 
-@[simp] lemma constant_coeff_witt_neg (n : ℕ) :
-  constant_coeff (witt_neg p n) = 0 :=
-begin
-  apply constant_coeff_witt_structure_int p _ _ n,
-  simp only [neg_zero, ring_hom.map_neg, constant_coeff_X],
-end
+@[simp]
+theorem constant_coeff_witt_neg (n : ℕ) : constantCoeff (wittNeg p n) = 0 := by
+  apply constant_coeff_witt_structure_int p _ _ n
+  simp only [neg_zero, RingHom.map_neg, constant_coeff_X]
 
-@[simp] lemma constant_coeff_witt_nsmul (m : ℕ) (n : ℕ):
-  constant_coeff (witt_nsmul p m n) = 0 :=
-begin
-  apply constant_coeff_witt_structure_int p _ _ n,
-  simp only [smul_zero, map_nsmul, constant_coeff_X],
-end
+@[simp]
+theorem constant_coeff_witt_nsmul (m : ℕ) (n : ℕ) : constantCoeff (wittNsmul p m n) = 0 := by
+  apply constant_coeff_witt_structure_int p _ _ n
+  simp only [smul_zero, map_nsmul, constant_coeff_X]
 
-@[simp] lemma constant_coeff_witt_zsmul (z : ℤ) (n : ℕ):
-  constant_coeff (witt_zsmul p z n) = 0 :=
-begin
-  apply constant_coeff_witt_structure_int p _ _ n,
-  simp only [smul_zero, map_zsmul, constant_coeff_X],
-end
+@[simp]
+theorem constant_coeff_witt_zsmul (z : ℤ) (n : ℕ) : constantCoeff (wittZsmul p z n) = 0 := by
+  apply constant_coeff_witt_structure_int p _ _ n
+  simp only [smul_zero, map_zsmul, constant_coeff_X]
 
-end witt_structure_simplifications
+end WittStructureSimplifications
 
-section coeff
+section Coeff
 
-variables (p R)
+variable (p R)
 
-@[simp] lemma zero_coeff (n : ℕ) : (0 : 𝕎 R).coeff n = 0 :=
-show (aeval _ (witt_zero p n) : R) = 0,
-by simp only [witt_zero_eq_zero, alg_hom.map_zero]
+@[simp]
+theorem zero_coeff (n : ℕ) : (0 : 𝕎 R).coeff n = 0 :=
+  show (aeval _ (wittZero p n) : R) = 0 by
+    simp only [witt_zero_eq_zero, AlgHom.map_zero]
 
-@[simp] lemma one_coeff_zero : (1 : 𝕎 R).coeff 0 = 1 :=
-show (aeval _ (witt_one p 0) : R) = 1,
-by simp only [witt_one_zero_eq_one, alg_hom.map_one]
+@[simp]
+theorem one_coeff_zero : (1 : 𝕎 R).coeff 0 = 1 :=
+  show (aeval _ (wittOne p 0) : R) = 1 by
+    simp only [witt_one_zero_eq_one, AlgHom.map_one]
 
-@[simp] lemma one_coeff_eq_of_pos (n : ℕ) (hn : 0 < n) : coeff (1 : 𝕎 R) n = 0 :=
-show (aeval _ (witt_one p n) : R) = 0,
-by simp only [hn, witt_one_pos_eq_zero, alg_hom.map_zero]
+@[simp]
+theorem one_coeff_eq_of_pos (n : ℕ) (hn : 0 < n) : coeff (1 : 𝕎 R) n = 0 :=
+  show (aeval _ (wittOne p n) : R) = 0 by
+    simp only [hn, witt_one_pos_eq_zero, AlgHom.map_zero]
 
-variables {p R}
+variable {p R}
 
 omit hp
+
+-- ././Mathport/Syntax/Translate/Tactic/Basic.lean:29:26: unsupported: too many args
 @[simp]
-lemma v2_coeff {p' R'} (x y : witt_vector p' R') (i : fin 2) :
-  (![x, y] i).coeff = ![x.coeff, y.coeff] i :=
-by fin_cases i; simp
+theorem v2_coeff {p' R'} (x y : WittVector p' R') (i : Finₓ 2) : (![x, y] i).coeff = ![x.coeff, y.coeff] i := by
+  fin_cases i <;> simp
+
 include hp
 
-lemma add_coeff (x y : 𝕎 R) (n : ℕ) :
-  (x + y).coeff n = peval (witt_add p n) ![x.coeff, y.coeff] :=
-by simp [(+), eval]
+theorem add_coeff (x y : 𝕎 R) (n : ℕ) : (x + y).coeff n = peval (wittAdd p n) ![x.coeff, y.coeff] := by
+  simp [(· + ·), eval]
 
-lemma sub_coeff (x y : 𝕎 R) (n : ℕ) :
-  (x - y).coeff n = peval (witt_sub p n) ![x.coeff, y.coeff] :=
-by simp [has_sub.sub, eval]
+theorem sub_coeff (x y : 𝕎 R) (n : ℕ) : (x - y).coeff n = peval (wittSub p n) ![x.coeff, y.coeff] := by
+  simp [Sub.sub, eval]
 
-lemma mul_coeff (x y : 𝕎 R) (n : ℕ) :
-  (x * y).coeff n = peval (witt_mul p n) ![x.coeff, y.coeff] :=
-by simp [(*), eval]
+theorem mul_coeff (x y : 𝕎 R) (n : ℕ) : (x * y).coeff n = peval (wittMul p n) ![x.coeff, y.coeff] := by
+  simp [(· * ·), eval]
 
-lemma neg_coeff (x : 𝕎 R) (n : ℕ) :
-  (-x).coeff n = peval (witt_neg p n) ![x.coeff] :=
-by simp [has_neg.neg, eval, matrix.cons_fin_one]
+theorem neg_coeff (x : 𝕎 R) (n : ℕ) : (-x).coeff n = peval (wittNeg p n) ![x.coeff] := by
+  simp [Neg.neg, eval, Matrix.cons_fin_one]
 
-lemma nsmul_coeff (m : ℕ) (x : 𝕎 R) (n : ℕ) :
-  (m • x).coeff n = peval (witt_nsmul p m n) ![x.coeff] :=
-by simp [has_scalar.smul, eval, matrix.cons_fin_one]
+theorem nsmul_coeff (m : ℕ) (x : 𝕎 R) (n : ℕ) : (m • x).coeff n = peval (wittNsmul p m n) ![x.coeff] := by
+  simp [HasScalar.smul, eval, Matrix.cons_fin_one]
 
-lemma zsmul_coeff (m : ℤ) (x : 𝕎 R) (n : ℕ) :
-  (m • x).coeff n = peval (witt_zsmul p m n) ![x.coeff] :=
-by simp [has_scalar.smul, eval, matrix.cons_fin_one]
+theorem zsmul_coeff (m : ℤ) (x : 𝕎 R) (n : ℕ) : (m • x).coeff n = peval (wittZsmul p m n) ![x.coeff] := by
+  simp [HasScalar.smul, eval, Matrix.cons_fin_one]
 
-lemma pow_coeff (m : ℕ) (x : 𝕎 R) (n : ℕ) :
-  (x ^ m).coeff n = peval (witt_pow p m n) ![x.coeff] :=
-by simp [has_pow.pow, eval, matrix.cons_fin_one]
+theorem pow_coeff (m : ℕ) (x : 𝕎 R) (n : ℕ) : (x ^ m).coeff n = peval (wittPow p m n) ![x.coeff] := by
+  simp [Pow.pow, eval, Matrix.cons_fin_one]
 
-lemma add_coeff_zero (x y : 𝕎 R) : (x + y).coeff 0 = x.coeff 0 + y.coeff 0 :=
-by simp [add_coeff, peval]
+theorem add_coeff_zero (x y : 𝕎 R) : (x + y).coeff 0 = x.coeff 0 + y.coeff 0 := by
+  simp [add_coeff, peval]
 
-lemma mul_coeff_zero (x y : 𝕎 R) : (x * y).coeff 0 = x.coeff 0 * y.coeff 0 :=
-by simp [mul_coeff, peval]
+theorem mul_coeff_zero (x y : 𝕎 R) : (x * y).coeff 0 = x.coeff 0 * y.coeff 0 := by
+  simp [mul_coeff, peval]
 
-end coeff
+end Coeff
 
-lemma witt_add_vars (n : ℕ) :
-  (witt_add p n).vars ⊆ finset.univ.product (finset.range (n + 1)) :=
-witt_structure_int_vars _ _ _
+theorem witt_add_vars (n : ℕ) : (wittAdd p n).vars ⊆ Finset.univ.product (Finset.range (n + 1)) :=
+  witt_structure_int_vars _ _ _
 
-lemma witt_sub_vars (n : ℕ) :
-  (witt_sub p n).vars ⊆ finset.univ.product (finset.range (n + 1)) :=
-witt_structure_int_vars _ _ _
+theorem witt_sub_vars (n : ℕ) : (wittSub p n).vars ⊆ Finset.univ.product (Finset.range (n + 1)) :=
+  witt_structure_int_vars _ _ _
 
-lemma witt_mul_vars (n : ℕ) :
-  (witt_mul p n).vars ⊆ finset.univ.product (finset.range (n + 1)) :=
-witt_structure_int_vars _ _ _
+theorem witt_mul_vars (n : ℕ) : (wittMul p n).vars ⊆ Finset.univ.product (Finset.range (n + 1)) :=
+  witt_structure_int_vars _ _ _
 
-lemma witt_neg_vars (n : ℕ) :
-  (witt_neg p n).vars ⊆ finset.univ.product (finset.range (n + 1)) :=
-witt_structure_int_vars _ _ _
+theorem witt_neg_vars (n : ℕ) : (wittNeg p n).vars ⊆ Finset.univ.product (Finset.range (n + 1)) :=
+  witt_structure_int_vars _ _ _
 
-lemma witt_nsmul_vars (m : ℕ) (n : ℕ) :
-  (witt_nsmul p m n).vars ⊆ finset.univ.product (finset.range (n + 1)) :=
-witt_structure_int_vars _ _ _
+theorem witt_nsmul_vars (m : ℕ) (n : ℕ) : (wittNsmul p m n).vars ⊆ Finset.univ.product (Finset.range (n + 1)) :=
+  witt_structure_int_vars _ _ _
 
-lemma witt_zsmul_vars (m : ℤ) (n : ℕ) :
-  (witt_zsmul p m n).vars ⊆ finset.univ.product (finset.range (n + 1)) :=
-witt_structure_int_vars _ _ _
+theorem witt_zsmul_vars (m : ℤ) (n : ℕ) : (wittZsmul p m n).vars ⊆ Finset.univ.product (Finset.range (n + 1)) :=
+  witt_structure_int_vars _ _ _
 
-lemma witt_pow_vars (m : ℕ) (n : ℕ) :
-  (witt_pow p m n).vars ⊆ finset.univ.product (finset.range (n + 1)) :=
-witt_structure_int_vars _ _ _
+theorem witt_pow_vars (m : ℕ) (n : ℕ) : (wittPow p m n).vars ⊆ Finset.univ.product (Finset.range (n + 1)) :=
+  witt_structure_int_vars _ _ _
 
-end witt_vector
+end WittVector
+

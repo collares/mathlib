@@ -3,100 +3,108 @@ Copyright (c) 2020 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import tactic.solve_by_elim
-import tactic.interactive
+import Mathbin.Tactic.SolveByElim
+import Mathbin.Tactic.Interactive
 
-namespace tactic
+namespace Tactic
 
-namespace hint
+namespace Hint
 
 /-- An attribute marking a `tactic unit` or `tactic string` which should be used by the `hint`
 tactic. -/
-@[user_attribute] meta def hint_tactic_attribute : user_attribute :=
-{ name := `hint_tactic,
-  descr := "A tactic that should be tried by `hint`." }
+@[user_attribute]
+unsafe def hint_tactic_attribute : user_attribute where
+  Name := `hint_tactic
+  descr := "A tactic that should be tried by `hint`."
 
 add_tactic_doc
-{ name                     := "hint_tactic",
-  category                 := doc_category.attr,
-  decl_names               := [`tactic.hint.hint_tactic_attribute],
-  tags                     := ["rewrite", "search"] }
+  { Name := "hint_tactic", category := DocCategory.attr, declNames := [`tactic.hint.hint_tactic_attribute],
+    tags := ["rewrite", "search"] }
 
 setup_tactic_parser
 
-private meta def add_tactic_hint (n : name) (t : expr) : tactic unit :=
-do
-  add_decl $ declaration.defn n [] `(tactic string) t reducibility_hints.opaque ff,
-  hint_tactic_attribute.set n () tt
+private unsafe def add_tactic_hint (n : Name) (t : expr) : tactic Unit := do
+  add_decl <| declaration.defn n [] (quote.1 (tactic Stringₓ)) t ReducibilityHints.opaque ff
+  hint_tactic_attribute n () tt
 
-/--
-`add_hint_tactic t` runs the tactic `t` whenever `hint` is invoked.
+/-- `add_hint_tactic t` runs the tactic `t` whenever `hint` is invoked.
 The typical use case is `add_hint_tactic "foo"` for some interactive tactic `foo`.
 -/
-@[user_command] meta def add_hint_tactic (_ : parse (tk "add_hint_tactic")) : parser unit :=
-do n ← parser.pexpr,
-   e ← to_expr n,
-   s ← eval_expr string e,
-   let t := "`[" ++ s ++ "]",
-   (t, _) ← with_input parser.pexpr t,
-   of_tactic $ do
-   let h := s <.> "_hint",
-   t ← to_expr ``(do %%t, pure %%n),
-   add_tactic_hint h t.
+@[user_command]
+unsafe def add_hint_tactic (_ : parse (tk "add_hint_tactic")) : parser Unit := do
+  let n ← parser.pexpr
+  let e ← to_expr n
+  let s ← eval_expr Stringₓ e
+  let t := "`[" ++ s ++ "]"
+  let (t, _) ← with_input parser.pexpr t
+  of_tactic <| do
+      let h := mkStrName s "_hint"
+      let t ←
+        to_expr
+            (pquote.1 do
+              %%ₓt
+              pure (%%ₓn))
+      add_tactic_hint h t
 
 add_tactic_doc
-{ name                     := "add_hint_tactic",
-  category                 := doc_category.cmd,
-  decl_names               := [`tactic.hint.add_hint_tactic],
-  tags                     := ["search"] }
+  { Name := "add_hint_tactic", category := DocCategory.cmd, declNames := [`tactic.hint.add_hint_tactic],
+    tags := ["search"] }
 
-add_hint_tactic "refl"
-add_hint_tactic "exact dec_trivial"
-add_hint_tactic "assumption"
+add_hint_tactic rfl
+
+add_hint_tactic
+  exact by
+    decide
+
+add_hint_tactic assumption
+
 -- tidy does something better here: it suggests the actual "intros X Y f" string.
 -- perhaps add a wrapper?
-add_hint_tactic "intro"
-add_hint_tactic "apply_auto_param"
-add_hint_tactic "dsimp at *"
-add_hint_tactic "simp at *" -- TODO hook up to squeeze_simp?
-add_hint_tactic "fconstructor"
-add_hint_tactic "injections_and_clear"
-add_hint_tactic "solve_by_elim"
-add_hint_tactic "unfold_coes"
-add_hint_tactic "unfold_aux"
+add_hint_tactic intro
 
-end hint
+add_hint_tactic infer_auto_param
 
-/--
-Report a list of tactics that can make progress against the current goal,
+add_hint_tactic dsimp  at *
+
+add_hint_tactic simp at *
+
+-- TODO hook up to squeeze_simp?
+add_hint_tactic fconstructor
+
+add_hint_tactic injections_and_clear
+
+add_hint_tactic solve_by_elim
+
+add_hint_tactic unfold_coes
+
+add_hint_tactic unfold_aux
+
+end Hint
+
+/-- Report a list of tactics that can make progress against the current goal,
 and for each such tactic, the number of remaining goals afterwards.
 -/
-meta def hint : tactic (list (string × ℕ)) :=
-do
-  names ← attribute.get_instances `hint_tactic,
-  focus1 $ try_all_sorted (names.reverse.map name_to_tactic)
+unsafe def hint : tactic (List (Stringₓ × ℕ)) := do
+  let names ← attribute.get_instances `hint_tactic
+  focus1 <| try_all_sorted (names name_to_tactic)
 
-namespace interactive
+namespace Interactive
 
-/--
-Report a list of tactics that can make progress against the current goal.
+/-- Report a list of tactics that can make progress against the current goal.
 -/
-meta def hint : tactic unit :=
-do
-  hints ← tactic.hint,
-  if hints.length = 0 then
-    fail "no hints available"
-  else do
-    t ← hints.nth 0,
-    if t.2 = 0 then do
-      trace "the following tactics solve the goal:\n----",
-      (hints.filter (λ p : string × ℕ, p.2 = 0)).mmap' (λ p, tactic.trace format!"Try this: {p.1}")
+unsafe def hint : tactic Unit := do
+  let hints ← tactic.hint
+  if hints = 0 then fail "no hints available"
     else do
-      trace "the following tactics make progress:\n----",
-      hints.mmap' (λ p, tactic.trace format!"Try this: {p.1}")
+      let t ← hints 0
+      if t.2 = 0 then do
+          trace "the following tactics solve the goal:\n----"
+          (hints fun p : Stringₓ × ℕ => p.2 = 0).mmap' fun p => tactic.trace f! "Try this: {p.1}"
+        else do
+          trace "the following tactics make progress:\n----"
+          hints fun p => tactic.trace f! "Try this: {p.1}"
 
-/--
-`hint` lists possible tactics which will make progress (that is, not fail) against the current goal.
+/-- `hint` lists possible tactics which will make progress (that is, not fail) against the current goal.
 
 ```lean
 example {P Q : Prop} (p : P) (h : P → Q) : Q :=
@@ -119,11 +127,10 @@ tactic), or
 2. `add_hint_tactic "my_tactic"`, specifying a string which works as an interactive tactic.
 -/
 add_tactic_doc
-{ name        := "hint",
-  category    := doc_category.tactic,
-  decl_names  := [`tactic.interactive.hint],
-  tags        := ["search", "Try this"] }
+  { Name := "hint", category := DocCategory.tactic, declNames := [`tactic.interactive.hint],
+    tags := ["search", "Try this"] }
 
-end interactive
+end Interactive
 
-end tactic
+end Tactic
+

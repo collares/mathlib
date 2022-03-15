@@ -1,1 +1,2 @@
-import ring_theory.adjoin.basic
+import Mathbin.RingTheory.Adjoin.Basic
+

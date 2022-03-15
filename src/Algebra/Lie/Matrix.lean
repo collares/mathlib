@@ -3,9 +3,9 @@ Copyright (c) 2021 Oliver Nash. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oliver Nash
 -/
-import algebra.lie.of_associative
-import linear_algebra.matrix.reindex
-import linear_algebra.matrix.to_linear_equiv
+import Mathbin.Algebra.Lie.OfAssociative
+import Mathbin.LinearAlgebra.Matrix.Reindex
+import Mathbin.LinearAlgebra.Matrix.ToLinearEquiv
 
 /-!
 # Lie algebras of matrices
@@ -25,61 +25,64 @@ primary value stems from their utility when constructing the classical Lie algeb
 lie algebra, matrix
 -/
 
-universes u v w w₁ w₂
 
-section matrices
-open_locale matrix
+universe u v w w₁ w₂
 
-variables {R : Type u} [comm_ring R]
-variables {n : Type w} [decidable_eq n] [fintype n]
+section Matrices
+
+open_locale Matrix
+
+variable {R : Type u} [CommRingₓ R]
+
+variable {n : Type w} [DecidableEq n] [Fintype n]
 
 /-- The natural equivalence between linear endomorphisms of finite free modules and square matrices
 is compatible with the Lie algebra structures. -/
-def lie_equiv_matrix' : module.End R (n → R) ≃ₗ⁅R⁆ matrix n n R :=
-{ map_lie' := λ T S,
-  begin
-    let f := @linear_map.to_matrix' R _ n n _ _,
-    change f (T.comp S - S.comp T) = (f T) * (f S) - (f S) * (f T),
-    have h : ∀ (T S : module.End R _), f (T.comp S) = (f T) ⬝ (f S) := linear_map.to_matrix'_comp,
-    rw [linear_equiv.map_sub, h, h, matrix.mul_eq_mul, matrix.mul_eq_mul],
-  end,
-  ..linear_map.to_matrix' }
+def lieEquivMatrix' : Module.End R (n → R) ≃ₗ⁅R⁆ Matrix n n R :=
+  { LinearMap.toMatrix' with
+    map_lie' := fun T S => by
+      let f := @LinearMap.toMatrix' R _ n n _ _
+      change f (T.comp S - S.comp T) = f T * f S - f S * f T
+      have h : ∀ T S : Module.End R _, f (T.comp S) = f T ⬝ f S := LinearMap.to_matrix'_comp
+      rw [LinearEquiv.map_sub, h, h, Matrix.mul_eq_mul, Matrix.mul_eq_mul] }
 
-@[simp] lemma lie_equiv_matrix'_apply (f : module.End R (n → R)) :
-  lie_equiv_matrix' f = f.to_matrix' := rfl
+@[simp]
+theorem lie_equiv_matrix'_apply (f : Module.End R (n → R)) : lieEquivMatrix' f = f.toMatrix' :=
+  rfl
 
-@[simp] lemma lie_equiv_matrix'_symm_apply (A : matrix n n R) :
-  (@lie_equiv_matrix' R _ n _ _).symm A = A.to_lin' := rfl
+@[simp]
+theorem lie_equiv_matrix'_symm_apply (A : Matrix n n R) : (@lieEquivMatrix' R _ n _ _).symm A = A.toLin' :=
+  rfl
 
 /-- An invertible matrix induces a Lie algebra equivalence from the space of matrices to itself. -/
-def matrix.lie_conj (P : matrix n n R) (h : invertible P) :
-  matrix n n R ≃ₗ⁅R⁆ matrix n n R :=
-((@lie_equiv_matrix' R _ n _ _).symm.trans (P.to_linear_equiv' h).lie_conj).trans lie_equiv_matrix'
+def Matrix.lieConj (P : Matrix n n R) (h : Invertible P) : Matrix n n R ≃ₗ⁅R⁆ Matrix n n R :=
+  ((@lieEquivMatrix' R _ n _ _).symm.trans (P.toLinearEquiv' h).lieConj).trans lieEquivMatrix'
 
-@[simp] lemma matrix.lie_conj_apply (P A : matrix n n R) (h : invertible P) :
-  P.lie_conj h A = P ⬝ A ⬝ P⁻¹ :=
-by simp [linear_equiv.conj_apply, matrix.lie_conj, linear_map.to_matrix'_comp,
-         linear_map.to_matrix'_to_lin']
+@[simp]
+theorem Matrix.lie_conj_apply (P A : Matrix n n R) (h : Invertible P) : P.lieConj h A = P ⬝ A ⬝ P⁻¹ := by
+  simp [LinearEquiv.conj_apply, Matrix.lieConj, LinearMap.to_matrix'_comp, LinearMap.to_matrix'_to_lin']
 
-@[simp] lemma matrix.lie_conj_symm_apply (P A : matrix n n R) (h : invertible P) :
-  (P.lie_conj h).symm A = P⁻¹ ⬝ A ⬝ P :=
-by simp [linear_equiv.symm_conj_apply, matrix.lie_conj, linear_map.to_matrix'_comp,
-         linear_map.to_matrix'_to_lin']
+@[simp]
+theorem Matrix.lie_conj_symm_apply (P A : Matrix n n R) (h : Invertible P) : (P.lieConj h).symm A = P⁻¹ ⬝ A ⬝ P := by
+  simp [LinearEquiv.symm_conj_apply, Matrix.lieConj, LinearMap.to_matrix'_comp, LinearMap.to_matrix'_to_lin']
 
-variables {m : Type w₁} [decidable_eq m] [fintype m] (e : n ≃ m)
+variable {m : Type w₁} [DecidableEq m] [Fintype m] (e : n ≃ m)
 
 /-- For square matrices, the natural map that reindexes a matrix's rows and columns with equivalent
 types, `matrix.reindex`, is an equivalence of Lie algebras. -/
-def matrix.reindex_lie_equiv : matrix n n R ≃ₗ⁅R⁆ matrix m m R :=
-{ to_fun := matrix.reindex e e,
-  map_lie' := λ M N, by simp only [lie_ring.of_associative_ring_bracket, matrix.reindex_apply,
-    matrix.minor_mul_equiv, matrix.mul_eq_mul, matrix.minor_sub, pi.sub_apply],
-  ..(matrix.reindex_linear_equiv R R e e) }
+def Matrix.reindexLieEquiv : Matrix n n R ≃ₗ⁅R⁆ Matrix m m R :=
+  { Matrix.reindexLinearEquiv R R e e with toFun := Matrix.reindex e e,
+    map_lie' := fun M N => by
+      simp only [LieRing.of_associative_ring_bracket, Matrix.reindex_apply, Matrix.minor_mul_equiv, Matrix.mul_eq_mul,
+        Matrix.minor_sub, Pi.sub_apply] }
 
-@[simp] lemma matrix.reindex_lie_equiv_apply (M : matrix n n R) :
-  matrix.reindex_lie_equiv e M = matrix.reindex e e M := rfl
+@[simp]
+theorem Matrix.reindex_lie_equiv_apply (M : Matrix n n R) : Matrix.reindexLieEquiv e M = Matrix.reindex e e M :=
+  rfl
 
-@[simp] lemma matrix.reindex_lie_equiv_symm :
-  (matrix.reindex_lie_equiv e : _ ≃ₗ⁅R⁆ _).symm = matrix.reindex_lie_equiv e.symm := rfl
+@[simp]
+theorem Matrix.reindex_lie_equiv_symm : (Matrix.reindexLieEquiv e : _ ≃ₗ⁅R⁆ _).symm = Matrix.reindexLieEquiv e.symm :=
+  rfl
 
-end matrices
+end Matrices
+

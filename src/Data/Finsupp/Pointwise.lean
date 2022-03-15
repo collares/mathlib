@@ -3,7 +3,7 @@ Copyright (c) 2020 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import data.finsupp.basic
+import Mathbin.Data.Finsupp.Basic
 
 /-!
 # The pointwise product on `finsupp`.
@@ -14,81 +14,89 @@ see the type synonyms `add_monoid_algebra`
 and `monoid_algebra`.
 -/
 
-noncomputable theory
 
-open finset
+noncomputable section
 
-universes u₁ u₂ u₃ u₄ u₅
-variables {α : Type u₁} {β : Type u₂} {γ : Type u₃} {δ : Type u₄} {ι : Type u₅}
+open Finset
 
-namespace finsupp
+universe u₁ u₂ u₃ u₄ u₅
+
+variable {α : Type u₁} {β : Type u₂} {γ : Type u₃} {δ : Type u₄} {ι : Type u₅}
+
+namespace Finsupp
 
 /-! ### Declarations about the pointwise product on `finsupp`s -/
 
+
 section
-variables [mul_zero_class β]
+
+variable [MulZeroClassₓ β]
 
 /-- The product of `f g : α →₀ β` is the finitely supported function
   whose value at `a` is `f a * g a`. -/
-instance : has_mul (α →₀ β) := ⟨zip_with (*) (mul_zero 0)⟩
+instance : Mul (α →₀ β) :=
+  ⟨zipWith (· * ·) (mul_zero 0)⟩
 
-lemma coe_mul (g₁ g₂ : α →₀ β) : ⇑(g₁ * g₂) = g₁ * g₂ := rfl
+theorem coe_mul (g₁ g₂ : α →₀ β) : ⇑(g₁ * g₂) = g₁ * g₂ :=
+  rfl
 
-@[simp] lemma mul_apply {g₁ g₂ : α →₀ β} {a : α} : (g₁ * g₂) a = g₁ a * g₂ a :=
-rfl
+@[simp]
+theorem mul_apply {g₁ g₂ : α →₀ β} {a : α} : (g₁ * g₂) a = g₁ a * g₂ a :=
+  rfl
 
-lemma support_mul [decidable_eq α] {g₁ g₂ : α →₀ β} : (g₁ * g₂).support ⊆ g₁.support ∩ g₂.support :=
-begin
-  intros a h,
-  simp only [mul_apply, mem_support_iff] at h,
-  simp only [mem_support_iff, mem_inter, ne.def],
-  rw ←not_or_distrib,
-  intro w,
-  apply h,
-  cases w; { rw w, simp },
+theorem support_mul [DecidableEq α] {g₁ g₂ : α →₀ β} : (g₁ * g₂).Support ⊆ g₁.Support ∩ g₂.Support := by
+  intro a h
+  simp only [mul_apply, mem_support_iff] at h
+  simp only [mem_support_iff, mem_inter, Ne.def]
+  rw [← not_or_distrib]
+  intro w
+  apply h
+  cases w <;>
+    · rw [w]
+      simp
+      
+
+instance : MulZeroClassₓ (α →₀ β) :=
+  Finsupp.coe_fn_injective.MulZeroClass _ coe_zero coe_mul
+
 end
 
-instance : mul_zero_class (α →₀ β) :=
-finsupp.coe_fn_injective.mul_zero_class _ coe_zero coe_mul
+instance [SemigroupWithZeroₓ β] : SemigroupWithZeroₓ (α →₀ β) :=
+  Finsupp.coe_fn_injective.SemigroupWithZero _ coe_zero coe_mul
 
-end
+instance [NonUnitalNonAssocSemiringₓ β] : NonUnitalNonAssocSemiringₓ (α →₀ β) :=
+  Finsupp.coe_fn_injective.NonUnitalNonAssocSemiring _ coe_zero coe_add coe_mul fun _ _ => rfl
 
-instance [semigroup_with_zero β] : semigroup_with_zero (α →₀ β) :=
-finsupp.coe_fn_injective.semigroup_with_zero _ coe_zero coe_mul
+instance [NonUnitalSemiringₓ β] : NonUnitalSemiringₓ (α →₀ β) :=
+  Finsupp.coe_fn_injective.NonUnitalSemiring _ coe_zero coe_add coe_mul fun _ _ => rfl
 
-instance [non_unital_non_assoc_semiring β] : non_unital_non_assoc_semiring (α →₀ β) :=
-finsupp.coe_fn_injective.non_unital_non_assoc_semiring _ coe_zero coe_add coe_mul (λ _ _, rfl)
+instance [NonUnitalNonAssocRing β] : NonUnitalNonAssocRing (α →₀ β) :=
+  Finsupp.coe_fn_injective.NonUnitalNonAssocRing _ coe_zero coe_add coe_mul coe_neg coe_sub (fun _ _ => rfl) fun _ _ =>
+    rfl
 
-instance [non_unital_semiring β] : non_unital_semiring (α →₀ β) :=
-finsupp.coe_fn_injective.non_unital_semiring _ coe_zero coe_add coe_mul (λ _ _, rfl)
-
-instance [non_unital_non_assoc_ring β] : non_unital_non_assoc_ring (α →₀ β) :=
-finsupp.coe_fn_injective.non_unital_non_assoc_ring _
-  coe_zero coe_add coe_mul coe_neg coe_sub (λ _ _, rfl) (λ _ _, rfl)
-
-instance [non_unital_ring β] : non_unital_ring (α →₀ β) :=
-finsupp.coe_fn_injective.non_unital_ring _
-  coe_zero coe_add coe_mul coe_neg coe_sub (λ _ _, rfl) (λ _ _, rfl)
+instance [NonUnitalRing β] : NonUnitalRing (α →₀ β) :=
+  Finsupp.coe_fn_injective.NonUnitalRing _ coe_zero coe_add coe_mul coe_neg coe_sub (fun _ _ => rfl) fun _ _ => rfl
 
 -- TODO can this be generalized in the direction of `pi.has_scalar'`
 -- (i.e. dependent functions and finsupps)
 -- TODO in theory this could be generalised, we only really need `smul_zero` for the definition
-instance pointwise_scalar [semiring β] : has_scalar (α → β) (α →₀ β) :=
-{ smul := λ f g, finsupp.of_support_finite (λ a, f a • g a) begin
-    apply set.finite.subset g.finite_support,
-    simp only [function.support_subset_iff, finsupp.mem_support_iff, ne.def,
-      finsupp.fun_support_eq, finset.mem_coe],
-    intros x hx h,
-    apply hx,
-    rw [h, smul_zero],
-  end }
+instance pointwiseScalar [Semiringₓ β] : HasScalar (α → β) (α →₀ β) where
+  smul := fun f g =>
+    Finsupp.ofSupportFinite (fun a => f a • g a)
+      (by
+        apply Set.Finite.subset g.finite_support
+        simp only [Function.support_subset_iff, Finsupp.mem_support_iff, Ne.def, Finsupp.fun_support_eq, Finset.mem_coe]
+        intro x hx h
+        apply hx
+        rw [h, smul_zero])
 
 @[simp]
-lemma coe_pointwise_smul [semiring β] (f : α → β) (g : α →₀ β) :
-  ⇑(f • g) = f • g := rfl
+theorem coe_pointwise_smul [Semiringₓ β] (f : α → β) (g : α →₀ β) : ⇑(f • g) = f • g :=
+  rfl
 
 /-- The pointwise multiplicative action of functions on finitely supported functions -/
-instance pointwise_module [semiring β] : module (α → β) (α →₀ β) :=
-function.injective.module _ coe_fn_add_hom coe_fn_injective coe_pointwise_smul
+instance pointwiseModule [Semiringₓ β] : Module (α → β) (α →₀ β) :=
+  Function.Injective.module _ coeFnAddHom coe_fn_injective coe_pointwise_smul
 
-end finsupp
+end Finsupp
+

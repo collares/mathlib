@@ -1,3 +1,4 @@
-import algebra.category.CommRing.adjunctions
-import algebra.category.CommRing.limits
-import algebra.category.CommRing.colimits
+import Mathbin.Algebra.Category.CommRing.Adjunctions
+import Mathbin.Algebra.Category.CommRing.Limits
+import Mathbin.Algebra.Category.CommRing.Colimits
+

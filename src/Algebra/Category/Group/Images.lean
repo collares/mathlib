@@ -3,9 +3,9 @@ Copyright (c) 2020 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import algebra.category.Group.abelian
-import category_theory.limits.shapes.images
-import category_theory.limits.types
+import Mathbin.Algebra.Category.Group.Abelian
+import Mathbin.CategoryTheory.Limits.Shapes.Images
+import Mathbin.CategoryTheory.Limits.Types
 
 /-!
 # The category of commutative additive groups has images.
@@ -14,89 +14,93 @@ Note that we don't need to register any of the constructions here as instances, 
 from the fact that `AddCommGroup` is an abelian category.
 -/
 
-open category_theory
-open category_theory.limits
+
+open CategoryTheory
+
+open CategoryTheory.Limits
 
 universe u
 
-namespace AddCommGroup
+namespace AddCommGroupₓₓ
 
 -- Note that because `injective_of_mono` is currently only proved in `Type 0`,
 -- we restrict to the lowest universe here for now.
-variables {G H : AddCommGroup.{0}} (f : G ⟶ H)
+variable {G H : AddCommGroupₓₓ.{0}} (f : G ⟶ H)
 
-local attribute [ext] subtype.ext_val
+attribute [local ext] Subtype.ext_val
 
-section -- implementation details of `has_image` for AddCommGroup; use the API, not these
+section
+
 /-- the image of a morphism in AddCommGroup is just the bundling of `add_monoid_hom.range f` -/
-def image : AddCommGroup := AddCommGroup.of (add_monoid_hom.range f)
+-- implementation details of `has_image` for AddCommGroup; use the API, not these
+def image : AddCommGroupₓₓ :=
+  AddCommGroupₓₓ.of (AddMonoidHom.range f)
 
 /-- the inclusion of `image f` into the target -/
-def image.ι : image f ⟶ H := f.range.subtype
+def image.ι : image f ⟶ H :=
+  f.range.Subtype
 
-instance : mono (image.ι f) := concrete_category.mono_of_injective (image.ι f) subtype.val_injective
+instance : Mono (image.ι f) :=
+  ConcreteCategory.mono_of_injective (image.ι f) Subtype.val_injective
 
 /-- the corestriction map to the image -/
-def factor_thru_image : G ⟶ image f := f.range_restrict
+def factorThruImage : G ⟶ image f :=
+  f.range_restrict
 
-lemma image.fac : factor_thru_image f ≫ image.ι f = f :=
-by { ext, refl, }
+theorem image.fac : factorThruImage f ≫ image.ι f = f := by
+  ext
+  rfl
 
-local attribute [simp] image.fac
+attribute [local simp] image.fac
 
-variables {f}
+variable {f}
+
 /-- the universal property for the image factorisation -/
-noncomputable def image.lift (F' : mono_factorisation f) : image f ⟶ F'.I :=
-{ to_fun :=
-  (λ x, F'.e (classical.indefinite_description _ x.2).1 : image f → F'.I),
-  map_zero' :=
-  begin
-    haveI := F'.m_mono,
-    apply injective_of_mono F'.m,
-    change (F'.e ≫ F'.m) _ = _,
-    rw [F'.fac, add_monoid_hom.map_zero],
-    exact (classical.indefinite_description (λ y, f y = 0) _).2,
-  end,
-  map_add' :=
-  begin
-    intros x y,
-    haveI := F'.m_mono,
-    apply injective_of_mono F'.m,
-    rw [add_monoid_hom.map_add],
-    change (F'.e ≫ F'.m) _ = (F'.e ≫ F'.m) _ + (F'.e ≫ F'.m) _,
-    rw [F'.fac],
-    rw (classical.indefinite_description (λ z, f z = _) _).2,
-    rw (classical.indefinite_description (λ z, f z = _) _).2,
-    rw (classical.indefinite_description (λ z, f z = _) _).2,
-    refl,
-  end, }
-lemma image.lift_fac (F' : mono_factorisation f) : image.lift F' ≫ F'.m = image.ι f :=
-begin
-  ext x,
-  change (F'.e ≫ F'.m) _ = _,
-  rw [F'.fac, (classical.indefinite_description _ x.2).2],
-  refl,
-end
+noncomputable def image.lift (F' : MonoFactorisation f) : image f ⟶ F'.i where
+  toFun := (fun x => F'.e (Classical.indefiniteDescription _ x.2).1 : image f → F'.i)
+  map_zero' := by
+    have := F'.m_mono
+    apply injective_of_mono F'.m
+    change (F'.e ≫ F'.m) _ = _
+    rw [F'.fac, AddMonoidHom.map_zero]
+    exact (Classical.indefiniteDescription (fun y => f y = 0) _).2
+  map_add' := by
+    intro x y
+    have := F'.m_mono
+    apply injective_of_mono F'.m
+    rw [AddMonoidHom.map_add]
+    change (F'.e ≫ F'.m) _ = (F'.e ≫ F'.m) _ + (F'.e ≫ F'.m) _
+    rw [F'.fac]
+    rw [(Classical.indefiniteDescription (fun z => f z = _) _).2]
+    rw [(Classical.indefiniteDescription (fun z => f z = _) _).2]
+    rw [(Classical.indefiniteDescription (fun z => f z = _) _).2]
+    rfl
+
+theorem image.lift_fac (F' : MonoFactorisation f) : image.lift F' ≫ F'.m = image.ι f := by
+  ext x
+  change (F'.e ≫ F'.m) _ = _
+  rw [F'.fac, (Classical.indefiniteDescription _ x.2).2]
+  rfl
+
 end
 
 /-- the factorisation of any morphism in AddCommGroup through a mono. -/
-def mono_factorisation : mono_factorisation f :=
-{ I := image f,
-  m := image.ι f,
-  e := factor_thru_image f }
+def monoFactorisation : MonoFactorisation f where
+  i := image f
+  m := image.ι f
+  e := factorThruImage f
 
 /-- the factorisation of any morphism in AddCommGroup through a mono has the universal property of
 the image. -/
-noncomputable def is_image : is_image (mono_factorisation f) :=
-{ lift := image.lift,
-  lift_fac' := image.lift_fac }
+noncomputable def isImage : IsImage (monoFactorisation f) where
+  lift := image.lift
+  lift_fac' := image.lift_fac
 
-/--
-The categorical image of a morphism in `AddCommGroup`
+/-- The categorical image of a morphism in `AddCommGroup`
 agrees with the usual group-theoretical range.
 -/
-noncomputable def image_iso_range {G H : AddCommGroup.{0}} (f : G ⟶ H) :
-  limits.image f ≅ AddCommGroup.of f.range :=
-is_image.iso_ext (image.is_image f) (is_image f)
+noncomputable def imageIsoRange {G H : AddCommGroupₓₓ.{0}} (f : G ⟶ H) : Limits.image f ≅ AddCommGroupₓₓ.of f.range :=
+  IsImage.isoExt (Image.isImage f) (isImage f)
 
-end AddCommGroup
+end AddCommGroupₓₓ
+

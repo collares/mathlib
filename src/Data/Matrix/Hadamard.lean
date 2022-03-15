@@ -3,7 +3,7 @@ Copyright (c) 2021 Lu-Ming Zhang. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Lu-Ming Zhang
 -/
-import linear_algebra.matrix.trace
+import Mathbin.LinearAlgebra.Matrix.Trace
 
 /-!
 # Hadamard product of matrices
@@ -29,104 +29,112 @@ and contains basic properties about them.
 hadamard product, hadamard
 -/
 
-variables {α β γ m n : Type*}
-variables {R : Type*}
 
-namespace matrix
-open_locale matrix big_operators
+variable {α β γ m n : Type _}
+
+variable {R : Type _}
+
+namespace Matrix
+
+open_locale Matrix BigOperators
 
 /-- `matrix.hadamard` defines the Hadamard product,
     which is the pointwise product of two matrices of the same size.-/
 @[simp]
-def hadamard [has_mul α] (A : matrix m n α) (B : matrix m n α) : matrix m n α
-| i j := A i j * B i j
+def hadamard [Mul α] (A : Matrix m n α) (B : Matrix m n α) : Matrix m n α
+  | i, j => A i j * B i j
 
-localized "infix ` ⊙ `:100 := matrix.hadamard" in matrix
+-- mathport name: «expr ⊙ »
+localized [Matrix] infixl:100 " ⊙ " => Matrix.hadamard
 
-section basic_properties
+section BasicProperties
 
-variables (A : matrix m n α) (B : matrix m n α) (C : matrix m n α)
+variable (A : Matrix m n α) (B : Matrix m n α) (C : Matrix m n α)
 
-/- commutativity -/
-lemma hadamard_comm [comm_semigroup α] : A ⊙ B = B ⊙ A :=
-ext $ λ _ _, mul_comm _ _
+-- commutativity
+theorem hadamard_comm [CommSemigroupₓ α] : A ⊙ B = B ⊙ A :=
+  ext fun _ _ => mul_comm _ _
 
-/- associativity -/
-lemma hadamard_assoc [semigroup α] : A ⊙ B ⊙ C = A ⊙ (B ⊙ C) :=
-ext $ λ _ _, mul_assoc _ _ _
+-- associativity
+theorem hadamard_assoc [Semigroupₓ α] : A ⊙ B ⊙ C = A ⊙ (B ⊙ C) :=
+  ext fun _ _ => mul_assoc _ _ _
 
-/- distributivity -/
-lemma hadamard_add [distrib α] : A ⊙ (B + C) = A ⊙ B + A ⊙ C :=
-ext $ λ _ _, left_distrib _ _ _
+-- distributivity
+theorem hadamard_add [Distribₓ α] : A ⊙ (B + C) = A ⊙ B + A ⊙ C :=
+  ext fun _ _ => left_distrib _ _ _
 
-lemma add_hadamard [distrib α] : (B + C) ⊙ A = B ⊙ A + C ⊙ A :=
-ext $ λ _ _, right_distrib _ _ _
+theorem add_hadamard [Distribₓ α] : (B + C) ⊙ A = B ⊙ A + C ⊙ A :=
+  ext fun _ _ => right_distrib _ _ _
 
-/- scalar multiplication -/
-section scalar
+-- scalar multiplication
+section Scalar
 
-@[simp] lemma smul_hadamard [has_mul α] [has_scalar R α] [is_scalar_tower R α α] (k : R) :
-  (k • A) ⊙ B = k • A ⊙ B :=
-ext $ λ _ _, smul_mul_assoc _ _ _
+@[simp]
+theorem smul_hadamard [Mul α] [HasScalar R α] [IsScalarTower R α α] (k : R) : (k • A) ⊙ B = k • A ⊙ B :=
+  ext fun _ _ => smul_mul_assoc _ _ _
 
-@[simp] lemma hadamard_smul [has_mul α] [has_scalar R α] [smul_comm_class R α α] (k : R):
-  A ⊙ (k • B) = k • A ⊙ B :=
-ext $ λ _ _, mul_smul_comm _ _ _
+@[simp]
+theorem hadamard_smul [Mul α] [HasScalar R α] [SmulCommClass R α α] (k : R) : A ⊙ (k • B) = k • A ⊙ B :=
+  ext fun _ _ => mul_smul_comm _ _ _
 
-end scalar
+end Scalar
 
-section zero
+section Zero
 
-variables [mul_zero_class α]
+variable [MulZeroClassₓ α]
 
-@[simp] lemma hadamard_zero : A ⊙ (0 : matrix m n α) = 0 :=
-ext $ λ _ _, mul_zero _
+@[simp]
+theorem hadamard_zero : A ⊙ (0 : Matrix m n α) = 0 :=
+  ext fun _ _ => mul_zero _
 
-@[simp] lemma zero_hadamard : (0 : matrix m n α) ⊙ A = 0 :=
-ext $ λ _ _, zero_mul _
+@[simp]
+theorem zero_hadamard : (0 : Matrix m n α) ⊙ A = 0 :=
+  ext fun _ _ => zero_mul _
 
-end zero
+end Zero
 
-section one
+section One
 
-variables [decidable_eq n] [mul_zero_one_class α]
-variables (M : matrix n n α)
+variable [DecidableEq n] [MulZeroOneClassₓ α]
 
-lemma hadamard_one : M ⊙ (1 : matrix n n α) = diagonal (λ i, M i i) :=
-by { ext, by_cases h : i = j; simp [h] }
+variable (M : Matrix n n α)
 
-lemma one_hadamard : (1 : matrix n n α) ⊙ M = diagonal (λ i, M i i) :=
-by { ext, by_cases h : i = j; simp [h] }
+theorem hadamard_one : M ⊙ (1 : Matrix n n α) = diagonalₓ fun i => M i i := by
+  ext
+  by_cases' h : i = j <;> simp [h]
 
-end one
+theorem one_hadamard : (1 : Matrix n n α) ⊙ M = diagonalₓ fun i => M i i := by
+  ext
+  by_cases' h : i = j <;> simp [h]
 
-section diagonal
+end One
 
-variables [decidable_eq n] [mul_zero_class α]
+section Diagonal
 
-lemma diagonal_hadamard_diagonal (v : n → α) (w : n → α) :
-  diagonal v ⊙ diagonal w = diagonal (v * w) :=
-ext $ λ _ _, (apply_ite2 _ _ _ _ _ _).trans (congr_arg _ $ zero_mul 0)
+variable [DecidableEq n] [MulZeroClassₓ α]
 
-end diagonal
+theorem diagonal_hadamard_diagonal (v : n → α) (w : n → α) : diagonalₓ v ⊙ diagonalₓ w = diagonalₓ (v * w) :=
+  ext fun _ _ => (apply_ite2 _ _ _ _ _ _).trans (congr_argₓ _ <| zero_mul 0)
+
+end Diagonal
 
 section trace
 
-variables [fintype m] [fintype n]
-variables (R) [semiring α] [semiring R] [module R α]
+variable [Fintype m] [Fintype n]
 
-lemma sum_hadamard_eq : ∑ (i : m) (j : n), (A ⊙ B) i j = trace m R α (A ⬝ Bᵀ) :=
-rfl
+variable (R) [Semiringₓ α] [Semiringₓ R] [Module R α]
 
-lemma dot_product_vec_mul_hadamard [decidable_eq m] [decidable_eq n] (v : m → α) (w : n → α) :
-  dot_product (vec_mul v (A ⊙ B)) w = trace m R α (diagonal v ⬝ A ⬝ (B ⬝ diagonal w)ᵀ) :=
-begin
-  rw [←sum_hadamard_eq, finset.sum_comm],
-  simp [dot_product, vec_mul, finset.sum_mul, mul_assoc],
-end
+theorem sum_hadamard_eq : (∑ (i : m) (j : n), (A ⊙ B) i j) = trace m R α (A ⬝ Bᵀ) :=
+  rfl
+
+theorem dot_product_vec_mul_hadamard [DecidableEq m] [DecidableEq n] (v : m → α) (w : n → α) :
+    dotProduct (vecMulₓ v (A ⊙ B)) w = trace m R α (diagonalₓ v ⬝ A ⬝ (B ⬝ diagonalₓ w)ᵀ) := by
+  rw [← sum_hadamard_eq, Finset.sum_comm]
+  simp [dot_product, vec_mul, Finset.sum_mul, mul_assoc]
 
 end trace
 
-end basic_properties
+end BasicProperties
 
-end matrix
+end Matrix
+

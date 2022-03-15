@@ -3,9 +3,9 @@ Copyright (c) 2021 Anne Baanen. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Anne Baanen
 -/
-import number_theory.class_number.admissible_card_pow_degree
-import number_theory.class_number.finite
-import number_theory.function_field
+import Mathbin.NumberTheory.ClassNumber.AdmissibleCardPowDegree
+import Mathbin.NumberTheory.ClassNumber.Finite
+import Mathbin.NumberTheory.FunctionField
 
 /-!
 # Class numbers of function fields
@@ -19,33 +19,39 @@ on the class number.
 cardinality of the class group of its ring of integers
 -/
 
-namespace function_field
-open_locale polynomial
 
-variables (Fq F : Type) [field Fq] [fintype Fq] [field F]
-variables [algebra Fq[X] F] [algebra (ratfunc Fq) F]
-variables [is_scalar_tower Fq[X] (ratfunc Fq) F]
-variables [function_field Fq F] [is_separable (ratfunc Fq) F]
+namespace FunctionField
 
-open_locale classical
+open_locale Polynomial
 
-namespace ring_of_integers
+variable (Fq F : Type) [Field Fq] [Fintype Fq] [Field F]
 
-open function_field
+variable [Algebra Fq[X] F] [Algebra (Ratfunc Fq) F]
 
-noncomputable instance  : fintype (class_group (ring_of_integers Fq F) F) :=
-class_group.fintype_of_admissible_of_finite (ratfunc Fq) F
-  (polynomial.card_pow_degree_is_admissible : absolute_value.is_admissible
-    (polynomial.card_pow_degree : absolute_value Fq[X] ℤ))
+variable [IsScalarTower Fq[X] (Ratfunc Fq) F]
 
-end ring_of_integers
+variable [FunctionField Fq F] [IsSeparable (Ratfunc Fq) F]
+
+open_locale Classical
+
+namespace RingOfIntegers
+
+open FunctionField
+
+noncomputable instance : Fintype (ClassGroup (ringOfIntegers Fq F) F) :=
+  ClassGroup.fintypeOfAdmissibleOfFinite (Ratfunc Fq) F
+    (Polynomial.cardPowDegreeIsAdmissible :
+      AbsoluteValue.IsAdmissible (Polynomial.cardPowDegree : AbsoluteValue Fq[X] ℤ))
+
+end RingOfIntegers
 
 /-- The class number in a function field is the (finite) cardinality of the class group. -/
-noncomputable def class_number : ℕ := fintype.card (class_group (ring_of_integers Fq F) F)
+noncomputable def classNumber : ℕ :=
+  Fintype.card (ClassGroup (ringOfIntegers Fq F) F)
 
 /-- The class number of a function field is `1` iff the ring of integers is a PID. -/
-theorem class_number_eq_one_iff :
-  class_number Fq F = 1 ↔ is_principal_ideal_ring (ring_of_integers Fq F) :=
-card_class_group_eq_one_iff
+theorem class_number_eq_one_iff : classNumber Fq F = 1 ↔ IsPrincipalIdealRing (ringOfIntegers Fq F) :=
+  card_class_group_eq_one_iff
 
-end function_field
+end FunctionField
+

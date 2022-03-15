@@ -3,9 +3,8 @@ Copyright (c) 2020 Kenny Lau. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau
 -/
-
-import algebra.algebra.tower
-import data.polynomial.algebra_map
+import Mathbin.Algebra.Algebra.Tower
+import Mathbin.Data.Polynomial.AlgebraMap
 
 /-!
 # Algebra towers for polynomial
@@ -15,65 +14,70 @@ This file proves some basic results about the algebra tower structure for the ty
 This structure itself is provided elsewhere as `polynomial.is_scalar_tower`
 -/
 
-universes u v w u₁
-open_locale polynomial
 
-variables (R : Type u) (S : Type v) (A : Type w) (B : Type u₁)
+universe u v w u₁
 
-namespace is_scalar_tower
+open_locale Polynomial
 
-section semiring
-variables [comm_semiring R] [comm_semiring S] [semiring A] [semiring B]
-variables [algebra R S] [algebra S A] [algebra S B] [algebra R A] [algebra R B]
-variables [is_scalar_tower R S A] [is_scalar_tower R S B]
+variable (R : Type u) (S : Type v) (A : Type w) (B : Type u₁)
 
-variables (R S A) {B}
-theorem aeval_apply (x : A) (p : R[X]) : polynomial.aeval x p =
-  polynomial.aeval x (polynomial.map (algebra_map R S) p) :=
-by rw [polynomial.aeval_def, polynomial.aeval_def, polynomial.eval₂_map, algebra_map_eq R S A]
+namespace IsScalarTower
 
-end semiring
+section Semiringₓ
 
-section comm_semiring
-variables [comm_semiring R] [comm_semiring A] [semiring B]
-variables [algebra R A] [algebra A B] [algebra R B] [is_scalar_tower R A B]
+variable [CommSemiringₓ R] [CommSemiringₓ S] [Semiringₓ A] [Semiringₓ B]
 
-lemma algebra_map_aeval (x : A) (p : R[X]) :
-  algebra_map A B (polynomial.aeval x p) = polynomial.aeval (algebra_map A B x) p :=
-by rw [polynomial.aeval_def, polynomial.aeval_def, polynomial.hom_eval₂,
-  ←is_scalar_tower.algebra_map_eq]
+variable [Algebra R S] [Algebra S A] [Algebra S B] [Algebra R A] [Algebra R B]
 
-lemma aeval_eq_zero_of_aeval_algebra_map_eq_zero {x : A} {p : R[X]}
-  (h : function.injective (algebra_map A B)) (hp : polynomial.aeval (algebra_map A B x) p = 0) :
-  polynomial.aeval x p = 0 :=
-begin
-  rw [← algebra_map_aeval, ← (algebra_map A B).map_zero] at hp,
-  exact h hp,
-end
+variable [IsScalarTower R S A] [IsScalarTower R S B]
 
-lemma aeval_eq_zero_of_aeval_algebra_map_eq_zero_field {R A B : Type*} [comm_semiring R] [field A]
-  [comm_semiring B] [nontrivial B] [algebra R A] [algebra R B] [algebra A B] [is_scalar_tower R A B]
-  {x : A} {p : R[X]} (h : polynomial.aeval (algebra_map A B x) p = 0) :
-  polynomial.aeval x p = 0 :=
-aeval_eq_zero_of_aeval_algebra_map_eq_zero R A B (algebra_map A B).injective h
+variable (R S A) {B}
 
-end comm_semiring
+theorem aeval_apply (x : A) (p : R[X]) :
+    Polynomial.aeval x p = Polynomial.aeval x (Polynomial.map (algebraMap R S) p) := by
+  rw [Polynomial.aeval_def, Polynomial.aeval_def, Polynomial.eval₂_map, algebra_map_eq R S A]
 
-end is_scalar_tower
+end Semiringₓ
 
-namespace subalgebra
+section CommSemiringₓ
 
-open is_scalar_tower
+variable [CommSemiringₓ R] [CommSemiringₓ A] [Semiringₓ B]
 
-section comm_semiring
+variable [Algebra R A] [Algebra A B] [Algebra R B] [IsScalarTower R A B]
 
-variables (R) {S A} [comm_semiring R] [comm_semiring S] [comm_semiring A]
-variables [algebra R S] [algebra S A] [algebra R A] [is_scalar_tower R S A]
+theorem algebra_map_aeval (x : A) (p : R[X]) :
+    algebraMap A B (Polynomial.aeval x p) = Polynomial.aeval (algebraMap A B x) p := by
+  rw [Polynomial.aeval_def, Polynomial.aeval_def, Polynomial.hom_eval₂, ← IsScalarTower.algebra_map_eq]
 
-@[simp] lemma aeval_coe {S : subalgebra R A} {x : S} {p : R[X]} :
-  polynomial.aeval (x : A) p = polynomial.aeval x p :=
-(algebra_map_aeval R S A x p).symm
+theorem aeval_eq_zero_of_aeval_algebra_map_eq_zero {x : A} {p : R[X]} (h : Function.Injective (algebraMap A B))
+    (hp : Polynomial.aeval (algebraMap A B x) p = 0) : Polynomial.aeval x p = 0 := by
+  rw [← algebra_map_aeval, ← (algebraMap A B).map_zero] at hp
+  exact h hp
 
-end comm_semiring
+theorem aeval_eq_zero_of_aeval_algebra_map_eq_zero_field {R A B : Type _} [CommSemiringₓ R] [Field A] [CommSemiringₓ B]
+    [Nontrivial B] [Algebra R A] [Algebra R B] [Algebra A B] [IsScalarTower R A B] {x : A} {p : R[X]}
+    (h : Polynomial.aeval (algebraMap A B x) p = 0) : Polynomial.aeval x p = 0 :=
+  aeval_eq_zero_of_aeval_algebra_map_eq_zero R A B (algebraMap A B).Injective h
 
-end subalgebra
+end CommSemiringₓ
+
+end IsScalarTower
+
+namespace Subalgebra
+
+open IsScalarTower
+
+section CommSemiringₓ
+
+variable (R) {S A} [CommSemiringₓ R] [CommSemiringₓ S] [CommSemiringₓ A]
+
+variable [Algebra R S] [Algebra S A] [Algebra R A] [IsScalarTower R S A]
+
+@[simp]
+theorem aeval_coe {S : Subalgebra R A} {x : S} {p : R[X]} : Polynomial.aeval (x : A) p = Polynomial.aeval x p :=
+  (algebra_map_aeval R S A x p).symm
+
+end CommSemiringₓ
+
+end Subalgebra
+

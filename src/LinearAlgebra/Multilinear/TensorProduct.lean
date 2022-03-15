@@ -3,25 +3,31 @@ Copyright (c) 2020 Eric Wieser. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Eric Wieser
 -/
-import linear_algebra.multilinear.basic
-import linear_algebra.tensor_product
+import Mathbin.LinearAlgebra.Multilinear.Basic
+import Mathbin.LinearAlgebra.TensorProduct
 
 /-!
 # Constructions relating multilinear maps and tensor products.
 -/
 
-namespace multilinear_map
 
-section dom_coprod
+namespace MultilinearMap
 
-open_locale tensor_product
+section DomCoprod
 
-variables {R ι₁ ι₂ ι₃ ι₄ : Type*}
-variables [comm_semiring R]
-variables [decidable_eq ι₁] [decidable_eq ι₂][decidable_eq ι₃] [decidable_eq ι₄]
-variables {N₁ : Type*} [add_comm_monoid N₁] [module R N₁]
-variables {N₂ : Type*} [add_comm_monoid N₂] [module R N₂]
-variables {N : Type*} [add_comm_monoid N] [module R N]
+open_locale TensorProduct
+
+variable {R ι₁ ι₂ ι₃ ι₄ : Type _}
+
+variable [CommSemiringₓ R]
+
+variable [DecidableEq ι₁] [DecidableEq ι₂] [DecidableEq ι₃] [DecidableEq ι₄]
+
+variable {N₁ : Type _} [AddCommMonoidₓ N₁] [Module R N₁]
+
+variable {N₂ : Type _} [AddCommMonoidₓ N₂] [Module R N₂]
+
+variable {N : Type _} [AddCommMonoidₓ N] [Module R N]
 
 /-- Given two multilinear maps `(ι₁ → N) → N₁` and `(ι₂ → N) → N₂`, this produces the map
 `(ι₁ ⊕ ι₂ → N) → N₁ ⊗ N₂` by taking the coproduct of the domain and the tensor product
@@ -37,37 +43,47 @@ to the simple case defined here. See [this zulip thread](
 https://leanprover.zulipchat.com/#narrow/stream/217875-Is-there.20code.20for.20X.3F/topic/Instances.20on.20.60sum.2Eelim.20A.20B.20i.60/near/218484619).
 -/
 @[simps apply]
-def dom_coprod
-  (a : multilinear_map R (λ _ : ι₁, N) N₁) (b : multilinear_map R (λ _ : ι₂, N) N₂) :
-  multilinear_map R (λ _ : ι₁ ⊕ ι₂, N) (N₁ ⊗[R] N₂) :=
-{ to_fun := λ v, a (λ i, v (sum.inl i)) ⊗ₜ b (λ i, v (sum.inr i)),
-  map_add' := λ v i p q, by cases i; simp [tensor_product.add_tmul, tensor_product.tmul_add],
-  map_smul' := λ v i c p, by cases i; simp [tensor_product.smul_tmul', tensor_product.tmul_smul] }
+def domCoprod (a : MultilinearMap R (fun _ : ι₁ => N) N₁) (b : MultilinearMap R (fun _ : ι₂ => N) N₂) :
+    MultilinearMap R (fun _ : Sum ι₁ ι₂ => N) (N₁ ⊗[R] N₂) where
+  toFun := fun v => (a fun i => v (Sum.inl i)) ⊗ₜ b fun i => v (Sum.inr i)
+  map_add' := fun v i p q => by
+    cases i <;> simp [TensorProduct.add_tmul, TensorProduct.tmul_add]
+  map_smul' := fun v i c p => by
+    cases i <;> simp [TensorProduct.smul_tmul', TensorProduct.tmul_smul]
 
 /-- A more bundled version of `multilinear_map.dom_coprod` that maps
 `((ι₁ → N) → N₁) ⊗ ((ι₂ → N) → N₂)` to `(ι₁ ⊕ ι₂ → N) → N₁ ⊗ N₂`. -/
-def dom_coprod' :
-  multilinear_map R (λ _ : ι₁, N) N₁ ⊗[R] multilinear_map R (λ _ : ι₂, N) N₂ →ₗ[R]
-  multilinear_map R (λ _ : ι₁ ⊕ ι₂, N) (N₁ ⊗[R] N₂) :=
-tensor_product.lift $ linear_map.mk₂ R (dom_coprod)
-  (λ m₁ m₂ n, by { ext, simp only [dom_coprod_apply, tensor_product.add_tmul, add_apply] })
-  (λ c m n,   by { ext, simp only [dom_coprod_apply, tensor_product.smul_tmul', smul_apply] })
-  (λ m n₁ n₂, by { ext, simp only [dom_coprod_apply, tensor_product.tmul_add, add_apply] })
-  (λ c m n,   by { ext, simp only [dom_coprod_apply, tensor_product.tmul_smul, smul_apply] })
+def domCoprod' :
+    MultilinearMap R (fun _ : ι₁ => N) N₁ ⊗[R] MultilinearMap R (fun _ : ι₂ => N) N₂ →ₗ[R]
+      MultilinearMap R (fun _ : Sum ι₁ ι₂ => N) (N₁ ⊗[R] N₂) :=
+  TensorProduct.lift <|
+    LinearMap.mk₂ R domCoprod
+      (fun m₁ m₂ n => by
+        ext
+        simp only [dom_coprod_apply, TensorProduct.add_tmul, add_apply])
+      (fun c m n => by
+        ext
+        simp only [dom_coprod_apply, TensorProduct.smul_tmul', smul_apply])
+      (fun m n₁ n₂ => by
+        ext
+        simp only [dom_coprod_apply, TensorProduct.tmul_add, add_apply])
+      fun c m n => by
+      ext
+      simp only [dom_coprod_apply, TensorProduct.tmul_smul, smul_apply]
 
 @[simp]
-lemma dom_coprod'_apply
-  (a : multilinear_map R (λ _ : ι₁, N) N₁) (b : multilinear_map R (λ _ : ι₂, N) N₂) :
-  dom_coprod' (a ⊗ₜ[R] b) = dom_coprod a b := rfl
+theorem dom_coprod'_apply (a : MultilinearMap R (fun _ : ι₁ => N) N₁) (b : MultilinearMap R (fun _ : ι₂ => N) N₂) :
+    domCoprod' (a ⊗ₜ[R] b) = domCoprod a b :=
+  rfl
 
 /-- When passed an `equiv.sum_congr`, `multilinear_map.dom_dom_congr` distributes over
 `multilinear_map.dom_coprod`. -/
-lemma dom_coprod_dom_dom_congr_sum_congr
-  (a : multilinear_map R (λ _ : ι₁, N) N₁) (b : multilinear_map R (λ _ : ι₂, N) N₂)
-  (σa : ι₁ ≃ ι₃) (σb : ι₂ ≃ ι₄) :
-    (a.dom_coprod b).dom_dom_congr (σa.sum_congr σb) =
-      (a.dom_dom_congr σa).dom_coprod (b.dom_dom_congr σb) := rfl
+theorem dom_coprod_dom_dom_congr_sum_congr (a : MultilinearMap R (fun _ : ι₁ => N) N₁)
+    (b : MultilinearMap R (fun _ : ι₂ => N) N₂) (σa : ι₁ ≃ ι₃) (σb : ι₂ ≃ ι₄) :
+    (a.domCoprod b).domDomCongr (σa.sumCongr σb) = (a.domDomCongr σa).domCoprod (b.domDomCongr σb) :=
+  rfl
 
-end dom_coprod
+end DomCoprod
 
-end multilinear_map
+end MultilinearMap
+

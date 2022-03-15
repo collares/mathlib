@@ -3,7 +3,7 @@ Copyright (c) 2018 Simon Hudon. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Simon Hudon, Scott Morrison
 -/
-import tactic.core
+import Mathbin.Tactic.Core
 
 /-!
 # solve_by_elim
@@ -22,11 +22,12 @@ At present it has no "premise selection", and simply tries the supplied lemmas i
 at each step of the search.
 -/
 
-namespace tactic
 
-namespace solve_by_elim
-/--
-`mk_assumption_set` builds a collection of lemmas for use in
+namespace Tactic
+
+namespace SolveByElim
+
+/-- `mk_assumption_set` builds a collection of lemmas for use in
 the backtracking search in `solve_by_elim`.
 
 * By default, it includes all local hypotheses, along with `rfl`, `trivial`, `congr_fun` and
@@ -67,42 +68,50 @@ See https://github.com/leanprover-community/mathlib/issues/2269
 As an optimisation, after we build the list of `tactic expr`s, we actually run them, and replace any
 that do not in fact produce metavariables with a simple `return` tactic.
 -/
-meta def mk_assumption_set (no_dflt : bool) (hs : list simp_arg_type) (attr : list name) :
-  tactic (list (tactic expr) × tactic (list expr)) :=
--- We lock the tactic state so that any spurious goals generated during
--- elaboration of pre-expressions are discarded
-lock_tactic_state $
-do
-  -- `hs` are expressions specified explicitly,
-  -- `hex` are exceptions (specified via `solve_by_elim [-h]`) referring to local hypotheses,
-  -- `gex` are the other exceptions
-  (hs, gex, hex, all_hyps) ← decode_simp_arg_list hs,
-  -- Recall, per the discussion above, we produce `tactic expr` thunks rather than actual `expr`s.
-  -- Note that while we evaluate these thunks on two occasions below while preparing the list,
-  -- this is a one-time cost during `mk_assumption_set`, rather than a cost proportional to the
-  -- length of the search `solve_by_elim` executes.
-  let hs := hs.map (λ h, i_to_expr_for_apply h),
-  l ← attr.mmap $ λ a, attribute.get_instances a,
-  let l := l.join,
-  let m := l.map (λ h, mk_const h),
-  -- In order to remove the expressions we need to evaluate the thunks.
-  hs ← (hs ++ m).mfilter $ λ h, (do h ← h, return $ expr.const_name h ∉ gex),
-  let hs := if no_dflt then hs else
-    ([`rfl, `trivial, `congr_fun, `congr_arg].map (λ n, (mk_const n))) ++ hs,
-  let locals : tactic (list expr) := if ¬ no_dflt ∨ all_hyps then do
-    ctx ← local_context,
-    -- Remove local exceptions specified in `hex`:
-    return $ ctx.filter (λ h : expr, h.local_uniq_name ∉ hex)
-  else return [],
-  -- Finally, run all of the tactics: any that return an expression without metavariables can safely
-  -- be replaced by a `return` tactic.
-  hs ← hs.mmap (λ h : tactic expr, do
-    e ← h,
-    if e.has_meta_var then return h else return (return e)),
-  return (hs, locals)
+unsafe def mk_assumption_set (no_dflt : Bool) (hs : List simp_arg_type) (attr : List Name) :
+    tactic (List (tactic expr) × tactic (List expr)) :=
+  -- We lock the tactic state so that any spurious goals generated during
+    -- elaboration of pre-expressions are discarded
+    lock_tactic_state <|
+    do
+    let-- `hs` are expressions specified explicitly,
+      -- `hex` are exceptions (specified via `solve_by_elim [-h]`) referring to local hypotheses,
+      -- `gex` are the other exceptions
+      (hs, gex, hex, all_hyps)
+      ← decode_simp_arg_list hs
+    let-- Recall, per the discussion above, we produce `tactic expr` thunks rather than actual `expr`s.
+    -- Note that while we evaluate these thunks on two occasions below while preparing the list,
+    -- this is a one-time cost during `mk_assumption_set`, rather than a cost proportional to the
+    -- length of the search `solve_by_elim` executes.
+    hs := hs.map fun h => i_to_expr_for_apply h
+    let l ← attr.mmap fun a => attribute.get_instances a
+    let l := l.join
+    let m := l.map fun h => mk_const h
+    let hs ←
+      (-- In order to remove the expressions we need to evaluate the thunks.
+              hs ++
+              m).mfilter
+          fun h => do
+          let h ← h
+          return <| expr.const_name h ∉ gex
+    let hs := if no_dflt then hs else ([`rfl, `trivial, `congr_fun, `congr_arg].map fun n => mk_const n) ++ hs
+    let locals : tactic (List expr) :=
+      if ¬no_dflt ∨ all_hyps then do
+        let ctx ← local_context
+        -- Remove local exceptions specified in `hex`:
+            return <|
+            ctx fun h : expr => h ∉ hex
+      else return []
+    let hs
+      ←-- Finally, run all of the tactics: any that return an expression without metavariables can safely
+            -- be replaced by a `return` tactic.
+            hs.mmap
+          fun h : tactic expr => do
+          let e ← h
+          if e then return h else return (return e)
+    return (hs, locals)
 
-/--
-Configuration options for `solve_by_elim`.
+/-- Configuration options for `solve_by_elim`.
 
 * `accept : list expr → tactic unit` determines whether the current branch should be explored.
    At each step, before the lemmas are applied,
@@ -119,70 +128,67 @@ Configuration options for `solve_by_elim`.
   for which no lemma applies.
   If that tactic succeeds, `solve_by_elim` will continue applying lemmas on resulting goals.
 -/
-meta structure basic_opt extends apply_any_opt :=
-(accept : list expr → tactic unit := λ _, skip)
-(pre_apply : tactic unit := skip)
-(discharger : tactic unit := failed)
-(max_depth : ℕ := 3)
+unsafe structure basic_opt extends apply_any_opt where
+  accept : List expr → tactic Unit := fun _ => skip
+  pre_apply : tactic Unit := skip
+  discharger : tactic Unit := failed
+  max_depth : ℕ := 3
 
-declare_trace solve_by_elim         -- trace attempted lemmas
+initialize
+  registerTraceClass.1 `solve_by_elim
 
-/--
-A helper function for trace messages, prepending '....' depending on the current search depth.
+/-- A helper function for trace messages, prepending '....' depending on the current search depth.
 -/
-meta def solve_by_elim_trace (n : ℕ) (f : format) : tactic unit :=
-trace_if_enabled `solve_by_elim
-  (format!"[solve_by_elim {(list.repeat '.' (n+1)).as_string} " ++ f ++ "]")
+-- trace attempted lemmas
+unsafe def solve_by_elim_trace (n : ℕ) (f : format) : tactic Unit :=
+  trace_if_enabled `solve_by_elim ((f!"[solve_by_elim {(List.repeat '.' (n + 1)).asString} ") ++ f ++ "]")
 
 /-- A helper function to generate trace messages on successful applications. -/
-meta def on_success (g : format) (n : ℕ) (e : expr) : tactic unit :=
-do
-  pp ← pp e,
-  solve_by_elim_trace n (format!"✅ `{pp}` solves `⊢ {g}`")
+unsafe def on_success (g : format) (n : ℕ) (e : expr) : tactic Unit := do
+  let pp ← pp e
+  solve_by_elim_trace n f! "✅ `{pp }` solves `⊢ {g}`"
 
 /-- A helper function to generate trace messages on unsuccessful applications. -/
-meta def on_failure (g : format) (n : ℕ) : tactic unit :=
-solve_by_elim_trace n (format!"❌ failed to solve `⊢ {g}`")
+unsafe def on_failure (g : format) (n : ℕ) : tactic Unit :=
+  solve_by_elim_trace n f! "❌ failed to solve `⊢ {g}`"
 
-/--
-A helper function to generate the tactic that print trace messages.
+/-- A helper function to generate the tactic that print trace messages.
 This function exists to ensure the target is pretty printed only as necessary.
 -/
-meta def trace_hooks (n : ℕ) : tactic ((expr → tactic unit) × tactic unit) :=
-if is_trace_enabled_for `solve_by_elim then
-  do
-    g ← target >>= pp,
+unsafe def trace_hooks (n : ℕ) : tactic ((expr → tactic Unit) × tactic Unit) :=
+  if is_trace_enabled_for `solve_by_elim then do
+    let g ← target >>= pp
     return (on_success g n, on_failure g n)
-else
-  return (λ _, skip, skip)
+  else return (fun _ => skip, skip)
 
-/--
-The internal implementation of `solve_by_elim`, with a limiting counter.
+/-- The internal implementation of `solve_by_elim`, with a limiting counter.
 -/
-meta def solve_by_elim_aux (opt : basic_opt) (original_goals : list expr)
-  (lemmas : list (tactic expr)) (ctx : tactic (list expr)) :
-  ℕ → tactic unit
-| n := do
-  -- First, check that progress so far is `accept`able.
-  lock_tactic_state (original_goals.mmap instantiate_mvars >>= opt.accept),
-  -- Then check if we've finished.
-  (done >> solve_by_elim_trace (opt.max_depth - n) "success!") <|> (do
-    -- Otherwise, if there's more time left,
-    (guard (n > 0) <|>
-      solve_by_elim_trace opt.max_depth "🛑 aborting, hit depth limit" >> failed),
-    -- run the `pre_apply` tactic, then
-    opt.pre_apply,
-    -- try either applying a lemma and recursing,
-    (on_success, on_failure) ← trace_hooks (opt.max_depth - n),
-    ctx_lemmas ← ctx,
-    (apply_any_thunk (lemmas ++ (ctx_lemmas.map return)) opt.to_apply_any_opt
-      (solve_by_elim_aux (n-1))
-      on_success on_failure) <|>
-    -- or if that doesn't work, run the discharger and recurse.
-     (opt.discharger >> solve_by_elim_aux (n-1)))
+unsafe def solve_by_elim_aux (opt : basic_opt) (original_goals : List expr) (lemmas : List (tactic expr))
+    (ctx : tactic (List expr)) : ℕ → tactic Unit
+  | n => do
+    -- First, check that progress so far is `accept`able.
+        lock_tactic_state
+        (original_goals instantiate_mvars >>= opt)
+    -- Then check if we've finished.
+          done >>
+          solve_by_elim_trace (opt - n) "success!" <|>
+        do
+        -- Otherwise, if there's more time left,
+              guardₓ
+              (n > 0) <|>
+            solve_by_elim_trace opt "🛑 aborting, hit depth limit" >> failed
+        -- run the `pre_apply` tactic, then
+          opt
+        let-- try either applying a lemma and recursing,
+          (on_success, on_failure)
+          ← trace_hooks (opt - n)
+        let ctx_lemmas ← ctx
+        apply_any_thunk (lemmas ++ ctx_lemmas return) opt (solve_by_elim_aux (n - 1)) on_success
+              on_failure <|>-- or if that doesn't work, run the discharger and recurse.
+              opt >>
+              solve_by_elim_aux (n - 1)
 
-/--
-Arguments for `solve_by_elim`:
+/-- Arguments for `solve_by_elim`:
 * By default `solve_by_elim` operates only on the first goal,
   but with `backtrack_all_goals := true`, it operates on all goals at once,
   backtracking across goals as needed,
@@ -197,28 +203,25 @@ Arguments for `solve_by_elim`:
 * `ctx_thunk` is for internal use only: it returns the local hypotheses which will be used.
 * `max_depth` bounds the depth of the search.
 -/
-meta structure opt extends basic_opt :=
-(backtrack_all_goals : bool := ff)
-(lemmas : option (list expr) := none)
-(lemma_thunks : option (list (tactic expr)) := lemmas.map (λ l, l.map return))
-(ctx_thunk : tactic (list expr) := local_context)
+unsafe structure opt extends basic_opt where
+  backtrack_all_goals : Bool := false
+  lemmas : Option (List expr) := none
+  lemma_thunks : Option (List (tactic expr)) := lemmas.map fun l => l.map return
+  ctx_thunk : tactic (List expr) := local_context
 
-/--
-If no lemmas have been specified, generate the default set
+/-- If no lemmas have been specified, generate the default set
 (local hypotheses, along with `rfl`, `trivial`, `congr_arg`, and `congr_fun`).
 -/
-meta def opt.get_lemma_thunks (opt : opt) : tactic (list (tactic expr) × tactic (list expr)) :=
-match opt.lemma_thunks with
-| none := mk_assumption_set ff [] []
-| some lemma_thunks := return (lemma_thunks, opt.ctx_thunk)
-end
+unsafe def opt.get_lemma_thunks (opt : opt) : tactic (List (tactic expr) × tactic (List expr)) :=
+  match opt.lemma_thunks with
+  | none => mk_assumption_set false [] []
+  | some lemma_thunks => return (lemma_thunks, opt.ctx_thunk)
 
-end solve_by_elim
+end SolveByElim
 
-open solve_by_elim
+open SolveByElim
 
-/--
-`solve_by_elim` repeatedly tries `apply`ing a lemma
+/-- `solve_by_elim` repeatedly tries `apply`ing a lemma
 from the list of assumptions (passed via the `opt` argument),
 recursively operating on any generated subgoals, backtracking as necessary.
 
@@ -242,22 +245,22 @@ for each application, which might otherwise get stuck.
 
 See also the simpler tactic `apply_rules`, which does not perform backtracking.
 -/
-meta def solve_by_elim (opt : opt := { }) : tactic unit :=
-do
-  tactic.fail_if_no_goals,
-  (lemmas, ctx_lemmas) ← opt.get_lemma_thunks,
-  (if opt.backtrack_all_goals then id else focus1) $ (do
-    gs ← get_goals,
-    solve_by_elim_aux opt.to_basic_opt gs lemmas ctx_lemmas opt.max_depth <|>
-    fail ("`solve_by_elim` failed.\n" ++
-      "Try `solve_by_elim { max_depth := N }` for `N > " ++ (to_string opt.max_depth) ++ "`\n" ++
-      "or use `set_option trace.solve_by_elim true` to view the search."))
+unsafe def solve_by_elim (opt : opt := {  }) : tactic Unit := do
+  tactic.fail_if_no_goals
+  let (lemmas, ctx_lemmas) ← opt.get_lemma_thunks
+  (if opt then id else focus1) <| do
+      let gs ← get_goals
+      solve_by_elim_aux opt gs lemmas ctx_lemmas opt <|>
+          fail
+            ("`solve_by_elim` failed.\n" ++ "Try `solve_by_elim { max_depth := N }` for `N > " ++ toString opt ++
+                "`\n" ++
+              "or use `set_option trace.solve_by_elim true` to view the search.")
 
 setup_tactic_parser
 
-namespace interactive
-/--
-`apply_assumption` looks for an assumption of the form `... → ∀ _, ... → head`
+namespace Interactive
+
+/-- `apply_assumption` looks for an assumption of the form `... → ∀ _, ... → head`
 where `head` matches the current goal.
 
 If this fails, `apply_assumption` will call `symmetry` and try again.
@@ -272,25 +275,20 @@ Optional arguments:
   this tactic fails, the corresponding assumption will be rejected and
   the next one will be attempted.
 -/
-meta def apply_assumption
-  (lemmas : option (list expr) := none)
-  (opt : apply_any_opt := {})
-  (tac : tactic unit := skip) : tactic unit :=
-do
-  lemmas ← match lemmas with
-  | none := local_context
-  | some lemmas := return lemmas
-  end,
+unsafe def apply_assumption (lemmas : Option (List expr) := none) (opt : apply_any_opt := {  })
+    (tac : tactic Unit := skip) : tactic Unit := do
+  let lemmas ←
+    match lemmas with
+      | none => local_context
+      | some lemmas => return lemmas
   tactic.apply_any lemmas opt tac
 
 add_tactic_doc
-{ name        := "apply_assumption",
-  category    := doc_category.tactic,
-  decl_names  := [`tactic.interactive.apply_assumption],
-  tags        := ["context management", "lemma application"] }
+  { Name := "apply_assumption", category := DocCategory.tactic, declNames := [`tactic.interactive.apply_assumption],
+    tags := ["context management", "lemma application"] }
 
-/--
-`solve_by_elim` calls `apply` on the main goal to find an assumption whose head matches
+-- ././Mathport/Syntax/Translate/Basic.lean:825:4: warning: unsupported notation `«expr ?»
+/-- `solve_by_elim` calls `apply` on the main goal to find an assumption whose head matches
 and then repeatedly calls `apply` on the generated subgoals until no subgoals remain,
 performing at most `max_depth` recursive steps.
 
@@ -326,22 +324,16 @@ optional arguments passed via a configuration argument as `solve_by_elim { ... }
     or filtering complete results
     (by testing for the absence of metavariables, and then the filtering condition).
 -/
-meta def solve_by_elim (all_goals : parse $ (tk "*")?) (no_dflt : parse only_flag)
-  (hs : parse simp_arg_list) (attr_names : parse with_ident_list) (opt : solve_by_elim.opt := { }) :
-  tactic unit :=
-do (lemma_thunks, ctx_thunk) ← mk_assumption_set no_dflt hs attr_names,
-   tactic.solve_by_elim
-   { backtrack_all_goals := all_goals.is_some ∨ opt.backtrack_all_goals,
-     lemma_thunks := some lemma_thunks,
-     ctx_thunk := ctx_thunk,
-     ..opt }
+unsafe def solve_by_elim (all_goals : parse <| «expr ?» (tk "*")) (no_dflt : parse only_flag) (hs : parse simp_arg_list)
+    (attr_names : parse with_ident_list) (opt : solve_by_elim.opt := {  }) : tactic Unit := do
+  let (lemma_thunks, ctx_thunk) ← mk_assumption_set no_dflt hs attr_names
+  tactic.solve_by_elim { opt with backtrack_all_goals := all_goals ∨ opt, lemma_thunks := some lemma_thunks, ctx_thunk }
 
 add_tactic_doc
-{ name        := "solve_by_elim",
-  category    := doc_category.tactic,
-  decl_names  := [`tactic.interactive.solve_by_elim],
-  tags        := ["search"] }
+  { Name := "solve_by_elim", category := DocCategory.tactic, declNames := [`tactic.interactive.solve_by_elim],
+    tags := ["search"] }
 
-end interactive
+end Interactive
 
-end tactic
+end Tactic
+

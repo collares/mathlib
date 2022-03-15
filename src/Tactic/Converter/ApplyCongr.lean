@@ -3,8 +3,8 @@ Copyright (c) 2020 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Lucas Allen, Scott Morrison
 -/
-import tactic.interactive
-import tactic.converter.interactive
+import Mathbin.Tactic.Interactive
+import Mathbin.Tactic.Converter.Interactive
 
 /-!
 ## Introduce the `apply_congr` conv mode tactic.
@@ -15,16 +15,17 @@ are not of the optimal shape. An example, described in the doc-string is
 rewriting inside the operand of a `finset.sum`.
 -/
 
-open tactic
 
-namespace conv.interactive
-open interactive interactive.types lean.parser
+open Tactic
 
-local postfix `?`:9001 := optional
+namespace Conv.Interactive
 
+open Interactive Interactive.Types Lean.Parser
 
-/--
-Apply a congruence lemma inside `conv` mode.
+-- mathport name: «expr ?»
+local postfix:1024 "?" => optionalₓ
+
+/-- Apply a congruence lemma inside `conv` mode.
 
 When called without an argument `apply_congr` will try applying all lemmas marked with `@[congr]`.
 Otherwise `apply_congr e` will apply the lemma `e`.
@@ -68,31 +69,39 @@ end
 In the above example, when the `apply_congr` tactic is called it gives the hypothesis `H : x ∈ S`
 which is then used to rewrite the `f x` to `g x`.
 -/
-meta def apply_congr (q : parse texpr?) : conv unit :=
-do
-  congr_lemmas ← match q with
-  -- If the user specified a lemma, use that one,
-  | some e := do
-    gs ← get_goals,
-    e ← to_expr e, -- to_expr messes with the goals? (see tests)
-    set_goals gs,
-    return [e]
-  -- otherwise, look up everything tagged `@[congr]`
-  | none := do
-    congr_lemma_names ← attribute.get_instances `congr,
-    congr_lemma_names.mmap mk_const
-  end,
+unsafe def apply_congr (q : parse texpr ?) : conv Unit := do
+  let congr_lemmas ←
+    match q with
+      |-- If the user specified a lemma, use that one,
+          some
+          e =>
+        do
+        let gs ← get_goals
+        let e ← to_expr e
+        -- to_expr messes with the goals? (see tests)
+            set_goals
+            gs
+        return [e]
+      |-- otherwise, look up everything tagged `@[congr]`
+        none =>
+        do
+        let congr_lemma_names ← attribute.get_instances `congr
+        congr_lemma_names mk_const
   -- For every lemma:
-  congr_lemmas.any_of (λ n,
-    -- Call tactic.eapply
-    seq' (tactic.eapply n >> tactic.skip)
-    -- and then call `intros` on each resulting goal, and require that afterwards it's an equation.
-        (tactic.intros >> (do `(_ = _) ← target, tactic.skip)))
+      congr_lemmas
+      fun n =>
+      -- Call tactic.eapply
+        seq'
+        (tactic.eapply n >> tactic.skip)
+        (-- and then call `intros` on each resulting goal, and require that afterwards it's an equation.
+          tactic.intros >>
+          do
+          let quote.1 (_ = _) ← target
+          tactic.skip)
 
 add_tactic_doc
-{ name := "apply_congr",
-  category := doc_category.tactic,
-  decl_names := [`conv.interactive.apply_congr],
-  tags := ["conv", "congruence", "rewriting"] }
+  { Name := "apply_congr", category := DocCategory.tactic, declNames := [`conv.interactive.apply_congr],
+    tags := ["conv", "congruence", "rewriting"] }
 
-end conv.interactive
+end Conv.Interactive
+

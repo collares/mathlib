@@ -1,1 +1,2 @@
-import tactic.omega.main
+import Mathbin.Tactic.Omega.Main
+

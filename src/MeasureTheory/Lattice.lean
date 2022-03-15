@@ -3,8 +3,7 @@ Copyright (c) 2021 Rémy Degenne. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Rémy Degenne
 -/
-
-import measure_theory.measure.measure_space
+import Mathbin.MeasureTheory.Measure.MeasureSpace
 
 /-!
 # Typeclasses for measurability of lattice operations
@@ -28,176 +27,176 @@ measurable function, lattice operation
 
 -/
 
-open measure_theory
+
+open MeasureTheory
 
 /-- We say that a type `has_measurable_sup` if `((⊔) c)` and `(⊔ c)` are measurable functions.
 For a typeclass assuming measurability of `uncurry (⊔)` see `has_measurable_sup₂`. -/
-class has_measurable_sup (M : Type*) [measurable_space M] [has_sup M] : Prop :=
-(measurable_const_sup : ∀ c : M, measurable ((⊔) c))
-(measurable_sup_const : ∀ c : M, measurable (⊔ c))
+class HasMeasurableSup (M : Type _) [MeasurableSpace M] [HasSup M] : Prop where
+  measurable_const_sup : ∀ c : M, Measurable ((·⊔·) c)
+  measurable_sup_const : ∀ c : M, Measurable (·⊔c)
 
 /-- We say that a type `has_measurable_sup₂` if `uncurry (⊔)` is a measurable functions.
 For a typeclass assuming measurability of `((⊔) c)` and `(⊔ c)` see `has_measurable_sup`. -/
-class has_measurable_sup₂ (M : Type*) [measurable_space M] [has_sup M] : Prop :=
-(measurable_sup : measurable (λ p : M × M, p.1 ⊔ p.2))
+class HasMeasurableSup₂ (M : Type _) [MeasurableSpace M] [HasSup M] : Prop where
+  measurable_sup : Measurable fun p : M × M => p.1⊔p.2
 
-export has_measurable_sup₂ (measurable_sup)
-  has_measurable_sup (measurable_const_sup measurable_sup_const)
+export HasMeasurableSup₂ (measurable_sup)
+
+export HasMeasurableSup (measurable_const_sup measurable_sup_const)
 
 /-- We say that a type `has_measurable_inf` if `((⊓) c)` and `(⊓ c)` are measurable functions.
 For a typeclass assuming measurability of `uncurry (⊓)` see `has_measurable_inf₂`. -/
-class has_measurable_inf (M : Type*) [measurable_space M] [has_inf M] : Prop :=
-(measurable_const_inf : ∀ c : M, measurable ((⊓) c))
-(measurable_inf_const : ∀ c : M, measurable (⊓ c))
+class HasMeasurableInf (M : Type _) [MeasurableSpace M] [HasInf M] : Prop where
+  measurable_const_inf : ∀ c : M, Measurable ((·⊓·) c)
+  measurable_inf_const : ∀ c : M, Measurable (·⊓c)
 
 /-- We say that a type `has_measurable_inf₂` if `uncurry (⊔)` is a measurable functions.
 For a typeclass assuming measurability of `((⊔) c)` and `(⊔ c)` see `has_measurable_inf`. -/
-class has_measurable_inf₂ (M : Type*) [measurable_space M] [has_inf M] : Prop :=
-(measurable_inf : measurable (λ p : M × M, p.1 ⊓ p.2))
+class HasMeasurableInf₂ (M : Type _) [MeasurableSpace M] [HasInf M] : Prop where
+  measurable_inf : Measurable fun p : M × M => p.1⊓p.2
 
-export has_measurable_inf₂ (measurable_inf)
-  has_measurable_inf (measurable_const_inf measurable_inf_const)
+export HasMeasurableInf₂ (measurable_inf)
 
-variables {M : Type*} [measurable_space M]
+export HasMeasurableInf (measurable_const_inf measurable_inf_const)
 
-section order_dual
+variable {M : Type _} [MeasurableSpace M]
 
-@[priority 100]
-instance order_dual.has_measurable_sup [has_inf M] [has_measurable_inf M] :
-  has_measurable_sup (order_dual M) :=
-⟨@measurable_const_inf M _ _ _, @measurable_inf_const M _ _ _⟩
+section OrderDual
 
-@[priority 100]
-instance order_dual.has_measurable_inf [has_sup M] [has_measurable_sup M] :
-  has_measurable_inf (order_dual M) :=
-⟨@measurable_const_sup M _ _ _, @measurable_sup_const M _ _ _⟩
+instance (priority := 100) OrderDual.has_measurable_sup [HasInf M] [HasMeasurableInf M] :
+    HasMeasurableSup (OrderDual M) :=
+  ⟨@measurable_const_inf M _ _ _, @measurable_inf_const M _ _ _⟩
 
-@[priority 100]
-instance order_dual.has_measurable_sup₂ [has_inf M] [has_measurable_inf₂ M] :
-  has_measurable_sup₂ (order_dual M) :=
-⟨@measurable_inf M _ _ _⟩
+instance (priority := 100) OrderDual.has_measurable_inf [HasSup M] [HasMeasurableSup M] :
+    HasMeasurableInf (OrderDual M) :=
+  ⟨@measurable_const_sup M _ _ _, @measurable_sup_const M _ _ _⟩
 
-@[priority 100]
-instance order_dual.has_measurable_inf₂ [has_sup M] [has_measurable_sup₂ M] :
-  has_measurable_inf₂ (order_dual M) :=
-⟨@measurable_sup M _ _ _⟩
+instance (priority := 100) OrderDual.has_measurable_sup₂ [HasInf M] [HasMeasurableInf₂ M] :
+    HasMeasurableSup₂ (OrderDual M) :=
+  ⟨@measurable_inf M _ _ _⟩
 
-end order_dual
+instance (priority := 100) OrderDual.has_measurable_inf₂ [HasSup M] [HasMeasurableSup₂ M] :
+    HasMeasurableInf₂ (OrderDual M) :=
+  ⟨@measurable_sup M _ _ _⟩
 
-variables {α : Type*} {m : measurable_space α} {μ : measure α} {f g : α → M}
+end OrderDual
+
+variable {α : Type _} {m : MeasurableSpace α} {μ : Measureₓ α} {f g : α → M}
+
 include m
 
-section sup
-variables [has_sup M]
+section Sup
 
-section measurable_sup
-variables [has_measurable_sup M]
+variable [HasSup M]
 
-@[measurability]
-lemma measurable.const_sup (hf : measurable f) (c : M) : measurable (λ x, c ⊔ f x) :=
-(measurable_const_sup c).comp hf
+section MeasurableSup
+
+variable [HasMeasurableSup M]
 
 @[measurability]
-lemma ae_measurable.const_sup (hf : ae_measurable f μ) (c : M) : ae_measurable (λ x, c ⊔ f x) μ :=
-(has_measurable_sup.measurable_const_sup c).comp_ae_measurable hf
+theorem Measurable.const_sup (hf : Measurable f) (c : M) : Measurable fun x => c⊔f x :=
+  (measurable_const_sup c).comp hf
 
 @[measurability]
-lemma measurable.sup_const (hf : measurable f) (c : M) : measurable (λ x, f x ⊔ c) :=
-(measurable_sup_const c).comp hf
+theorem AeMeasurable.const_sup (hf : AeMeasurable f μ) (c : M) : AeMeasurable (fun x => c⊔f x) μ :=
+  (HasMeasurableSup.measurable_const_sup c).comp_ae_measurable hf
 
 @[measurability]
-lemma ae_measurable.sup_const (hf : ae_measurable f μ) (c : M) :
-  ae_measurable (λ x, f x ⊔ c) μ :=
-(measurable_sup_const c).comp_ae_measurable hf
-
-end measurable_sup
-
-section measurable_sup₂
-variables [has_measurable_sup₂ M]
+theorem Measurable.sup_const (hf : Measurable f) (c : M) : Measurable fun x => f x⊔c :=
+  (measurable_sup_const c).comp hf
 
 @[measurability]
-lemma measurable.sup' (hf : measurable f) (hg : measurable g) : measurable (f ⊔ g) :=
-measurable_sup.comp (hf.prod_mk hg)
+theorem AeMeasurable.sup_const (hf : AeMeasurable f μ) (c : M) : AeMeasurable (fun x => f x⊔c) μ :=
+  (measurable_sup_const c).comp_ae_measurable hf
+
+end MeasurableSup
+
+section MeasurableSup₂
+
+variable [HasMeasurableSup₂ M]
 
 @[measurability]
-lemma measurable.sup (hf : measurable f) (hg : measurable g) : measurable (λ a, f a ⊔ g a) :=
-measurable_sup.comp (hf.prod_mk hg)
+theorem Measurable.sup' (hf : Measurable f) (hg : Measurable g) : Measurable (f⊔g) :=
+  measurable_sup.comp (hf.prod_mk hg)
 
 @[measurability]
-lemma ae_measurable.sup' (hf : ae_measurable f μ) (hg : ae_measurable g μ) :
-  ae_measurable (f ⊔ g) μ :=
-measurable_sup.comp_ae_measurable (hf.prod_mk hg)
+theorem Measurable.sup (hf : Measurable f) (hg : Measurable g) : Measurable fun a => f a⊔g a :=
+  measurable_sup.comp (hf.prod_mk hg)
 
 @[measurability]
-lemma ae_measurable.sup (hf : ae_measurable f μ) (hg : ae_measurable g μ) :
-  ae_measurable (λ a, f a ⊔ g a) μ :=
-measurable_sup.comp_ae_measurable (hf.prod_mk hg)
+theorem AeMeasurable.sup' (hf : AeMeasurable f μ) (hg : AeMeasurable g μ) : AeMeasurable (f⊔g) μ :=
+  measurable_sup.comp_ae_measurable (hf.prod_mk hg)
+
+@[measurability]
+theorem AeMeasurable.sup (hf : AeMeasurable f μ) (hg : AeMeasurable g μ) : AeMeasurable (fun a => f a⊔g a) μ :=
+  measurable_sup.comp_ae_measurable (hf.prod_mk hg)
 
 omit m
-@[priority 100]
-instance has_measurable_sup₂.to_has_measurable_sup : has_measurable_sup M :=
-⟨λ c, measurable_const.sup measurable_id, λ c, measurable_id.sup measurable_const⟩
+
+instance (priority := 100) HasMeasurableSup₂.to_has_measurable_sup : HasMeasurableSup M :=
+  ⟨fun c => measurable_const.sup measurable_id, fun c => measurable_id.sup measurable_const⟩
+
 include m
 
-end measurable_sup₂
+end MeasurableSup₂
 
-end sup
+end Sup
 
-section inf
-variables [has_inf M]
+section Inf
 
-section measurable_inf
-variables [has_measurable_inf M]
+variable [HasInf M]
 
-@[measurability]
-lemma measurable.const_inf (hf : measurable f) (c : M) :
-  measurable (λ x, c ⊓ f x) :=
-(measurable_const_inf c).comp hf
+section MeasurableInf
+
+variable [HasMeasurableInf M]
 
 @[measurability]
-lemma ae_measurable.const_inf (hf : ae_measurable f μ) (c : M) :
-  ae_measurable (λ x, c ⊓ f x) μ :=
-(has_measurable_inf.measurable_const_inf c).comp_ae_measurable hf
+theorem Measurable.const_inf (hf : Measurable f) (c : M) : Measurable fun x => c⊓f x :=
+  (measurable_const_inf c).comp hf
 
 @[measurability]
-lemma measurable.inf_const (hf : measurable f) (c : M) :
-  measurable (λ x, f x ⊓ c) :=
-(measurable_inf_const c).comp hf
+theorem AeMeasurable.const_inf (hf : AeMeasurable f μ) (c : M) : AeMeasurable (fun x => c⊓f x) μ :=
+  (HasMeasurableInf.measurable_const_inf c).comp_ae_measurable hf
 
 @[measurability]
-lemma ae_measurable.inf_const (hf : ae_measurable f μ) (c : M) :
-  ae_measurable (λ x, f x ⊓ c) μ :=
-(measurable_inf_const c).comp_ae_measurable hf
-
-end measurable_inf
-
-section measurable_inf₂
-variables [has_measurable_inf₂ M]
+theorem Measurable.inf_const (hf : Measurable f) (c : M) : Measurable fun x => f x⊓c :=
+  (measurable_inf_const c).comp hf
 
 @[measurability]
-lemma measurable.inf' (hf : measurable f) (hg : measurable g) : measurable (f ⊓ g) :=
-measurable_inf.comp (hf.prod_mk hg)
+theorem AeMeasurable.inf_const (hf : AeMeasurable f μ) (c : M) : AeMeasurable (fun x => f x⊓c) μ :=
+  (measurable_inf_const c).comp_ae_measurable hf
+
+end MeasurableInf
+
+section MeasurableInf₂
+
+variable [HasMeasurableInf₂ M]
 
 @[measurability]
-lemma measurable.inf (hf : measurable f) (hg : measurable g) : measurable (λ a, f a ⊓ g a) :=
-measurable_inf.comp (hf.prod_mk hg)
+theorem Measurable.inf' (hf : Measurable f) (hg : Measurable g) : Measurable (f⊓g) :=
+  measurable_inf.comp (hf.prod_mk hg)
 
 @[measurability]
-lemma ae_measurable.inf' (hf : ae_measurable f μ) (hg : ae_measurable g μ) :
-  ae_measurable (f ⊓ g) μ :=
-measurable_inf.comp_ae_measurable (hf.prod_mk hg)
+theorem Measurable.inf (hf : Measurable f) (hg : Measurable g) : Measurable fun a => f a⊓g a :=
+  measurable_inf.comp (hf.prod_mk hg)
 
 @[measurability]
-lemma ae_measurable.inf (hf : ae_measurable f μ) (hg : ae_measurable g μ) :
-  ae_measurable (λ a, f a ⊓ g a) μ :=
-measurable_inf.comp_ae_measurable (hf.prod_mk hg)
+theorem AeMeasurable.inf' (hf : AeMeasurable f μ) (hg : AeMeasurable g μ) : AeMeasurable (f⊓g) μ :=
+  measurable_inf.comp_ae_measurable (hf.prod_mk hg)
+
+@[measurability]
+theorem AeMeasurable.inf (hf : AeMeasurable f μ) (hg : AeMeasurable g μ) : AeMeasurable (fun a => f a⊓g a) μ :=
+  measurable_inf.comp_ae_measurable (hf.prod_mk hg)
 
 omit m
-@[priority 100]
-instance has_measurable_inf₂.to_has_measurable_inf : has_measurable_inf M :=
-⟨λ c, measurable_const.inf measurable_id, λ c, measurable_id.inf measurable_const⟩
+
+instance (priority := 100) HasMeasurableInf₂.to_has_measurable_inf : HasMeasurableInf M :=
+  ⟨fun c => measurable_const.inf measurable_id, fun c => measurable_id.inf measurable_const⟩
+
 include m
 
-end measurable_inf₂
+end MeasurableInf₂
 
-end inf
+end Inf
+

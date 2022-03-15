@@ -1,4 +1,5 @@
-import geometry.euclidean.basic
-import geometry.euclidean.circumcenter
-import geometry.euclidean.monge_point
-import geometry.euclidean.triangle
+import Mathbin.Geometry.Euclidean.Basic
+import Mathbin.Geometry.Euclidean.Circumcenter
+import Mathbin.Geometry.Euclidean.MongePoint
+import Mathbin.Geometry.Euclidean.Triangle
+

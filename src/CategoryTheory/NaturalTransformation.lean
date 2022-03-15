@@ -3,7 +3,7 @@ Copyright (c) 2017 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Tim Baumann, Stephen Morgan, Scott Morrison, Floris van Doorn
 -/
-import category_theory.functor
+import Mathbin.CategoryTheory.Functor.Default
 
 /-!
 # Natural transformations
@@ -29,62 +29,69 @@ Introduces notations
 
 -/
 
-namespace category_theory
+
+namespace CategoryTheory
 
 -- declare the `v`'s first; see `category_theory.category` for an explanation
-universes v₁ v₂ v₃ v₄ u₁ u₂ u₃ u₄
+universe v₁ v₂ v₃ v₄ u₁ u₂ u₃ u₄
 
-variables {C : Type u₁} [category.{v₁} C] {D : Type u₂} [category.{v₂} D]
+variable {C : Type u₁} [Category.{v₁} C] {D : Type u₂} [Category.{v₂} D]
 
-/--
-`nat_trans F G` represents a natural transformation between functors `F` and `G`.
+/-- `nat_trans F G` represents a natural transformation between functors `F` and `G`.
 
 The field `app` provides the components of the natural transformation.
 
 Naturality is expressed by `α.naturality_lemma`.
 -/
 @[ext]
-structure nat_trans (F G : C ⥤ D) : Type (max u₁ v₂) :=
-(app : Π X : C, F.obj X ⟶ G.obj X)
-(naturality' : ∀ ⦃X Y : C⦄ (f : X ⟶ Y), F.map f ≫ app Y = app X ≫ G.map f . obviously)
+structure NatTrans (F G : C ⥤ D) : Type max u₁ v₂ where
+  app : ∀ X : C, F.obj X ⟶ G.obj X
+  naturality' : ∀ ⦃X Y : C⦄ f : X ⟶ Y, F.map f ≫ app Y = app X ≫ G.map f := by
+    run_tac
+      obviously
 
 restate_axiom nat_trans.naturality'
+
 -- Rather arbitrarily, we say that the 'simpler' form is
 -- components of natural transfomations moving earlier.
 attribute [simp, reassoc] nat_trans.naturality
 
-lemma congr_app {F G : C ⥤ D} {α β : nat_trans F G} (h : α = β) (X : C) : α.app X = β.app X :=
-congr_fun (congr_arg nat_trans.app h) X
+theorem congr_app {F G : C ⥤ D} {α β : NatTrans F G} (h : α = β) (X : C) : α.app X = β.app X :=
+  congr_funₓ (congr_argₓ NatTrans.app h) X
 
-namespace nat_trans
+namespace NatTrans
 
 /-- `nat_trans.id F` is the identity natural transformation on a functor `F`. -/
-protected def id (F : C ⥤ D) : nat_trans F F :=
-{ app := λ X, 𝟙 (F.obj X) }
+protected def id (F : C ⥤ D) : NatTrans F F where
+  app := fun X => 𝟙 (F.obj X)
 
-@[simp] lemma id_app' (F : C ⥤ D) (X : C) : (nat_trans.id F).app X = 𝟙 (F.obj X) := rfl
+@[simp]
+theorem id_app' (F : C ⥤ D) (X : C) : (NatTrans.id F).app X = 𝟙 (F.obj X) :=
+  rfl
 
-instance (F : C ⥤ D) : inhabited (nat_trans F F) := ⟨nat_trans.id F⟩
+instance (F : C ⥤ D) : Inhabited (NatTrans F F) :=
+  ⟨NatTrans.id F⟩
 
-open category
-open category_theory.functor
+open Category
+
+open CategoryTheory.Functor
 
 section
-variables {F G H I : C ⥤ D}
+
+variable {F G H I : C ⥤ D}
 
 /-- `vcomp α β` is the vertical compositions of natural transformations. -/
-def vcomp (α : nat_trans F G) (β : nat_trans G H) : nat_trans F H :=
-{ app := λ X, (α.app X) ≫ (β.app X) }
+def vcomp (α : NatTrans F G) (β : NatTrans G H) : NatTrans F H where
+  app := fun X => α.app X ≫ β.app X
 
 -- functor_category will rewrite (vcomp α β) to (α ≫ β), so this is not a
 -- suitable simp lemma.  We will declare the variant vcomp_app' there.
-lemma vcomp_app (α : nat_trans F G) (β : nat_trans G H) (X : C) :
-  (vcomp α β).app X = (α.app X) ≫ (β.app X) := rfl
+theorem vcomp_app (α : NatTrans F G) (β : NatTrans G H) (X : C) : (vcomp α β).app X = α.app X ≫ β.app X :=
+  rfl
 
 end
 
-/--
-The diagram
+/-- The diagram
     F(f)      F(g)      F(h)
 F X ----> F Y ----> F U ----> F U
  |         |         |         |
@@ -94,11 +101,11 @@ G X ----> G Y ----> G U ----> G V
     G(f)      G(g)      G(h)
 commutes.
 -/
-example {F G : C ⥤ D} (α : nat_trans F G) {X Y U V : C} (f : X ⟶ Y) (g : Y ⟶ U) (h : U ⟶ V) :
-  α.app X ≫ G.map f ≫ G.map g ≫ G.map h =
-    F.map f ≫ F.map g ≫ F.map h ≫ α.app V :=
-by simp
+example {F G : C ⥤ D} (α : NatTrans F G) {X Y U V : C} (f : X ⟶ Y) (g : Y ⟶ U) (h : U ⟶ V) :
+    α.app X ≫ G.map f ≫ G.map g ≫ G.map h = F.map f ≫ F.map g ≫ F.map h ≫ α.app V := by
+  simp
 
-end nat_trans
+end NatTrans
 
-end category_theory
+end CategoryTheory
+

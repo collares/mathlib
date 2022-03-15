@@ -3,8 +3,8 @@ Copyright (c) 2021 Adam Topaz. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Adam Topaz, Scott Morrison
 -/
-import category_theory.limits.preserves.shapes.biproducts
-import category_theory.preadditive.functor_category
+import Mathbin.CategoryTheory.Limits.Preserves.Shapes.Biproducts
+import Mathbin.CategoryTheory.Preadditive.FunctorCategory
 
 /-!
 # Additive Functors
@@ -26,165 +26,170 @@ We also define the category of bundled additive functors.
 
 -/
 
-namespace category_theory
+
+namespace CategoryTheory
 
 /-- A functor `F` is additive provided `F.map` is an additive homomorphism. -/
-class functor.additive {C D : Type*} [category C] [category D]
-  [preadditive C] [preadditive D] (F : C ⥤ D) : Prop :=
-(map_add' : Π {X Y : C} {f g : X ⟶ Y}, F.map (f + g) = F.map f + F.map g . obviously)
+class Functor.Additive {C D : Type _} [Category C] [Category D] [Preadditive C] [Preadditive D] (F : C ⥤ D) : Prop where
+  map_add' : ∀ {X Y : C} {f g : X ⟶ Y}, F.map (f + g) = F.map f + F.map g := by
+    run_tac
+      obviously
 
-section preadditive
+section Preadditive
 
-namespace functor
+namespace Functor
 
 section
-variables {C D : Type*} [category C] [category D] [preadditive C]
-  [preadditive D] (F : C ⥤ D) [functor.additive F]
+
+variable {C D : Type _} [Category C] [Category D] [Preadditive C] [Preadditive D] (F : C ⥤ D) [Functor.Additive F]
 
 @[simp]
-lemma map_add {X Y : C} {f g : X ⟶ Y} : F.map (f + g) = F.map f + F.map g :=
-functor.additive.map_add'
+theorem map_add {X Y : C} {f g : X ⟶ Y} : F.map (f + g) = F.map f + F.map g :=
+  functor.additive.map_add'
 
 /-- `F.map_add_hom` is an additive homomorphism whose underlying function is `F.map`. -/
-@[simps {fully_applied := ff}]
-def map_add_hom {X Y : C} : (X ⟶ Y) →+ (F.obj X ⟶ F.obj Y) :=
-add_monoid_hom.mk' (λ f, F.map f) (λ f g, F.map_add)
+@[simps (config := { fullyApplied := false })]
+def mapAddHom {X Y : C} : (X ⟶ Y) →+ (F.obj X ⟶ F.obj Y) :=
+  AddMonoidHom.mk' (fun f => F.map f) fun f g => F.map_add
 
-lemma coe_map_add_hom {X Y : C} : ⇑(F.map_add_hom : (X ⟶ Y) →+ _) = @map C _ D _ F X Y := rfl
+theorem coe_map_add_hom {X Y : C} : ⇑(F.mapAddHom : (X ⟶ Y) →+ _) = @map C _ D _ F X Y :=
+  rfl
 
-@[priority 100]
-instance preserves_zero_morphisms_of_additive : preserves_zero_morphisms F :=
-{ map_zero' := λ X Y, F.map_add_hom.map_zero }
+instance (priority := 100) preserves_zero_morphisms_of_additive : PreservesZeroMorphisms F where
+  map_zero' := fun X Y => F.mapAddHom.map_zero
 
-instance : additive (𝟭 C) :=
-{}
+instance : Additive (𝟭 C) :=
+  {  }
 
-instance {E : Type*} [category E] [preadditive E] (G : D ⥤ E) [functor.additive G] :
-  additive (F ⋙ G) :=
-{}
-
-@[simp]
-lemma map_neg {X Y : C} {f : X ⟶ Y} : F.map (-f) = - F.map f :=
-F.map_add_hom.map_neg _
+instance {E : Type _} [Category E] [Preadditive E] (G : D ⥤ E) [Functor.Additive G] : Additive (F ⋙ G) :=
+  {  }
 
 @[simp]
-lemma map_sub {X Y : C} {f g : X ⟶ Y} : F.map (f - g) = F.map f - F.map g :=
-F.map_add_hom.map_sub _ _
+theorem map_neg {X Y : C} {f : X ⟶ Y} : F.map (-f) = -F.map f :=
+  F.mapAddHom.map_neg _
+
+@[simp]
+theorem map_sub {X Y : C} {f g : X ⟶ Y} : F.map (f - g) = F.map f - F.map g :=
+  F.mapAddHom.map_sub _ _
 
 -- You can alternatively just use `functor.map_smul` here, with an explicit `(r : ℤ)` argument.
-lemma map_zsmul {X Y : C} {f : X ⟶ Y} {r : ℤ} : F.map (r • f) = r • F.map f :=
-F.map_add_hom.map_zsmul _ _
+theorem map_zsmul {X Y : C} {f : X ⟶ Y} {r : ℤ} : F.map (r • f) = r • F.map f :=
+  F.mapAddHom.map_zsmul _ _
 
-open_locale big_operators
+open_locale BigOperators
 
 @[simp]
-lemma map_sum {X Y : C} {α : Type*} (f : α → (X ⟶ Y)) (s : finset α) :
-  F.map (∑ a in s, f a) = ∑ a in s, F.map (f a) :=
-(F.map_add_hom : (X ⟶ Y) →+ _).map_sum f s
+theorem map_sum {X Y : C} {α : Type _} (f : α → (X ⟶ Y)) (s : Finset α) :
+    F.map (∑ a in s, f a) = ∑ a in s, F.map (f a) :=
+  (F.mapAddHom : (X ⟶ Y) →+ _).map_sum f s
 
 end
 
-section induced_category
-variables {C : Type*} {D : Type*} [category D] [preadditive D] (F : C → D)
+section InducedCategory
 
-instance induced_functor_additive : functor.additive (induced_functor F) := {}
+variable {C : Type _} {D : Type _} [Category D] [Preadditive D] (F : C → D)
 
-end induced_category
+instance induced_functor_additive : Functor.Additive (inducedFunctor F) :=
+  {  }
+
+end InducedCategory
 
 section
+
 -- To talk about preservation of biproducts we need to specify universes explicitly.
+noncomputable section
 
-noncomputable theory
-universes v u₁ u₂
+universe v u₁ u₂
 
+variable {C : Type u₁} {D : Type u₂} [Category.{v} C] [Category.{v} D] [Preadditive C] [Preadditive D] (F : C ⥤ D)
 
-variables {C : Type u₁} {D : Type u₂} [category.{v} C] [category.{v} D]
-  [preadditive C] [preadditive D] (F : C ⥤ D)
+open CategoryTheory.Limits
 
-open category_theory.limits
-open category_theory.preadditive
+open CategoryTheory.Preadditive
 
-@[priority 100]
-instance preserves_finite_biproducts_of_additive [additive F] : preserves_finite_biproducts F :=
-{ preserves := λ J _ _,
-  { preserves := λ f,
-    { preserves := λ b hb, by exactI is_bilimit_of_total _
-      begin
-        simp_rw [F.map_bicone_π, F.map_bicone_ι, ← F.map_comp, ← F.map_sum],
-        dsimp only [map_bicone_X],
-        simp_rw [← F.map_id],
-        refine congr_arg _ (hb.is_limit.hom_ext (λ j, hb.is_colimit.hom_ext (λ j', _))),
-        simp [sum_comp, comp_sum, bicone.ι_π, comp_dite, dite_comp]
-      end } } }
+instance (priority := 100) preservesFiniteBiproductsOfAdditive [Additive F] : PreservesFiniteBiproducts F where
+  preserves := fun J _ _ =>
+    { preserves := fun f =>
+        { preserves := fun b hb =>
+            is_bilimit_of_total _
+              (by
+                simp_rw [F.map_bicone_π, F.map_bicone_ι, ← F.map_comp, ← F.map_sum]
+                dsimp only [map_bicone_X]
+                simp_rw [← F.map_id]
+                refine' congr_argₓ _ (hb.is_limit.hom_ext fun j => hb.is_colimit.hom_ext fun j' => _)
+                simp [sum_comp, comp_sum, bicone.ι_π, comp_dite, dite_comp]) } }
 
-lemma additive_of_preserves_binary_biproducts [has_binary_biproducts C] [preserves_zero_morphisms F]
-  [preserves_binary_biproducts F] : additive F :=
-{ map_add' := λ X Y f g, by rw [biprod.add_eq_lift_id_desc, F.map_comp, ← biprod.lift_map_biprod,
-    ← biprod.map_biprod_hom_desc, category.assoc, iso.inv_hom_id_assoc, F.map_id,
-    biprod.add_eq_lift_id_desc] }
+theorem additive_of_preserves_binary_biproducts [HasBinaryBiproducts C] [PreservesZeroMorphisms F]
+    [PreservesBinaryBiproducts F] : Additive F :=
+  { map_add' := fun X Y f g => by
+      rw [biprod.add_eq_lift_id_desc, F.map_comp, ← biprod.lift_map_biprod, ← biprod.map_biprod_hom_desc,
+        category.assoc, iso.inv_hom_id_assoc, F.map_id, biprod.add_eq_lift_id_desc] }
 
 end
 
-end functor
+end Functor
 
-namespace equivalence
+namespace Equivalenceₓ
 
-variables {C D : Type*} [category C] [category D] [preadditive C] [preadditive D]
+variable {C D : Type _} [Category C] [Category D] [Preadditive C] [Preadditive D]
 
-instance inverse_additive (e : C ≌ D) [e.functor.additive] : e.inverse.additive :=
-{ map_add' := λ X Y f g, by { apply e.functor.map_injective, simp, }, }
+instance inverse_additive (e : C ≌ D) [e.Functor.Additive] : e.inverse.Additive where
+  map_add' := fun X Y f g => by
+    apply e.functor.map_injective
+    simp
 
-end equivalence
+end Equivalenceₓ
 
 section
-variables (C D : Type*) [category C] [category D] [preadditive C] [preadditive D]
+
+variable (C D : Type _) [Category C] [Category D] [Preadditive C] [Preadditive D]
 
 /-- Bundled additive functors. -/
-@[derive category, nolint has_inhabited_instance]
+@[nolint has_inhabited_instance]
 def AdditiveFunctor :=
-{ F : C ⥤ D // functor.additive F }
+  { F : C ⥤ D // Functor.Additive F }deriving Category
 
-infixr ` ⥤+ `:26 := AdditiveFunctor
+-- mathport name: «expr ⥤+ »
+infixr:26 " ⥤+ " => AdditiveFunctor
 
-instance : preadditive (C ⥤+ D) :=
-preadditive.induced_category.category _
+instance : Preadditive (C ⥤+ D) :=
+  Preadditive.InducedCategory.category _
 
 /-- An additive functor is in particular a functor. -/
-@[derive full, derive faithful]
-def AdditiveFunctor.forget : (C ⥤+ D) ⥤ (C ⥤ D) :=
-full_subcategory_inclusion _
+def AdditiveFunctor.forget : (C ⥤+ D) ⥤ C ⥤ D :=
+  fullSubcategoryInclusion _ deriving Full, Faithful
 
-variables {C D}
+variable {C D}
 
 /-- Turn an additive functor into an object of the category `AdditiveFunctor C D`. -/
-def AdditiveFunctor.of (F : C ⥤ D) [F.additive] : C ⥤+ D :=
-⟨F, infer_instance⟩
+def AdditiveFunctor.of (F : C ⥤ D) [F.Additive] : C ⥤+ D :=
+  ⟨F, inferInstance⟩
 
 @[simp]
-lemma AdditiveFunctor.of_fst (F : C ⥤ D) [F.additive] : (AdditiveFunctor.of F).1 = F :=
-rfl
+theorem AdditiveFunctor.of_fst (F : C ⥤ D) [F.Additive] : (AdditiveFunctor.of F).1 = F :=
+  rfl
 
 @[simp]
-lemma AdditiveFunctor.forget_obj (F : C ⥤+ D) : (AdditiveFunctor.forget C D).obj F = F.1 :=
-rfl
+theorem AdditiveFunctor.forget_obj (F : C ⥤+ D) : (AdditiveFunctor.forget C D).obj F = F.1 :=
+  rfl
 
-lemma AdditiveFunctor.forget_obj_of (F : C ⥤ D) [F.additive] :
-  (AdditiveFunctor.forget C D).obj (AdditiveFunctor.of F) = F :=
-rfl
+theorem AdditiveFunctor.forget_obj_of (F : C ⥤ D) [F.Additive] :
+    (AdditiveFunctor.forget C D).obj (AdditiveFunctor.of F) = F :=
+  rfl
 
 @[simp]
-lemma AdditiveFunctor.forget_map (F G : C ⥤+ D) (α : F ⟶ G) :
-  (AdditiveFunctor.forget C D).map α = α :=
-rfl
+theorem AdditiveFunctor.forget_map (F G : C ⥤+ D) (α : F ⟶ G) : (AdditiveFunctor.forget C D).map α = α :=
+  rfl
 
-instance : functor.additive (AdditiveFunctor.forget C D) :=
-{ map_add' := λ F G α β, rfl }
+instance : Functor.Additive (AdditiveFunctor.forget C D) where
+  map_add' := fun F G α β => rfl
 
-instance (F : C ⥤+ D) : functor.additive F.1 :=
-F.2
+instance (F : C ⥤+ D) : Functor.Additive F.1 :=
+  F.2
 
 end
 
-end preadditive
+end Preadditive
 
-end category_theory
+end CategoryTheory
+

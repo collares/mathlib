@@ -3,46 +3,56 @@ Copyright (c) 2020 Markus Himmel. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Markus Himmel
 -/
-import algebra.category.Group.Z_Module_equivalence
-import algebra.category.Group.limits
-import algebra.category.Group.colimits
-import algebra.category.Module.abelian
-import category_theory.abelian.basic
+import Mathbin.Algebra.Category.Group.ZModuleEquivalence
+import Mathbin.Algebra.Category.Group.Limits
+import Mathbin.Algebra.Category.Group.Colimits
+import Mathbin.Algebra.Category.Module.Abelian
+import Mathbin.CategoryTheory.Abelian.Basic
 
 /-!
 # The category of abelian groups is abelian
 -/
 
-open category_theory
-open category_theory.limits
+
+open CategoryTheory
+
+open CategoryTheory.Limits
 
 universe u
 
-noncomputable theory
+noncomputable section
 
-namespace AddCommGroup
+namespace AddCommGroupₓₓ
 
 section
-variables {X Y : AddCommGroup.{u}} (f : X ⟶ Y)
+
+variable {X Y : AddCommGroupₓₓ.{u}} (f : X ⟶ Y)
 
 /-- In the category of abelian groups, every monomorphism is normal. -/
-def normal_mono (hf : mono f) : normal_mono f :=
-equivalence_reflects_normal_mono (forget₂ (Module.{u} ℤ) AddCommGroup.{u}).inv $
-  Module.normal_mono _ $ right_adjoint_preserves_mono (functor.adjunction _) hf
+def normalMono (hf : Mono f) : NormalMono f :=
+  equivalenceReflectsNormalMono (forget₂ (ModuleCat.{u} ℤ) AddCommGroupₓₓ.{u}).inv <|
+    ModuleCat.normalMono _ <| right_adjoint_preserves_mono (Functor.adjunction _) hf
 
 /-- In the category of abelian groups, every epimorphism is normal. -/
-def normal_epi (hf : epi f) : normal_epi f :=
-equivalence_reflects_normal_epi (forget₂ (Module.{u} ℤ) AddCommGroup.{u}).inv $
-  Module.normal_epi _ $ left_adjoint_preserves_epi (functor.adjunction _) hf
+def normalEpi (hf : Epi f) : NormalEpi f :=
+  equivalenceReflectsNormalEpi (forget₂ (ModuleCat.{u} ℤ) AddCommGroupₓₓ.{u}).inv <|
+    ModuleCat.normalEpi _ <| left_adjoint_preserves_epi (Functor.adjunction _) hf
 
 end
 
 /-- The category of abelian groups is abelian. -/
-instance : abelian AddCommGroup.{u} :=
-{ has_finite_products := ⟨by apply_instance⟩,
-  normal_mono_of_mono := λ X Y, normal_mono,
-  normal_epi_of_epi := λ X Y, normal_epi,
-  add_comp' := by { intros, simp only [preadditive.add_comp] },
-  comp_add' := by { intros, simp only [preadditive.comp_add] } }
+instance : Abelian AddCommGroupₓₓ.{u} where
+  HasFiniteProducts :=
+    ⟨by
+      infer_instance⟩
+  normalMonoOfMono := fun X Y => normalMono
+  normalEpiOfEpi := fun X Y => normalEpi
+  add_comp' := by
+    intros
+    simp only [preadditive.add_comp]
+  comp_add' := by
+    intros
+    simp only [preadditive.comp_add]
 
-end AddCommGroup
+end AddCommGroupₓₓ
+

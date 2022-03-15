@@ -1,1 +1,2 @@
-import tactic.rewrite_search.frontend
+import Mathbin.Tactic.RewriteSearch.Frontend
+

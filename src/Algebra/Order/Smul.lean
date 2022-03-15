@@ -3,9 +3,8 @@ Copyright (c) 2020 Frédéric Dupuis. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Frédéric Dupuis
 -/
-
-import group_theory.group_action.group
-import algebra.smul_with_zero
+import Mathbin.GroupTheory.GroupAction.Group
+import Mathbin.Algebra.SmulWithZero
 
 /-!
 # Ordered scalar product
@@ -35,176 +34,185 @@ ordered module, ordered scalar, ordered smul, ordered action, ordered vector spa
 -/
 
 
-/--
-The ordered scalar product property is when an ordered additive commutative monoid
+/-- The ordered scalar product property is when an ordered additive commutative monoid
 with a partial order has a scalar multiplication which is compatible with the order.
 -/
 @[protect_proj]
-class ordered_smul (R M : Type*)
-  [ordered_semiring R] [ordered_add_comm_monoid M] [smul_with_zero R M] : Prop :=
-(smul_lt_smul_of_pos : ∀ {a b : M}, ∀ {c : R}, a < b → 0 < c → c • a < c • b)
-(lt_of_smul_lt_smul_of_pos : ∀ {a b : M}, ∀ {c : R}, c • a < c • b → 0 < c → a < b)
+class OrderedSmul (R M : Type _) [OrderedSemiring R] [OrderedAddCommMonoid M] [SmulWithZero R M] : Prop where
+  smul_lt_smul_of_pos : ∀ {a b : M}, ∀ {c : R}, a < b → 0 < c → c • a < c • b
+  lt_of_smul_lt_smul_of_pos : ∀ {a b : M}, ∀ {c : R}, c • a < c • b → 0 < c → a < b
 
-namespace order_dual
+namespace OrderDual
 
-variables {R M : Type*}
+variable {R M : Type _}
 
-instance [has_scalar R M] : has_scalar R (order_dual M) :=
-{ smul := λ k x, order_dual.rec (λ x', (k • x' : M)) x }
+instance [HasScalar R M] : HasScalar R (OrderDual M) where
+  smul := fun k x => OrderDual.rec (fun x' => (k • x' : M)) x
 
-instance [has_zero R] [add_zero_class M] [h : smul_with_zero R M] :
-  smul_with_zero R (order_dual M) :=
-{ zero_smul := λ m, order_dual.rec (zero_smul _) m,
-  smul_zero := λ r, order_dual.rec (smul_zero' _) r,
-  ..order_dual.has_scalar }
+instance [Zero R] [AddZeroClass M] [h : SmulWithZero R M] : SmulWithZero R (OrderDual M) :=
+  { OrderDual.hasScalar with zero_smul := fun m => OrderDual.rec (zero_smul _) m,
+    smul_zero := fun r => OrderDual.rec (smul_zero' _) r }
 
-instance [monoid R] [mul_action R M] : mul_action R (order_dual M) :=
-{ one_smul := λ m, order_dual.rec (one_smul _) m,
-  mul_smul := λ r, order_dual.rec mul_smul r,
-  ..order_dual.has_scalar }
+instance [Monoidₓ R] [MulAction R M] : MulAction R (OrderDual M) :=
+  { OrderDual.hasScalar with one_smul := fun m => OrderDual.rec (one_smul _) m,
+    mul_smul := fun r => OrderDual.rec mul_smul r }
 
-instance [monoid_with_zero R] [add_monoid M] [mul_action_with_zero R M] :
-  mul_action_with_zero R (order_dual M) :=
-{ ..order_dual.mul_action, ..order_dual.smul_with_zero }
+instance [MonoidWithZeroₓ R] [AddMonoidₓ M] [MulActionWithZero R M] : MulActionWithZero R (OrderDual M) :=
+  { OrderDual.mulAction, OrderDual.smulWithZero with }
 
-instance [monoid_with_zero R] [add_monoid M] [distrib_mul_action R M] :
-  distrib_mul_action R (order_dual M) :=
-{ smul_add := λ k a, order_dual.rec (λ a' b, order_dual.rec (smul_add _ _) b) a,
-  smul_zero := λ r, order_dual.rec smul_zero r }
+instance [MonoidWithZeroₓ R] [AddMonoidₓ M] [DistribMulAction R M] : DistribMulAction R (OrderDual M) where
+  smul_add := fun k a => OrderDual.rec (fun a' b => OrderDual.rec (smul_add _ _) b) a
+  smul_zero := fun r => OrderDual.rec smul_zero r
 
-instance [ordered_semiring R] [ordered_add_comm_monoid M] [smul_with_zero R M]
-  [ordered_smul R M] :
-  ordered_smul R (order_dual M) :=
-{ smul_lt_smul_of_pos := λ a b, @ordered_smul.smul_lt_smul_of_pos R M _ _ _ _ b a,
-  lt_of_smul_lt_smul_of_pos := λ a b,
-    @ordered_smul.lt_of_smul_lt_smul_of_pos R M _ _ _ _ b a }
+instance [OrderedSemiring R] [OrderedAddCommMonoid M] [SmulWithZero R M] [OrderedSmul R M] :
+    OrderedSmul R (OrderDual M) where
+  smul_lt_smul_of_pos := fun a b => @OrderedSmul.smul_lt_smul_of_pos R M _ _ _ _ b a
+  lt_of_smul_lt_smul_of_pos := fun a b => @OrderedSmul.lt_of_smul_lt_smul_of_pos R M _ _ _ _ b a
 
-@[simp] lemma to_dual_smul [has_scalar R M] {c : R} {a : M} : to_dual (c • a) = c • to_dual a := rfl
+@[simp]
+theorem to_dual_smul [HasScalar R M] {c : R} {a : M} : toDual (c • a) = c • toDual a :=
+  rfl
 
-@[simp] lemma of_dual_smul [has_scalar R M] {c : R} {a : order_dual M} :
-  of_dual (c • a) = c • of_dual a :=
-rfl
+@[simp]
+theorem of_dual_smul [HasScalar R M] {c : R} {a : OrderDual M} : ofDual (c • a) = c • ofDual a :=
+  rfl
 
-end order_dual
+end OrderDual
 
-section ordered_smul
+section OrderedSmul
 
-variables {R M : Type*}
-  [ordered_semiring R] [ordered_add_comm_monoid M] [smul_with_zero R M] [ordered_smul R M]
-  {a b : M} {c : R}
+variable {R M : Type _} [OrderedSemiring R] [OrderedAddCommMonoid M] [SmulWithZero R M] [OrderedSmul R M] {a b : M}
+  {c : R}
 
-lemma smul_lt_smul_of_pos : a < b → 0 < c → c • a < c • b := ordered_smul.smul_lt_smul_of_pos
+theorem smul_lt_smul_of_pos : a < b → 0 < c → c • a < c • b :=
+  OrderedSmul.smul_lt_smul_of_pos
 
-lemma smul_le_smul_of_nonneg (h₁ : a ≤ b) (h₂ : 0 ≤ c) : c • a ≤ c • b :=
-begin
-  by_cases H₁ : c = 0,
-  { simp [H₁, zero_smul] },
-  { by_cases H₂ : a = b,
-    { rw H₂ },
-    { exact le_of_lt
-        (smul_lt_smul_of_pos (lt_of_le_of_ne h₁ H₂) (lt_of_le_of_ne h₂ (ne.symm H₁))), } }
-end
+theorem smul_le_smul_of_nonneg (h₁ : a ≤ b) (h₂ : 0 ≤ c) : c • a ≤ c • b := by
+  by_cases' H₁ : c = 0
+  · simp [H₁, zero_smul]
+    
+  · by_cases' H₂ : a = b
+    · rw [H₂]
+      
+    · exact le_of_ltₓ (smul_lt_smul_of_pos (lt_of_le_of_neₓ h₁ H₂) (lt_of_le_of_neₓ h₂ (Ne.symm H₁)))
+      
+    
 
-lemma smul_nonneg (hc : 0 ≤ c) (ha : 0 ≤ a) : 0 ≤ c • a :=
-calc (0 : M) = c • (0 : M) : (smul_zero' M c).symm
-         ... ≤ c • a : smul_le_smul_of_nonneg ha hc
+theorem smul_nonneg (hc : 0 ≤ c) (ha : 0 ≤ a) : 0 ≤ c • a :=
+  calc
+    (0 : M) = c • (0 : M) := (smul_zero' M c).symm
+    _ ≤ c • a := smul_le_smul_of_nonneg ha hc
+    
 
-lemma smul_nonpos_of_nonneg_of_nonpos (hc : 0 ≤ c) (ha : a ≤ 0) : c • a ≤ 0 :=
-@smul_nonneg R (order_dual M) _ _ _ _ _ _ hc ha
+theorem smul_nonpos_of_nonneg_of_nonpos (hc : 0 ≤ c) (ha : a ≤ 0) : c • a ≤ 0 :=
+  @smul_nonneg R (OrderDual M) _ _ _ _ _ _ hc ha
 
-lemma eq_of_smul_eq_smul_of_pos_of_le (h₁ : c • a = c • b) (hc : 0 < c) (hle : a ≤ b) :
-  a = b :=
-hle.lt_or_eq.resolve_left $ λ hlt, (smul_lt_smul_of_pos hlt hc).ne h₁
+theorem eq_of_smul_eq_smul_of_pos_of_le (h₁ : c • a = c • b) (hc : 0 < c) (hle : a ≤ b) : a = b :=
+  hle.lt_or_eq.resolve_left fun hlt => (smul_lt_smul_of_pos hlt hc).Ne h₁
 
-lemma lt_of_smul_lt_smul_of_nonneg (h : c • a < c • b) (hc : 0 ≤ c) : a < b :=
-hc.eq_or_lt.elim (λ hc, false.elim $ lt_irrefl (0:M) $ by rwa [← hc, zero_smul, zero_smul] at h)
-  (ordered_smul.lt_of_smul_lt_smul_of_pos h)
+theorem lt_of_smul_lt_smul_of_nonneg (h : c • a < c • b) (hc : 0 ≤ c) : a < b :=
+  hc.eq_or_lt.elim
+    (fun hc =>
+      False.elim <|
+        lt_irreflₓ (0 : M) <| by
+          rwa [← hc, zero_smul, zero_smul] at h)
+    (OrderedSmul.lt_of_smul_lt_smul_of_pos h)
 
-lemma smul_lt_smul_iff_of_pos (hc : 0 < c) : c • a < c • b ↔ a < b :=
-⟨λ h, lt_of_smul_lt_smul_of_nonneg h hc.le, λ h, smul_lt_smul_of_pos h hc⟩
+theorem smul_lt_smul_iff_of_pos (hc : 0 < c) : c • a < c • b ↔ a < b :=
+  ⟨fun h => lt_of_smul_lt_smul_of_nonneg h hc.le, fun h => smul_lt_smul_of_pos h hc⟩
 
-lemma smul_pos_iff_of_pos (hc : 0 < c) : 0 < c • a ↔ 0 < a :=
-calc 0 < c • a ↔ c • 0 < c • a : by rw smul_zero'
-           ... ↔ 0 < a         : smul_lt_smul_iff_of_pos hc
+theorem smul_pos_iff_of_pos (hc : 0 < c) : 0 < c • a ↔ 0 < a :=
+  calc
+    0 < c • a ↔ c • 0 < c • a := by
+      rw [smul_zero']
+    _ ↔ 0 < a := smul_lt_smul_iff_of_pos hc
+    
 
 alias smul_pos_iff_of_pos ↔ _ smul_pos
 
-lemma monotone_smul_left (hc : 0 ≤ c) : monotone (has_scalar.smul c : M → M) :=
-λ a b h, smul_le_smul_of_nonneg h hc
+theorem monotone_smul_left (hc : 0 ≤ c) : Monotone (HasScalar.smul c : M → M) := fun a b h =>
+  smul_le_smul_of_nonneg h hc
 
-lemma strict_mono_smul_left (hc : 0 < c) : strict_mono (has_scalar.smul c : M → M) :=
-λ a b h, smul_lt_smul_of_pos h hc
+theorem strict_mono_smul_left (hc : 0 < c) : StrictMono (HasScalar.smul c : M → M) := fun a b h =>
+  smul_lt_smul_of_pos h hc
 
-end ordered_smul
+end OrderedSmul
 
 /-- If `R` is a linear ordered semifield, then it suffices to verify only the first axiom of
 `ordered_smul`. Moreover, it suffices to verify that `a < b` and `0 < c` imply
 `c • a ≤ c • b`. We have no semifields in `mathlib`, so we use the assumption `∀ c ≠ 0, is_unit c`
 instead. -/
-lemma ordered_smul.mk'' {R M : Type*} [linear_ordered_semiring R] [ordered_add_comm_monoid M]
-  [mul_action_with_zero R M] (hR : ∀ {c : R}, c ≠ 0 → is_unit c)
-  (hlt : ∀ ⦃a b : M⦄ ⦃c : R⦄, a < b → 0 < c → c • a ≤ c • b) :
-  ordered_smul R M :=
-begin
-  have hlt' : ∀ ⦃a b : M⦄ ⦃c : R⦄, a < b → 0 < c → c • a < c • b,
-  { refine λ a b c hab hc, (hlt hab hc).lt_of_ne _,
-    rw [ne.def, (hR hc.ne').smul_left_cancel],
-    exact hab.ne },
-  refine { smul_lt_smul_of_pos := hlt', .. },
-  intros a b c h hc,
-  rcases (hR hc.ne') with ⟨c, rfl⟩,
-  rw [← inv_smul_smul c a, ← inv_smul_smul c b],
-  refine hlt' h (pos_of_mul_pos_left _ hc.le),
+theorem OrderedSmul.mk'' {R M : Type _} [LinearOrderedSemiring R] [OrderedAddCommMonoid M] [MulActionWithZero R M]
+    (hR : ∀ {c : R}, c ≠ 0 → IsUnit c) (hlt : ∀ ⦃a b : M⦄ ⦃c : R⦄, a < b → 0 < c → c • a ≤ c • b) : OrderedSmul R M :=
+  by
+  have hlt' : ∀ ⦃a b : M⦄ ⦃c : R⦄, a < b → 0 < c → c • a < c • b := by
+    refine' fun a b c hab hc => (hlt hab hc).lt_of_ne _
+    rw [Ne.def, (hR hc.ne').smul_left_cancel]
+    exact hab.ne
+  refine' { smul_lt_smul_of_pos := hlt', .. }
+  intro a b c h hc
+  rcases hR hc.ne' with ⟨c, rfl⟩
+  rw [← inv_smul_smul c a, ← inv_smul_smul c b]
+  refine' hlt' h (pos_of_mul_pos_left _ hc.le)
   simp only [c.mul_inv, zero_lt_one]
-end
 
 /-- If `R` is a linear ordered field, then it suffices to verify only the first axiom of
 `ordered_smul`. -/
-lemma ordered_smul.mk' {k M : Type*} [linear_ordered_field k] [ordered_add_comm_monoid M]
-  [mul_action_with_zero k M] (hlt : ∀ ⦃a b : M⦄ ⦃c : k⦄, a < b → 0 < c → c • a ≤ c • b) :
-  ordered_smul k M :=
-ordered_smul.mk'' (λ c hc, is_unit.mk0 _ hc) hlt
+theorem OrderedSmul.mk' {k M : Type _} [LinearOrderedField k] [OrderedAddCommMonoid M] [MulActionWithZero k M]
+    (hlt : ∀ ⦃a b : M⦄ ⦃c : k⦄, a < b → 0 < c → c • a ≤ c • b) : OrderedSmul k M :=
+  OrderedSmul.mk'' (fun c hc => IsUnit.mk0 _ hc) hlt
 
-instance linear_ordered_semiring.to_ordered_smul {R : Type*} [linear_ordered_semiring R] :
-  ordered_smul R R :=
-{ smul_lt_smul_of_pos        := ordered_semiring.mul_lt_mul_of_pos_left,
-  lt_of_smul_lt_smul_of_pos  := λ _ _ _ h hc, lt_of_mul_lt_mul_left h hc.le }
+instance LinearOrderedSemiring.to_ordered_smul {R : Type _} [LinearOrderedSemiring R] : OrderedSmul R R where
+  smul_lt_smul_of_pos := OrderedSemiring.mul_lt_mul_of_pos_left
+  lt_of_smul_lt_smul_of_pos := fun _ _ _ h hc => lt_of_mul_lt_mul_left h hc.le
 
-section field
+section Field
 
-variables {k M : Type*} [linear_ordered_field k]
-  [ordered_add_comm_group M] [mul_action_with_zero k M] [ordered_smul k M]
+variable {k M : Type _} [LinearOrderedField k] [OrderedAddCommGroup M] [MulActionWithZero k M] [OrderedSmul k M]
   {a b : M} {c : k}
 
-lemma smul_le_smul_iff_of_pos (hc : 0 < c) : c • a ≤ c • b ↔ a ≤ b :=
-⟨λ h, inv_smul_smul₀ hc.ne' a ▸ inv_smul_smul₀ hc.ne' b ▸
-  smul_le_smul_of_nonneg h (inv_nonneg.2 hc.le),
-  λ h, smul_le_smul_of_nonneg h hc.le⟩
+theorem smul_le_smul_iff_of_pos (hc : 0 < c) : c • a ≤ c • b ↔ a ≤ b :=
+  ⟨fun h => inv_smul_smul₀ hc.ne' a ▸ inv_smul_smul₀ hc.ne' b ▸ smul_le_smul_of_nonneg h (inv_nonneg.2 hc.le), fun h =>
+    smul_le_smul_of_nonneg h hc.le⟩
 
-lemma smul_lt_iff_of_pos (hc : 0 < c) : c • a < b ↔ a < c⁻¹ • b :=
-calc c • a < b ↔ c • a < c • c⁻¹ • b : by rw [smul_inv_smul₀ hc.ne']
-... ↔ a < c⁻¹ • b : smul_lt_smul_iff_of_pos hc
+theorem smul_lt_iff_of_pos (hc : 0 < c) : c • a < b ↔ a < c⁻¹ • b :=
+  calc
+    c • a < b ↔ c • a < c • c⁻¹ • b := by
+      rw [smul_inv_smul₀ hc.ne']
+    _ ↔ a < c⁻¹ • b := smul_lt_smul_iff_of_pos hc
+    
 
-lemma lt_smul_iff_of_pos (hc : 0 < c) : a < c • b ↔ c⁻¹ • a < b :=
-calc a < c • b ↔ c • c⁻¹ • a < c • b : by rw [smul_inv_smul₀ hc.ne']
-... ↔ c⁻¹ • a < b : smul_lt_smul_iff_of_pos hc
+theorem lt_smul_iff_of_pos (hc : 0 < c) : a < c • b ↔ c⁻¹ • a < b :=
+  calc
+    a < c • b ↔ c • c⁻¹ • a < c • b := by
+      rw [smul_inv_smul₀ hc.ne']
+    _ ↔ c⁻¹ • a < b := smul_lt_smul_iff_of_pos hc
+    
 
-lemma smul_le_iff_of_pos (hc : 0 < c) : c • a ≤ b ↔ a ≤ c⁻¹ • b :=
-calc c • a ≤ b ↔ c • a ≤ c • c⁻¹ • b : by rw [smul_inv_smul₀ hc.ne']
-... ↔ a ≤ c⁻¹ • b : smul_le_smul_iff_of_pos hc
+theorem smul_le_iff_of_pos (hc : 0 < c) : c • a ≤ b ↔ a ≤ c⁻¹ • b :=
+  calc
+    c • a ≤ b ↔ c • a ≤ c • c⁻¹ • b := by
+      rw [smul_inv_smul₀ hc.ne']
+    _ ↔ a ≤ c⁻¹ • b := smul_le_smul_iff_of_pos hc
+    
 
-lemma le_smul_iff_of_pos (hc : 0 < c) : a ≤ c • b ↔ c⁻¹ • a ≤ b :=
-calc a ≤ c • b ↔ c • c⁻¹ • a ≤ c • b : by rw [smul_inv_smul₀ hc.ne']
-... ↔ c⁻¹ • a ≤ b : smul_le_smul_iff_of_pos hc
+theorem le_smul_iff_of_pos (hc : 0 < c) : a ≤ c • b ↔ c⁻¹ • a ≤ b :=
+  calc
+    a ≤ c • b ↔ c • c⁻¹ • a ≤ c • b := by
+      rw [smul_inv_smul₀ hc.ne']
+    _ ↔ c⁻¹ • a ≤ b := smul_le_smul_iff_of_pos hc
+    
 
-variables (M)
+variable (M)
 
 /-- Left scalar multiplication as an order isomorphism. -/
-@[simps] def order_iso.smul_left {c : k} (hc : 0 < c) : M ≃o M :=
-{ to_fun := λ b, c • b,
-  inv_fun := λ b, c⁻¹ • b,
-  left_inv := inv_smul_smul₀ hc.ne',
-  right_inv := smul_inv_smul₀ hc.ne',
-  map_rel_iff' := λ b₁ b₂, smul_le_smul_iff_of_pos hc }
+@[simps]
+def OrderIso.smulLeft {c : k} (hc : 0 < c) : M ≃o M where
+  toFun := fun b => c • b
+  invFun := fun b => c⁻¹ • b
+  left_inv := inv_smul_smul₀ hc.ne'
+  right_inv := smul_inv_smul₀ hc.ne'
+  map_rel_iff' := fun b₁ b₂ => smul_le_smul_iff_of_pos hc
 
-end field
+end Field
+

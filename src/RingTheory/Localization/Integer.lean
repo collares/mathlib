@@ -3,7 +3,7 @@ Copyright (c) 2018 Kenny Lau. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau, Mario Carneiro, Johan Commelin, Amelia Livingston, Anne Baanen
 -/
-import ring_theory.localization.basic
+import Mathbin.RingTheory.Localization.Basic
 
 /-!
 # Integer elements of a localization
@@ -21,130 +21,124 @@ localization, ring localization, commutative ring localization, characteristic p
 commutative ring, field of fractions
 -/
 
-variables {R : Type*} [comm_ring R] {M : submonoid R} {S : Type*} [comm_ring S]
-variables [algebra R S] {P : Type*} [comm_ring P]
 
-open function
-open_locale big_operators
+variable {R : Type _} [CommRingₓ R] {M : Submonoid R} {S : Type _} [CommRingₓ S]
 
-namespace is_localization
+variable [Algebra R S] {P : Type _} [CommRingₓ P]
+
+open Function
+
+open_locale BigOperators
+
+namespace IsLocalization
 
 section
 
-variables (R) {M S}
+variable (R) {M S}
 
--- TODO: define a subalgebra of `is_integer`s
 /-- Given `a : S`, `S` a localization of `R`, `is_integer R a` iff `a` is in the image of
 the localization map from `R` to `S`. -/
-def is_integer (a : S) : Prop := a ∈ (algebra_map R S).range
+-- TODO: define a subalgebra of `is_integer`s
+def IsInteger (a : S) : Prop :=
+  a ∈ (algebraMap R S).range
 
 end
 
-lemma is_integer_zero : is_integer R (0 : S) := subring.zero_mem _
-lemma is_integer_one : is_integer R (1 : S) := subring.one_mem _
+theorem is_integer_zero : IsInteger R (0 : S) :=
+  Subring.zero_mem _
 
-lemma is_integer_add {a b : S} (ha : is_integer R a) (hb : is_integer R b) :
-  is_integer R (a + b) :=
-subring.add_mem _ ha hb
+theorem is_integer_one : IsInteger R (1 : S) :=
+  Subring.one_mem _
 
-lemma is_integer_mul {a b : S} (ha : is_integer R a) (hb : is_integer R b) :
-  is_integer R (a * b) :=
-subring.mul_mem _ ha hb
+theorem is_integer_add {a b : S} (ha : IsInteger R a) (hb : IsInteger R b) : IsInteger R (a + b) :=
+  Subring.add_mem _ ha hb
 
-lemma is_integer_smul {a : R} {b : S} (hb : is_integer R b) :
-  is_integer R (a • b) :=
-begin
-  rcases hb with ⟨b', hb⟩,
-  use a * b',
-  rw [←hb, (algebra_map R S).map_mul, algebra.smul_def]
-end
+theorem is_integer_mul {a b : S} (ha : IsInteger R a) (hb : IsInteger R b) : IsInteger R (a * b) :=
+  Subring.mul_mem _ ha hb
 
-variables (M) {S} [is_localization M S]
+theorem is_integer_smul {a : R} {b : S} (hb : IsInteger R b) : IsInteger R (a • b) := by
+  rcases hb with ⟨b', hb⟩
+  use a * b'
+  rw [← hb, (algebraMap R S).map_mul, Algebra.smul_def]
+
+variable (M) {S} [IsLocalization M S]
 
 /-- Each element `a : S` has an `M`-multiple which is an integer.
 
 This version multiplies `a` on the right, matching the argument order in `localization_map.surj`.
 -/
-lemma exists_integer_multiple' (a : S) :
-  ∃ (b : M), is_integer R (a * algebra_map R S b) :=
-let ⟨⟨num, denom⟩, h⟩ := is_localization.surj _ a in ⟨denom, set.mem_range.mpr ⟨num, h.symm⟩⟩
+theorem exists_integer_multiple' (a : S) : ∃ b : M, IsInteger R (a * algebraMap R S b) :=
+  let ⟨⟨Num, denom⟩, h⟩ := IsLocalization.surj _ a
+  ⟨denom, Set.mem_range.mpr ⟨Num, h.symm⟩⟩
 
 /-- Each element `a : S` has an `M`-multiple which is an integer.
 
 This version multiplies `a` on the left, matching the argument order in the `has_scalar` instance.
 -/
-lemma exists_integer_multiple (a : S) :
-  ∃ (b : M), is_integer R ((b : R) • a) :=
-by { simp_rw [algebra.smul_def, mul_comm _ a], apply exists_integer_multiple' }
+theorem exists_integer_multiple (a : S) : ∃ b : M, IsInteger R ((b : R) • a) := by
+  simp_rw [Algebra.smul_def, mul_comm _ a]
+  apply exists_integer_multiple'
 
 /-- We can clear the denominators of a `finset`-indexed family of fractions. -/
-lemma exist_integer_multiples {ι : Type*} (s : finset ι) (f : ι → S) :
-  ∃ (b : M), ∀ i ∈ s, is_localization.is_integer R ((b : R) • f i) :=
-begin
-  haveI := classical.prop_decidable,
-  refine ⟨∏ i in s, (sec M (f i)).2, λ i hi, ⟨_, _⟩⟩,
-  { exact (∏ j in s.erase i, (sec M (f j)).2) * (sec M (f i)).1 },
-  rw [ring_hom.map_mul, sec_spec', ←mul_assoc, ←(algebra_map R S).map_mul, ← algebra.smul_def],
-  congr' 2,
-  refine trans _ ((submonoid.subtype M).map_prod _ _).symm,
-  rw [mul_comm, ←finset.prod_insert (s.not_mem_erase i), finset.insert_erase hi],
-  refl
-end
+theorem exist_integer_multiples {ι : Type _} (s : Finset ι) (f : ι → S) :
+    ∃ b : M, ∀, ∀ i ∈ s, ∀, IsLocalization.IsInteger R ((b : R) • f i) := by
+  have := Classical.propDecidable
+  refine' ⟨∏ i in s, (sec M (f i)).2, fun i hi => ⟨_, _⟩⟩
+  · exact (∏ j in s.erase i, (sec M (f j)).2) * (sec M (f i)).1
+    
+  rw [RingHom.map_mul, sec_spec', ← mul_assoc, ← (algebraMap R S).map_mul, ← Algebra.smul_def]
+  congr 2
+  refine' trans _ ((Submonoid.subtype M).map_prod _ _).symm
+  rw [mul_comm, ← Finset.prod_insert (s.not_mem_erase i), Finset.insert_erase hi]
+  rfl
 
 /-- We can clear the denominators of a `fintype`-indexed family of fractions. -/
-lemma exist_integer_multiples_of_fintype {ι : Type*} [fintype ι] (f : ι → S) :
-  ∃ (b : M), ∀ i, is_localization.is_integer R ((b : R) • f i) :=
-begin
-  obtain ⟨b, hb⟩ := exist_integer_multiples M finset.univ f,
-  exact ⟨b, λ i, hb i (finset.mem_univ _)⟩
-end
+theorem exist_integer_multiples_of_fintype {ι : Type _} [Fintype ι] (f : ι → S) :
+    ∃ b : M, ∀ i, IsLocalization.IsInteger R ((b : R) • f i) := by
+  obtain ⟨b, hb⟩ := exist_integer_multiples M Finset.univ f
+  exact ⟨b, fun i => hb i (Finset.mem_univ _)⟩
 
 /-- We can clear the denominators of a finite set of fractions. -/
-lemma exist_integer_multiples_of_finset (s : finset S) :
-  ∃ (b : M), ∀ a ∈ s, is_integer R ((b : R) • a) :=
-exist_integer_multiples M s id
+theorem exist_integer_multiples_of_finset (s : Finset S) : ∃ b : M, ∀, ∀ a ∈ s, ∀, IsInteger R ((b : R) • a) :=
+  exist_integer_multiples M s id
 
 /-- A choice of a common multiple of the denominators of a `finset`-indexed family of fractions. -/
-noncomputable
-def common_denom {ι : Type*} (s : finset ι) (f : ι → S) : M :=
-(exist_integer_multiples M s f).some
+noncomputable def commonDenom {ι : Type _} (s : Finset ι) (f : ι → S) : M :=
+  (exist_integer_multiples M s f).some
 
 /-- The numerator of a fraction after clearing the denominators
 of a `finset`-indexed family of fractions. -/
-noncomputable
-def integer_multiple {ι : Type*} (s : finset ι) (f : ι → S) (i : s) : R :=
-((exist_integer_multiples M s f).some_spec i i.prop).some
+noncomputable def integerMultiple {ι : Type _} (s : Finset ι) (f : ι → S) (i : s) : R :=
+  ((exist_integer_multiples M s f).some_spec i i.Prop).some
 
 @[simp]
-lemma map_integer_multiple {ι : Type*} (s : finset ι) (f : ι → S) (i : s) :
-  algebra_map R S (integer_multiple M s f i) = common_denom M s f • f i :=
-((exist_integer_multiples M s f).some_spec _ i.prop).some_spec
+theorem map_integer_multiple {ι : Type _} (s : Finset ι) (f : ι → S) (i : s) :
+    algebraMap R S (integerMultiple M s f i) = commonDenom M s f • f i :=
+  ((exist_integer_multiples M s f).some_spec _ i.Prop).some_spec
 
 /-- A choice of a common multiple of the denominators of a finite set of fractions. -/
-noncomputable
-def common_denom_of_finset (s : finset S) : M :=
-common_denom M s id
+noncomputable def commonDenomOfFinset (s : Finset S) : M :=
+  commonDenom M s id
 
 /-- The finset of numerators after clearing the denominators of a finite set of fractions. -/
-noncomputable
-def finset_integer_multiple [decidable_eq R] (s : finset S) : finset R :=
-s.attach.image (λ t, integer_multiple M s id t)
+noncomputable def finsetIntegerMultiple [DecidableEq R] (s : Finset S) : Finset R :=
+  s.attach.Image fun t => integerMultiple M s id t
 
-open_locale pointwise
+open_locale Pointwise
 
-lemma finset_integer_multiple_image [decidable_eq R] (s : finset S) :
-  algebra_map R S '' (finset_integer_multiple M s) =
-    common_denom_of_finset M s • s :=
-begin
-  delta finset_integer_multiple common_denom,
-  rw finset.coe_image,
-  ext,
-  split,
-  { rintro ⟨_, ⟨x, -, rfl⟩, rfl⟩,
-    rw map_integer_multiple,
-    exact set.mem_image_of_mem _ x.prop },
-  { rintro ⟨x, hx, rfl⟩,
-    exact ⟨_, ⟨⟨x, hx⟩, s.mem_attach _, rfl⟩, map_integer_multiple M s id _⟩ }
-end
+theorem finset_integer_multiple_image [DecidableEq R] (s : Finset S) :
+    algebraMap R S '' finsetIntegerMultiple M s = commonDenomOfFinset M s • s := by
+  delta' finset_integer_multiple common_denom
+  rw [Finset.coe_image]
+  ext
+  constructor
+  · rintro ⟨_, ⟨x, -, rfl⟩, rfl⟩
+    rw [map_integer_multiple]
+    exact Set.mem_image_of_mem _ x.prop
+    
+  · rintro ⟨x, hx, rfl⟩
+    exact ⟨_, ⟨⟨x, hx⟩, s.mem_attach _, rfl⟩, map_integer_multiple M s id _⟩
+    
 
-end is_localization
+end IsLocalization
+

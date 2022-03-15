@@ -3,7 +3,7 @@ Copyright (c) 2020 Floris van Doorn. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Floris van Doorn
 -/
-import data.list.nodup
+import Mathbin.Data.List.Nodup
 
 /-!
 # Finite products of types
@@ -33,117 +33,136 @@ construction/theorem that is easier to define/prove on binary products than on f
 * The product of sets is `set.tprod : (Π i, set (α i)) → set (tprod α l)`.
 -/
 
-open list function
 
-variables {ι : Type*} {α : ι → Type*} {i j : ι} {l : list ι} {f : Π i, α i}
+open List Function
 
-namespace list
+variable {ι : Type _} {α : ι → Type _} {i j : ι} {l : List ι} {f : ∀ i, α i}
+
+namespace List
 
 variable (α)
 
 /-- The product of a family of types over a list. -/
-def tprod (l : list ι) : Type* :=
-l.foldr (λ i β, α i × β) punit
+def Tprod (l : List ι) : Type _ :=
+  l.foldr (fun i β => α i × β) PUnit
 
 variable {α}
 
-namespace tprod
+namespace Tprod
 
-open list
+open List
 
 /-- Turning a function `f : Π i, α i` into an element of the iterated product `tprod α l`. -/
-protected def mk : ∀ (l : list ι) (f : Π i, α i), tprod α l
-| []        := λ f, punit.star
-| (i :: is) := λ f, (f i, mk is f)
+protected def mkₓ : ∀ l : List ι f : ∀ i, α i, Tprod α l
+  | [] => fun f => PUnit.unit
+  | i :: is => fun f => (f i, mk is f)
 
-instance [∀ i, inhabited (α i)] : inhabited (tprod α l) :=
-⟨tprod.mk l (λ _, default)⟩
-
-@[simp] lemma fst_mk (i : ι) (l : list ι) (f : Π i, α i) : (tprod.mk (i::l) f).1 = f i := rfl
+instance [∀ i, Inhabited (α i)] : Inhabited (Tprod α l) :=
+  ⟨Tprod.mkₓ l fun _ => default⟩
 
 @[simp]
-lemma snd_mk (i : ι) (l : list ι) (f : Π i, α i) : (tprod.mk (i::l) f).2 = tprod.mk l f := rfl
+theorem fst_mk (i : ι) (l : List ι) (f : ∀ i, α i) : (Tprod.mkₓ (i :: l) f).1 = f i :=
+  rfl
 
-variables [decidable_eq ι]
+@[simp]
+theorem snd_mk (i : ι) (l : List ι) (f : ∀ i, α i) : (Tprod.mkₓ (i :: l) f).2 = Tprod.mkₓ l f :=
+  rfl
+
+variable [DecidableEq ι]
 
 /-- Given an element of the iterated product `l.prod α`, take a projection into direction `i`.
   If `i` appears multiple times in `l`, this chooses the first component in direction `i`. -/
-protected def elim : ∀ {l : list ι} (v : tprod α l) {i : ι} (hi : i ∈ l), α i
-| (i :: is) v j hj :=
-  if hji : j = i then by { subst hji, exact v.1 } else elim v.2 (hj.resolve_left hji)
+protected def elimₓ : ∀ {l : List ι} v : Tprod α l {i : ι} hi : i ∈ l, α i
+  | i :: is, v, j, hj =>
+    if hji : j = i then by
+      subst hji
+      exact v.1
+    else elim v.2 (hj.resolve_left hji)
 
-@[simp] lemma elim_self (v : tprod α (i :: l)) : v.elim (l.mem_cons_self i) = v.1 :=
-by simp [tprod.elim]
+@[simp]
+theorem elim_self (v : Tprod α (i :: l)) : v.elim (l.mem_cons_self i) = v.1 := by
+  simp [tprod.elim]
 
-@[simp] lemma elim_of_ne (hj : j ∈ i :: l) (hji : j ≠ i) (v : tprod α (i :: l)) :
-  v.elim hj = tprod.elim v.2 (hj.resolve_left hji) :=
-by simp [tprod.elim, hji]
+@[simp]
+theorem elim_of_ne (hj : j ∈ i :: l) (hji : j ≠ i) (v : Tprod α (i :: l)) :
+    v.elim hj = Tprod.elimₓ v.2 (hj.resolve_left hji) := by
+  simp [tprod.elim, hji]
 
-@[simp] lemma elim_of_mem (hl : (i :: l).nodup) (hj : j ∈ l) (v : tprod α (i :: l)) :
-  v.elim (mem_cons_of_mem _ hj) = tprod.elim v.2 hj :=
-by { apply elim_of_ne, rintro rfl, exact not_mem_of_nodup_cons hl hj }
+@[simp]
+theorem elim_of_mem (hl : (i :: l).Nodup) (hj : j ∈ l) (v : Tprod α (i :: l)) :
+    v.elim (mem_cons_of_memₓ _ hj) = Tprod.elimₓ v.2 hj := by
+  apply elim_of_ne
+  rintro rfl
+  exact not_mem_of_nodup_cons hl hj
 
-lemma elim_mk : ∀ (l : list ι) (f : Π i, α i) {i : ι} (hi : i ∈ l),
-  (tprod.mk l f).elim hi = f i
-| (i :: is) f j hj := begin
-      by_cases hji : j = i,
-      { subst hji, simp },
-      { rw [elim_of_ne _ hji, snd_mk, elim_mk] }
-  end
+theorem elim_mk : ∀ l : List ι f : ∀ i, α i {i : ι} hi : i ∈ l, (Tprod.mkₓ l f).elim hi = f i
+  | i :: is, f, j, hj => by
+    by_cases' hji : j = i
+    · subst hji
+      simp
+      
+    · rw [elim_of_ne _ hji, snd_mk, elim_mk]
+      
 
-@[ext] lemma ext : ∀ {l : list ι} (hl : l.nodup) {v w : tprod α l}
-  (hvw : ∀ i (hi : i ∈ l), v.elim hi = w.elim hi), v = w
-| []        hl v w hvw := punit.ext
-| (i :: is) hl v w hvw := begin
-    ext, rw [← elim_self v, hvw, elim_self],
-    refine ext (nodup_cons.mp hl).2 (λ j hj, _),
+@[ext]
+theorem ext : ∀ {l : List ι} hl : l.Nodup {v w : Tprod α l} hvw : ∀ i hi : i ∈ l, v.elim hi = w.elim hi, v = w
+  | [], hl, v, w, hvw => PUnit.extₓ
+  | i :: is, hl, v, w, hvw => by
+    ext
+    rw [← elim_self v, hvw, elim_self]
+    refine' ext (nodup_cons.mp hl).2 fun j hj => _
     rw [← elim_of_mem hl, hvw, elim_of_mem hl]
-  end
 
 /-- A version of `tprod.elim` when `l` contains all elements. In this case we get a function into
   `Π i, α i`. -/
-@[simp] protected def elim' (h : ∀ i, i ∈ l) (v : tprod α l) (i : ι) : α i :=
-v.elim (h i)
+@[simp]
+protected def elim' (h : ∀ i, i ∈ l) (v : Tprod α l) (i : ι) : α i :=
+  v.elim (h i)
 
-lemma mk_elim (hnd : l.nodup) (h : ∀ i, i ∈ l) (v : tprod α l) : tprod.mk l (v.elim' h) = v :=
-tprod.ext hnd (λ i hi, by simp [elim_mk])
+theorem mk_elim (hnd : l.Nodup) (h : ∀ i, i ∈ l) (v : Tprod α l) : Tprod.mkₓ l (v.elim' h) = v :=
+  Tprod.ext hnd fun i hi => by
+    simp [elim_mk]
 
 /-- Pi-types are equivalent to iterated products. -/
-def pi_equiv_tprod (hnd : l.nodup) (h : ∀ i, i ∈ l) : (Π i, α i) ≃ tprod α l :=
-⟨tprod.mk l, tprod.elim' h, λ f, funext $ λ i, elim_mk l f (h i), mk_elim hnd h⟩
+def piEquivTprod (hnd : l.Nodup) (h : ∀ i, i ∈ l) : (∀ i, α i) ≃ Tprod α l :=
+  ⟨Tprod.mkₓ l, Tprod.elim' h, fun f => funext fun i => elim_mk l f (h i), mk_elim hnd h⟩
 
-end tprod
+end Tprod
 
-end list
+end List
 
-namespace set
+namespace Set
 
-open list
+open List
+
 /-- A product of sets in `tprod α l`. -/
-@[simp] protected def tprod : ∀ (l : list ι) (t : Π i, set (α i)), set (tprod α l)
-| []        t := univ
-| (i :: is) t := t i ×ˢ tprod is t
+@[simp]
+protected def Tprodₓ : ∀ l : List ι t : ∀ i, Set (α i), Set (Tprod α l)
+  | [], t => Univ
+  | i :: is, t => t i ×ˢ tprod is t
 
-lemma mk_preimage_tprod : ∀ (l : list ι) (t : Π i, set (α i)),
-  tprod.mk l ⁻¹' set.tprod l t = {i | i ∈ l}.pi t
-| []        t := by simp [set.tprod]
-| (i :: l) t := begin
-  ext f,
-  have : f ∈ tprod.mk l ⁻¹' set.tprod l t ↔ f ∈ {x | x ∈ l}.pi t, { rw [mk_preimage_tprod l t] },
-  change tprod.mk l f ∈ set.tprod l t ↔ ∀ (i : ι), i ∈ l → f i ∈ t i at this,
-  /- `simp [set.tprod, tprod.mk, this]` can close this goal but is slow. -/
-  rw [set.tprod, tprod.mk, mem_preimage, mem_pi, prod_mk_mem_set_prod_eq],
-  simp_rw [mem_set_of_eq, mem_cons_iff],
-  rw [forall_eq_or_imp, and.congr_right_iff],
-  exact λ _, this
-end
+theorem mk_preimage_tprod : ∀ l : List ι t : ∀ i, Set (α i), Tprod.mkₓ l ⁻¹' Set.Tprodₓ l t = { i | i ∈ l }.pi t
+  | [], t => by
+    simp [Set.Tprodₓ]
+  | i :: l, t => by
+    ext f
+    have : f ∈ tprod.mk l ⁻¹' Set.Tprodₓ l t ↔ f ∈ { x | x ∈ l }.pi t := by
+      rw [mk_preimage_tprod l t]
+    change tprod.mk l f ∈ Set.Tprodₓ l t ↔ ∀ i : ι, i ∈ l → f i ∈ t i at this
+    -- `simp [set.tprod, tprod.mk, this]` can close this goal but is slow.
+    rw [Set.Tprodₓ, tprod.mk, mem_preimage, mem_pi, prod_mk_mem_set_prod_eq]
+    simp_rw [mem_set_of_eq, mem_cons_iff]
+    rw [forall_eq_or_imp, And.congr_right_iff]
+    exact fun _ => this
 
-lemma elim_preimage_pi [decidable_eq ι] {l : list ι} (hnd : l.nodup) (h : ∀ i, i ∈ l)
-  (t : Π i, set (α i)) : tprod.elim' h ⁻¹' pi univ t = set.tprod l t :=
-begin
-  have : { i | i ∈ l} = univ, { ext i, simp [h] },
-  rw [← this, ← mk_preimage_tprod, preimage_preimage],
-  convert preimage_id, simp [tprod.mk_elim hnd h, id_def]
-end
+theorem elim_preimage_pi [DecidableEq ι] {l : List ι} (hnd : l.Nodup) (h : ∀ i, i ∈ l) (t : ∀ i, Set (α i)) :
+    Tprod.elim' h ⁻¹' Pi Univ t = Set.Tprodₓ l t := by
+  have : { i | i ∈ l } = univ := by
+    ext i
+    simp [h]
+  rw [← this, ← mk_preimage_tprod, preimage_preimage]
+  convert preimage_id
+  simp [tprod.mk_elim hnd h, id_def]
 
-end set
+end Set
+

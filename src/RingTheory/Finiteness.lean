@@ -3,11 +3,10 @@ Copyright (c) 2020 Johan Commelin. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johan Commelin
 -/
-
-import group_theory.finiteness
-import ring_theory.algebra_tower
-import ring_theory.ideal.quotient
-import ring_theory.noetherian
+import Mathbin.GroupTheory.Finiteness
+import Mathbin.RingTheory.AlgebraTower
+import Mathbin.RingTheory.Ideal.Quotient
+import Mathbin.RingTheory.Noetherian
 
 /-!
 # Finiteness conditions in commutative algebra
@@ -25,925 +24,896 @@ In this file we define several notions of finiteness that are common in commutat
 
 -/
 
-open function (surjective)
-open_locale big_operators polynomial
 
-section module_and_algebra
+open Function (Surjective)
 
-variables (R A B M N : Type*)
+open_locale BigOperators Polynomial
+
+section ModuleAndAlgebra
+
+variable (R A B M N : Type _)
 
 /-- A module over a semiring is `finite` if it is finitely generated as a module. -/
-class module.finite [semiring R] [add_comm_monoid M] [module R M] :
-  Prop := (out : (⊤ : submodule R M).fg)
+class Module.Finite [Semiringₓ R] [AddCommMonoidₓ M] [Module R M] : Prop where
+  out : (⊤ : Submodule R M).Fg
 
 /-- An algebra over a commutative semiring is of `finite_type` if it is finitely generated
 over the base ring as algebra. -/
-class algebra.finite_type [comm_semiring R] [semiring A] [algebra R A] : Prop :=
-(out : (⊤ : subalgebra R A).fg)
+class Algebra.FiniteType [CommSemiringₓ R] [Semiringₓ A] [Algebra R A] : Prop where
+  out : (⊤ : Subalgebra R A).Fg
 
 /-- An algebra over a commutative semiring is `finite_presentation` if it is the quotient of a
 polynomial ring in `n` variables by a finitely generated ideal. -/
-def algebra.finite_presentation [comm_semiring R] [semiring A] [algebra R A] : Prop :=
-∃ (n : ℕ) (f : mv_polynomial (fin n) R →ₐ[R] A),
-  surjective f ∧ f.to_ring_hom.ker.fg
+def Algebra.FinitePresentation [CommSemiringₓ R] [Semiringₓ A] [Algebra R A] : Prop :=
+  ∃ (n : ℕ)(f : MvPolynomial (Finₓ n) R →ₐ[R] A), Surjective f ∧ f.toRingHom.ker.Fg
 
-namespace module
+namespace Module
 
-variables [semiring R] [add_comm_monoid M] [module R M] [add_comm_monoid N] [module R N]
+variable [Semiringₓ R] [AddCommMonoidₓ M] [Module R M] [AddCommMonoidₓ N] [Module R N]
 
-lemma finite_def {R M} [semiring R] [add_comm_monoid M] [module R M] :
-  finite R M ↔ (⊤ : submodule R M).fg := ⟨λ h, h.1, λ h, ⟨h⟩⟩
+theorem finite_def {R M} [Semiringₓ R] [AddCommMonoidₓ M] [Module R M] : Finite R M ↔ (⊤ : Submodule R M).Fg :=
+  ⟨fun h => h.1, fun h => ⟨h⟩⟩
 
-@[priority 100] -- see Note [lower instance priority]
-instance is_noetherian.finite [is_noetherian R M] : finite R M :=
-⟨is_noetherian.noetherian ⊤⟩
+-- see Note [lower instance priority]
+instance (priority := 100) IsNoetherian.finite [IsNoetherian R M] : Finite R M :=
+  ⟨IsNoetherian.noetherian ⊤⟩
 
-namespace finite
-open _root_.submodule set
+namespace Finite
 
-lemma iff_add_monoid_fg {M : Type*} [add_comm_monoid M] : module.finite ℕ M ↔ add_monoid.fg M :=
-⟨λ h, add_monoid.fg_def.2 $ (fg_iff_add_submonoid_fg ⊤).1 (finite_def.1 h),
-  λ h, finite_def.2 $ (fg_iff_add_submonoid_fg ⊤).2 (add_monoid.fg_def.1 h)⟩
+open _Root_.Submodule Set
 
-lemma iff_add_group_fg {G : Type*} [add_comm_group G] : module.finite ℤ G ↔ add_group.fg G :=
-⟨λ h, add_group.fg_def.2 $ (fg_iff_add_subgroup_fg ⊤).1 (finite_def.1 h),
-  λ h, finite_def.2 $ (fg_iff_add_subgroup_fg ⊤).2 (add_group.fg_def.1 h)⟩
+theorem iff_add_monoid_fg {M : Type _} [AddCommMonoidₓ M] : Module.Finite ℕ M ↔ AddMonoidₓ.Fg M :=
+  ⟨fun h => AddMonoidₓ.fg_def.2 <| (fg_iff_add_submonoid_fg ⊤).1 (finite_def.1 h), fun h =>
+    finite_def.2 <| (fg_iff_add_submonoid_fg ⊤).2 (AddMonoidₓ.fg_def.1 h)⟩
 
-variables {R M N}
+theorem iff_add_group_fg {G : Type _} [AddCommGroupₓ G] : Module.Finite ℤ G ↔ AddGroupₓ.Fg G :=
+  ⟨fun h => AddGroupₓ.fg_def.2 <| (fg_iff_add_subgroup_fg ⊤).1 (finite_def.1 h), fun h =>
+    finite_def.2 <| (fg_iff_add_subgroup_fg ⊤).2 (AddGroupₓ.fg_def.1 h)⟩
 
-lemma exists_fin [finite R M] : ∃ (n : ℕ) (s : fin n → M), span R (range s) = ⊤ :=
-submodule.fg_iff_exists_fin_generating_family.mp out
+variable {R M N}
 
-lemma of_surjective [hM : finite R M] (f : M →ₗ[R] N) (hf : surjective f) :
-  finite R N :=
-⟨begin
-  rw [← linear_map.range_eq_top.2 hf, ← submodule.map_top],
-  exact hM.1.map f
-end⟩
+theorem exists_fin [Finite R M] : ∃ (n : ℕ)(s : Finₓ n → M), span R (Range s) = ⊤ :=
+  Submodule.fg_iff_exists_fin_generating_family.mp out
 
-lemma of_injective [is_noetherian R N] (f : M →ₗ[R] N)
-  (hf : function.injective f) : finite R M :=
-⟨fg_of_injective f hf⟩
+theorem of_surjective [hM : Finite R M] (f : M →ₗ[R] N) (hf : Surjective f) : Finite R N :=
+  ⟨by
+    rw [← LinearMap.range_eq_top.2 hf, ← Submodule.map_top]
+    exact hM.1.map f⟩
 
-variables (R)
+theorem of_injective [IsNoetherian R N] (f : M →ₗ[R] N) (hf : Function.Injective f) : Finite R M :=
+  ⟨fg_of_injective f hf⟩
 
-instance self : finite R R :=
-⟨⟨{1}, by simpa only [finset.coe_singleton] using ideal.span_singleton_one⟩⟩
+variable (R)
+
+instance self : Finite R R :=
+  ⟨⟨{1}, by
+      simpa only [Finset.coe_singleton] using Ideal.span_singleton_one⟩⟩
 
 variable (M)
 
-lemma of_restrict_scalars_finite (R A M : Type*) [comm_semiring R] [semiring A] [add_comm_monoid M]
-  [module R M] [module A M] [algebra R A] [is_scalar_tower R A M] [hM : finite R M] :
-  finite A M :=
-begin
-  rw [finite_def, fg_def] at hM ⊢,
-  obtain ⟨S, hSfin, hSgen⟩ := hM,
-  refine ⟨S, hSfin, eq_top_iff.2 _⟩,
-  have := submodule.span_le_restrict_scalars R A S,
-  rw hSgen at this,
+theorem of_restrict_scalars_finite (R A M : Type _) [CommSemiringₓ R] [Semiringₓ A] [AddCommMonoidₓ M] [Module R M]
+    [Module A M] [Algebra R A] [IsScalarTower R A M] [hM : Finite R M] : Finite A M := by
+  rw [finite_def, fg_def] at hM⊢
+  obtain ⟨S, hSfin, hSgen⟩ := hM
+  refine' ⟨S, hSfin, eq_top_iff.2 _⟩
+  have := Submodule.span_le_restrict_scalars R A S
+  rw [hSgen] at this
   exact this
-end
 
-variables {R M}
+variable {R M}
 
-instance prod [hM : finite R M] [hN : finite R N] : finite R (M × N) :=
-⟨begin
-  rw ← submodule.prod_top,
-  exact submodule.fg_prod hM.1 hN.1
-end⟩
+instance prod [hM : Finite R M] [hN : Finite R N] : Finite R (M × N) :=
+  ⟨by
+    rw [← Submodule.prod_top]
+    exact Submodule.fg_prod hM.1 hN.1⟩
 
-instance pi {ι : Type*} {M : ι → Type*} [fintype ι] [Π i, add_comm_monoid (M i)]
-  [Π i, module R (M i)] [h : ∀ i, finite R (M i)] : finite R (Π i, M i) :=
-⟨begin
-  rw ← submodule.pi_top,
-  exact submodule.fg_pi (λ i, (h i).1),
-end⟩
+instance pi {ι : Type _} {M : ι → Type _} [Fintype ι] [∀ i, AddCommMonoidₓ (M i)] [∀ i, Module R (M i)]
+    [h : ∀ i, Finite R (M i)] : Finite R (∀ i, M i) :=
+  ⟨by
+    rw [← Submodule.pi_top]
+    exact Submodule.fg_pi fun i => (h i).1⟩
 
-lemma equiv [hM : finite R M] (e : M ≃ₗ[R] N) : finite R N :=
-of_surjective (e : M →ₗ[R] N) e.surjective
+theorem equiv [hM : Finite R M] (e : M ≃ₗ[R] N) : Finite R N :=
+  of_surjective (e : M →ₗ[R] N) e.Surjective
 
-section algebra
+section Algebra
 
-lemma trans {R : Type*} (A B : Type*) [comm_semiring R] [comm_semiring A] [algebra R A]
-  [semiring B] [algebra R B] [algebra A B] [is_scalar_tower R A B] :
-  ∀ [finite R A] [finite A B], finite R B
-| ⟨⟨s, hs⟩⟩ ⟨⟨t, ht⟩⟩ := ⟨submodule.fg_def.2
-  ⟨set.image2 (•) (↑s : set A) (↑t : set B),
-    set.finite.image2 _ s.finite_to_set t.finite_to_set,
-    by rw [set.image2_smul, submodule.span_smul hs (↑t : set B),
-      ht, submodule.restrict_scalars_top]⟩⟩
+theorem trans {R : Type _} (A B : Type _) [CommSemiringₓ R] [CommSemiringₓ A] [Algebra R A] [Semiringₓ B] [Algebra R B]
+    [Algebra A B] [IsScalarTower R A B] : ∀ [Finite R A] [Finite A B], Finite R B
+  | ⟨⟨s, hs⟩⟩, ⟨⟨t, ht⟩⟩ =>
+    ⟨Submodule.fg_def.2
+        ⟨Set.Image2 (· • ·) (↑s : Set A) (↑t : Set B), Set.Finite.image2 _ s.finite_to_set t.finite_to_set, by
+          rw [Set.image2_smul, Submodule.span_smul hs (↑t : Set B), ht, Submodule.restrict_scalars_top]⟩⟩
 
-@[priority 100] -- see Note [lower instance priority]
-instance finite_type {R : Type*} (A : Type*) [comm_semiring R] [comm_semiring A]
-  [algebra R A] [hRA : finite R A] : algebra.finite_type R A :=
-⟨subalgebra.fg_of_submodule_fg hRA.1⟩
+-- see Note [lower instance priority]
+instance (priority := 100) finite_type {R : Type _} (A : Type _) [CommSemiringₓ R] [CommSemiringₓ A] [Algebra R A]
+    [hRA : Finite R A] : Algebra.FiniteType R A :=
+  ⟨Subalgebra.fg_of_submodule_fg hRA.1⟩
 
-end algebra
+end Algebra
 
-end finite
+end Finite
 
-end module
+end Module
 
-namespace algebra
+namespace Algebra
 
-variables [comm_ring R] [comm_ring A] [algebra R A] [comm_ring B] [algebra R B]
-variables [add_comm_group M] [module R M]
-variables [add_comm_group N] [module R N]
+variable [CommRingₓ R] [CommRingₓ A] [Algebra R A] [CommRingₓ B] [Algebra R B]
 
-namespace finite_type
+variable [AddCommGroupₓ M] [Module R M]
 
-lemma self : finite_type R R := ⟨⟨{1}, subsingleton.elim _ _⟩⟩
+variable [AddCommGroupₓ N] [Module R N]
+
+namespace FiniteType
+
+theorem self : FiniteType R R :=
+  ⟨⟨{1}, Subsingleton.elimₓ _ _⟩⟩
 
 section
-open_locale classical
 
-protected lemma mv_polynomial (ι : Type*) [fintype ι] : finite_type R (mv_polynomial ι R) :=
-⟨⟨finset.univ.image mv_polynomial.X, begin
-  rw eq_top_iff, refine λ p, mv_polynomial.induction_on' p
-    (λ u x, finsupp.induction u (subalgebra.algebra_map_mem _ x)
-      (λ i n f hif hn ih, _))
-    (λ p q ihp ihq, subalgebra.add_mem _ ihp ihq),
-  rw [add_comm, mv_polynomial.monomial_add_single],
-  exact subalgebra.mul_mem _ ih
-    (subalgebra.pow_mem _ (subset_adjoin $ finset.mem_image_of_mem _ $ finset.mem_univ _) _)
-end⟩⟩
+open_locale Classical
+
+protected theorem mv_polynomial (ι : Type _) [Fintype ι] : FiniteType R (MvPolynomial ι R) :=
+  ⟨⟨Finset.univ.Image MvPolynomial.x, by
+      rw [eq_top_iff]
+      refine' fun p =>
+        MvPolynomial.induction_on' p
+          (fun u x => Finsupp.induction u (Subalgebra.algebra_map_mem _ x) fun i n f hif hn ih => _) fun p q ihp ihq =>
+          Subalgebra.add_mem _ ihp ihq
+      rw [add_commₓ, MvPolynomial.monomial_add_single]
+      exact
+        Subalgebra.mul_mem _ ih
+          (Subalgebra.pow_mem _ (subset_adjoin <| Finset.mem_image_of_mem _ <| Finset.mem_univ _) _)⟩⟩
+
 end
 
-lemma of_restrict_scalars_finite_type [algebra A B] [is_scalar_tower R A B] [hB : finite_type R B] :
-  finite_type A B :=
-begin
-  obtain ⟨S, hS⟩ := hB.out,
-  refine ⟨⟨S, eq_top_iff.2 (λ b, _)⟩⟩,
-  have le : adjoin R (S : set B) ≤ subalgebra.restrict_scalars R (adjoin A S),
-  { apply (algebra.adjoin_le _ : _ ≤ (subalgebra.restrict_scalars R (adjoin A ↑S))),
-    simp only [subalgebra.coe_restrict_scalars],
-    exact algebra.subset_adjoin, },
-  exact le (eq_top_iff.1 hS b),
-end
+theorem of_restrict_scalars_finite_type [Algebra A B] [IsScalarTower R A B] [hB : FiniteType R B] : FiniteType A B := by
+  obtain ⟨S, hS⟩ := hB.out
+  refine' ⟨⟨S, eq_top_iff.2 fun b => _⟩⟩
+  have le : adjoin R (S : Set B) ≤ Subalgebra.restrictScalars R (adjoin A S) := by
+    apply (Algebra.adjoin_le _ : _ ≤ Subalgebra.restrictScalars R (adjoin A ↑S))
+    simp only [Subalgebra.coe_restrict_scalars]
+    exact Algebra.subset_adjoin
+  exact le (eq_top_iff.1 hS b)
 
-variables {R A B}
+variable {R A B}
 
-lemma of_surjective (hRA : finite_type R A) (f : A →ₐ[R] B) (hf : surjective f) :
-  finite_type R B :=
-⟨begin
-  convert subalgebra.fg_map _ f hRA.1,
-  simpa only [map_top f, @eq_comm _ ⊤, eq_top_iff, alg_hom.mem_range] using hf
-end⟩
+theorem of_surjective (hRA : FiniteType R A) (f : A →ₐ[R] B) (hf : Surjective f) : FiniteType R B :=
+  ⟨by
+    convert Subalgebra.fg_map _ f hRA.1
+    simpa only [map_top f, @eq_comm _ ⊤, eq_top_iff, AlgHom.mem_range] using hf⟩
 
-lemma equiv (hRA : finite_type R A) (e : A ≃ₐ[R] B) : finite_type R B :=
-hRA.of_surjective e e.surjective
+theorem equiv (hRA : FiniteType R A) (e : A ≃ₐ[R] B) : FiniteType R B :=
+  hRA.ofSurjective e e.Surjective
 
-lemma trans [algebra A B] [is_scalar_tower R A B] (hRA : finite_type R A) (hAB : finite_type A B) :
-  finite_type R B :=
-⟨fg_trans' hRA.1 hAB.1⟩
+theorem trans [Algebra A B] [IsScalarTower R A B] (hRA : FiniteType R A) (hAB : FiniteType A B) : FiniteType R B :=
+  ⟨fg_trans' hRA.1 hAB.1⟩
 
 /-- An algebra is finitely generated if and only if it is a quotient
 of a polynomial ring whose variables are indexed by a finset. -/
-lemma iff_quotient_mv_polynomial : (finite_type R A) ↔ ∃ (s : finset A)
-  (f : (mv_polynomial {x // x ∈ s} R) →ₐ[R] A), (surjective f) :=
-begin
-  split,
-  { rintro ⟨s, hs⟩,
-    use [s, mv_polynomial.aeval coe],
-    intro x,
-    have hrw : (↑s : set A) = (λ (x : A), x ∈ s.val) := rfl,
-    rw [← set.mem_range, ← alg_hom.coe_range, ← adjoin_eq_range, ← hrw, hs],
-    exact set.mem_univ x },
-  { rintro ⟨s, ⟨f, hsur⟩⟩,
-    exact finite_type.of_surjective (finite_type.mv_polynomial R {x // x ∈ s}) f hsur }
-end
+theorem iff_quotient_mv_polynomial :
+    FiniteType R A ↔ ∃ (s : Finset A)(f : MvPolynomial { x // x ∈ s } R →ₐ[R] A), Surjective f := by
+  constructor
+  · rintro ⟨s, hs⟩
+    use s, MvPolynomial.aeval coe
+    intro x
+    have hrw : (↑s : Set A) = fun x : A => x ∈ s.val := rfl
+    rw [← Set.mem_range, ← AlgHom.coe_range, ← adjoin_eq_range, ← hrw, hs]
+    exact Set.mem_univ x
+    
+  · rintro ⟨s, ⟨f, hsur⟩⟩
+    exact finite_type.of_surjective (finite_type.mv_polynomial R { x // x ∈ s }) f hsur
+    
 
 /-- An algebra is finitely generated if and only if it is a quotient
 of a polynomial ring whose variables are indexed by a fintype. -/
-lemma iff_quotient_mv_polynomial' : (finite_type R A) ↔ ∃ (ι : Type u_2) (_ : fintype ι)
-  (f : (mv_polynomial ι R) →ₐ[R] A), (surjective f) :=
-begin
-  split,
-  { rw iff_quotient_mv_polynomial,
-    rintro ⟨s, ⟨f, hsur⟩⟩,
-    use [{x // x ∈ s}, by apply_instance, f, hsur] },
-  { rintro ⟨ι, ⟨hfintype, ⟨f, hsur⟩⟩⟩,
-    letI : fintype ι := hfintype,
-    exact finite_type.of_surjective (finite_type.mv_polynomial R ι) f hsur }
-end
+theorem iff_quotient_mv_polynomial' :
+    FiniteType R A ↔ ∃ (ι : Type u_2)(_ : Fintype ι)(f : MvPolynomial ι R →ₐ[R] A), Surjective f := by
+  constructor
+  · rw [iff_quotient_mv_polynomial]
+    rintro ⟨s, ⟨f, hsur⟩⟩
+    use { x // x ∈ s }, by
+      infer_instance, f, hsur
+    
+  · rintro ⟨ι, ⟨hfintype, ⟨f, hsur⟩⟩⟩
+    let this' : Fintype ι := hfintype
+    exact finite_type.of_surjective (finite_type.mv_polynomial R ι) f hsur
+    
 
 /-- An algebra is finitely generated if and only if it is a quotient of a polynomial ring in `n`
 variables. -/
-lemma iff_quotient_mv_polynomial'' : (finite_type R A) ↔ ∃ (n : ℕ)
-  (f : (mv_polynomial (fin n) R) →ₐ[R] A), (surjective f) :=
-begin
-  split,
-  { rw iff_quotient_mv_polynomial',
-    rintro ⟨ι, hfintype, ⟨f, hsur⟩⟩,
-    letI := hfintype,
-    obtain ⟨equiv⟩ := @fintype.trunc_equiv_fin ι (classical.dec_eq ι) hfintype,
-    replace equiv := mv_polynomial.rename_equiv R equiv,
-    exact ⟨fintype.card ι, alg_hom.comp f equiv.symm, function.surjective.comp hsur
-      (alg_equiv.symm equiv).surjective⟩ },
-  { rintro ⟨n, ⟨f, hsur⟩⟩,
-    exact finite_type.of_surjective (finite_type.mv_polynomial R (fin n)) f hsur }
-end
+theorem iff_quotient_mv_polynomial'' : FiniteType R A ↔ ∃ (n : ℕ)(f : MvPolynomial (Finₓ n) R →ₐ[R] A), Surjective f :=
+  by
+  constructor
+  · rw [iff_quotient_mv_polynomial']
+    rintro ⟨ι, hfintype, ⟨f, hsur⟩⟩
+    let this' := hfintype
+    obtain ⟨equiv⟩ := @Fintype.truncEquivFin ι (Classical.decEq ι) hfintype
+    replace equiv := MvPolynomial.renameEquiv R Equivₓ
+    exact ⟨Fintype.card ι, AlgHom.comp f Equivₓ.symm, Function.Surjective.comp hsur (AlgEquiv.symm Equivₓ).Surjective⟩
+    
+  · rintro ⟨n, ⟨f, hsur⟩⟩
+    exact finite_type.of_surjective (finite_type.mv_polynomial R (Finₓ n)) f hsur
+    
 
 /-- A finitely presented algebra is of finite type. -/
-lemma of_finite_presentation : finite_presentation R A → finite_type R A :=
-begin
-  rintro ⟨n, f, hf⟩,
-  apply (finite_type.iff_quotient_mv_polynomial'').2,
+theorem of_finite_presentation : FinitePresentation R A → FiniteType R A := by
+  rintro ⟨n, f, hf⟩
+  apply finite_type.iff_quotient_mv_polynomial''.2
   exact ⟨n, f, hf.1⟩
-end
 
-instance prod [hA : finite_type R A] [hB : finite_type R B] : finite_type R (A × B) :=
-⟨begin
-  rw ← subalgebra.prod_top,
-  exact subalgebra.fg_prod hA.1 hB.1
-end⟩
+instance prod [hA : FiniteType R A] [hB : FiniteType R B] : FiniteType R (A × B) :=
+  ⟨by
+    rw [← Subalgebra.prod_top]
+    exact Subalgebra.fg_prod hA.1 hB.1⟩
 
-end finite_type
+end FiniteType
 
-namespace finite_presentation
+namespace FinitePresentation
 
-variables {R A B}
+variable {R A B}
 
 /-- An algebra over a Noetherian ring is finitely generated if and only if it is finitely
 presented. -/
-lemma of_finite_type [is_noetherian_ring R] : finite_type R A ↔ finite_presentation R A :=
-begin
-  refine ⟨λ h, _, algebra.finite_type.of_finite_presentation⟩,
-  obtain ⟨n, f, hf⟩ := algebra.finite_type.iff_quotient_mv_polynomial''.1 h,
-  refine ⟨n, f, hf, _⟩,
-  have hnoet : is_noetherian_ring (mv_polynomial (fin n) R) := by apply_instance,
-  replace hnoet := (is_noetherian_ring_iff.1 hnoet).noetherian,
-  exact hnoet f.to_ring_hom.ker,
-end
+theorem of_finite_type [IsNoetherianRing R] : FiniteType R A ↔ FinitePresentation R A := by
+  refine' ⟨fun h => _, Algebra.FiniteType.of_finite_presentation⟩
+  obtain ⟨n, f, hf⟩ := Algebra.FiniteType.iff_quotient_mv_polynomial''.1 h
+  refine' ⟨n, f, hf, _⟩
+  have hnoet : IsNoetherianRing (MvPolynomial (Finₓ n) R) := by
+    infer_instance
+  replace hnoet := (is_noetherian_ring_iff.1 hnoet).noetherian
+  exact hnoet f.to_ring_hom.ker
 
 /-- If `e : A ≃ₐ[R] B` and `A` is finitely presented, then so is `B`. -/
-lemma equiv (hfp : finite_presentation R A) (e : A ≃ₐ[R] B) : finite_presentation R B :=
-begin
-  obtain ⟨n, f, hf⟩ := hfp,
-  use [n, alg_hom.comp ↑e f],
-  split,
-  { exact function.surjective.comp e.surjective hf.1 },
-  suffices hker : (alg_hom.comp ↑e f).to_ring_hom.ker = f.to_ring_hom.ker,
-  { rw hker, exact hf.2 },
-  { have hco : (alg_hom.comp ↑e f).to_ring_hom = ring_hom.comp ↑e.to_ring_equiv f.to_ring_hom,
-    { have h : (alg_hom.comp ↑e f).to_ring_hom = e.to_alg_hom.to_ring_hom.comp f.to_ring_hom := rfl,
-      have h1 : ↑(e.to_ring_equiv) = (e.to_alg_hom).to_ring_hom := rfl,
-      rw [h, h1] },
-    rw [ring_hom.ker_eq_comap_bot, hco, ← ideal.comap_comap, ← ring_hom.ker_eq_comap_bot,
-      ring_hom.ker_coe_equiv (alg_equiv.to_ring_equiv e), ring_hom.ker_eq_comap_bot] }
-end
+theorem equiv (hfp : FinitePresentation R A) (e : A ≃ₐ[R] B) : FinitePresentation R B := by
+  obtain ⟨n, f, hf⟩ := hfp
+  use n, AlgHom.comp (↑e) f
+  constructor
+  · exact Function.Surjective.comp e.surjective hf.1
+    
+  suffices hker : (AlgHom.comp (↑e) f).toRingHom.ker = f.to_ring_hom.ker
+  · rw [hker]
+    exact hf.2
+    
+  · have hco : (AlgHom.comp (↑e) f).toRingHom = RingHom.comp (↑e.to_ring_equiv) f.to_ring_hom := by
+      have h : (AlgHom.comp (↑e) f).toRingHom = e.to_alg_hom.to_ring_hom.comp f.to_ring_hom := rfl
+      have h1 : ↑e.to_ring_equiv = e.to_alg_hom.toRingHom := rfl
+      rw [h, h1]
+    rw [RingHom.ker_eq_comap_bot, hco, ← Ideal.comap_comap, ← RingHom.ker_eq_comap_bot,
+      RingHom.ker_coe_equiv (AlgEquiv.toRingEquiv e), RingHom.ker_eq_comap_bot]
+    
 
 variable (R)
 
 /-- The ring of polynomials in finitely many variables is finitely presented. -/
-protected lemma mv_polynomial (ι : Type u_2) [fintype ι] :
-  finite_presentation R (mv_polynomial ι R) :=
-begin
-  obtain ⟨equiv⟩ := @fintype.trunc_equiv_fin ι (classical.dec_eq ι) _,
-  replace equiv := mv_polynomial.rename_equiv R equiv,
-  refine ⟨_, alg_equiv.to_alg_hom equiv.symm, _⟩,
-  split,
-  { exact (alg_equiv.symm equiv).surjective },
-  suffices hinj : function.injective equiv.symm.to_alg_hom.to_ring_hom,
-  { rw [(ring_hom.injective_iff_ker_eq_bot _).1 hinj],
-    exact submodule.fg_bot },
-  exact (alg_equiv.symm equiv).injective
-end
+protected theorem mv_polynomial (ι : Type u_2) [Fintype ι] : FinitePresentation R (MvPolynomial ι R) := by
+  obtain ⟨equiv⟩ := @Fintype.truncEquivFin ι (Classical.decEq ι) _
+  replace equiv := MvPolynomial.renameEquiv R Equivₓ
+  refine' ⟨_, AlgEquiv.toAlgHom Equivₓ.symm, _⟩
+  constructor
+  · exact (AlgEquiv.symm Equivₓ).Surjective
+    
+  suffices hinj : Function.Injective equiv.symm.to_alg_hom.to_ring_hom
+  · rw [(RingHom.injective_iff_ker_eq_bot _).1 hinj]
+    exact Submodule.fg_bot
+    
+  exact (AlgEquiv.symm Equivₓ).Injective
 
 /-- `R` is finitely presented as `R`-algebra. -/
-lemma self : finite_presentation R R :=
-equiv (finite_presentation.mv_polynomial R pempty) (mv_polynomial.is_empty_alg_equiv R pempty)
+theorem self : FinitePresentation R R :=
+  equiv (FinitePresentation.mv_polynomial R Pempty) (MvPolynomial.isEmptyAlgEquiv R Pempty)
 
 variable {R}
 
 /-- The quotient of a finitely presented algebra by a finitely generated ideal is finitely
 presented. -/
-protected lemma quotient {I : ideal A} (h : I.fg) (hfp : finite_presentation R A) :
-  finite_presentation R (A ⧸ I) :=
-begin
-  obtain ⟨n, f, hf⟩ := hfp,
-  refine ⟨n, (ideal.quotient.mkₐ R I).comp f, _, _⟩,
-  { exact (ideal.quotient.mkₐ_surjective R I).comp hf.1 },
-  { refine ideal.fg_ker_comp _ _ hf.2 _ hf.1,
-    simp [h] }
-end
+protected theorem quotient {I : Ideal A} (h : I.Fg) (hfp : FinitePresentation R A) : FinitePresentation R (A ⧸ I) := by
+  obtain ⟨n, f, hf⟩ := hfp
+  refine' ⟨n, (Ideal.Quotient.mkₐ R I).comp f, _, _⟩
+  · exact (Ideal.Quotient.mkₐ_surjective R I).comp hf.1
+    
+  · refine' Ideal.fg_ker_comp _ _ hf.2 _ hf.1
+    simp [h]
+    
 
 /-- If `f : A →ₐ[R] B` is surjective with finitely generated kernel and `A` is finitely presented,
 then so is `B`. -/
-lemma of_surjective {f : A →ₐ[R] B} (hf : function.surjective f) (hker : f.to_ring_hom.ker.fg)
-  (hfp : finite_presentation R A) : finite_presentation R B :=
-equiv (hfp.quotient hker) (ideal.quotient_ker_alg_equiv_of_surjective hf)
+theorem of_surjective {f : A →ₐ[R] B} (hf : Function.Surjective f) (hker : f.toRingHom.ker.Fg)
+    (hfp : FinitePresentation R A) : FinitePresentation R B :=
+  equiv (hfp.Quotient hker) (Ideal.quotientKerAlgEquivOfSurjective hf)
 
-lemma iff : finite_presentation R A ↔
-  ∃ n (I : ideal (mv_polynomial (fin n) R)) (e : (_ ⧸ I) ≃ₐ[R] A), I.fg :=
-begin
-  split,
-  { rintros ⟨n, f, hf⟩,
-    exact ⟨n, f.to_ring_hom.ker, ideal.quotient_ker_alg_equiv_of_surjective hf.1, hf.2⟩ },
-  { rintros ⟨n, I, e, hfg⟩,
-    exact equiv ((finite_presentation.mv_polynomial R _).quotient hfg) e }
-end
+theorem iff : FinitePresentation R A ↔ ∃ (n : _)(I : Ideal (MvPolynomial (Finₓ n) R))(e : (_ ⧸ I) ≃ₐ[R] A), I.Fg := by
+  constructor
+  · rintro ⟨n, f, hf⟩
+    exact ⟨n, f.to_ring_hom.ker, Ideal.quotientKerAlgEquivOfSurjective hf.1, hf.2⟩
+    
+  · rintro ⟨n, I, e, hfg⟩
+    exact Equivₓ ((finite_presentation.mv_polynomial R _).Quotient hfg) e
+    
 
 /-- An algebra is finitely presented if and only if it is a quotient of a polynomial ring whose
 variables are indexed by a fintype by a finitely generated ideal. -/
-lemma iff_quotient_mv_polynomial' : finite_presentation R A ↔ ∃ (ι : Type u_2) (_ : fintype ι)
-  (f : mv_polynomial ι R →ₐ[R] A), surjective f ∧ f.to_ring_hom.ker.fg :=
-begin
-  split,
-  { rintro ⟨n, f, hfs, hfk⟩,
-    set ulift_var := mv_polynomial.rename_equiv R equiv.ulift,
-    refine ⟨ulift (fin n), infer_instance, f.comp ulift_var.to_alg_hom,
-      hfs.comp ulift_var.surjective,
-      ideal.fg_ker_comp _ _ _ hfk ulift_var.surjective⟩,
-    convert submodule.fg_bot,
-    exact ring_hom.ker_coe_equiv ulift_var.to_ring_equiv, },
-  { rintro ⟨ι, hfintype, f, hf⟩,
-    haveI : fintype ι := hfintype,
-    obtain ⟨equiv⟩ := @fintype.trunc_equiv_fin ι (classical.dec_eq ι) _,
-    replace equiv := mv_polynomial.rename_equiv R equiv,
-    refine ⟨fintype.card ι, f.comp equiv.symm,
-      hf.1.comp (alg_equiv.symm equiv).surjective,
-      ideal.fg_ker_comp _ f _ hf.2 equiv.symm.surjective⟩,
-    convert submodule.fg_bot,
-    exact ring_hom.ker_coe_equiv (equiv.symm.to_ring_equiv), }
-end
+theorem iff_quotient_mv_polynomial' :
+    FinitePresentation R A ↔
+      ∃ (ι : Type u_2)(_ : Fintype ι)(f : MvPolynomial ι R →ₐ[R] A), Surjective f ∧ f.toRingHom.ker.Fg :=
+  by
+  constructor
+  · rintro ⟨n, f, hfs, hfk⟩
+    set ulift_var := MvPolynomial.renameEquiv R Equivₓ.ulift
+    refine'
+      ⟨ULift (Finₓ n), inferInstance, f.comp ulift_var.to_alg_hom, hfs.comp ulift_var.surjective,
+        Ideal.fg_ker_comp _ _ _ hfk ulift_var.surjective⟩
+    convert Submodule.fg_bot
+    exact RingHom.ker_coe_equiv ulift_var.to_ring_equiv
+    
+  · rintro ⟨ι, hfintype, f, hf⟩
+    have : Fintype ι := hfintype
+    obtain ⟨equiv⟩ := @Fintype.truncEquivFin ι (Classical.decEq ι) _
+    replace equiv := MvPolynomial.renameEquiv R Equivₓ
+    refine'
+      ⟨Fintype.card ι, f.comp Equivₓ.symm, hf.1.comp (AlgEquiv.symm Equivₓ).Surjective,
+        Ideal.fg_ker_comp _ f _ hf.2 equiv.symm.surjective⟩
+    convert Submodule.fg_bot
+    exact RingHom.ker_coe_equiv equiv.symm.to_ring_equiv
+    
 
 /-- If `A` is a finitely presented `R`-algebra, then `mv_polynomial (fin n) A` is finitely presented
 as `R`-algebra. -/
-lemma mv_polynomial_of_finite_presentation (hfp : finite_presentation R A) (ι : Type*)
-  [fintype ι] : finite_presentation R (mv_polynomial ι A) :=
-begin
-  rw iff_quotient_mv_polynomial' at hfp ⊢,
-  classical,
-  obtain ⟨ι', _, f, hf_surj, hf_ker⟩ := hfp,
-  resetI,
-  let g := (mv_polynomial.map_alg_hom f).comp (mv_polynomial.sum_alg_equiv R ι ι').to_alg_hom,
-  refine ⟨ι ⊕ ι', by apply_instance, g,
-    (mv_polynomial.map_surjective f.to_ring_hom hf_surj).comp (alg_equiv.surjective _),
-    ideal.fg_ker_comp _ _ _ _ (alg_equiv.surjective _)⟩,
-  { convert submodule.fg_bot,
-    exact ring_hom.ker_coe_equiv (mv_polynomial.sum_alg_equiv R ι ι').to_ring_equiv },
-  { rw [alg_hom.to_ring_hom_eq_coe, mv_polynomial.map_alg_hom_coe_ring_hom, mv_polynomial.ker_map],
-    exact hf_ker.map mv_polynomial.C, }
-end
+theorem mv_polynomial_of_finite_presentation (hfp : FinitePresentation R A) (ι : Type _) [Fintype ι] :
+    FinitePresentation R (MvPolynomial ι A) := by
+  rw [iff_quotient_mv_polynomial'] at hfp⊢
+  classical
+  obtain ⟨ι', _, f, hf_surj, hf_ker⟩ := hfp
+  skip
+  let g := (MvPolynomial.mapAlgHom f).comp (MvPolynomial.sumAlgEquiv R ι ι').toAlgHom
+  refine'
+    ⟨Sum ι ι', by
+      infer_instance, g, (MvPolynomial.map_surjective f.to_ring_hom hf_surj).comp (AlgEquiv.surjective _),
+      Ideal.fg_ker_comp _ _ _ _ (AlgEquiv.surjective _)⟩
+  · convert Submodule.fg_bot
+    exact RingHom.ker_coe_equiv (MvPolynomial.sumAlgEquiv R ι ι').toRingEquiv
+    
+  · rw [AlgHom.to_ring_hom_eq_coe, MvPolynomial.map_alg_hom_coe_ring_hom, MvPolynomial.ker_map]
+    exact hf_ker.map MvPolynomial.c
+    
 
 /-- If `A` is an `R`-algebra and `S` is an `A`-algebra, both finitely presented, then `S` is
   finitely presented as `R`-algebra. -/
-lemma trans [algebra A B] [is_scalar_tower R A B] (hfpA : finite_presentation R A)
-  (hfpB : finite_presentation A B) : finite_presentation R B :=
-begin
-  obtain ⟨n, I, e, hfg⟩ := iff.1 hfpB,
-  exact equiv ((mv_polynomial_of_finite_presentation hfpA _).quotient hfg) (e.restrict_scalars R)
-end
+theorem trans [Algebra A B] [IsScalarTower R A B] (hfpA : FinitePresentation R A) (hfpB : FinitePresentation A B) :
+    FinitePresentation R B := by
+  obtain ⟨n, I, e, hfg⟩ := Iff.1 hfpB
+  exact Equivₓ ((mv_polynomial_of_finite_presentation hfpA _).Quotient hfg) (e.restrict_scalars R)
 
-end finite_presentation
+end FinitePresentation
 
-end algebra
+end Algebra
 
-end module_and_algebra
+end ModuleAndAlgebra
 
-namespace ring_hom
-variables {A B C : Type*} [comm_ring A] [comm_ring B] [comm_ring C]
+namespace RingHom
+
+variable {A B C : Type _} [CommRingₓ A] [CommRingₓ B] [CommRingₓ C]
 
 /-- A ring morphism `A →+* B` is `finite` if `B` is finitely generated as `A`-module. -/
-def finite (f : A →+* B) : Prop :=
-by letI : algebra A B := f.to_algebra; exact module.finite A B
+def Finite (f : A →+* B) : Prop := by
+  let this' : Algebra A B := f.to_algebra <;> exact Module.Finite A B
 
 /-- A ring morphism `A →+* B` is of `finite_type` if `B` is finitely generated as `A`-algebra. -/
-def finite_type (f : A →+* B) : Prop := @algebra.finite_type A B _ _ f.to_algebra
+def FiniteType (f : A →+* B) : Prop :=
+  @Algebra.FiniteType A B _ _ f.toAlgebra
 
 /-- A ring morphism `A →+* B` is of `finite_presentation` if `B` is finitely presented as
 `A`-algebra. -/
-def finite_presentation (f : A →+* B) : Prop := @algebra.finite_presentation A B _ _ f.to_algebra
+def FinitePresentation (f : A →+* B) : Prop :=
+  @Algebra.FinitePresentation A B _ _ f.toAlgebra
 
-namespace finite
+namespace Finite
 
-variables (A)
+variable (A)
 
-lemma id : finite (ring_hom.id A) := module.finite.self A
+theorem id : Finite (RingHom.id A) :=
+  Module.Finite.self A
 
-variables {A}
+variable {A}
 
-lemma of_surjective (f : A →+* B) (hf : surjective f) : f.finite :=
-begin
-  letI := f.to_algebra,
-  exact module.finite.of_surjective (algebra.of_id A B).to_linear_map hf
-end
+theorem of_surjective (f : A →+* B) (hf : Surjective f) : f.Finite := by
+  let this' := f.to_algebra
+  exact Module.Finite.of_surjective (Algebra.ofId A B).toLinearMap hf
 
-lemma comp {g : B →+* C} {f : A →+* B} (hg : g.finite) (hf : f.finite) : (g.comp f).finite :=
-@module.finite.trans A B C _ _ f.to_algebra _ (g.comp f).to_algebra g.to_algebra
-begin
-  fconstructor,
-  intros a b c,
-  simp only [algebra.smul_def, ring_hom.map_mul, mul_assoc],
-  refl
-end
-hf hg
+theorem comp {g : B →+* C} {f : A →+* B} (hg : g.Finite) (hf : f.Finite) : (g.comp f).Finite :=
+  @Module.Finite.trans A B C _ _ f.toAlgebra _ (g.comp f).toAlgebra g.toAlgebra
+    (by
+      fconstructor
+      intro a b c
+      simp only [Algebra.smul_def, RingHom.map_mul, mul_assoc]
+      rfl)
+    hf hg
 
-lemma finite_type {f : A →+* B} (hf : f.finite) : finite_type f :=
-@module.finite.finite_type _ _ _ _ f.to_algebra hf
+theorem finite_type {f : A →+* B} (hf : f.Finite) : FiniteType f :=
+  @Module.Finite.finite_type _ _ _ _ f.toAlgebra hf
 
-lemma of_comp_finite {f : A →+* B} {g : B →+* C} (h : (g.comp f).finite) : g.finite :=
-begin
-  letI := f.to_algebra,
-  letI := g.to_algebra,
-  letI := (g.comp f).to_algebra,
-  letI : is_scalar_tower A B C := restrict_scalars.is_scalar_tower A B C,
-  letI : module.finite A C := h,
-  exact module.finite.of_restrict_scalars_finite A B C
-end
+theorem of_comp_finite {f : A →+* B} {g : B →+* C} (h : (g.comp f).Finite) : g.Finite := by
+  let this' := f.to_algebra
+  let this' := g.to_algebra
+  let this' := (g.comp f).toAlgebra
+  let this' : IsScalarTower A B C := RestrictScalars.is_scalar_tower A B C
+  let this' : Module.Finite A C := h
+  exact Module.Finite.of_restrict_scalars_finite A B C
 
-end finite
+end Finite
 
-namespace finite_type
+namespace FiniteType
 
-variables (A)
+variable (A)
 
-lemma id : finite_type (ring_hom.id A) := algebra.finite_type.self A
+theorem id : FiniteType (RingHom.id A) :=
+  Algebra.FiniteType.self A
 
-variables {A}
+variable {A}
 
-lemma comp_surjective {f : A →+* B} {g : B →+* C} (hf : f.finite_type) (hg : surjective g) :
-  (g.comp f).finite_type :=
-@algebra.finite_type.of_surjective A B C _ _ f.to_algebra _ (g.comp f).to_algebra hf
-{ to_fun := g, commutes' := λ a, rfl, .. g } hg
+theorem comp_surjective {f : A →+* B} {g : B →+* C} (hf : f.FiniteType) (hg : Surjective g) : (g.comp f).FiniteType :=
+  @Algebra.FiniteType.of_surjective A B C _ _ f.toAlgebra _ (g.comp f).toAlgebra hf
+    { g with toFun := g, commutes' := fun a => rfl } hg
 
-lemma of_surjective (f : A →+* B) (hf : surjective f) : f.finite_type :=
-by { rw ← f.comp_id, exact (id A).comp_surjective hf }
+theorem of_surjective (f : A →+* B) (hf : Surjective f) : f.FiniteType := by
+  rw [← f.comp_id]
+  exact (id A).comp_surjective hf
 
-lemma comp {g : B →+* C} {f : A →+* B} (hg : g.finite_type) (hf : f.finite_type) :
-  (g.comp f).finite_type :=
-@algebra.finite_type.trans A B C _ _ f.to_algebra _ (g.comp f).to_algebra g.to_algebra
-begin
-  fconstructor,
-  intros a b c,
-  simp only [algebra.smul_def, ring_hom.map_mul, mul_assoc],
-  refl
-end
-hf hg
+theorem comp {g : B →+* C} {f : A →+* B} (hg : g.FiniteType) (hf : f.FiniteType) : (g.comp f).FiniteType :=
+  @Algebra.FiniteType.trans A B C _ _ f.toAlgebra _ (g.comp f).toAlgebra g.toAlgebra
+    (by
+      fconstructor
+      intro a b c
+      simp only [Algebra.smul_def, RingHom.map_mul, mul_assoc]
+      rfl)
+    hf hg
 
-lemma of_finite_presentation {f : A →+* B} (hf : f.finite_presentation) : f.finite_type :=
-@algebra.finite_type.of_finite_presentation A B _ _ f.to_algebra hf
+theorem of_finite_presentation {f : A →+* B} (hf : f.FinitePresentation) : f.FiniteType :=
+  @Algebra.FiniteType.of_finite_presentation A B _ _ f.toAlgebra hf
 
-lemma of_comp_finite_type {f : A →+* B} {g : B →+* C} (h : (g.comp f).finite_type) :
-  g.finite_type :=
-begin
-  letI := f.to_algebra,
-  letI := g.to_algebra,
-  letI := (g.comp f).to_algebra,
-  letI : is_scalar_tower A B C := restrict_scalars.is_scalar_tower A B C,
-  letI : algebra.finite_type A C := h,
-  exact algebra.finite_type.of_restrict_scalars_finite_type A B C
-end
+theorem of_comp_finite_type {f : A →+* B} {g : B →+* C} (h : (g.comp f).FiniteType) : g.FiniteType := by
+  let this' := f.to_algebra
+  let this' := g.to_algebra
+  let this' := (g.comp f).toAlgebra
+  let this' : IsScalarTower A B C := RestrictScalars.is_scalar_tower A B C
+  let this' : Algebra.FiniteType A C := h
+  exact Algebra.FiniteType.of_restrict_scalars_finite_type A B C
 
-end finite_type
+end FiniteType
 
-namespace finite_presentation
+namespace FinitePresentation
 
-variables (A)
+variable (A)
 
-lemma id : finite_presentation (ring_hom.id A) := algebra.finite_presentation.self A
+theorem id : FinitePresentation (RingHom.id A) :=
+  Algebra.FinitePresentation.self A
 
-variables {A}
+variable {A}
 
-lemma comp_surjective {f : A →+* B} {g : B →+* C} (hf : f.finite_presentation) (hg : surjective g)
-  (hker : g.ker.fg) :  (g.comp f).finite_presentation :=
-@algebra.finite_presentation.of_surjective A B C _ _ f.to_algebra _ (g.comp f).to_algebra
-{ to_fun := g, commutes' := λ a, rfl, .. g } hg hker hf
+theorem comp_surjective {f : A →+* B} {g : B →+* C} (hf : f.FinitePresentation) (hg : Surjective g) (hker : g.ker.Fg) :
+    (g.comp f).FinitePresentation :=
+  @Algebra.FinitePresentation.of_surjective A B C _ _ f.toAlgebra _ (g.comp f).toAlgebra
+    { g with toFun := g, commutes' := fun a => rfl } hg hker hf
 
-lemma of_surjective (f : A →+* B) (hf : surjective f) (hker : f.ker.fg) : f.finite_presentation :=
-by { rw ← f.comp_id, exact (id A).comp_surjective hf hker}
+theorem of_surjective (f : A →+* B) (hf : Surjective f) (hker : f.ker.Fg) : f.FinitePresentation := by
+  rw [← f.comp_id]
+  exact (id A).comp_surjective hf hker
 
-lemma of_finite_type [is_noetherian_ring A] {f : A →+* B} : f.finite_type ↔ f.finite_presentation :=
-@algebra.finite_presentation.of_finite_type A B _ _ f.to_algebra _
+theorem of_finite_type [IsNoetherianRing A] {f : A →+* B} : f.FiniteType ↔ f.FinitePresentation :=
+  @Algebra.FinitePresentation.of_finite_type A B _ _ f.toAlgebra _
 
-lemma comp {g : B →+* C} {f : A →+* B} (hg : g.finite_presentation) (hf : f.finite_presentation) :
-  (g.comp f).finite_presentation :=
-@algebra.finite_presentation.trans A B C _ _ f.to_algebra _ (g.comp f).to_algebra g.to_algebra
-{ smul_assoc := λ a b c, begin
-    simp only [algebra.smul_def, ring_hom.map_mul, mul_assoc],
-    refl
-  end }
-hf hg
+theorem comp {g : B →+* C} {f : A →+* B} (hg : g.FinitePresentation) (hf : f.FinitePresentation) :
+    (g.comp f).FinitePresentation :=
+  @Algebra.FinitePresentation.trans A B C _ _ f.toAlgebra _ (g.comp f).toAlgebra g.toAlgebra
+    { smul_assoc := fun a b c => by
+        simp only [Algebra.smul_def, RingHom.map_mul, mul_assoc]
+        rfl }
+    hf hg
 
-end finite_presentation
+end FinitePresentation
 
-end ring_hom
+end RingHom
 
-namespace alg_hom
+namespace AlgHom
 
-variables {R A B C : Type*} [comm_ring R]
-variables [comm_ring A] [comm_ring B] [comm_ring C]
-variables [algebra R A] [algebra R B] [algebra R C]
+variable {R A B C : Type _} [CommRingₓ R]
+
+variable [CommRingₓ A] [CommRingₓ B] [CommRingₓ C]
+
+variable [Algebra R A] [Algebra R B] [Algebra R C]
 
 /-- An algebra morphism `A →ₐ[R] B` is finite if it is finite as ring morphism.
 In other words, if `B` is finitely generated as `A`-module. -/
-def finite (f : A →ₐ[R] B) : Prop := f.to_ring_hom.finite
+def Finite (f : A →ₐ[R] B) : Prop :=
+  f.toRingHom.Finite
 
 /-- An algebra morphism `A →ₐ[R] B` is of `finite_type` if it is of finite type as ring morphism.
 In other words, if `B` is finitely generated as `A`-algebra. -/
-def finite_type (f : A →ₐ[R] B) : Prop := f.to_ring_hom.finite_type
+def FiniteType (f : A →ₐ[R] B) : Prop :=
+  f.toRingHom.FiniteType
 
 /-- An algebra morphism `A →ₐ[R] B` is of `finite_presentation` if it is of finite presentation as
 ring morphism. In other words, if `B` is finitely presented as `A`-algebra. -/
-def finite_presentation (f : A →ₐ[R] B) : Prop := f.to_ring_hom.finite_presentation
+def FinitePresentation (f : A →ₐ[R] B) : Prop :=
+  f.toRingHom.FinitePresentation
 
-namespace finite
+namespace Finite
 
-variables (R A)
+variable (R A)
 
-lemma id : finite (alg_hom.id R A) := ring_hom.finite.id A
+theorem id : Finite (AlgHom.id R A) :=
+  RingHom.Finite.id A
 
-variables {R A}
+variable {R A}
 
-lemma comp {g : B →ₐ[R] C} {f : A →ₐ[R] B} (hg : g.finite) (hf : f.finite) : (g.comp f).finite :=
-ring_hom.finite.comp hg hf
+theorem comp {g : B →ₐ[R] C} {f : A →ₐ[R] B} (hg : g.Finite) (hf : f.Finite) : (g.comp f).Finite :=
+  RingHom.Finite.comp hg hf
 
-lemma of_surjective (f : A →ₐ[R] B) (hf : surjective f) : f.finite :=
-ring_hom.finite.of_surjective f hf
+theorem of_surjective (f : A →ₐ[R] B) (hf : Surjective f) : f.Finite :=
+  RingHom.Finite.of_surjective f hf
 
-lemma finite_type {f : A →ₐ[R] B} (hf : f.finite) : finite_type f :=
-ring_hom.finite.finite_type hf
+theorem finite_type {f : A →ₐ[R] B} (hf : f.Finite) : FiniteType f :=
+  RingHom.Finite.finite_type hf
 
-lemma of_comp_finite {f : A →ₐ[R] B} {g : B →ₐ[R] C} (h : (g.comp f).finite) : g.finite :=
-ring_hom.finite.of_comp_finite h
+theorem of_comp_finite {f : A →ₐ[R] B} {g : B →ₐ[R] C} (h : (g.comp f).Finite) : g.Finite :=
+  RingHom.Finite.of_comp_finite h
 
-end finite
+end Finite
 
-namespace finite_type
+namespace FiniteType
 
-variables (R A)
+variable (R A)
 
-lemma id : finite_type (alg_hom.id R A) := ring_hom.finite_type.id A
+theorem id : FiniteType (AlgHom.id R A) :=
+  RingHom.FiniteType.id A
 
-variables {R A}
+variable {R A}
 
-lemma comp {g : B →ₐ[R] C} {f : A →ₐ[R] B} (hg : g.finite_type) (hf : f.finite_type) :
-  (g.comp f).finite_type :=
-ring_hom.finite_type.comp hg hf
+theorem comp {g : B →ₐ[R] C} {f : A →ₐ[R] B} (hg : g.FiniteType) (hf : f.FiniteType) : (g.comp f).FiniteType :=
+  RingHom.FiniteType.comp hg hf
 
-lemma comp_surjective {f : A →ₐ[R] B} {g : B →ₐ[R] C} (hf : f.finite_type) (hg : surjective g) :
-  (g.comp f).finite_type :=
-ring_hom.finite_type.comp_surjective hf hg
+theorem comp_surjective {f : A →ₐ[R] B} {g : B →ₐ[R] C} (hf : f.FiniteType) (hg : Surjective g) :
+    (g.comp f).FiniteType :=
+  RingHom.FiniteType.comp_surjective hf hg
 
-lemma of_surjective (f : A →ₐ[R] B) (hf : surjective f) : f.finite_type :=
-ring_hom.finite_type.of_surjective f hf
+theorem of_surjective (f : A →ₐ[R] B) (hf : Surjective f) : f.FiniteType :=
+  RingHom.FiniteType.of_surjective f hf
 
-lemma of_finite_presentation {f : A →ₐ[R] B} (hf : f.finite_presentation) : f.finite_type :=
-ring_hom.finite_type.of_finite_presentation hf
+theorem of_finite_presentation {f : A →ₐ[R] B} (hf : f.FinitePresentation) : f.FiniteType :=
+  RingHom.FiniteType.of_finite_presentation hf
 
-lemma of_comp_finite_type {f : A →ₐ[R] B} {g : B →ₐ[R] C} (h : (g.comp f).finite_type) :
-g.finite_type :=
-ring_hom.finite_type.of_comp_finite_type h
+theorem of_comp_finite_type {f : A →ₐ[R] B} {g : B →ₐ[R] C} (h : (g.comp f).FiniteType) : g.FiniteType :=
+  RingHom.FiniteType.of_comp_finite_type h
 
-end finite_type
+end FiniteType
 
-namespace finite_presentation
+namespace FinitePresentation
 
-variables (R A)
+variable (R A)
 
-lemma id : finite_presentation (alg_hom.id R A) := ring_hom.finite_presentation.id A
+theorem id : FinitePresentation (AlgHom.id R A) :=
+  RingHom.FinitePresentation.id A
 
-variables {R A}
+variable {R A}
 
-lemma comp {g : B →ₐ[R] C} {f : A →ₐ[R] B} (hg : g.finite_presentation)
-  (hf : f.finite_presentation) : (g.comp f).finite_presentation :=
-ring_hom.finite_presentation.comp hg hf
+theorem comp {g : B →ₐ[R] C} {f : A →ₐ[R] B} (hg : g.FinitePresentation) (hf : f.FinitePresentation) :
+    (g.comp f).FinitePresentation :=
+  RingHom.FinitePresentation.comp hg hf
 
-lemma comp_surjective {f : A →ₐ[R] B} {g : B →ₐ[R] C} (hf : f.finite_presentation)
-  (hg : surjective g) (hker : g.to_ring_hom.ker.fg) : (g.comp f).finite_presentation :=
-ring_hom.finite_presentation.comp_surjective hf hg hker
+theorem comp_surjective {f : A →ₐ[R] B} {g : B →ₐ[R] C} (hf : f.FinitePresentation) (hg : Surjective g)
+    (hker : g.toRingHom.ker.Fg) : (g.comp f).FinitePresentation :=
+  RingHom.FinitePresentation.comp_surjective hf hg hker
 
-lemma of_surjective (f : A →ₐ[R] B) (hf : surjective f) (hker : f.to_ring_hom.ker.fg) :
-  f.finite_presentation :=
-ring_hom.finite_presentation.of_surjective f hf hker
+theorem of_surjective (f : A →ₐ[R] B) (hf : Surjective f) (hker : f.toRingHom.ker.Fg) : f.FinitePresentation :=
+  RingHom.FinitePresentation.of_surjective f hf hker
 
-lemma of_finite_type [is_noetherian_ring A] {f : A →ₐ[R] B} :
-  f.finite_type ↔ f.finite_presentation :=
-ring_hom.finite_presentation.of_finite_type
+theorem of_finite_type [IsNoetherianRing A] {f : A →ₐ[R] B} : f.FiniteType ↔ f.FinitePresentation :=
+  RingHom.FinitePresentation.of_finite_type
 
-end finite_presentation
+end FinitePresentation
 
-end alg_hom
+end AlgHom
 
-section monoid_algebra
+section MonoidAlgebra
 
-variables {R : Type*} {M : Type*}
+variable {R : Type _} {M : Type _}
 
-namespace add_monoid_algebra
+namespace AddMonoidAlgebra
 
-open algebra add_submonoid submodule
+open Algebra AddSubmonoid Submodule
 
-section span
+section Span
 
-section semiring
+section Semiringₓ
 
-variables [comm_semiring R] [add_monoid M]
+variable [CommSemiringₓ R] [AddMonoidₓ M]
 
 /-- An element of `add_monoid_algebra R M` is in the subalgebra generated by its support. -/
-lemma mem_adjoin_support (f : add_monoid_algebra R M) : f ∈ adjoin R (of' R M '' f.support) :=
-begin
-  suffices : span R (of' R M '' f.support) ≤ (adjoin R (of' R M '' f.support)).to_submodule,
-  { exact this (mem_span_support f) },
-  rw submodule.span_le,
+theorem mem_adjoin_support (f : AddMonoidAlgebra R M) : f ∈ adjoin R (of' R M '' f.support) := by
+  suffices span R (of' R M '' f.support) ≤ (adjoin R (of' R M '' f.support)).toSubmodule by
+    exact this (mem_span_support f)
+  rw [Submodule.span_le]
   exact subset_adjoin
-end
 
 /-- If a set `S` generates, as algebra, `add_monoid_algebra R M`, then the set of supports of
 elements of `S` generates `add_monoid_algebra R M`. -/
-lemma support_gen_of_gen {S : set (add_monoid_algebra R M)} (hS : algebra.adjoin R S = ⊤) :
-  algebra.adjoin R (⋃ f ∈ S, (of' R M '' (f.support : set M))) = ⊤ :=
-begin
-  refine le_antisymm le_top _,
-  rw [← hS, adjoin_le_iff],
-  intros f hf,
-  have hincl : of' R M '' f.support ⊆
-    ⋃ (g : add_monoid_algebra R M) (H : g ∈ S), of' R M '' g.support,
-  { intros s hs,
-    exact set.mem_Union₂.2 ⟨f, ⟨hf, hs⟩⟩ },
+theorem support_gen_of_gen {S : Set (AddMonoidAlgebra R M)} (hS : Algebra.adjoin R S = ⊤) :
+    Algebra.adjoin R (⋃ f ∈ S, of' R M '' (f.support : Set M)) = ⊤ := by
+  refine' le_antisymmₓ le_top _
+  rw [← hS, adjoin_le_iff]
+  intro f hf
+  have hincl : of' R M '' f.support ⊆ ⋃ (g : AddMonoidAlgebra R M) (H : g ∈ S), of' R M '' g.support := by
+    intro s hs
+    exact Set.mem_Union₂.2 ⟨f, ⟨hf, hs⟩⟩
   exact adjoin_mono hincl (mem_adjoin_support f)
-end
 
 /-- If a set `S` generates, as algebra, `add_monoid_algebra R M`, then the image of the union of
 the supports of elements of `S` generates `add_monoid_algebra R M`. -/
-lemma support_gen_of_gen' {S : set (add_monoid_algebra R M)} (hS : algebra.adjoin R S = ⊤) :
-  algebra.adjoin R (of' R M '' (⋃ f ∈ S, (f.support : set M))) = ⊤ :=
-begin
-  suffices : of' R M '' (⋃ f ∈ S, (f.support : set M)) = ⋃ f ∈ S, (of' R M '' (f.support : set M)),
-  { rw this,
-    exact support_gen_of_gen hS },
-  simp only [set.image_Union]
-end
+theorem support_gen_of_gen' {S : Set (AddMonoidAlgebra R M)} (hS : Algebra.adjoin R S = ⊤) :
+    Algebra.adjoin R (of' R M '' ⋃ f ∈ S, (f.support : Set M)) = ⊤ := by
+  suffices (of' R M '' ⋃ f ∈ S, (f.support : Set M)) = ⋃ f ∈ S, of' R M '' (f.support : Set M) by
+    rw [this]
+    exact support_gen_of_gen hS
+  simp only [Set.image_Union]
 
-end semiring
+end Semiringₓ
 
-section ring
+section Ringₓ
 
-variables [comm_ring R] [add_comm_monoid M]
+variable [CommRingₓ R] [AddCommMonoidₓ M]
 
 /-- If `add_monoid_algebra R M` is of finite type, there there is a `G : finset M` such that its
 image generates, as algera, `add_monoid_algebra R M`. -/
-lemma exists_finset_adjoin_eq_top [h : finite_type R (add_monoid_algebra R M)] :
-  ∃ G : finset M, algebra.adjoin R (of' R M '' G) = ⊤ :=
-begin
-  unfreezingI { obtain ⟨S, hS⟩ := h },
-  letI : decidable_eq M := classical.dec_eq M,
-  use finset.bUnion S (λ f, f.support),
-  have : (finset.bUnion S (λ f, f.support) : set M) = ⋃ f ∈ S, (f.support : set M),
-  { simp only [finset.set_bUnion_coe, finset.coe_bUnion] },
-  rw [this],
+theorem exists_finset_adjoin_eq_top [h : FiniteType R (AddMonoidAlgebra R M)] :
+    ∃ G : Finset M, Algebra.adjoin R (of' R M '' G) = ⊤ := by
+  obtain ⟨S, hS⟩ := h
+  let this' : DecidableEq M := Classical.decEq M
+  use Finset.bUnion S fun f => f.support
+  have : (Finset.bUnion S fun f => f.support : Set M) = ⋃ f ∈ S, (f.support : Set M) := by
+    simp only [Finset.set_bUnion_coe, Finset.coe_bUnion]
+  rw [this]
   exact support_gen_of_gen' hS
-end
 
 /-- The image of an element `m : M` in `add_monoid_algebra R M` belongs the submodule generated by
 `S : set M` if and only if `m ∈ S`. -/
-lemma of'_mem_span [nontrivial R] {m : M} {S : set M} :
-  of' R M m ∈ span R (of' R M '' S) ↔ m ∈ S :=
-begin
-  refine ⟨λ h, _, λ h, submodule.subset_span $ set.mem_image_of_mem (of R M) h⟩,
-  rw [of', ← finsupp.supported_eq_span_single, finsupp.mem_supported,
-    finsupp.support_single_ne_zero (@one_ne_zero R _ (by apply_instance))] at h,
+theorem of'_mem_span [Nontrivial R] {m : M} {S : Set M} : of' R M m ∈ span R (of' R M '' S) ↔ m ∈ S := by
+  refine' ⟨fun h => _, fun h => Submodule.subset_span <| Set.mem_image_of_mem (of R M) h⟩
+  rw [of', ← Finsupp.supported_eq_span_single, Finsupp.mem_supported,
+    Finsupp.support_single_ne_zero
+      (@one_ne_zero R _
+        (by
+          infer_instance))] at
+    h
   simpa using h
-end
 
-/--If the image of an element `m : M` in `add_monoid_algebra R M` belongs the submodule generated by
+/-- If the image of an element `m : M` in `add_monoid_algebra R M` belongs the submodule generated by
 the closure of some `S : set M` then `m ∈ closure S`. -/
-lemma mem_closure_of_mem_span_closure [nontrivial R] {m : M} {S : set M}
-  (h : of' R M m ∈ span R (submonoid.closure (of' R M '' S) : set (add_monoid_algebra R M))) :
-  m ∈ closure S :=
-begin
-  suffices : multiplicative.of_add m ∈ submonoid.closure (multiplicative.to_add ⁻¹' S),
-  { simpa [← to_submonoid_closure] },
-  rw [set.image_congr' (show ∀ x, of' R M x = of R M x, from λ x, of'_eq_of x),
-    ← monoid_hom.map_mclosure] at h,
+theorem mem_closure_of_mem_span_closure [Nontrivial R] {m : M} {S : Set M}
+    (h : of' R M m ∈ span R (Submonoid.closure (of' R M '' S) : Set (AddMonoidAlgebra R M))) : m ∈ closure S := by
+  suffices Multiplicative.ofAdd m ∈ Submonoid.closure (Multiplicative.toAdd ⁻¹' S) by
+    simpa [← to_submonoid_closure]
+  rw [Set.image_congr' (show ∀ x, of' R M x = of R M x from fun x => of'_eq_of x), ← MonoidHom.map_mclosure] at h
   simpa using of'_mem_span.1 h
-end
 
-end ring
+end Ringₓ
 
-end span
+end Span
 
-variables [add_comm_monoid M]
+variable [AddCommMonoidₓ M]
 
 /-- If a set `S` generates an additive monoid `M`, then the image of `M` generates, as algebra,
 `add_monoid_algebra R M`. -/
-lemma mv_polynomial_aeval_of_surjective_of_closure [comm_semiring R] {S : set M}
-  (hS : closure S = ⊤) : function.surjective (mv_polynomial.aeval
-  (λ (s : S), of' R M ↑s) : mv_polynomial S R → add_monoid_algebra R M) :=
-begin
-  refine λ f, induction_on f (λ m, _) _ _,
-  { have : m ∈ closure S := hS.symm ▸ mem_top _,
-    refine closure_induction this (λ m hm, _) _ _,
-    { exact ⟨mv_polynomial.X ⟨m, hm⟩, mv_polynomial.aeval_X _ _⟩ },
-    { exact ⟨1, alg_hom.map_one _⟩ },
-    { rintro m₁ m₂ ⟨P₁, hP₁⟩ ⟨P₂, hP₂⟩,
-      exact ⟨P₁ * P₂, by rw [alg_hom.map_mul, hP₁, hP₂, of_apply, of_apply, of_apply,
-        single_mul_single, one_mul]; refl⟩ } },
-  { rintro f g ⟨P, rfl⟩ ⟨Q, rfl⟩,
-    exact ⟨P + Q, alg_hom.map_add _ _ _⟩ },
-  { rintro r f ⟨P, rfl⟩,
-    exact ⟨r • P, alg_hom.map_smul _ _ _⟩ }
-end
+theorem mv_polynomial_aeval_of_surjective_of_closure [CommSemiringₓ R] {S : Set M} (hS : closure S = ⊤) :
+    Function.Surjective (MvPolynomial.aeval fun s : S => of' R M ↑s : MvPolynomial S R → AddMonoidAlgebra R M) := by
+  refine' fun f => induction_on f (fun m => _) _ _
+  · have : m ∈ closure S := hS.symm ▸ mem_top _
+    refine' closure_induction this (fun m hm => _) _ _
+    · exact ⟨MvPolynomial.x ⟨m, hm⟩, MvPolynomial.aeval_X _ _⟩
+      
+    · exact ⟨1, AlgHom.map_one _⟩
+      
+    · rintro m₁ m₂ ⟨P₁, hP₁⟩ ⟨P₂, hP₂⟩
+      exact
+        ⟨P₁ * P₂, by
+          rw [AlgHom.map_mul, hP₁, hP₂, of_apply, of_apply, of_apply, single_mul_single, one_mulₓ] <;> rfl⟩
+      
+    
+  · rintro f g ⟨P, rfl⟩ ⟨Q, rfl⟩
+    exact ⟨P + Q, AlgHom.map_add _ _ _⟩
+    
+  · rintro r f ⟨P, rfl⟩
+    exact ⟨r • P, AlgHom.map_smul _ _ _⟩
+    
 
-variables (R M)
+variable (R M)
 
 /-- If an additive monoid `M` is finitely generated then `add_monoid_algebra R M` is of finite
 type. -/
-instance finite_type_of_fg [comm_ring R] [h : add_monoid.fg M] :
-  finite_type R (add_monoid_algebra R M) :=
-begin
-  obtain ⟨S, hS⟩ := h.out,
-  exact (finite_type.mv_polynomial R (S : set M)).of_surjective (mv_polynomial.aeval
-    (λ (s : (S : set M)), of' R M ↑s)) (mv_polynomial_aeval_of_surjective_of_closure hS)
-end
+instance finite_type_of_fg [CommRingₓ R] [h : AddMonoidₓ.Fg M] : FiniteType R (AddMonoidAlgebra R M) := by
+  obtain ⟨S, hS⟩ := h.out
+  exact
+    (finite_type.mv_polynomial R (S : Set M)).ofSurjective (MvPolynomial.aeval fun s : (S : Set M) => of' R M ↑s)
+      (mv_polynomial_aeval_of_surjective_of_closure hS)
 
-variables {R M}
+variable {R M}
 
 /-- An additive monoid `M` is finitely generated if and only if `add_monoid_algebra R M` is of
 finite type. -/
-lemma finite_type_iff_fg [comm_ring R] [nontrivial R] :
-  finite_type R (add_monoid_algebra R M) ↔ add_monoid.fg M :=
-begin
-  refine ⟨λ h, _, λ h, @add_monoid_algebra.finite_type_of_fg _ _ _ _ h⟩,
-  obtain ⟨S, hS⟩ := @exists_finset_adjoin_eq_top R M _ _ h,
-  refine add_monoid.fg_def.2 ⟨S, (eq_top_iff' _).2 (λ m, _)⟩,
-  have hm : of' R M m ∈ (adjoin R (of' R M '' ↑S)).to_submodule,
-  { simp only [hS, top_to_submodule, submodule.mem_top], },
-  rw [adjoin_eq_span] at hm,
+theorem finite_type_iff_fg [CommRingₓ R] [Nontrivial R] : FiniteType R (AddMonoidAlgebra R M) ↔ AddMonoidₓ.Fg M := by
+  refine' ⟨fun h => _, fun h => @AddMonoidAlgebra.finite_type_of_fg _ _ _ _ h⟩
+  obtain ⟨S, hS⟩ := @exists_finset_adjoin_eq_top R M _ _ h
+  refine' AddMonoidₓ.fg_def.2 ⟨S, (eq_top_iff' _).2 fun m => _⟩
+  have hm : of' R M m ∈ (adjoin R (of' R M '' ↑S)).toSubmodule := by
+    simp only [hS, top_to_submodule, Submodule.mem_top]
+  rw [adjoin_eq_span] at hm
   exact mem_closure_of_mem_span_closure hm
-end
 
 /-- If `add_monoid_algebra R M` is of finite type then `M` is finitely generated. -/
-lemma fg_of_finite_type [comm_ring R] [nontrivial R] [h : finite_type R (add_monoid_algebra R M)] :
-  add_monoid.fg M :=
-finite_type_iff_fg.1 h
+theorem fg_of_finite_type [CommRingₓ R] [Nontrivial R] [h : FiniteType R (AddMonoidAlgebra R M)] : AddMonoidₓ.Fg M :=
+  finite_type_iff_fg.1 h
 
 /-- An additive group `G` is finitely generated if and only if `add_monoid_algebra R G` is of
 finite type. -/
-lemma finite_type_iff_group_fg {G : Type*} [add_comm_group G] [comm_ring R] [nontrivial R] :
-  finite_type R (add_monoid_algebra R G) ↔ add_group.fg G :=
-by simpa [add_group.fg_iff_add_monoid.fg] using finite_type_iff_fg
+theorem finite_type_iff_group_fg {G : Type _} [AddCommGroupₓ G] [CommRingₓ R] [Nontrivial R] :
+    FiniteType R (AddMonoidAlgebra R G) ↔ AddGroupₓ.Fg G := by
+  simpa [AddGroupₓ.FgIffAddMonoid.fg] using finite_type_iff_fg
 
-end add_monoid_algebra
+end AddMonoidAlgebra
 
-namespace monoid_algebra
+namespace MonoidAlgebra
 
-open algebra submonoid submodule
+open Algebra Submonoid Submodule
 
-section span
+section Span
 
-section semiring
+section Semiringₓ
 
-variables [comm_semiring R] [monoid M]
+variable [CommSemiringₓ R] [Monoidₓ M]
 
 /-- An element of `monoid_algebra R M` is in the subalgebra generated by its support. -/
-lemma mem_adjoint_support (f : monoid_algebra R M) : f ∈ adjoin R (of R M '' f.support) :=
-begin
-  suffices : span R (of R M '' f.support) ≤ (adjoin R (of R M '' f.support)).to_submodule,
-  { exact this (mem_span_support f) },
-  rw submodule.span_le,
+theorem mem_adjoint_support (f : MonoidAlgebra R M) : f ∈ adjoin R (of R M '' f.support) := by
+  suffices span R (of R M '' f.support) ≤ (adjoin R (of R M '' f.support)).toSubmodule by
+    exact this (mem_span_support f)
+  rw [Submodule.span_le]
   exact subset_adjoin
-end
 
 /-- If a set `S` generates, as algebra, `monoid_algebra R M`, then the set of supports of elements
 of `S` generates `monoid_algebra R M`. -/
-lemma support_gen_of_gen {S : set (monoid_algebra R M)} (hS : algebra.adjoin R S = ⊤) :
-  algebra.adjoin R (⋃ f ∈ S, (of R M '' (f.support : set M))) = ⊤ :=
-begin
-  refine le_antisymm le_top _,
-  rw [← hS, adjoin_le_iff],
-  intros f hf,
-  have hincl : (of R M) '' f.support ⊆
-    ⋃ (g : monoid_algebra R M) (H : g ∈ S), of R M '' g.support,
-  { intros s hs,
-    exact set.mem_Union₂.2 ⟨f, ⟨hf, hs⟩⟩ },
+theorem support_gen_of_gen {S : Set (MonoidAlgebra R M)} (hS : Algebra.adjoin R S = ⊤) :
+    Algebra.adjoin R (⋃ f ∈ S, of R M '' (f.support : Set M)) = ⊤ := by
+  refine' le_antisymmₓ le_top _
+  rw [← hS, adjoin_le_iff]
+  intro f hf
+  have hincl : of R M '' f.support ⊆ ⋃ (g : MonoidAlgebra R M) (H : g ∈ S), of R M '' g.support := by
+    intro s hs
+    exact Set.mem_Union₂.2 ⟨f, ⟨hf, hs⟩⟩
   exact adjoin_mono hincl (mem_adjoint_support f)
-end
 
 /-- If a set `S` generates, as algebra, `monoid_algebra R M`, then the image of the union of the
 supports of elements of `S` generates `monoid_algebra R M`. -/
-lemma support_gen_of_gen' {S : set (monoid_algebra R M)} (hS : algebra.adjoin R S = ⊤) :
-  algebra.adjoin R (of R M '' (⋃ f ∈ S, (f.support : set M))) = ⊤ :=
-begin
-  suffices : of R M '' (⋃ f ∈ S, (f.support : set M)) = ⋃ f ∈ S, (of R M '' (f.support : set M)),
-  { rw this,
-    exact support_gen_of_gen hS },
-  simp only [set.image_Union]
-end
+theorem support_gen_of_gen' {S : Set (MonoidAlgebra R M)} (hS : Algebra.adjoin R S = ⊤) :
+    Algebra.adjoin R (of R M '' ⋃ f ∈ S, (f.support : Set M)) = ⊤ := by
+  suffices (of R M '' ⋃ f ∈ S, (f.support : Set M)) = ⋃ f ∈ S, of R M '' (f.support : Set M) by
+    rw [this]
+    exact support_gen_of_gen hS
+  simp only [Set.image_Union]
 
-end semiring
+end Semiringₓ
 
-section ring
+section Ringₓ
 
-variables [comm_ring R] [comm_monoid M]
+variable [CommRingₓ R] [CommMonoidₓ M]
 
 /-- If `monoid_algebra R M` is of finite type, there there is a `G : finset M` such that its image
 generates, as algera, `monoid_algebra R M`. -/
-lemma exists_finset_adjoin_eq_top [h :finite_type R (monoid_algebra R M)] :
-  ∃ G : finset M, algebra.adjoin R (of R M '' G) = ⊤ :=
-begin
-  unfreezingI { obtain ⟨S, hS⟩ := h },
-  letI : decidable_eq M := classical.dec_eq M,
-  use finset.bUnion S (λ f, f.support),
-  have : (finset.bUnion S (λ f, f.support) : set M) = ⋃ f ∈ S, (f.support : set M),
-  { simp only [finset.set_bUnion_coe, finset.coe_bUnion] },
-  rw [this],
+theorem exists_finset_adjoin_eq_top [h : FiniteType R (MonoidAlgebra R M)] :
+    ∃ G : Finset M, Algebra.adjoin R (of R M '' G) = ⊤ := by
+  obtain ⟨S, hS⟩ := h
+  let this' : DecidableEq M := Classical.decEq M
+  use Finset.bUnion S fun f => f.support
+  have : (Finset.bUnion S fun f => f.support : Set M) = ⋃ f ∈ S, (f.support : Set M) := by
+    simp only [Finset.set_bUnion_coe, Finset.coe_bUnion]
+  rw [this]
   exact support_gen_of_gen' hS
-end
 
 /-- The image of an element `m : M` in `monoid_algebra R M` belongs the submodule generated by
 `S : set M` if and only if `m ∈ S`. -/
-lemma of_mem_span_of_iff [nontrivial R] {m : M} {S : set M} :
-  of R M m ∈ span R (of R M '' S) ↔ m ∈ S :=
-begin
-  refine ⟨λ h, _, λ h, submodule.subset_span $ set.mem_image_of_mem (of R M) h⟩,
-  rw [of, monoid_hom.coe_mk, ← finsupp.supported_eq_span_single, finsupp.mem_supported,
-    finsupp.support_single_ne_zero (@one_ne_zero R _ (by apply_instance))] at h,
+theorem of_mem_span_of_iff [Nontrivial R] {m : M} {S : Set M} : of R M m ∈ span R (of R M '' S) ↔ m ∈ S := by
+  refine' ⟨fun h => _, fun h => Submodule.subset_span <| Set.mem_image_of_mem (of R M) h⟩
+  rw [of, MonoidHom.coe_mk, ← Finsupp.supported_eq_span_single, Finsupp.mem_supported,
+    Finsupp.support_single_ne_zero
+      (@one_ne_zero R _
+        (by
+          infer_instance))] at
+    h
   simpa using h
-end
 
-/--If the image of an element `m : M` in `monoid_algebra R M` belongs the submodule generated by the
+/-- If the image of an element `m : M` in `monoid_algebra R M` belongs the submodule generated by the
 closure of some `S : set M` then `m ∈ closure S`. -/
-lemma mem_closure_of_mem_span_closure [nontrivial R] {m : M} {S : set M}
-  (h : of R M m ∈ span R (submonoid.closure (of R M '' S) : set (monoid_algebra R M))) :
-  m ∈ closure S :=
-begin
-  rw ← monoid_hom.map_mclosure at h,
+theorem mem_closure_of_mem_span_closure [Nontrivial R] {m : M} {S : Set M}
+    (h : of R M m ∈ span R (Submonoid.closure (of R M '' S) : Set (MonoidAlgebra R M))) : m ∈ closure S := by
+  rw [← MonoidHom.map_mclosure] at h
   simpa using of_mem_span_of_iff.1 h
-end
 
-end ring
+end Ringₓ
 
-end span
+end Span
 
-variables [comm_monoid M]
+variable [CommMonoidₓ M]
 
 /-- If a set `S` generates a monoid `M`, then the image of `M` generates, as algebra,
 `monoid_algebra R M`. -/
-lemma mv_polynomial_aeval_of_surjective_of_closure [comm_semiring R] {S : set M}
-  (hS : closure S = ⊤) : function.surjective (mv_polynomial.aeval
-  (λ (s : S), of R M ↑s) : mv_polynomial S R → monoid_algebra R M) :=
-begin
-  refine λ f, induction_on f (λ m, _) _ _,
-  { have : m ∈ closure S := hS.symm ▸ mem_top _,
-    refine closure_induction this (λ m hm, _) _ _,
-    { exact ⟨mv_polynomial.X ⟨m, hm⟩, mv_polynomial.aeval_X _ _⟩ },
-    { exact ⟨1, alg_hom.map_one _⟩ },
-    { rintro m₁ m₂ ⟨P₁, hP₁⟩ ⟨P₂, hP₂⟩,
-      exact ⟨P₁ * P₂, by rw [alg_hom.map_mul, hP₁, hP₂, of_apply, of_apply, of_apply,
-        single_mul_single, one_mul]⟩ } },
-  { rintro f g ⟨P, rfl⟩ ⟨Q, rfl⟩,
-    exact ⟨P + Q, alg_hom.map_add _ _ _⟩ },
-  { rintro r f ⟨P, rfl⟩,
-    exact ⟨r • P, alg_hom.map_smul _ _ _⟩ }
-end
+theorem mv_polynomial_aeval_of_surjective_of_closure [CommSemiringₓ R] {S : Set M} (hS : closure S = ⊤) :
+    Function.Surjective (MvPolynomial.aeval fun s : S => of R M ↑s : MvPolynomial S R → MonoidAlgebra R M) := by
+  refine' fun f => induction_on f (fun m => _) _ _
+  · have : m ∈ closure S := hS.symm ▸ mem_top _
+    refine' closure_induction this (fun m hm => _) _ _
+    · exact ⟨MvPolynomial.x ⟨m, hm⟩, MvPolynomial.aeval_X _ _⟩
+      
+    · exact ⟨1, AlgHom.map_one _⟩
+      
+    · rintro m₁ m₂ ⟨P₁, hP₁⟩ ⟨P₂, hP₂⟩
+      exact
+        ⟨P₁ * P₂, by
+          rw [AlgHom.map_mul, hP₁, hP₂, of_apply, of_apply, of_apply, single_mul_single, one_mulₓ]⟩
+      
+    
+  · rintro f g ⟨P, rfl⟩ ⟨Q, rfl⟩
+    exact ⟨P + Q, AlgHom.map_add _ _ _⟩
+    
+  · rintro r f ⟨P, rfl⟩
+    exact ⟨r • P, AlgHom.map_smul _ _ _⟩
+    
 
 /-- If a monoid `M` is finitely generated then `monoid_algebra R M` is of finite type. -/
-instance finite_type_of_fg [comm_ring R] [monoid.fg M] : finite_type R (monoid_algebra R M) :=
-(add_monoid_algebra.finite_type_of_fg R (additive M)).equiv (to_additive_alg_equiv R M).symm
+instance finite_type_of_fg [CommRingₓ R] [Monoidₓ.Fg M] : FiniteType R (MonoidAlgebra R M) :=
+  (AddMonoidAlgebra.finite_type_of_fg R (Additive M)).Equiv (toAdditiveAlgEquiv R M).symm
 
 /-- A monoid `M` is finitely generated if and only if `monoid_algebra R M` is of finite type. -/
-lemma finite_type_iff_fg [comm_ring R] [nontrivial R] :
-  finite_type R (monoid_algebra R M) ↔ monoid.fg M :=
-⟨λ h, monoid.fg_iff_add_fg.2 $ add_monoid_algebra.finite_type_iff_fg.1 $ h.equiv $
-  to_additive_alg_equiv R M, λ h, @monoid_algebra.finite_type_of_fg _ _ _ _ h⟩
+theorem finite_type_iff_fg [CommRingₓ R] [Nontrivial R] : FiniteType R (MonoidAlgebra R M) ↔ Monoidₓ.Fg M :=
+  ⟨fun h => Monoidₓ.fg_iff_add_fg.2 <| AddMonoidAlgebra.finite_type_iff_fg.1 <| h.Equiv <| toAdditiveAlgEquiv R M,
+    fun h => @MonoidAlgebra.finite_type_of_fg _ _ _ _ h⟩
 
 /-- If `monoid_algebra R M` is of finite type then `M` is finitely generated. -/
-lemma fg_of_finite_type [comm_ring R] [nontrivial R] [h : finite_type R (monoid_algebra R M)] :
-  monoid.fg M :=
-finite_type_iff_fg.1 h
+theorem fg_of_finite_type [CommRingₓ R] [Nontrivial R] [h : FiniteType R (MonoidAlgebra R M)] : Monoidₓ.Fg M :=
+  finite_type_iff_fg.1 h
 
 /-- A group `G` is finitely generated if and only if `add_monoid_algebra R G` is of finite type. -/
-lemma finite_type_iff_group_fg {G : Type*} [comm_group G] [comm_ring R] [nontrivial R] :
-  finite_type R (monoid_algebra R G) ↔ group.fg G :=
-by simpa [group.fg_iff_monoid.fg] using finite_type_iff_fg
+theorem finite_type_iff_group_fg {G : Type _} [CommGroupₓ G] [CommRingₓ R] [Nontrivial R] :
+    FiniteType R (MonoidAlgebra R G) ↔ Groupₓ.Fg G := by
+  simpa [Groupₓ.FgIffMonoid.fg] using finite_type_iff_fg
 
-end monoid_algebra
+end MonoidAlgebra
 
-end monoid_algebra
+end MonoidAlgebra
 
-section vasconcelos
-variables {R : Type*} [comm_ring R] {M : Type*} [add_comm_group M] [module R M] (f : M →ₗ[R] M)
+section Vasconcelos
 
-noncomputable theory
+variable {R : Type _} [CommRingₓ R] {M : Type _} [AddCommGroupₓ M] [Module R M] (f : M →ₗ[R] M)
+
+noncomputable section
 
 /-- The structure of a module `M` over a ring `R` as a module over `polynomial R` when given a
 choice of how `X` acts by choosing a linear map `f : M →ₗ[R] M` -/
 @[simps]
-def module_polynomial_of_endo : module R[X] M :=
-module.comp_hom M (polynomial.aeval f).to_ring_hom
+def modulePolynomialOfEndo : Module R[X] M :=
+  Module.compHom M (Polynomial.aeval f).toRingHom
 
 include f
-lemma module_polynomial_of_endo.is_scalar_tower : @is_scalar_tower R R[X] M _
-  (by { letI := module_polynomial_of_endo f, apply_instance }) _ :=
-begin
-  letI := module_polynomial_of_endo f,
-  constructor,
-  intros x y z,
-  simp,
-end
 
-open polynomial module
+theorem modulePolynomialOfEndo.is_scalar_tower :
+    @IsScalarTower R R[X] M _
+      (by
+        let this' := modulePolynomialOfEndo f
+        infer_instance)
+      _ :=
+  by
+  let this' := modulePolynomialOfEndo f
+  constructor
+  intro x y z
+  simp
+
+open Polynomial Module
 
 /-- A theorem/proof by Vasconcelos, given a finite module `M` over a commutative ring, any
 surjective endomorphism of `M` is also injective. Based on,
@@ -951,30 +921,32 @@ https://math.stackexchange.com/a/239419/31917,
 https://www.ams.org/journals/tran/1969-138-00/S0002-9947-1969-0238839-5/.
 This is similar to `is_noetherian.injective_of_surjective_endomorphism` but only applies in the
 commutative case, but does not use a Noetherian hypothesis. -/
-theorem module.finite.injective_of_surjective_endomorphism [hfg : finite R M]
-  (f_surj : function.surjective f) : function.injective f :=
-begin
-  letI := module_polynomial_of_endo f,
-  haveI : is_scalar_tower R R[X] M := module_polynomial_of_endo.is_scalar_tower f,
-  have hfgpoly : finite R[X] M, from finite.of_restrict_scalars_finite R _ _,
-  have X_mul : ∀ o, (X : R[X]) • o = f o,
-  { intro,
-    simp, },
-  have : (⊤ : submodule R[X] M) ≤ ideal.span {X} • ⊤,
-  { intros a ha,
-    obtain ⟨y, rfl⟩ := f_surj a,
-    rw [← X_mul y],
-    exact submodule.smul_mem_smul (ideal.mem_span_singleton.mpr (dvd_refl _)) trivial, },
-  obtain ⟨F, hFa, hFb⟩ := submodule.exists_sub_one_mem_and_smul_eq_zero_of_fg_of_le_smul _
-    (⊤ : submodule R[X] M) (finite_def.mp hfgpoly) this,
-  rw [← linear_map.ker_eq_bot, linear_map.ker_eq_bot'],
-  intros m hm,
-  rw ideal.mem_span_singleton' at hFa,
-  obtain ⟨G, hG⟩ := hFa,
-  suffices : (F - 1) • m = 0,
-  { have Fmzero := hFb m (by simp),
-    rwa [← sub_add_cancel F 1, add_smul, one_smul, this, zero_add] at Fmzero, },
-  rw [← hG, mul_smul, X_mul m, hm, smul_zero],
-end
+theorem Module.Finite.injective_of_surjective_endomorphism [hfg : Finite R M] (f_surj : Function.Surjective f) :
+    Function.Injective f := by
+  let this' := modulePolynomialOfEndo f
+  have : IsScalarTower R R[X] M := modulePolynomialOfEndo.is_scalar_tower f
+  have hfgpoly : finite R[X] M := finite.of_restrict_scalars_finite R _ _
+  have X_mul : ∀ o, (X : R[X]) • o = f o := by
+    intro
+    simp
+  have : (⊤ : Submodule R[X] M) ≤ Ideal.span {X} • ⊤ := by
+    intro a ha
+    obtain ⟨y, rfl⟩ := f_surj a
+    rw [← X_mul y]
+    exact Submodule.smul_mem_smul (ideal.mem_span_singleton.mpr (dvd_refl _)) trivialₓ
+  obtain ⟨F, hFa, hFb⟩ :=
+    Submodule.exists_sub_one_mem_and_smul_eq_zero_of_fg_of_le_smul _ (⊤ : Submodule R[X] M) (finite_def.mp hfgpoly) this
+  rw [← LinearMap.ker_eq_bot, LinearMap.ker_eq_bot']
+  intro m hm
+  rw [Ideal.mem_span_singleton'] at hFa
+  obtain ⟨G, hG⟩ := hFa
+  suffices (F - 1) • m = 0 by
+    have Fmzero :=
+      hFb m
+        (by
+          simp )
+    rwa [← sub_add_cancel F 1, add_smul, one_smul, this, zero_addₓ] at Fmzero
+  rw [← hG, mul_smul, X_mul m, hm, smul_zero]
 
-end vasconcelos
+end Vasconcelos
+

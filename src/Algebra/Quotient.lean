@@ -3,8 +3,7 @@ Copyright (c) 2021 Anne Baanen. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Anne Baanen
 -/
-
-import data.set_like.basic
+import Mathbin.Data.SetLike.Basic
 
 /-!
 # Algebraic quotients
@@ -33,7 +32,8 @@ quotient, group quotient, quotient group, module quotient, quotient module, ring
 ideal quotient, quotient ring
 -/
 
-universes u v
+
+universe u v
 
 /-- `has_quotient A B` is a notation typeclass that allows us to write `A ⧸ b` for `b : B`.
 This allows the usual notation for quotients of algebraic structures,
@@ -41,17 +41,19 @@ such as groups, modules and rings.
 
 `A` is a parameter, despite being unused in the definition below, so it appears in the notation.
 -/
-class has_quotient (A : out_param $ Type u) (B : Type v) :=
-(quotient' : B → Type (max u v))
+class HasQuotient (A : outParam <| Type u) (B : Type v) where
+  Quotient' : B → Type max u v
 
 /-- `has_quotient.quotient A b` (with notation `A ⧸ b`) is the quotient of the type `A` by `b`.
 
 This differs from `has_quotient.quotient'` in that the `A` argument is explicit, which is necessary
 to make Lean show the notation in the goal state.
 -/
-@[reducible, nolint has_inhabited_instance] -- Will be provided by e.g. `ideal.quotient.inhabited`
-def has_quotient.quotient (A : out_param $ Type u) {B : Type v} [has_quotient A B] (b : B) :
-  Type (max u v) :=
-has_quotient.quotient' b
+-- Will be provided by e.g. `ideal.quotient.inhabited`
+@[reducible, nolint has_inhabited_instance]
+def HasQuotient.Quotient (A : outParam <| Type u) {B : Type v} [HasQuotient A B] (b : B) : Type max u v :=
+  HasQuotient.Quotient' b
 
-notation G ` ⧸ `:35 H:34 := has_quotient.quotient G H
+-- mathport name: «expr ⧸ »
+notation:35 G " ⧸ " H:34 => HasQuotient.Quotient G H
+

@@ -3,8 +3,8 @@ Copyright (c) 2022 Yaël Dillies. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yaël Dillies
 -/
-import order.hom.basic
-import order.bounded_order
+import Mathbin.Order.Hom.Basic
+import Mathbin.Order.BoundedOrder
 
 /-!
 # Bounded order homomorphisms
@@ -27,408 +27,547 @@ be satisfied by itself and all stricter types.
 * `bounded_order_hom_class`
 -/
 
-open function order_dual
 
-variables {F α β γ δ : Type*}
+open Function OrderDual
+
+variable {F α β γ δ : Type _}
 
 /-- The type of `⊤`-preserving functions from `α` to `β`. -/
-structure top_hom (α β : Type*) [has_top α] [has_top β] :=
-(to_fun   : α → β)
-(map_top' : to_fun ⊤ = ⊤)
+structure TopHom (α β : Type _) [HasTop α] [HasTop β] where
+  toFun : α → β
+  map_top' : to_fun ⊤ = ⊤
 
 /-- The type of `⊥`-preserving functions from `α` to `β`. -/
-structure bot_hom (α β : Type*) [has_bot α] [has_bot β] :=
-(to_fun   : α → β)
-(map_bot' : to_fun ⊥ = ⊥)
+structure BotHom (α β : Type _) [HasBot α] [HasBot β] where
+  toFun : α → β
+  map_bot' : to_fun ⊥ = ⊥
 
 /-- The type of bounded order homomorphisms from `α` to `β`. -/
-structure bounded_order_hom (α β : Type*) [preorder α] [preorder β] [bounded_order α]
-  [bounded_order β]
-  extends order_hom α β :=
-(map_top' : to_fun ⊤ = ⊤)
-(map_bot' : to_fun ⊥ = ⊥)
+structure BoundedOrderHom (α β : Type _) [Preorderₓ α] [Preorderₓ β] [BoundedOrder α] [BoundedOrder β] extends
+  OrderHom α β where
+  map_top' : to_fun ⊤ = ⊤
+  map_bot' : to_fun ⊥ = ⊥
 
 /-- `top_hom_class F α β` states that `F` is a type of `⊤`-preserving morphisms.
 
 You should extend this class when you extend `top_hom`. -/
-class top_hom_class (F : Type*) (α β : out_param $ Type*) [has_top α] [has_top β]
-  extends fun_like F α (λ _, β) :=
-(map_top (f : F) : f ⊤ = ⊤)
+class TopHomClass (F : Type _) (α β : outParam <| Type _) [HasTop α] [HasTop β] extends FunLike F α fun _ => β where
+  map_top (f : F) : f ⊤ = ⊤
 
 /-- `bot_hom_class F α β` states that `F` is a type of `⊥`-preserving morphisms.
 
 You should extend this class when you extend `bot_hom`. -/
-class bot_hom_class (F : Type*) (α β : out_param $ Type*) [has_bot α] [has_bot β]
-  extends fun_like F α (λ _, β) :=
-(map_bot (f : F) : f ⊥ = ⊥)
+class BotHomClass (F : Type _) (α β : outParam <| Type _) [HasBot α] [HasBot β] extends FunLike F α fun _ => β where
+  map_bot (f : F) : f ⊥ = ⊥
 
 /-- `bounded_order_hom_class F α β` states that `F` is a type of bounded order morphisms.
 
 You should extend this class when you extend `bounded_order_hom`. -/
-class bounded_order_hom_class (F : Type*) (α β : out_param $ Type*) [preorder α] [preorder β]
-  [bounded_order α] [bounded_order β]
-  extends rel_hom_class F ((≤) : α → α → Prop) ((≤) : β → β → Prop) :=
-(map_top (f : F) : f ⊤ = ⊤)
-(map_bot (f : F) : f ⊥ = ⊥)
+class BoundedOrderHomClass (F : Type _) (α β : outParam <| Type _) [Preorderₓ α] [Preorderₓ β] [BoundedOrder α]
+  [BoundedOrder β] extends RelHomClass F ((· ≤ ·) : α → α → Prop) ((· ≤ ·) : β → β → Prop) where
+  map_top (f : F) : f ⊤ = ⊤
+  map_bot (f : F) : f ⊥ = ⊥
 
-export top_hom_class (map_top) bot_hom_class (map_bot)
+export TopHomClass (map_top)
+
+export BotHomClass (map_bot)
 
 attribute [simp] map_top map_bot
 
-@[priority 100] -- See note [lower instance priority]
-instance bounded_order_hom_class.to_top_hom_class [preorder α] [preorder β]
-  [bounded_order α] [bounded_order β] [bounded_order_hom_class F α β] :
-  top_hom_class F α β :=
-{ .. ‹bounded_order_hom_class F α β› }
+-- See note [lower instance priority]
+instance (priority := 100) BoundedOrderHomClass.toTopHomClass [Preorderₓ α] [Preorderₓ β] [BoundedOrder α]
+    [BoundedOrder β] [BoundedOrderHomClass F α β] : TopHomClass F α β :=
+  { ‹BoundedOrderHomClass F α β› with }
 
-@[priority 100] -- See note [lower instance priority]
-instance bounded_order_hom_class.to_bot_hom_class [preorder α] [preorder β]
-  [bounded_order α] [bounded_order β] [bounded_order_hom_class F α β] :
-  bot_hom_class F α β :=
-{ .. ‹bounded_order_hom_class F α β› }
+-- See note [lower instance priority]
+instance (priority := 100) BoundedOrderHomClass.toBotHomClass [Preorderₓ α] [Preorderₓ β] [BoundedOrder α]
+    [BoundedOrder β] [BoundedOrderHomClass F α β] : BotHomClass F α β :=
+  { ‹BoundedOrderHomClass F α β› with }
 
-@[priority 100] -- See note [lower instance priority]
-instance order_iso.top_hom_class [partial_order α] [partial_order β] [order_top α] [order_top β] :
-  top_hom_class (α ≃o β) α β :=
-{ map_top := λ f, f.map_top, ..rel_iso.rel_hom_class }
+-- See note [lower instance priority]
+instance (priority := 100) OrderIso.topHomClass [PartialOrderₓ α] [PartialOrderₓ β] [OrderTop α] [OrderTop β] :
+    TopHomClass (α ≃o β) α β :=
+  { RelIso.relHomClass with map_top := fun f => f.map_top }
 
-@[priority 100] -- See note [lower instance priority]
-instance order_iso.bot_hom_class [partial_order α] [partial_order β] [order_bot α] [order_bot β] :
-  bot_hom_class (α ≃o β) α β :=
-{ map_bot := λ f, f.map_bot, ..rel_iso.rel_hom_class }
+-- See note [lower instance priority]
+instance (priority := 100) OrderIso.botHomClass [PartialOrderₓ α] [PartialOrderₓ β] [OrderBot α] [OrderBot β] :
+    BotHomClass (α ≃o β) α β :=
+  { RelIso.relHomClass with map_bot := fun f => f.map_bot }
 
-@[priority 100] -- See note [lower instance priority]
-instance order_iso.bounded_order_hom_class [partial_order α] [partial_order β]
-  [bounded_order α] [bounded_order β] :
-  bounded_order_hom_class (α ≃o β) α β :=
-{ ..order_iso.top_hom_class, ..order_iso.bot_hom_class }
+-- See note [lower instance priority]
+instance (priority := 100) OrderIso.boundedOrderHomClass [PartialOrderₓ α] [PartialOrderₓ β] [BoundedOrder α]
+    [BoundedOrder β] : BoundedOrderHomClass (α ≃o β) α β :=
+  { OrderIso.topHomClass, OrderIso.botHomClass with }
 
-instance [has_top α] [has_top β] [top_hom_class F α β] : has_coe_t F (top_hom α β) :=
-⟨λ f, ⟨f, map_top f⟩⟩
+instance [HasTop α] [HasTop β] [TopHomClass F α β] : CoeTₓ F (TopHom α β) :=
+  ⟨fun f => ⟨f, map_top f⟩⟩
 
-instance [has_bot α] [has_bot β] [bot_hom_class F α β] : has_coe_t F (bot_hom α β) :=
-⟨λ f, ⟨f, map_bot f⟩⟩
+instance [HasBot α] [HasBot β] [BotHomClass F α β] : CoeTₓ F (BotHom α β) :=
+  ⟨fun f => ⟨f, map_bot f⟩⟩
 
-instance [preorder α] [preorder β] [bounded_order α] [bounded_order β]
-  [bounded_order_hom_class F α β] : has_coe_t F (bounded_order_hom α β) :=
-⟨λ f, { to_fun := f, map_top' := map_top f, map_bot' := map_bot f, ..(f : α →o β) }⟩
+instance [Preorderₓ α] [Preorderₓ β] [BoundedOrder α] [BoundedOrder β] [BoundedOrderHomClass F α β] :
+    CoeTₓ F (BoundedOrderHom α β) :=
+  ⟨fun f => { (f : α →o β) with toFun := f, map_top' := map_top f, map_bot' := map_bot f }⟩
 
 /-! ### Top homomorphisms -/
 
-namespace top_hom
-variables [has_top α]
 
-section has_top
-variables [has_top β] [has_top γ] [has_top δ]
+namespace TopHom
 
-instance : top_hom_class (top_hom α β) α β :=
-{ coe := top_hom.to_fun,
-  coe_injective' := λ f g h, by cases f; cases g; congr',
-  map_top := top_hom.map_top' }
+variable [HasTop α]
+
+section HasTop
+
+variable [HasTop β] [HasTop γ] [HasTop δ]
+
+instance : TopHomClass (TopHom α β) α β where
+  coe := TopHom.toFun
+  coe_injective' := fun f g h => by
+    cases f <;> cases g <;> congr
+  map_top := TopHom.map_top'
 
 /-- Helper instance for when there's too many metavariables to apply `fun_like.has_coe_to_fun`
 directly. -/
-instance : has_coe_to_fun (top_hom α β) (λ _, α → β) := fun_like.has_coe_to_fun
+instance : CoeFun (TopHom α β) fun _ => α → β :=
+  FunLike.hasCoeToFun
 
-@[simp] lemma to_fun_eq_coe {f : top_hom α β} : f.to_fun = (f : α → β) := rfl
+@[simp]
+theorem to_fun_eq_coe {f : TopHom α β} : f.toFun = (f : α → β) :=
+  rfl
 
-@[ext] lemma ext {f g : top_hom α β} (h : ∀ a, f a = g a) : f = g := fun_like.ext f g h
+@[ext]
+theorem ext {f g : TopHom α β} (h : ∀ a, f a = g a) : f = g :=
+  FunLike.ext f g h
 
 /-- Copy of a `top_hom` with a new `to_fun` equal to the old one. Useful to fix definitional
 equalities. -/
-protected def copy (f : top_hom α β) (f' : α → β) (h : f' = f) : top_hom α β :=
-{ to_fun := f',
-  map_top' := h.symm ▸ f.map_top' }
+protected def copy (f : TopHom α β) (f' : α → β) (h : f' = f) : TopHom α β where
+  toFun := f'
+  map_top' := h.symm ▸ f.map_top'
 
-instance : inhabited (top_hom α β) := ⟨⟨λ _, ⊤, rfl⟩⟩
+instance : Inhabited (TopHom α β) :=
+  ⟨⟨fun _ => ⊤, rfl⟩⟩
 
-variables (α)
+variable (α)
 
 /-- `id` as a `top_hom`. -/
-protected def id : top_hom α α := ⟨id, rfl⟩
+protected def id : TopHom α α :=
+  ⟨id, rfl⟩
 
-@[simp] lemma coe_id : ⇑(top_hom.id α) = id := rfl
+@[simp]
+theorem coe_id : ⇑(TopHom.id α) = id :=
+  rfl
 
-variables {α}
+variable {α}
 
-@[simp] lemma id_apply (a : α) : top_hom.id α a = a := rfl
+@[simp]
+theorem id_apply (a : α) : TopHom.id α a = a :=
+  rfl
 
 /-- Composition of `top_hom`s as a `top_hom`. -/
-def comp (f : top_hom β γ) (g : top_hom α β) : top_hom α γ :=
-{ to_fun := f ∘ g,
-  map_top' := by rw [comp_apply, map_top, map_top] }
+def comp (f : TopHom β γ) (g : TopHom α β) : TopHom α γ where
+  toFun := f ∘ g
+  map_top' := by
+    rw [comp_apply, map_top, map_top]
 
-@[simp] lemma coe_comp (f : top_hom β γ) (g : top_hom α β) : (f.comp g : α → γ) = f ∘ g := rfl
-@[simp] lemma comp_apply (f : top_hom β γ) (g : top_hom α β) (a : α) :
-  (f.comp g) a = f (g a) := rfl
-@[simp] lemma comp_assoc (f : top_hom γ δ) (g : top_hom β γ) (h : top_hom α β) :
-  (f.comp g).comp h = f.comp (g.comp h) := rfl
-@[simp] lemma comp_id (f : top_hom α β) : f.comp (top_hom.id α) = f := top_hom.ext $ λ a, rfl
-@[simp] lemma id_comp (f : top_hom α β) : (top_hom.id β).comp f = f := top_hom.ext $ λ a, rfl
+@[simp]
+theorem coe_comp (f : TopHom β γ) (g : TopHom α β) : (f.comp g : α → γ) = f ∘ g :=
+  rfl
 
-lemma cancel_right {g₁ g₂ : top_hom β γ} {f : top_hom α β} (hf : surjective f) :
-  g₁.comp f = g₂.comp f ↔ g₁ = g₂ :=
-⟨λ h, top_hom.ext $ hf.forall.2 $ fun_like.ext_iff.1 h, congr_arg _⟩
+@[simp]
+theorem comp_apply (f : TopHom β γ) (g : TopHom α β) (a : α) : (f.comp g) a = f (g a) :=
+  rfl
 
-lemma cancel_left {g : top_hom β γ} {f₁ f₂ : top_hom α β} (hg : injective g) :
-  g.comp f₁ = g.comp f₂ ↔ f₁ = f₂ :=
-⟨λ h, top_hom.ext $ λ a, hg $
-  by rw [←top_hom.comp_apply, h, top_hom.comp_apply], congr_arg _⟩
+@[simp]
+theorem comp_assoc (f : TopHom γ δ) (g : TopHom β γ) (h : TopHom α β) : (f.comp g).comp h = f.comp (g.comp h) :=
+  rfl
 
-end has_top
+@[simp]
+theorem comp_id (f : TopHom α β) : f.comp (TopHom.id α) = f :=
+  TopHom.ext fun a => rfl
 
-instance [preorder β] [has_top β] : preorder (top_hom α β) :=
-preorder.lift (coe_fn : top_hom α β → α → β)
+@[simp]
+theorem id_comp (f : TopHom α β) : (TopHom.id β).comp f = f :=
+  TopHom.ext fun a => rfl
 
-instance [partial_order β] [has_top β] : partial_order (top_hom α β) :=
-partial_order.lift _ fun_like.coe_injective
+theorem cancel_right {g₁ g₂ : TopHom β γ} {f : TopHom α β} (hf : Surjective f) : g₁.comp f = g₂.comp f ↔ g₁ = g₂ :=
+  ⟨fun h => TopHom.ext <| hf.forall.2 <| FunLike.ext_iff.1 h, congr_argₓ _⟩
 
-section order_top
-variables [preorder β] [order_top β]
+theorem cancel_left {g : TopHom β γ} {f₁ f₂ : TopHom α β} (hg : Injective g) : g.comp f₁ = g.comp f₂ ↔ f₁ = f₂ :=
+  ⟨fun h =>
+    TopHom.ext fun a =>
+      hg <| by
+        rw [← TopHom.comp_apply, h, TopHom.comp_apply],
+    congr_argₓ _⟩
 
-instance : order_top (top_hom α β) := ⟨⟨⊤, rfl⟩, λ _, le_top⟩
+end HasTop
 
-@[simp] lemma coe_top : ⇑(⊤ : top_hom α β) = ⊤ := rfl
-@[simp] lemma top_apply (a : α) : (⊤ : top_hom α β) a = ⊤ := rfl
+instance [Preorderₓ β] [HasTop β] : Preorderₓ (TopHom α β) :=
+  Preorderₓ.lift (coeFn : TopHom α β → α → β)
 
-end order_top
+instance [PartialOrderₓ β] [HasTop β] : PartialOrderₓ (TopHom α β) :=
+  PartialOrderₓ.lift _ FunLike.coe_injective
 
-section semilattice_inf
-variables [semilattice_inf β] [order_top β] (f g : top_hom α β)
+section OrderTop
 
-instance : has_inf (top_hom α β) :=
-⟨λ f g, ⟨f ⊓ g, by rw [pi.inf_apply, map_top, map_top, inf_top_eq]⟩⟩
+variable [Preorderₓ β] [OrderTop β]
 
-instance : semilattice_inf (top_hom α β) := fun_like.coe_injective.semilattice_inf _ $ λ _ _, rfl
+instance : OrderTop (TopHom α β) :=
+  ⟨⟨⊤, rfl⟩, fun _ => le_top⟩
 
-@[simp] lemma coe_inf : ⇑(f ⊓ g) = f ⊓ g := rfl
-@[simp] lemma inf_apply (a : α) : (f ⊓ g) a = f a ⊓ g a := rfl
+@[simp]
+theorem coe_top : ⇑(⊤ : TopHom α β) = ⊤ :=
+  rfl
 
-end semilattice_inf
+@[simp]
+theorem top_apply (a : α) : (⊤ : TopHom α β) a = ⊤ :=
+  rfl
 
-section semilattice_sup
-variables [semilattice_sup β] [order_top β] (f g : top_hom α β)
+end OrderTop
 
-instance : has_sup (top_hom α β) :=
-⟨λ f g, ⟨f ⊔ g, by rw [pi.sup_apply, map_top, map_top, sup_top_eq]⟩⟩
+section SemilatticeInf
 
-instance : semilattice_sup (top_hom α β) := fun_like.coe_injective.semilattice_sup _ $ λ _ _, rfl
+variable [SemilatticeInf β] [OrderTop β] (f g : TopHom α β)
 
-@[simp] lemma coe_sup : ⇑(f ⊔ g) = f ⊔ g := rfl
-@[simp] lemma sup_apply (a : α) : (f ⊔ g) a = f a ⊔ g a := rfl
+instance : HasInf (TopHom α β) :=
+  ⟨fun f g =>
+    ⟨f⊓g, by
+      rw [Pi.inf_apply, map_top, map_top, inf_top_eq]⟩⟩
 
-end semilattice_sup
+instance : SemilatticeInf (TopHom α β) :=
+  (FunLike.coe_injective.SemilatticeInf _) fun _ _ => rfl
 
-instance [lattice β] [order_top β] : lattice (top_hom α β) :=
-fun_like.coe_injective.lattice _ (λ _ _, rfl) (λ _ _, rfl)
+@[simp]
+theorem coe_inf : ⇑(f⊓g) = f⊓g :=
+  rfl
 
-instance [distrib_lattice β] [order_top β] : distrib_lattice (top_hom α β) :=
-fun_like.coe_injective.distrib_lattice _ (λ _ _, rfl) (λ _ _, rfl)
+@[simp]
+theorem inf_apply (a : α) : (f⊓g) a = f a⊓g a :=
+  rfl
 
-end top_hom
+end SemilatticeInf
+
+section SemilatticeSup
+
+variable [SemilatticeSup β] [OrderTop β] (f g : TopHom α β)
+
+instance : HasSup (TopHom α β) :=
+  ⟨fun f g =>
+    ⟨f⊔g, by
+      rw [Pi.sup_apply, map_top, map_top, sup_top_eq]⟩⟩
+
+instance : SemilatticeSup (TopHom α β) :=
+  (FunLike.coe_injective.SemilatticeSup _) fun _ _ => rfl
+
+@[simp]
+theorem coe_sup : ⇑(f⊔g) = f⊔g :=
+  rfl
+
+@[simp]
+theorem sup_apply (a : α) : (f⊔g) a = f a⊔g a :=
+  rfl
+
+end SemilatticeSup
+
+instance [Lattice β] [OrderTop β] : Lattice (TopHom α β) :=
+  FunLike.coe_injective.Lattice _ (fun _ _ => rfl) fun _ _ => rfl
+
+instance [DistribLattice β] [OrderTop β] : DistribLattice (TopHom α β) :=
+  FunLike.coe_injective.DistribLattice _ (fun _ _ => rfl) fun _ _ => rfl
+
+end TopHom
 
 /-! ### Bot homomorphisms -/
 
-namespace bot_hom
-variables [has_bot α]
 
-section has_bot
-variables [has_bot β] [has_bot γ] [has_bot δ]
+namespace BotHom
 
-instance : bot_hom_class (bot_hom α β) α β :=
-{ coe := bot_hom.to_fun,
-  coe_injective' := λ f g h, by cases f; cases g; congr',
-  map_bot := bot_hom.map_bot' }
+variable [HasBot α]
+
+section HasBot
+
+variable [HasBot β] [HasBot γ] [HasBot δ]
+
+instance : BotHomClass (BotHom α β) α β where
+  coe := BotHom.toFun
+  coe_injective' := fun f g h => by
+    cases f <;> cases g <;> congr
+  map_bot := BotHom.map_bot'
 
 /-- Helper instance for when there's too many metavariables to apply `fun_like.has_coe_to_fun`
 directly. -/
-instance : has_coe_to_fun (bot_hom α β) (λ _, α → β) := fun_like.has_coe_to_fun
+instance : CoeFun (BotHom α β) fun _ => α → β :=
+  FunLike.hasCoeToFun
 
-@[simp] lemma to_fun_eq_coe {f : bot_hom α β} : f.to_fun = (f : α → β) := rfl
+@[simp]
+theorem to_fun_eq_coe {f : BotHom α β} : f.toFun = (f : α → β) :=
+  rfl
 
-@[ext] lemma ext {f g : bot_hom α β} (h : ∀ a, f a = g a) : f = g := fun_like.ext f g h
+@[ext]
+theorem ext {f g : BotHom α β} (h : ∀ a, f a = g a) : f = g :=
+  FunLike.ext f g h
 
 /-- Copy of a `bot_hom` with a new `to_fun` equal to the old one. Useful to fix definitional
 equalities. -/
-protected def copy (f : bot_hom α β) (f' : α → β) (h : f' = f) : bot_hom α β :=
-{ to_fun := f',
-  map_bot' := h.symm ▸ f.map_bot' }
+protected def copy (f : BotHom α β) (f' : α → β) (h : f' = f) : BotHom α β where
+  toFun := f'
+  map_bot' := h.symm ▸ f.map_bot'
 
-instance : inhabited (bot_hom α β) := ⟨⟨λ _, ⊥, rfl⟩⟩
+instance : Inhabited (BotHom α β) :=
+  ⟨⟨fun _ => ⊥, rfl⟩⟩
 
-variables (α)
+variable (α)
 
 /-- `id` as a `bot_hom`. -/
-protected def id : bot_hom α α := ⟨id, rfl⟩
+protected def id : BotHom α α :=
+  ⟨id, rfl⟩
 
-@[simp] lemma coe_id : ⇑(bot_hom.id α) = id := rfl
+@[simp]
+theorem coe_id : ⇑(BotHom.id α) = id :=
+  rfl
 
-variables {α}
+variable {α}
 
-@[simp] lemma id_apply (a : α) : bot_hom.id α a = a := rfl
+@[simp]
+theorem id_apply (a : α) : BotHom.id α a = a :=
+  rfl
 
 /-- Composition of `bot_hom`s as a `bot_hom`. -/
-def comp (f : bot_hom β γ) (g : bot_hom α β) : bot_hom α γ :=
-{ to_fun := f ∘ g,
-  map_bot' := by rw [comp_apply, map_bot, map_bot] }
+def comp (f : BotHom β γ) (g : BotHom α β) : BotHom α γ where
+  toFun := f ∘ g
+  map_bot' := by
+    rw [comp_apply, map_bot, map_bot]
 
-@[simp] lemma coe_comp (f : bot_hom β γ) (g : bot_hom α β) : (f.comp g : α → γ) = f ∘ g := rfl
-@[simp] lemma comp_apply (f : bot_hom β γ) (g : bot_hom α β) (a : α) :
-  (f.comp g) a = f (g a) := rfl
-@[simp] lemma comp_assoc (f : bot_hom γ δ) (g : bot_hom β γ) (h : bot_hom α β) :
-  (f.comp g).comp h = f.comp (g.comp h) := rfl
-@[simp] lemma comp_id (f : bot_hom α β) : f.comp (bot_hom.id α) = f := bot_hom.ext $ λ a, rfl
-@[simp] lemma id_comp (f : bot_hom α β) : (bot_hom.id β).comp f = f := bot_hom.ext $ λ a, rfl
+@[simp]
+theorem coe_comp (f : BotHom β γ) (g : BotHom α β) : (f.comp g : α → γ) = f ∘ g :=
+  rfl
 
-lemma cancel_right {g₁ g₂ : bot_hom β γ} {f : bot_hom α β} (hf : surjective f) :
-  g₁.comp f = g₂.comp f ↔ g₁ = g₂ :=
-⟨λ h, bot_hom.ext $ hf.forall.2 $ fun_like.ext_iff.1 h, congr_arg _⟩
+@[simp]
+theorem comp_apply (f : BotHom β γ) (g : BotHom α β) (a : α) : (f.comp g) a = f (g a) :=
+  rfl
 
-lemma cancel_left {g : bot_hom β γ} {f₁ f₂ : bot_hom α β} (hg : injective g) :
-  g.comp f₁ = g.comp f₂ ↔ f₁ = f₂ :=
-⟨λ h, bot_hom.ext $ λ a, hg $
-  by rw [←bot_hom.comp_apply, h, bot_hom.comp_apply], congr_arg _⟩
+@[simp]
+theorem comp_assoc (f : BotHom γ δ) (g : BotHom β γ) (h : BotHom α β) : (f.comp g).comp h = f.comp (g.comp h) :=
+  rfl
 
-end has_bot
+@[simp]
+theorem comp_id (f : BotHom α β) : f.comp (BotHom.id α) = f :=
+  BotHom.ext fun a => rfl
 
-instance [preorder β] [has_bot β] : preorder (bot_hom α β) :=
-preorder.lift (coe_fn : bot_hom α β → α → β)
+@[simp]
+theorem id_comp (f : BotHom α β) : (BotHom.id β).comp f = f :=
+  BotHom.ext fun a => rfl
 
-instance [partial_order β] [has_bot β] : partial_order (bot_hom α β) :=
-partial_order.lift _ fun_like.coe_injective
+theorem cancel_right {g₁ g₂ : BotHom β γ} {f : BotHom α β} (hf : Surjective f) : g₁.comp f = g₂.comp f ↔ g₁ = g₂ :=
+  ⟨fun h => BotHom.ext <| hf.forall.2 <| FunLike.ext_iff.1 h, congr_argₓ _⟩
 
-section order_bot
-variables [preorder β] [order_bot β]
+theorem cancel_left {g : BotHom β γ} {f₁ f₂ : BotHom α β} (hg : Injective g) : g.comp f₁ = g.comp f₂ ↔ f₁ = f₂ :=
+  ⟨fun h =>
+    BotHom.ext fun a =>
+      hg <| by
+        rw [← BotHom.comp_apply, h, BotHom.comp_apply],
+    congr_argₓ _⟩
 
-instance : order_bot (bot_hom α β) := ⟨⟨⊥, rfl⟩, λ _, bot_le⟩
+end HasBot
 
-@[simp] lemma coe_bot : ⇑(⊥ : bot_hom α β) = ⊥ := rfl
-@[simp] lemma bot_apply (a : α) : (⊥ : bot_hom α β) a = ⊥ := rfl
+instance [Preorderₓ β] [HasBot β] : Preorderₓ (BotHom α β) :=
+  Preorderₓ.lift (coeFn : BotHom α β → α → β)
 
-end order_bot
+instance [PartialOrderₓ β] [HasBot β] : PartialOrderₓ (BotHom α β) :=
+  PartialOrderₓ.lift _ FunLike.coe_injective
 
-section semilattice_inf
-variables [semilattice_inf β] [order_bot β] (f g : bot_hom α β)
+section OrderBot
 
-instance : has_inf (bot_hom α β) :=
-⟨λ f g, ⟨f ⊓ g, by rw [pi.inf_apply, map_bot, map_bot, inf_bot_eq]⟩⟩
+variable [Preorderₓ β] [OrderBot β]
 
-instance : semilattice_inf (bot_hom α β) := fun_like.coe_injective.semilattice_inf _ $ λ _ _, rfl
+instance : OrderBot (BotHom α β) :=
+  ⟨⟨⊥, rfl⟩, fun _ => bot_le⟩
 
-@[simp] lemma coe_inf : ⇑(f ⊓ g) = f ⊓ g := rfl
-@[simp] lemma inf_apply (a : α) : (f ⊓ g) a = f a ⊓ g a := rfl
+@[simp]
+theorem coe_bot : ⇑(⊥ : BotHom α β) = ⊥ :=
+  rfl
 
-end semilattice_inf
+@[simp]
+theorem bot_apply (a : α) : (⊥ : BotHom α β) a = ⊥ :=
+  rfl
 
-section semilattice_sup
-variables [semilattice_sup β] [order_bot β] (f g : bot_hom α β)
+end OrderBot
 
-instance : has_sup (bot_hom α β) :=
-⟨λ f g, ⟨f ⊔ g, by rw [pi.sup_apply, map_bot, map_bot, sup_bot_eq]⟩⟩
+section SemilatticeInf
 
-instance : semilattice_sup (bot_hom α β) := fun_like.coe_injective.semilattice_sup _ $ λ _ _, rfl
+variable [SemilatticeInf β] [OrderBot β] (f g : BotHom α β)
 
-@[simp] lemma coe_sup : ⇑(f ⊔ g) = f ⊔ g := rfl
-@[simp] lemma sup_apply (a : α) : (f ⊔ g) a = f a ⊔ g a := rfl
+instance : HasInf (BotHom α β) :=
+  ⟨fun f g =>
+    ⟨f⊓g, by
+      rw [Pi.inf_apply, map_bot, map_bot, inf_bot_eq]⟩⟩
 
-end semilattice_sup
+instance : SemilatticeInf (BotHom α β) :=
+  (FunLike.coe_injective.SemilatticeInf _) fun _ _ => rfl
 
-instance [lattice β] [order_bot β] : lattice (bot_hom α β) :=
-fun_like.coe_injective.lattice _ (λ _ _, rfl) (λ _ _, rfl)
+@[simp]
+theorem coe_inf : ⇑(f⊓g) = f⊓g :=
+  rfl
 
-instance [distrib_lattice β] [order_bot β] : distrib_lattice (bot_hom α β) :=
-fun_like.coe_injective.distrib_lattice _ (λ _ _, rfl) (λ _ _, rfl)
+@[simp]
+theorem inf_apply (a : α) : (f⊓g) a = f a⊓g a :=
+  rfl
 
-end bot_hom
+end SemilatticeInf
+
+section SemilatticeSup
+
+variable [SemilatticeSup β] [OrderBot β] (f g : BotHom α β)
+
+instance : HasSup (BotHom α β) :=
+  ⟨fun f g =>
+    ⟨f⊔g, by
+      rw [Pi.sup_apply, map_bot, map_bot, sup_bot_eq]⟩⟩
+
+instance : SemilatticeSup (BotHom α β) :=
+  (FunLike.coe_injective.SemilatticeSup _) fun _ _ => rfl
+
+@[simp]
+theorem coe_sup : ⇑(f⊔g) = f⊔g :=
+  rfl
+
+@[simp]
+theorem sup_apply (a : α) : (f⊔g) a = f a⊔g a :=
+  rfl
+
+end SemilatticeSup
+
+instance [Lattice β] [OrderBot β] : Lattice (BotHom α β) :=
+  FunLike.coe_injective.Lattice _ (fun _ _ => rfl) fun _ _ => rfl
+
+instance [DistribLattice β] [OrderBot β] : DistribLattice (BotHom α β) :=
+  FunLike.coe_injective.DistribLattice _ (fun _ _ => rfl) fun _ _ => rfl
+
+end BotHom
 
 /-! ### Bounded order homomorphisms -/
 
-namespace bounded_order_hom
-variables [preorder α] [preorder β] [preorder γ] [preorder δ] [bounded_order α] [bounded_order β]
-  [bounded_order γ] [bounded_order δ]
+
+namespace BoundedOrderHom
+
+variable [Preorderₓ α] [Preorderₓ β] [Preorderₓ γ] [Preorderₓ δ] [BoundedOrder α] [BoundedOrder β] [BoundedOrder γ]
+  [BoundedOrder δ]
 
 /-- Reinterpret a `bounded_order_hom` as a `top_hom`. -/
-def to_top_hom (f : bounded_order_hom α β) : top_hom α β := { ..f }
+def toTopHom (f : BoundedOrderHom α β) : TopHom α β :=
+  { f with }
 
 /-- Reinterpret a `bounded_order_hom` as a `bot_hom`. -/
-def to_bot_hom (f : bounded_order_hom α β) : bot_hom α β := { ..f }
+def toBotHom (f : BoundedOrderHom α β) : BotHom α β :=
+  { f with }
 
-instance : bounded_order_hom_class (bounded_order_hom α β) α β :=
-{ coe := λ f, f.to_fun,
-  coe_injective' := λ f g h, by obtain ⟨⟨_, _⟩, _⟩ := f; obtain ⟨⟨_, _⟩, _⟩ := g; congr',
-  map_rel := λ f, f.monotone',
-  map_top := λ f, f.map_top',
-  map_bot := λ f, f.map_bot' }
+instance : BoundedOrderHomClass (BoundedOrderHom α β) α β where
+  coe := fun f => f.toFun
+  coe_injective' := fun f g h => by
+    obtain ⟨⟨_, _⟩, _⟩ := f <;> obtain ⟨⟨_, _⟩, _⟩ := g <;> congr
+  map_rel := fun f => f.monotone'
+  map_top := fun f => f.map_top'
+  map_bot := fun f => f.map_bot'
 
 /-- Helper instance for when there's too many metavariables to apply `fun_like.has_coe_to_fun`
 directly. -/
-instance : has_coe_to_fun (bounded_order_hom α β) (λ _, α → β) := fun_like.has_coe_to_fun
+instance : CoeFun (BoundedOrderHom α β) fun _ => α → β :=
+  FunLike.hasCoeToFun
 
-@[simp] lemma to_fun_eq_coe {f : bounded_order_hom α β} : f.to_fun = (f : α → β) := rfl
+@[simp]
+theorem to_fun_eq_coe {f : BoundedOrderHom α β} : f.toFun = (f : α → β) :=
+  rfl
 
-@[ext] lemma ext {f g : bounded_order_hom α β} (h : ∀ a, f a = g a) : f = g := fun_like.ext f g h
+@[ext]
+theorem ext {f g : BoundedOrderHom α β} (h : ∀ a, f a = g a) : f = g :=
+  FunLike.ext f g h
 
 /-- Copy of a `bounded_order_hom` with a new `to_fun` equal to the old one. Useful to fix
 definitional equalities. -/
-protected def copy (f : bounded_order_hom α β) (f' : α → β) (h : f' = f) : bounded_order_hom α β :=
-{ .. f.to_order_hom.copy f' h, .. f.to_top_hom.copy f' h, .. f.to_bot_hom.copy f' h }
+protected def copy (f : BoundedOrderHom α β) (f' : α → β) (h : f' = f) : BoundedOrderHom α β :=
+  { f.toOrderHom.copy f' h, f.toTopHom.copy f' h, f.toBotHom.copy f' h with }
 
-variables (α)
+variable (α)
 
 /-- `id` as a `bounded_order_hom`. -/
-protected def id : bounded_order_hom α α := { ..order_hom.id, ..top_hom.id α, ..bot_hom.id α }
+protected def id : BoundedOrderHom α α :=
+  { OrderHom.id, TopHom.id α, BotHom.id α with }
 
-instance : inhabited (bounded_order_hom α α) := ⟨bounded_order_hom.id α⟩
+instance : Inhabited (BoundedOrderHom α α) :=
+  ⟨BoundedOrderHom.id α⟩
 
-@[simp] lemma coe_id : ⇑(bounded_order_hom.id α) = id := rfl
+@[simp]
+theorem coe_id : ⇑(BoundedOrderHom.id α) = id :=
+  rfl
 
-variables {α}
+variable {α}
 
-@[simp] lemma id_apply (a : α) : bounded_order_hom.id α a = a := rfl
+@[simp]
+theorem id_apply (a : α) : BoundedOrderHom.id α a = a :=
+  rfl
 
 /-- Composition of `bounded_order_hom`s as a `bounded_order_hom`. -/
-def comp (f : bounded_order_hom β γ) (g : bounded_order_hom α β) : bounded_order_hom α γ :=
-{ ..f.to_order_hom.comp g.to_order_hom,
-  ..f.to_top_hom.comp g.to_top_hom, ..f.to_bot_hom.comp g.to_bot_hom }
+def comp (f : BoundedOrderHom β γ) (g : BoundedOrderHom α β) : BoundedOrderHom α γ :=
+  { f.toOrderHom.comp g.toOrderHom, f.toTopHom.comp g.toTopHom, f.toBotHom.comp g.toBotHom with }
 
-@[simp] lemma coe_comp (f : bounded_order_hom β γ) (g : bounded_order_hom α β) :
-  (f.comp g : α → γ) = f ∘ g := rfl
-@[simp] lemma comp_apply (f : bounded_order_hom β γ) (g : bounded_order_hom α β) (a : α) :
-  (f.comp g) a = f (g a) := rfl
-@[simp] lemma coe_comp_order_hom (f : bounded_order_hom β γ) (g : bounded_order_hom α β) :
-  (f.comp g : order_hom α γ) = (f : order_hom β γ).comp g := rfl
-@[simp] lemma coe_comp_top_hom (f : bounded_order_hom β γ) (g : bounded_order_hom α β) :
-  (f.comp g : top_hom α γ) = (f : top_hom β γ).comp g := rfl
-@[simp] lemma coe_comp_bot_hom (f : bounded_order_hom β γ) (g : bounded_order_hom α β) :
-  (f.comp g : bot_hom α γ) = (f : bot_hom β γ).comp g := rfl
-@[simp] lemma comp_assoc (f : bounded_order_hom γ δ) (g : bounded_order_hom β γ)
-  (h : bounded_order_hom α β) :
-  (f.comp g).comp h = f.comp (g.comp h) := rfl
-@[simp] lemma comp_id (f : bounded_order_hom α β) : f.comp (bounded_order_hom.id α) = f :=
-bounded_order_hom.ext $ λ a, rfl
-@[simp] lemma id_comp (f : bounded_order_hom α β) : (bounded_order_hom.id β).comp f = f :=
-bounded_order_hom.ext $ λ a, rfl
+@[simp]
+theorem coe_comp (f : BoundedOrderHom β γ) (g : BoundedOrderHom α β) : (f.comp g : α → γ) = f ∘ g :=
+  rfl
 
-lemma cancel_right {g₁ g₂ : bounded_order_hom β γ} {f : bounded_order_hom α β} (hf : surjective f) :
-  g₁.comp f = g₂.comp f ↔ g₁ = g₂ :=
-⟨λ h, bounded_order_hom.ext $ hf.forall.2 $ fun_like.ext_iff.1 h, congr_arg _⟩
+@[simp]
+theorem comp_apply (f : BoundedOrderHom β γ) (g : BoundedOrderHom α β) (a : α) : (f.comp g) a = f (g a) :=
+  rfl
 
-lemma cancel_left {g : bounded_order_hom β γ} {f₁ f₂ : bounded_order_hom α β} (hg : injective g) :
-  g.comp f₁ = g.comp f₂ ↔ f₁ = f₂ :=
-⟨λ h, bounded_order_hom.ext $ λ a, hg $
-  by rw [←bounded_order_hom.comp_apply, h, bounded_order_hom.comp_apply], congr_arg _⟩
+@[simp]
+theorem coe_comp_order_hom (f : BoundedOrderHom β γ) (g : BoundedOrderHom α β) :
+    (f.comp g : OrderHom α γ) = (f : OrderHom β γ).comp g :=
+  rfl
+
+@[simp]
+theorem coe_comp_top_hom (f : BoundedOrderHom β γ) (g : BoundedOrderHom α β) :
+    (f.comp g : TopHom α γ) = (f : TopHom β γ).comp g :=
+  rfl
+
+@[simp]
+theorem coe_comp_bot_hom (f : BoundedOrderHom β γ) (g : BoundedOrderHom α β) :
+    (f.comp g : BotHom α γ) = (f : BotHom β γ).comp g :=
+  rfl
+
+@[simp]
+theorem comp_assoc (f : BoundedOrderHom γ δ) (g : BoundedOrderHom β γ) (h : BoundedOrderHom α β) :
+    (f.comp g).comp h = f.comp (g.comp h) :=
+  rfl
+
+@[simp]
+theorem comp_id (f : BoundedOrderHom α β) : f.comp (BoundedOrderHom.id α) = f :=
+  BoundedOrderHom.ext fun a => rfl
+
+@[simp]
+theorem id_comp (f : BoundedOrderHom α β) : (BoundedOrderHom.id β).comp f = f :=
+  BoundedOrderHom.ext fun a => rfl
+
+theorem cancel_right {g₁ g₂ : BoundedOrderHom β γ} {f : BoundedOrderHom α β} (hf : Surjective f) :
+    g₁.comp f = g₂.comp f ↔ g₁ = g₂ :=
+  ⟨fun h => BoundedOrderHom.ext <| hf.forall.2 <| FunLike.ext_iff.1 h, congr_argₓ _⟩
+
+theorem cancel_left {g : BoundedOrderHom β γ} {f₁ f₂ : BoundedOrderHom α β} (hg : Injective g) :
+    g.comp f₁ = g.comp f₂ ↔ f₁ = f₂ :=
+  ⟨fun h =>
+    BoundedOrderHom.ext fun a =>
+      hg <| by
+        rw [← BoundedOrderHom.comp_apply, h, BoundedOrderHom.comp_apply],
+    congr_argₓ _⟩
 
 /-- Reinterpret a bounded order homomorphism as a bounded order homomorphism between the dual
 orders. -/
-@[simps] protected def dual :
-   bounded_order_hom α β ≃ bounded_order_hom (order_dual α) (order_dual β) :=
-{ to_fun := λ f, { to_order_hom := f.to_order_hom.dual,
-                   map_top' := congr_arg to_dual (map_bot f),
-                   map_bot' := congr_arg to_dual (map_top f) },
-  inv_fun := λ f, { to_order_hom := order_hom.dual.symm f.to_order_hom,
-                    map_top' := map_bot f,
-                    map_bot' := map_top f },
-  left_inv := λ f, ext $ λ a, rfl,
-  right_inv := λ f, ext $ λ a, rfl }
+@[simps]
+protected def dual : BoundedOrderHom α β ≃ BoundedOrderHom (OrderDual α) (OrderDual β) where
+  toFun := fun f =>
+    { toOrderHom := f.toOrderHom.dual, map_top' := congr_argₓ toDual (map_bot f),
+      map_bot' := congr_argₓ toDual (map_top f) }
+  invFun := fun f => { toOrderHom := OrderHom.dual.symm f.toOrderHom, map_top' := map_bot f, map_bot' := map_top f }
+  left_inv := fun f => ext fun a => rfl
+  right_inv := fun f => ext fun a => rfl
 
-end bounded_order_hom
+end BoundedOrderHom
+

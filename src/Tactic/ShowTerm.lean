@@ -3,14 +3,13 @@ Copyright (c) 2020 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import tactic.core
+import Mathbin.Tactic.Core
 
-open tactic
+open Tactic
 
-namespace tactic.interactive
+namespace Tactic.Interactive
 
-/--
-`show_term { tac }` runs the tactic `tac`,
+/-- `show_term { tac }` runs the tactic `tac`,
 and then prints the term that was constructed.
 
 This is useful for
@@ -29,17 +28,14 @@ print `refine (0, _)`, and afterwards there will be one remaining goal (of type 
 This indicates that `split, exact 0` partially filled in the original metavariable,
 but created a new metavariable for the resulting sub-goal.
 -/
-meta def show_term (t : itactic) : itactic :=
-do
-  g :: _ ← get_goals,
-  t,
-  g ← tactic_statement g,
+unsafe def show_term (t : itactic) : itactic := do
+  let g :: _ ← get_goals
+  t
+  let g ← tactic_statement g
   trace g
 
 add_tactic_doc
-{ name := "show_term",
-  category := doc_category.tactic,
-  decl_names := [``show_term],
-  tags := ["debugging"] }
+  { Name := "show_term", category := DocCategory.tactic, declNames := [`` show_term], tags := ["debugging"] }
 
-end tactic.interactive
+end Tactic.Interactive
+

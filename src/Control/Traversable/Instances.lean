@@ -3,9 +3,9 @@ Copyright (c) 2018 Simon Hudon. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Simon Hudon
 -/
-import control.applicative
-import data.list.forall2
-import data.set.functor
+import Mathbin.Control.Applicative
+import Mathbin.Data.List.Forall2
+import Mathbin.Data.Set.Functor
 
 /-!
 # Traversable instances
@@ -14,158 +14,175 @@ This file provides instances of `traversable` for types from the core library: `
 `sum`.
 -/
 
-universes u v
 
-section option
+universe u v
 
-open functor
+section Option
 
-variables {F G : Type u → Type u}
-variables [applicative F] [applicative G]
-variables [is_lawful_applicative F] [is_lawful_applicative G]
+open Functor
 
-lemma option.id_traverse {α} (x : option α) : option.traverse id.mk x = x :=
-by cases x; refl
+variable {F G : Type u → Type u}
 
+variable [Applicativeₓ F] [Applicativeₓ G]
+
+variable [IsLawfulApplicative F] [IsLawfulApplicative G]
+
+theorem Option.id_traverse {α} (x : Option α) : Option.traverseₓₓ id.mk x = x := by
+  cases x <;> rfl
+
+-- ././Mathport/Syntax/Translate/Tactic/Lean3.lean:377:22: warning: unsupported simp config option: iota_eqn
 @[nolint unused_arguments]
-lemma option.comp_traverse {α β γ} (f : β → F γ) (g : α → G β) (x : option α) :
-  option.traverse (comp.mk ∘ (<$>) f ∘ g) x =
-  comp.mk (option.traverse f <$> option.traverse g x) :=
-by cases x; simp! with functor_norm; refl
+theorem Option.comp_traverse {α β γ} (f : β → F γ) (g : α → G β) (x : Option α) :
+    Option.traverseₓₓ (comp.mk ∘ (· <$> ·) f ∘ g) x = Comp.mk (Option.traverseₓₓ f <$> Option.traverseₓₓ g x) := by
+  cases x <;> simp' with functor_norm <;> rfl
 
-lemma option.traverse_eq_map_id {α β} (f : α → β) (x : option α) :
-  traverse (id.mk ∘ f) x = id.mk (f <$> x) :=
-by cases x; refl
+theorem Option.traverse_eq_map_id {α β} (f : α → β) (x : Option α) : traverse (id.mk ∘ f) x = id.mk (f <$> x) := by
+  cases x <;> rfl
 
-variable (η : applicative_transformation F G)
+variable (η : ApplicativeTransformation F G)
 
-lemma option.naturality {α β} (f : α → F β) (x : option α) :
-  η (option.traverse f x) = option.traverse (@η _ ∘ f) x :=
-by cases x with x; simp! [*] with functor_norm
+-- ././Mathport/Syntax/Translate/Tactic/Lean3.lean:377:22: warning: unsupported simp config option: iota_eqn
+theorem Option.naturality {α β} (f : α → F β) (x : Option α) :
+    η (Option.traverseₓₓ f x) = Option.traverseₓₓ (@η _ ∘ f) x := by
+  cases' x with x <;> simp' [*] with functor_norm
 
-end option
+end Option
 
-instance : is_lawful_traversable option :=
-{ id_traverse := @option.id_traverse,
-  comp_traverse := @option.comp_traverse,
-  traverse_eq_map_id := @option.traverse_eq_map_id,
-  naturality := @option.naturality,
-  .. option.is_lawful_monad }
+instance : IsLawfulTraversable Option :=
+  { Option.is_lawful_monad with id_traverse := @Option.id_traverse, comp_traverse := @Option.comp_traverse,
+    traverse_eq_map_id := @Option.traverse_eq_map_id, naturality := @Option.naturality }
 
-namespace list
+namespace List
 
-variables {F G : Type u → Type u}
-variables [applicative F] [applicative G]
+variable {F G : Type u → Type u}
+
+variable [Applicativeₓ F] [Applicativeₓ G]
 
 section
-variables [is_lawful_applicative F] [is_lawful_applicative G]
 
-open applicative functor
-open list (cons)
+variable [IsLawfulApplicative F] [IsLawfulApplicative G]
 
-protected lemma id_traverse {α} (xs : list α) :
-  list.traverse id.mk xs = xs :=
-by induction xs; simp! * with functor_norm; refl
+open Applicativeₓ Functor
 
+open List (cons)
+
+-- ././Mathport/Syntax/Translate/Tactic/Lean3.lean:377:22: warning: unsupported simp config option: iota_eqn
+protected theorem id_traverse {α} (xs : List α) : List.traverseₓₓ id.mk xs = xs := by
+  induction xs <;> simp' [*] with functor_norm <;> rfl
+
+-- ././Mathport/Syntax/Translate/Tactic/Lean3.lean:377:22: warning: unsupported simp config option: iota_eqn
 @[nolint unused_arguments]
-protected lemma comp_traverse {α β γ} (f : β → F γ) (g : α → G β) (x : list α) :
-  list.traverse (comp.mk ∘ (<$>) f ∘ g) x =
-  comp.mk (list.traverse f <$> list.traverse g x) :=
-by induction x; simp! * with functor_norm; refl
+protected theorem comp_traverse {α β γ} (f : β → F γ) (g : α → G β) (x : List α) :
+    List.traverseₓₓ (comp.mk ∘ (· <$> ·) f ∘ g) x = Comp.mk (List.traverseₓₓ f <$> List.traverseₓₓ g x) := by
+  induction x <;> simp' [*] with functor_norm <;> rfl
 
-protected lemma traverse_eq_map_id {α β} (f : α → β) (x : list α) :
-  list.traverse (id.mk ∘ f) x = id.mk (f <$> x) :=
-by induction x; simp! * with functor_norm; refl
+-- ././Mathport/Syntax/Translate/Tactic/Lean3.lean:377:22: warning: unsupported simp config option: iota_eqn
+protected theorem traverse_eq_map_id {α β} (f : α → β) (x : List α) : List.traverseₓₓ (id.mk ∘ f) x = id.mk (f <$> x) :=
+  by
+  induction x <;> simp' [*] with functor_norm <;> rfl
 
-variable (η : applicative_transformation F G)
+variable (η : ApplicativeTransformation F G)
 
-protected lemma naturality {α β} (f : α → F β) (x : list α) :
-  η (list.traverse f x) = list.traverse (@η _ ∘ f) x :=
-by induction x; simp! * with functor_norm
-open nat
+-- ././Mathport/Syntax/Translate/Tactic/Lean3.lean:377:22: warning: unsupported simp config option: iota_eqn
+protected theorem naturality {α β} (f : α → F β) (x : List α) :
+    η (List.traverseₓₓ f x) = List.traverseₓₓ (@η _ ∘ f) x := by
+  induction x <;> simp' [*] with functor_norm
 
-instance : is_lawful_traversable.{u} list :=
-{ id_traverse := @list.id_traverse,
-  comp_traverse := @list.comp_traverse,
-  traverse_eq_map_id := @list.traverse_eq_map_id,
-  naturality := @list.naturality,
-  .. list.is_lawful_monad }
+open Nat
+
+instance : IsLawfulTraversable.{u} List :=
+  { List.is_lawful_monad with id_traverse := @List.id_traverse, comp_traverse := @List.comp_traverse,
+    traverse_eq_map_id := @List.traverse_eq_map_id, naturality := @List.naturality }
+
 end
 
-section traverse
-variables {α' β' : Type u} (f : α' → F β')
+section Traverse
 
-@[simp] lemma traverse_nil : traverse f ([] : list α') = (pure [] : F (list β')) := rfl
+variable {α' β' : Type u} (f : α' → F β')
 
-@[simp] lemma traverse_cons (a : α') (l : list α') :
-  traverse f (a :: l) = (::) <$> f a <*> traverse f l := rfl
+@[simp]
+theorem traverse_nil : traverse f ([] : List α') = (pure [] : F (List β')) :=
+  rfl
 
-variables [is_lawful_applicative F]
+@[simp]
+theorem traverse_cons (a : α') (l : List α') : traverse f (a :: l) = (· :: ·) <$> f a <*> traverse f l :=
+  rfl
 
-@[simp] lemma traverse_append :
-  ∀ (as bs : list α'), traverse f (as ++ bs) = (++) <$> traverse f as <*> traverse f bs
-| [] bs :=
-  have has_append.append ([] : list β') = id, by funext; refl,
-  by simp [this] with functor_norm
-| (a :: as) bs := by simp [traverse_append as bs] with functor_norm; congr
+variable [IsLawfulApplicative F]
 
-lemma mem_traverse {f : α' → set β'} :
-  ∀(l : list α') (n : list β'), n ∈ traverse f l ↔ forall₂ (λb a, b ∈ f a) n l
-| []      []      := by simp
-| (a::as) []      := by simp
-| []      (b::bs) := by simp
-| (a::as) (b::bs) := by simp [mem_traverse as bs]
+@[simp]
+theorem traverse_append : ∀ as bs : List α', traverse f (as ++ bs) = (· ++ ·) <$> traverse f as <*> traverse f bs
+  | [], bs => by
+    have : Append.append ([] : List β') = id := by
+      funext <;> rfl
+    simp' [this] with functor_norm
+  | a :: as, bs => by
+    simp' [traverse_append as bs] with functor_norm <;> congr
 
-end traverse
+theorem mem_traverse {f : α' → Set β'} : ∀ l : List α' n : List β', n ∈ traverse f l ↔ Forall₂ (fun b a => b ∈ f a) n l
+  | [], [] => by
+    simp
+  | a :: as, [] => by
+    simp
+  | [], b :: bs => by
+    simp
+  | a :: as, b :: bs => by
+    simp [mem_traverse as bs]
 
-end list
+end Traverse
 
-namespace sum
+end List
 
-section traverse
-variables {σ : Type u}
-variables {F G : Type u → Type u}
-variables [applicative F] [applicative G]
+namespace Sum
 
-open applicative functor
-open list (cons)
+section Traverse
 
-protected lemma traverse_map {α β γ : Type u} (g : α → β) (f : β → G γ) (x : σ ⊕ α) :
-  sum.traverse f (g <$> x) = sum.traverse (f ∘ g) x :=
-by cases x; simp [sum.traverse, id_map] with functor_norm; refl
+variable {σ : Type u}
 
-variables [is_lawful_applicative F] [is_lawful_applicative G]
+variable {F G : Type u → Type u}
 
-protected lemma id_traverse {σ α} (x : σ ⊕ α) : sum.traverse id.mk x = x :=
-by cases x; refl
+variable [Applicativeₓ F] [Applicativeₓ G]
 
+open Applicativeₓ Functor
+
+open List (cons)
+
+protected theorem traverse_map {α β γ : Type u} (g : α → β) (f : β → G γ) (x : Sum σ α) :
+    Sum.traverseₓ f (g <$> x) = Sum.traverseₓ (f ∘ g) x := by
+  cases x <;> simp' [Sum.traverseₓ, id_map] with functor_norm <;> rfl
+
+variable [IsLawfulApplicative F] [IsLawfulApplicative G]
+
+protected theorem id_traverse {σ α} (x : Sum σ α) : Sum.traverseₓ id.mk x = x := by
+  cases x <;> rfl
+
+-- ././Mathport/Syntax/Translate/Tactic/Lean3.lean:377:22: warning: unsupported simp config option: iota_eqn
 @[nolint unused_arguments]
-protected lemma comp_traverse {α β γ} (f : β → F γ) (g : α → G β) (x : σ ⊕ α) :
-  sum.traverse (comp.mk ∘ (<$>) f ∘ g) x =
-  comp.mk (sum.traverse f <$> sum.traverse g x) :=
-by cases x; simp! [sum.traverse,map_id] with functor_norm; refl
+protected theorem comp_traverse {α β γ} (f : β → F γ) (g : α → G β) (x : Sum σ α) :
+    Sum.traverseₓ (comp.mk ∘ (· <$> ·) f ∘ g) x = Comp.mk (Sum.traverseₓ f <$> Sum.traverseₓ g x) := by
+  cases x <;> simp' [Sum.traverseₓ, map_id] with functor_norm <;> rfl
 
-protected lemma traverse_eq_map_id {α β} (f : α → β) (x : σ ⊕ α) :
-  sum.traverse (id.mk ∘ f) x = id.mk (f <$> x) :=
-by induction x; simp! * with functor_norm; refl
+-- ././Mathport/Syntax/Translate/Tactic/Lean3.lean:377:22: warning: unsupported simp config option: iota_eqn
+protected theorem traverse_eq_map_id {α β} (f : α → β) (x : Sum σ α) : Sum.traverseₓ (id.mk ∘ f) x = id.mk (f <$> x) :=
+  by
+  induction x <;> simp' [*] with functor_norm <;> rfl
 
-protected lemma map_traverse {α β γ} (g : α → G β) (f : β → γ) (x : σ ⊕ α) :
-  (<$>) f <$> sum.traverse g x = sum.traverse ((<$>) f ∘ g) x :=
-by cases x; simp [sum.traverse, id_map] with functor_norm; congr; refl
+protected theorem map_traverse {α β γ} (g : α → G β) (f : β → γ) (x : Sum σ α) :
+    (· <$> ·) f <$> Sum.traverseₓ g x = Sum.traverseₓ ((· <$> ·) f ∘ g) x := by
+  cases x <;> simp' [Sum.traverseₓ, id_map] with functor_norm <;> congr <;> rfl
 
-variable (η : applicative_transformation F G)
+variable (η : ApplicativeTransformation F G)
 
-protected lemma naturality {α β} (f : α → F β) (x : σ ⊕ α) :
-  η (sum.traverse f x) = sum.traverse (@η _ ∘ f) x :=
-by cases x; simp! [sum.traverse] with functor_norm
+-- ././Mathport/Syntax/Translate/Tactic/Lean3.lean:377:22: warning: unsupported simp config option: iota_eqn
+protected theorem naturality {α β} (f : α → F β) (x : Sum σ α) : η (Sum.traverseₓ f x) = Sum.traverseₓ (@η _ ∘ f) x :=
+  by
+  cases x <;> simp' [Sum.traverseₓ] with functor_norm
 
-end traverse
+end Traverse
 
-instance {σ : Type u} : is_lawful_traversable.{u} (sum σ) :=
-{ id_traverse := @sum.id_traverse σ,
-  comp_traverse := @sum.comp_traverse σ,
-  traverse_eq_map_id := @sum.traverse_eq_map_id σ,
-  naturality := @sum.naturality σ,
-  .. sum.is_lawful_monad }
+instance {σ : Type u} : IsLawfulTraversable.{u} (Sum σ) :=
+  { Sum.is_lawful_monad with id_traverse := @Sum.id_traverse σ, comp_traverse := @Sum.comp_traverse σ,
+    traverse_eq_map_id := @Sum.traverse_eq_map_id σ, naturality := @Sum.naturality σ }
 
-end sum
+end Sum
+

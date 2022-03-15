@@ -3,9 +3,9 @@ Copyright (c) 2020 Simon Hudon. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Simon Hudon
 -/
-import data.bool.basic
-import meta.rb_map
-import tactic.core
+import Mathbin.Data.Bool.Basic
+import Mathbin.Meta.RbMap
+import Mathbin.Tactic.Core
 
 /-!
 # list_unused_decls
@@ -29,44 +29,44 @@ The `@[main_declaration]` attribute should be removed before submitting
 code to mathlib as it is merely a tool for cleaning up a module.
 -/
 
-namespace tactic
+
+namespace Tactic
 
 /-- Attribute `main_declaration` is used to mark declarations that are featured
 in the current file.  Then, the `#list_unused_decls` command can be used to
 list the declaration present in the file that are not used by the main
 declarations of the file. -/
 @[user_attribute]
-meta def main_declaration_attr : user_attribute :=
-{ name := `main_declaration,
-  descr := "tag essential declarations to help identify unused definitions" }
+unsafe def main_declaration_attr : user_attribute where
+  Name := `main_declaration
+  descr := "tag essential declarations to help identify unused definitions"
 
 /-- `update_unsed_decls_list n m` removes from the map of unneeded declarations those
 referenced by declaration named `n` which is considerred to be a
 main declaration -/
-private meta def update_unsed_decls_list :
-  name → name_map declaration → tactic (name_map declaration)
-| n m :=
-  do d ← get_decl n,
-     if m.contains n then do
-       let m := m.erase n,
-       let ns := d.value.list_constant.union d.type.list_constant,
-       ns.mfold m update_unsed_decls_list
-     else pure m
+private unsafe def update_unsed_decls_list : Name → name_map declaration → tactic (name_map declaration)
+  | n, m => do
+    let d ← get_decl n
+    if m n then do
+        let m := m n
+        let ns := d d
+        ns m update_unsed_decls_list
+      else pure m
 
 /-- In the current file, list all the declaration that are not marked as `@[main_declaration]` and
 that are not referenced by such declarations -/
-meta def all_unused (fs : list (option string)) : tactic (name_map declaration) :=
-do ds ← get_decls_from fs,
-   ls ← ds.keys.mfilter (succeeds ∘ user_attribute.get_param_untyped main_declaration_attr),
-   ds ← ls.mfoldl (flip update_unsed_decls_list) ds,
-   ds.mfilter $ λ n d, do
-     e ← get_env,
-     return $ !d.is_auto_or_internal e
+unsafe def all_unused (fs : List (Option Stringₓ)) : tactic (name_map declaration) := do
+  let ds ← get_decls_from fs
+  let ls ← ds.keys.mfilter (succeeds ∘ user_attribute.get_param_untyped main_declaration_attr)
+  let ds ← ls.mfoldl (flip update_unsed_decls_list) ds
+  ds fun n d => do
+      let e ← get_env
+      return <| !d e
 
 /-- expecting a string literal (e.g. `"src/tactic/find_unused.lean"`)
 -/
-meta def parse_file_name (fn : pexpr) : tactic (option string) :=
-some <$> (to_expr fn >>= eval_expr string) <|> fail "expecting: \"src/dir/file-name\""
+unsafe def parse_file_name (fn : pexpr) : tactic (Option Stringₓ) :=
+  some <$> (to_expr fn >>= eval_expr Stringₓ) <|> fail "expecting: \"src/dir/file-name\""
 
 setup_tactic_parser
 
@@ -94,17 +94,18 @@ is present).
 Neither `#list_unused_decls` nor `@[main_declaration]` should appear
 in a finished mathlib development. -/
 @[user_command]
-meta def unused_decls_cmd (_ : parse $ tk "#list_unused_decls") : lean.parser unit :=
-do fs ← pexpr_list,
-   show tactic unit, from
-   do fs ← fs.mmap parse_file_name,
-      ds ← all_unused $ none :: fs,
-      ds.to_list.mmap' $ λ ⟨n,_⟩, trace!"#print {n}"
+unsafe def unused_decls_cmd (_ : parse <| tk "#list_unused_decls") : lean.parser Unit := do
+  let fs ← pexpr_list
+  show tactic Unit from do
+      let fs ← fs parse_file_name
+      let ds ← all_unused <| none :: fs
+      ds fun ⟨n, _⟩ =>
+          ← do
+            dbg_trace "#print {← n}"
 
 add_tactic_doc
-{ name                     := "#list_unused_decls",
-  category                 := doc_category.cmd,
-  decl_names               := [`tactic.unused_decls_cmd],
-  tags                     := ["debugging"] }
+  { Name := "#list_unused_decls", category := DocCategory.cmd, declNames := [`tactic.unused_decls_cmd],
+    tags := ["debugging"] }
 
-end tactic
+end Tactic
+

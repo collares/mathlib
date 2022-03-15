@@ -3,8 +3,7 @@ Copyright (c) 2020 Aaron Anderson. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Aaron Anderson
 -/
-
-import order.bounds
+import Mathbin.Order.Bounds
 
 /-!
 # Intervals in Lattices
@@ -26,146 +25,158 @@ In the following, `*` can represent either `c`, `o`, or `i`.
 
 -/
 
-variable {α : Type*}
 
-namespace set
+variable {α : Type _}
+
+namespace Set
 
 namespace Ico
 
-variables {a b : α}
+variable {a b : α}
 
-instance [semilattice_inf α] : semilattice_inf (Ico a b) :=
-subtype.semilattice_inf (λ x y hx hy, ⟨le_inf hx.1 hy.1, lt_of_le_of_lt inf_le_left hx.2⟩)
+instance [SemilatticeInf α] : SemilatticeInf (Ico a b) :=
+  Subtype.semilatticeInf fun x y hx hy => ⟨le_inf hx.1 hy.1, lt_of_le_of_ltₓ inf_le_left hx.2⟩
 
 /-- `Ico a b` has a bottom element whenever `a < b`. -/
-@[reducible] protected def order_bot [partial_order α] (h : a < b) : order_bot (Ico a b) :=
-(is_least_Ico h).order_bot
+@[reducible]
+protected def orderBot [PartialOrderₓ α] (h : a < b) : OrderBot (Ico a b) :=
+  (is_least_Ico h).OrderBot
 
 end Ico
 
 namespace Iio
 
-instance [semilattice_inf α] {a : α} : semilattice_inf (Iio a) :=
-subtype.semilattice_inf (λ x y hx hy, lt_of_le_of_lt inf_le_left hx)
+instance [SemilatticeInf α] {a : α} : SemilatticeInf (Iio a) :=
+  Subtype.semilatticeInf fun x y hx hy => lt_of_le_of_ltₓ inf_le_left hx
 
 end Iio
 
 namespace Ioc
 
-variables {a b : α}
+variable {a b : α}
 
-instance [semilattice_sup α] : semilattice_sup (Ioc a b) :=
-subtype.semilattice_sup (λ x y hx hy, ⟨lt_of_lt_of_le hx.1 le_sup_left, sup_le hx.2 hy.2⟩)
+instance [SemilatticeSup α] : SemilatticeSup (Ioc a b) :=
+  Subtype.semilatticeSup fun x y hx hy => ⟨lt_of_lt_of_leₓ hx.1 le_sup_left, sup_le hx.2 hy.2⟩
 
 /-- `Ioc a b` has a top element whenever `a < b`. -/
-@[reducible] protected def order_top [partial_order α] (h : a < b) : order_top (Ioc a b) :=
-(is_greatest_Ioc h).order_top
+@[reducible]
+protected def orderTop [PartialOrderₓ α] (h : a < b) : OrderTop (Ioc a b) :=
+  (is_greatest_Ioc h).OrderTop
 
 end Ioc
 
 namespace Iio
 
-instance [semilattice_sup α] {a : α} : semilattice_sup (Ioi a) :=
-subtype.semilattice_sup (λ x y hx hy, lt_of_lt_of_le hx le_sup_left)
+instance [SemilatticeSup α] {a : α} : SemilatticeSup (Ioi a) :=
+  Subtype.semilatticeSup fun x y hx hy => lt_of_lt_of_leₓ hx le_sup_left
 
 end Iio
 
 namespace Iic
 
-variables {a : α}
+variable {a : α}
 
-instance [semilattice_inf α] : semilattice_inf (Iic a) :=
-subtype.semilattice_inf (λ x y hx hy, le_trans inf_le_left hx)
+instance [SemilatticeInf α] : SemilatticeInf (Iic a) :=
+  Subtype.semilatticeInf fun x y hx hy => le_transₓ inf_le_left hx
 
-instance [semilattice_sup α] : semilattice_sup (Iic a) :=
-subtype.semilattice_sup (λ x y hx hy, sup_le hx hy)
+instance [SemilatticeSup α] : SemilatticeSup (Iic a) :=
+  Subtype.semilatticeSup fun x y hx hy => sup_le hx hy
 
-instance [lattice α] : lattice (Iic a) :=
-{ .. Iic.semilattice_inf,
-  .. Iic.semilattice_sup }
+instance [Lattice α] : Lattice (Iic a) :=
+  { Iic.semilatticeInf, Iic.semilatticeSup with }
 
-instance [preorder α] : order_top (Iic a) :=
-{ top := ⟨a, le_refl a⟩,
-  le_top := λ x, x.prop }
+instance [Preorderₓ α] : OrderTop (Iic a) where
+  top := ⟨a, le_reflₓ a⟩
+  le_top := fun x => x.Prop
 
-@[simp] lemma coe_top [partial_order α] {a : α} : ↑(⊤ : Iic a) = a := rfl
+@[simp]
+theorem coe_top [PartialOrderₓ α] {a : α} : ↑(⊤ : Iic a) = a :=
+  rfl
 
-instance [preorder α] [order_bot α] : order_bot (Iic a) :=
-{ bot := ⟨⊥, bot_le⟩,
-  bot_le := λ ⟨_,_⟩, subtype.mk_le_mk.2 bot_le }
+instance [Preorderₓ α] [OrderBot α] : OrderBot (Iic a) where
+  bot := ⟨⊥, bot_le⟩
+  bot_le := fun ⟨_, _⟩ => Subtype.mk_le_mk.2 bot_le
 
-@[simp] lemma coe_bot [preorder α] [order_bot α] {a : α} : ↑(⊥ : Iic a) = (⊥ : α) := rfl
+@[simp]
+theorem coe_bot [Preorderₓ α] [OrderBot α] {a : α} : ↑(⊥ : Iic a) = (⊥ : α) :=
+  rfl
 
-instance [partial_order α] [no_min_order α] {a : α} : no_min_order (Iic a) :=
-⟨λ x, let ⟨y, hy⟩ := exists_lt x.1 in ⟨⟨y, le_trans hy.le x.2⟩, hy⟩ ⟩
+instance [PartialOrderₓ α] [NoMinOrder α] {a : α} : NoMinOrder (Iic a) :=
+  ⟨fun x =>
+    let ⟨y, hy⟩ := exists_lt x.1
+    ⟨⟨y, le_transₓ hy.le x.2⟩, hy⟩⟩
 
-instance [preorder α] [order_bot α] : bounded_order (Iic a) :=
-{ .. Iic.order_top,
-  .. Iic.order_bot }
+instance [Preorderₓ α] [OrderBot α] : BoundedOrder (Iic a) :=
+  { Iic.orderTop, Iic.orderBot with }
 
 end Iic
 
 namespace Ici
 
-variables {a : α}
+variable {a : α}
 
-instance [semilattice_inf α] : semilattice_inf (Ici a) :=
-subtype.semilattice_inf (λ x y hx hy, le_inf hx hy)
+instance [SemilatticeInf α] : SemilatticeInf (Ici a) :=
+  Subtype.semilatticeInf fun x y hx hy => le_inf hx hy
 
-instance [semilattice_sup α] : semilattice_sup (Ici a) :=
-subtype.semilattice_sup (λ x y hx hy, le_trans hx le_sup_left)
+instance [SemilatticeSup α] : SemilatticeSup (Ici a) :=
+  Subtype.semilatticeSup fun x y hx hy => le_transₓ hx le_sup_left
 
-instance [lattice α] : lattice (Ici a) :=
-{ .. Ici.semilattice_inf,
-  .. Ici.semilattice_sup }
+instance [Lattice α] : Lattice (Ici a) :=
+  { Ici.semilatticeInf, Ici.semilatticeSup with }
 
-instance [preorder α] : order_bot (Ici a) :=
-{ bot := ⟨a, le_refl a⟩,
-  bot_le := λ x, x.prop }
+instance [Preorderₓ α] : OrderBot (Ici a) where
+  bot := ⟨a, le_reflₓ a⟩
+  bot_le := fun x => x.Prop
 
-@[simp] lemma coe_bot [partial_order α] {a : α} : ↑(⊥ : Ici a) = a := rfl
+@[simp]
+theorem coe_bot [PartialOrderₓ α] {a : α} : ↑(⊥ : Ici a) = a :=
+  rfl
 
-instance [preorder α] [order_top α] : order_top (Ici a) :=
-{ top := ⟨⊤, le_top⟩,
-  le_top := λ ⟨_,_⟩, subtype.mk_le_mk.2 le_top }
+instance [Preorderₓ α] [OrderTop α] : OrderTop (Ici a) where
+  top := ⟨⊤, le_top⟩
+  le_top := fun ⟨_, _⟩ => Subtype.mk_le_mk.2 le_top
 
-@[simp] lemma coe_top [preorder α] [order_top α] {a : α} : ↑(⊤ : Ici a) = (⊤ : α) := rfl
+@[simp]
+theorem coe_top [Preorderₓ α] [OrderTop α] {a : α} : ↑(⊤ : Ici a) = (⊤ : α) :=
+  rfl
 
-instance [partial_order α] [no_max_order α] {a : α} : no_max_order (Ici a) :=
-⟨λ x, let ⟨y, hy⟩ := exists_gt x.1 in ⟨⟨y, le_trans x.2 hy.le⟩, hy⟩ ⟩
+instance [PartialOrderₓ α] [NoMaxOrder α] {a : α} : NoMaxOrder (Ici a) :=
+  ⟨fun x =>
+    let ⟨y, hy⟩ := exists_gt x.1
+    ⟨⟨y, le_transₓ x.2 hy.le⟩, hy⟩⟩
 
-instance [preorder α] [order_top α] : bounded_order (Ici a) :=
-{ .. Ici.order_top,
-  .. Ici.order_bot }
+instance [Preorderₓ α] [OrderTop α] : BoundedOrder (Ici a) :=
+  { Ici.orderTop, Ici.orderBot with }
 
 end Ici
 
 namespace Icc
 
-instance [semilattice_inf α] {a b : α} : semilattice_inf (Icc a b) :=
-subtype.semilattice_inf (λ x y hx hy, ⟨le_inf hx.1 hy.1, le_trans inf_le_left hx.2⟩)
+instance [SemilatticeInf α] {a b : α} : SemilatticeInf (Icc a b) :=
+  Subtype.semilatticeInf fun x y hx hy => ⟨le_inf hx.1 hy.1, le_transₓ inf_le_left hx.2⟩
 
-instance [semilattice_sup α] {a b : α} : semilattice_sup (Icc a b) :=
-subtype.semilattice_sup (λ x y hx hy, ⟨le_trans hx.1 le_sup_left, sup_le hx.2 hy.2⟩)
+instance [SemilatticeSup α] {a b : α} : SemilatticeSup (Icc a b) :=
+  Subtype.semilatticeSup fun x y hx hy => ⟨le_transₓ hx.1 le_sup_left, sup_le hx.2 hy.2⟩
 
-instance [lattice α] {a b : α} : lattice (Icc a b) :=
-{ .. Icc.semilattice_inf,
-  .. Icc.semilattice_sup }
+instance [Lattice α] {a b : α} : Lattice (Icc a b) :=
+  { Icc.semilatticeInf, Icc.semilatticeSup with }
 
 /-- `Icc a b` has a bottom element whenever `a ≤ b`. -/
-@[reducible] protected def order_bot [preorder α] {a b : α} (h : a ≤ b) : order_bot (Icc a b) :=
-(is_least_Icc h).order_bot
+@[reducible]
+protected def orderBot [Preorderₓ α] {a b : α} (h : a ≤ b) : OrderBot (Icc a b) :=
+  (is_least_Icc h).OrderBot
 
 /-- `Icc a b` has a top element whenever `a ≤ b`. -/
-@[reducible] protected def order_top [preorder α] {a b : α} (h : a ≤ b) : order_top (Icc a b) :=
-(is_greatest_Icc h).order_top
+@[reducible]
+protected def orderTop [Preorderₓ α] {a b : α} (h : a ≤ b) : OrderTop (Icc a b) :=
+  (is_greatest_Icc h).OrderTop
 
 /-- `Icc a b` is a `bounded_order` whenever `a ≤ b`. -/
-@[reducible] protected def bounded_order [preorder α] {a b : α} (h : a ≤ b) :
-  bounded_order (Icc a b) :=
-{ .. Icc.order_top h,
-  .. Icc.order_bot h }
+@[reducible]
+protected def boundedOrder [Preorderₓ α] {a b : α} (h : a ≤ b) : BoundedOrder (Icc a b) :=
+  { Icc.orderTop h, Icc.orderBot h with }
 
 end Icc
 
-end set
+end Set
+

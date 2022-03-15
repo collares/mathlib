@@ -3,10 +3,10 @@ Copyright (c) 2021 Aaron Anderson, Jesse Michael Han, Floris van Doorn. All righ
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Aaron Anderson, Jesse Michael Han, Floris van Doorn
 -/
-import data.equiv.fin
-import data.finset.basic
-import model_theory.basic
-import set_theory.cardinal_ordinal
+import Mathbin.Data.Equiv.Fin
+import Mathbin.Data.Finset.Basic
+import Mathbin.ModelTheory.Basic
+import Mathbin.SetTheory.CardinalOrdinal
 
 /-!
 # Basics on First-Order Structures
@@ -39,653 +39,701 @@ the continuum hypothesis*][flypitch_itp]
 
 -/
 
-universes u v w u' v'
 
-namespace first_order
-namespace language
+universe u v w u' v'
 
-variables (L : language.{u v})
-variables {M : Type w} {N P : Type*} [L.Structure M] [L.Structure N] [L.Structure P]
-variables {α : Type u'} {β : Type v'}
-open_locale first_order cardinal
-open Structure cardinal
+namespace FirstOrder
+
+namespace Language
+
+variable (L : Language.{u, v})
+
+variable {M : Type w} {N P : Type _} [L.Structure M] [L.Structure N] [L.Structure P]
+
+variable {α : Type u'} {β : Type v'}
+
+open_locale FirstOrder Cardinal
+
+open Structure Cardinal
 
 /-- A term on `α` is either a variable indexed by an element of `α`
   or a function symbol applied to simpler terms. -/
-inductive term (α : Type u') : Type (max u u')
-| var {} : ∀ (a : α), term
-| func {} : ∀ {l : ℕ} (f : L.functions l) (ts : fin l → term), term
-export term
+inductive Term (α : Type u') : Type max u u'
+  | var {} : ∀ a : α, term
+  | func {} : ∀ {l : ℕ} f : L.Functions l ts : Finₓ l → term, term
+
+export Term ()
 
 variable {L}
 
-namespace term
+namespace Term
 
-open list
+open List
 
 /-- Relabels a term's variables along a particular function. -/
-@[simp] def relabel (g : α → β) : L.term α → L.term β
-| (var i) := var (g i)
-| (func f ts) := func f (λ i, (ts i).relabel)
+@[simp]
+def relabelₓ (g : α → β) : L.Term α → L.Term β
+  | var i => var (g i)
+  | func f ts => func f fun i => (ts i).relabel
 
 /-- Encodes a term as a list of variables and function symbols. -/
-def list_encode : L.term α → list (α ⊕ (Σ i, L.functions i))
-| (var i) := [sum.inl i]
-| (func f ts) := ((sum.inr (⟨_, f⟩ : Σ i, L.functions i)) ::
-    ((list.fin_range _).bind (λ i, (ts i).list_encode)))
+def listEncodeₓ : L.Term α → List (Sum α (Σi, L.Functions i))
+  | var i => [Sum.inl i]
+  | func f ts => Sum.inr (⟨_, f⟩ : Σi, L.Functions i) :: (List.finRange _).bind fun i => (ts i).listEncode
 
 /-- Decodes a list of variables and function symbols as a list of terms. -/
-def list_decode [inhabited (L.term α)] :
-  list (α ⊕ (Σ i, L.functions i)) → list (L.term α)
-| [] := []
-| ((sum.inl a) :: l) := var a :: list_decode l
-| ((sum.inr ⟨n, f⟩) :: l) := func f (λ i, ((list_decode l).nth i).iget) :: ((list_decode l).drop n)
+def listDecodeₓ [Inhabited (L.Term α)] : List (Sum α (Σi, L.Functions i)) → List (L.Term α)
+  | [] => []
+  | Sum.inl a :: l => var a :: list_decode l
+  | Sum.inr ⟨n, f⟩ :: l => (func f fun i => ((list_decode l).nth i).iget) :: (list_decode l).drop n
 
-@[simp] theorem list_decode_encode_list [inhabited (L.term α)] (l : list (L.term α)) :
-  list_decode (l.bind list_encode) = l :=
-begin
-  suffices h : ∀ (t : L.term α) (l : list (α ⊕ (Σ i, L.functions i))),
-    list_decode (t.list_encode ++ l) = t :: list_decode l,
-  { induction l with t l lih,
-    { refl },
-    { rw [cons_bind, h t (l.bind list_encode), lih] } },
-  { intro t,
-    induction t with a n f ts ih; intro l,
-    { rw [list_encode, singleton_append, list_decode] },
-    { rw [list_encode, cons_append, list_decode],
-      have h : list_decode ((fin_range n).bind (λ (i : fin n), (ts i).list_encode) ++ l) =
-        (fin_range n).map ts ++ list_decode l,
-      { induction (fin_range n) with i l' l'ih,
-        { refl },
-        { rw [cons_bind, append_assoc, ih, map_cons, l'ih, cons_append] } },
-      have h' : n ≤ (list_decode ((fin_range n).bind (λ (i : fin n),
-        (ts i).list_encode) ++ l)).length,
-      { rw [h, length_append, length_map, length_fin_range],
-        exact le_self_add, },
-      refine congr (congr rfl (congr rfl (funext (λ i, _)))) _,
-      { rw [nth_le_nth (lt_of_lt_of_le i.is_lt h'), option.iget_some, nth_le_of_eq h, nth_le_append,
-          nth_le_map, nth_le_fin_range, fin.eta],
-        { rw [length_fin_range],
-          exact i.is_lt },
-        { rw [length_map, length_fin_range],
-          exact i.is_lt } },
-      { rw [h, drop_left'],
-        rw [length_map, length_fin_range] } } }
-end
+@[simp]
+theorem list_decode_encode_list [Inhabited (L.Term α)] (l : List (L.Term α)) : listDecodeₓ (l.bind listEncodeₓ) = l :=
+  by
+  suffices h : ∀ t : L.term α l : List (Sum α (Σi, L.functions i)), list_decode (t.listEncode ++ l) = t :: list_decode l
+  · induction' l with t l lih
+    · rfl
+      
+    · rw [cons_bind, h t (l.bind list_encode), lih]
+      
+    
+  · intro t
+    induction' t with a n f ts ih <;> intro l
+    · rw [list_encode, singleton_append, list_decode]
+      
+    · rw [list_encode, cons_append, list_decode]
+      have h :
+        list_decode (((fin_range n).bind fun i : Finₓ n => (ts i).listEncode) ++ l) =
+          (fin_range n).map ts ++ list_decode l :=
+        by
+        induction' fin_range n with i l' l'ih
+        · rfl
+          
+        · rw [cons_bind, append_assoc, ih, map_cons, l'ih, cons_append]
+          
+      have h' : n ≤ (list_decode (((fin_range n).bind fun i : Finₓ n => (ts i).listEncode) ++ l)).length := by
+        rw [h, length_append, length_map, length_fin_range]
+        exact le_self_add
+      refine' congr (congr rfl (congr rfl (funext fun i => _))) _
+      · rw [nth_le_nth (lt_of_lt_of_leₓ i.is_lt h'), Option.iget_some, nth_le_of_eq h, nth_le_append, nth_le_map,
+          nth_le_fin_range, Finₓ.eta]
+        · rw [length_fin_range]
+          exact i.is_lt
+          
+        · rw [length_map, length_fin_range]
+          exact i.is_lt
+          
+        
+      · rw [h, drop_left']
+        rw [length_map, length_fin_range]
+        
+      
+    
 
-lemma list_encode_injective :
-  function.injective (list_encode : L.term α → list (α ⊕ (Σ i, L.functions i))) :=
-begin
-  cases is_empty_or_nonempty (L.term α) with he hne,
-  { exact he.elim },
-  { resetI,
-    inhabit (L.term α),
-    intros t1 t2 h,
-    have h' : (list_decode ([t1].bind (list_encode))) = (list_decode ([t2].bind (list_encode))),
-    { rw [bind_singleton, h, bind_singleton] },
-    rw [list_decode_encode_list, list_decode_encode_list] at h',
-    exact head_eq_of_cons_eq h' }
-end
+theorem list_encode_injective : Function.Injective (listEncodeₓ : L.Term α → List (Sum α (Σi, L.Functions i))) := by
+  cases' is_empty_or_nonempty (L.term α) with he hne
+  · exact he.elim
+    
+  · skip
+    inhabit L.term α
+    intro t1 t2 h
+    have h' : list_decode ([t1].bind list_encode) = list_decode ([t2].bind list_encode) := by
+      rw [bind_singleton, h, bind_singleton]
+    rw [list_decode_encode_list, list_decode_encode_list] at h'
+    exact head_eq_of_cons_eq h'
+    
 
-theorem card_le : # (L.term α) ≤ # (α ⊕ (Σ i, L.functions i)) + ω :=
-begin
-  have h := (mk_le_of_injective list_encode_injective),
-  refine h.trans _,
-  casesI fintype_or_infinite (α ⊕ (Σ i, L.functions i)) with ft inf,
-  { haveI := fintype.encodable (α ⊕ (Σ i, L.functions i)),
-    exact le_add_left (encodable_iff.1 ⟨encodable.list⟩) },
-  { rw mk_list_eq_mk,
-    exact le_self_add }
-end
+theorem card_le : # (L.Term α) ≤ # (Sum α (Σi, L.Functions i)) + ω := by
+  have h := mk_le_of_injective list_encode_injective
+  refine' h.trans _
+  cases' fintypeOrInfinite (Sum α (Σi, L.functions i)) with ft inf
+  · have := Fintype.encodable (Sum α (Σi, L.functions i))
+    exact le_add_left (encodable_iff.1 ⟨Encodable.list⟩)
+    
+  · rw [mk_list_eq_mk]
+    exact le_self_add
+    
 
-instance [encodable α] [encodable ((Σ i, L.functions i))] [inhabited (L.term α)] :
-  encodable (L.term α) :=
-encodable.of_left_injection list_encode (λ l, (list_decode l).head')
-  (λ t, by rw [← bind_singleton list_encode, list_decode_encode_list, head'])
+instance [Encodable α] [Encodable (Σi, L.Functions i)] [Inhabited (L.Term α)] : Encodable (L.Term α) :=
+  Encodable.ofLeftInjection listEncodeₓ (fun l => (listDecodeₓ l).head') fun t => by
+    rw [← bind_singleton list_encode, list_decode_encode_list, head']
 
-instance inhabited_of_var [inhabited α] : inhabited (L.term α) :=
-⟨var default⟩
+instance inhabitedOfVar [Inhabited α] : Inhabited (L.Term α) :=
+  ⟨var default⟩
 
-instance inhabited_of_constant [inhabited L.constants] : inhabited (L.term α) :=
-⟨func (default : L.constants) default⟩
+instance inhabitedOfConstant [Inhabited L.Constants] : Inhabited (L.Term α) :=
+  ⟨func (default : L.Constants) default⟩
 
-instance : has_coe L.constants (L.term α) :=
-⟨λ c, func c default⟩
+instance : Coe L.Constants (L.Term α) :=
+  ⟨fun c => func c default⟩
 
 /-- A term `t` with variables indexed by `α` can be evaluated by giving a value to each variable. -/
-@[simp] def realize (v : α → M) :
-  ∀ (t : L.term α), M
-| (var k)         := v k
-| (func f ts)     := fun_map f (λ i, (ts i).realize)
+@[simp]
+def realizeₓ (v : α → M) : ∀ t : L.Term α, M
+  | var k => v k
+  | func f ts => funMap f fun i => (ts i).realize
 
-@[simp] lemma realize_relabel {t : L.term α} {g : α → β} {v : β → M} :
-  (t.relabel g).realize v = t.realize (v ∘ g) :=
-begin
-  induction t with _ n f ts ih,
-  { refl, },
-  { simp [ih] }
-end
+@[simp]
+theorem realize_relabel {t : L.Term α} {g : α → β} {v : β → M} : (t.relabel g).realize v = t.realize (v ∘ g) := by
+  induction' t with _ n f ts ih
+  · rfl
+    
+  · simp [ih]
+    
 
-end term
+end Term
 
-localized "prefix `&`:max := first_order.language.term.var ∘ sum.inr" in first_order
+-- mathport name: «expr& »
+localized [FirstOrder] prefix:arg "&" => FirstOrder.Language.Term.var ∘ Sum.inr
 
-@[simp] lemma hom.realize_term (g : M →[L] N) {t : L.term α} {v : α → M} :
-  t.realize (g ∘ v) = g (t.realize v) :=
-begin
-  induction t,
-  { refl },
-  { rw [term.realize, term.realize, g.map_fun],
-    refine congr rfl _,
-    ext x,
-    simp [t_ih x], },
-end
+@[simp]
+theorem Hom.realize_term (g : M →[L] N) {t : L.Term α} {v : α → M} : t.realize (g ∘ v) = g (t.realize v) := by
+  induction t
+  · rfl
+    
+  · rw [term.realize, term.realize, g.map_fun]
+    refine' congr rfl _
+    ext x
+    simp [t_ih x]
+    
 
-@[simp] lemma embedding.realize_term {v : α → M}
-  (t : L.term α) (g : M ↪[L] N) :
-  t.realize (g ∘ v) = g (t.realize v) :=
-g.to_hom.realize_term
+@[simp]
+theorem Embedding.realize_term {v : α → M} (t : L.Term α) (g : M ↪[L] N) : t.realize (g ∘ v) = g (t.realize v) :=
+  g.toHom.realize_term
 
-@[simp] lemma equiv.realize_term {v : α → M}
-  (t : L.term α) (g : M ≃[L] N) :
-  t.realize (g ∘ v) = g (t.realize v) :=
-g.to_hom.realize_term
+@[simp]
+theorem Equiv.realize_term {v : α → M} (t : L.Term α) (g : M ≃[L] N) : t.realize (g ∘ v) = g (t.realize v) :=
+  g.toHom.realize_term
 
-variables (L) (α)
+variable (L) (α)
+
 /-- `bounded_formula α n` is the type of formulas with free variables indexed by `α` and up to `n`
   additional free variables. -/
-inductive bounded_formula : ℕ → Type (max u v u')
-| falsum {} {n} : bounded_formula n
-| equal {n} (t₁ t₂ : L.term (α ⊕ fin n)) : bounded_formula n
-| rel {n l : ℕ} (R : L.relations l) (ts : fin l → L.term (α ⊕ fin n)) : bounded_formula n
-| imp {n} (f₁ f₂ : bounded_formula n) : bounded_formula n
-| all {n} (f : bounded_formula (n+1)) : bounded_formula n
+inductive BoundedFormula : ℕ → Type max u v u'
+  | falsum {} {n} : bounded_formula n
+  | equal {n} (t₁ t₂ : L.Term (Sum α (Finₓ n))) : bounded_formula n
+  | rel {n l : ℕ} (R : L.Relations l) (ts : Finₓ l → L.Term (Sum α (Finₓ n))) : bounded_formula n
+  | imp {n} (f₁ f₂ : bounded_formula n) : bounded_formula n
+  | all {n} (f : bounded_formula (n + 1)) : bounded_formula n
 
 /-- `formula α` is the type of formulas with all free variables indexed by `α`. -/
-@[reducible] def formula := L.bounded_formula α 0
+@[reducible]
+def Formula :=
+  L.BoundedFormula α 0
 
 /-- A sentence is a formula with no free variables. -/
-@[reducible] def sentence := L.formula empty
+@[reducible]
+def Sentence :=
+  L.Formula Empty
 
 /-- A theory is a set of sentences. -/
-@[reducible] def Theory := set L.sentence
+@[reducible]
+def Theory :=
+  Set L.Sentence
 
-variables {L} {α} {n : ℕ}
+variable {L} {α} {n : ℕ}
 
 /-- Applies a relation to terms as a bounded formula. -/
-def relations.bounded_formula {l : ℕ} (R : L.relations n) (ts : fin n → L.term (α ⊕ fin l)) :
-  L.bounded_formula α l := bounded_formula.rel R ts
+def Relations.boundedFormula {l : ℕ} (R : L.Relations n) (ts : Finₓ n → L.Term (Sum α (Finₓ l))) :
+    L.BoundedFormula α l :=
+  BoundedFormula.rel R ts
 
 /-- The equality of two terms as a bounded formula. -/
-def term.bd_equal (t₁ t₂ : L.term (α ⊕ fin n)) : (L.bounded_formula α n) :=
-bounded_formula.equal t₁ t₂
+def Term.bdEqual (t₁ t₂ : L.Term (Sum α (Finₓ n))) : L.BoundedFormula α n :=
+  BoundedFormula.equal t₁ t₂
 
 /-- Applies a relation to terms as a bounded formula. -/
-def relations.formula (R : L.relations n) (ts : fin n → L.term α) :
-  L.formula α := R.bounded_formula (λ i, (ts i).relabel sum.inl)
+def Relations.formula (R : L.Relations n) (ts : Finₓ n → L.Term α) : L.Formula α :=
+  R.BoundedFormula fun i => (ts i).relabel Sum.inl
 
 /-- The equality of two terms as a first-order formula. -/
-def term.equal (t₁ t₂ : L.term α) : (L.formula α) :=
-(t₁.relabel sum.inl).bd_equal (t₂.relabel sum.inl)
+def Term.equal (t₁ t₂ : L.Term α) : L.Formula α :=
+  (t₁.relabel Sum.inl).bdEqual (t₂.relabel Sum.inl)
 
-namespace bounded_formula
+namespace BoundedFormula
 
-instance : inhabited (L.bounded_formula α n) :=
-⟨falsum⟩
+instance : Inhabited (L.BoundedFormula α n) :=
+  ⟨falsum⟩
 
-instance : has_bot (L.bounded_formula α n) := ⟨falsum⟩
+instance : HasBot (L.BoundedFormula α n) :=
+  ⟨falsum⟩
 
 /-- The negation of a bounded formula is also a bounded formula. -/
-protected def not (φ : L.bounded_formula α n) : L.bounded_formula α n := φ.imp ⊥
+protected def not (φ : L.BoundedFormula α n) : L.BoundedFormula α n :=
+  φ.imp ⊥
 
 /-- Puts an `∃` quantifier on a bounded formula. -/
-protected def ex (φ : L.bounded_formula α (n + 1)) : L.bounded_formula α n :=
-  φ.not.all.not
+protected def ex (φ : L.BoundedFormula α (n + 1)) : L.BoundedFormula α n :=
+  φ.Not.all.Not
 
-instance : has_top (L.bounded_formula α n) := ⟨bounded_formula.not ⊥⟩
+instance : HasTop (L.BoundedFormula α n) :=
+  ⟨BoundedFormula.not ⊥⟩
 
-instance : has_inf (L.bounded_formula α n) := ⟨λ f g, (f.imp g.not).not⟩
+instance : HasInf (L.BoundedFormula α n) :=
+  ⟨fun f g => (f.imp g.Not).Not⟩
 
-instance : has_sup (L.bounded_formula α n) := ⟨λ f g, f.not.imp g⟩
+instance : HasSup (L.BoundedFormula α n) :=
+  ⟨fun f g => f.Not.imp g⟩
 
 /-- The biimplication between two bounded formulas. -/
-protected def iff (φ ψ : L.bounded_formula α n) := φ.imp ψ ⊓ ψ.imp φ
+protected def iff (φ ψ : L.BoundedFormula α n) :=
+  φ.imp ψ⊓ψ.imp φ
 
 /-- A function to help relabel the variables in bounded formulas. -/
-def relabel_aux (g : α → (β ⊕ fin n)) (k : ℕ) :
-  α ⊕ fin k → β ⊕ fin (n + k) :=
-(sum.map id fin_sum_fin_equiv) ∘ (equiv.sum_assoc _ _ _) ∘ (sum.map g id)
+def relabelAux (g : α → Sum β (Finₓ n)) (k : ℕ) : Sum α (Finₓ k) → Sum β (Finₓ (n + k)) :=
+  Sum.map id finSumFinEquiv ∘ Equivₓ.sumAssoc _ _ _ ∘ Sum.map g id
 
-@[simp] lemma sum_elim_comp_relabel_aux {m : ℕ} {g : α → (β ⊕ fin n)}
-  {v : β → M} {xs : fin (n + m) → M} :
-  sum.elim v xs ∘ relabel_aux g m =
-    sum.elim (sum.elim v (xs ∘ (fin.cast_add m)) ∘ g) (xs ∘ (fin.nat_add n)) :=
-begin
-  ext x,
-  cases x,
-  { simp only [bounded_formula.relabel_aux, function.comp_app, sum.map_inl, sum.elim_inl],
-    cases g x with l r;
-    simp },
-  { simp [bounded_formula.relabel_aux] }
-end
+@[simp]
+theorem sum_elim_comp_relabel_aux {m : ℕ} {g : α → Sum β (Finₓ n)} {v : β → M} {xs : Finₓ (n + m) → M} :
+    Sum.elim v xs ∘ relabelAux g m = Sum.elim (Sum.elim v (xs ∘ Finₓ.castAdd m) ∘ g) (xs ∘ Finₓ.natAdd n) := by
+  ext x
+  cases x
+  · simp only [bounded_formula.relabel_aux, Function.comp_app, Sum.map_inl, Sum.elim_inl]
+    cases' g x with l r <;> simp
+    
+  · simp [bounded_formula.relabel_aux]
+    
 
 /-- Relabels a bounded formula's variables along a particular function. -/
-def relabel (g : α → (β ⊕ fin n)) :
-  ∀ {k : ℕ}, L.bounded_formula α k → L.bounded_formula β (n + k)
-| k falsum := falsum
-| k (equal t₁ t₂) := (t₁.relabel (relabel_aux g k)).bd_equal (t₂.relabel (relabel_aux g k))
-| k (rel R ts) := R.bounded_formula (term.relabel (relabel_aux g k) ∘ ts)
-| k (imp f₁ f₂) := f₁.relabel.imp f₂.relabel
-| k (all f) := f.relabel.all
+def relabelₓ (g : α → Sum β (Finₓ n)) : ∀ {k : ℕ}, L.BoundedFormula α k → L.BoundedFormula β (n + k)
+  | k, falsum => falsum
+  | k, equal t₁ t₂ => (t₁.relabel (relabelAux g k)).bdEqual (t₂.relabel (relabelAux g k))
+  | k, rel R ts => R.BoundedFormula (Term.relabelₓ (relabelAux g k) ∘ ts)
+  | k, imp f₁ f₂ => f₁.relabel.imp f₂.relabel
+  | k, all f => f.relabel.all
 
 /-- Places universal quantifiers on all extra variables of a bounded formula. -/
-def alls : ∀ {n}, L.bounded_formula α n → L.formula α
-| 0 φ := φ
-| (n + 1) φ := φ.all.alls
+def allsₓ : ∀ {n}, L.BoundedFormula α n → L.Formula α
+  | 0, φ => φ
+  | n + 1, φ => φ.all.alls
 
 /-- Places existential quantifiers on all extra variables of a bounded formula. -/
-def exs : ∀ {n}, L.bounded_formula α n → L.formula α
-| 0 φ := φ
-| (n + 1) φ := φ.ex.exs
+def exsₓ : ∀ {n}, L.BoundedFormula α n → L.Formula α
+  | 0, φ => φ
+  | n + 1, φ => φ.ex.exs
 
 /-- A bounded formula can be evaluated as true or false by giving values to each free variable. -/
-def realize :
-  ∀ {l} (f : L.bounded_formula α l) (v : α → M) (xs : fin l → M), Prop
-| _ falsum        v xs := false
-| _ (equal t₁ t₂) v xs := t₁.realize (sum.elim v xs) = t₂.realize (sum.elim v xs)
-| _ (rel R ts)    v xs := rel_map R (λ i, (ts i).realize (sum.elim v xs))
-| _ (imp f₁ f₂)   v xs := realize f₁ v xs → realize f₂ v xs
-| _ (all f)       v xs := ∀(x : M), realize f v (fin.snoc xs x)
+def Realizeₓ : ∀ {l} f : L.BoundedFormula α l v : α → M xs : Finₓ l → M, Prop
+  | _, falsum, v, xs => False
+  | _, equal t₁ t₂, v, xs => t₁.realize (Sum.elim v xs) = t₂.realize (Sum.elim v xs)
+  | _, rel R ts, v, xs => RelMap R fun i => (ts i).realize (Sum.elim v xs)
+  | _, imp f₁ f₂, v, xs => realize f₁ v xs → realize f₂ v xs
+  | _, all f, v, xs => ∀ x : M, realize f v (Finₓ.snoc xs x)
 
-variables {l : ℕ} {φ ψ : L.bounded_formula α l} {θ : L.bounded_formula α l.succ}
-variables {v : α → M} {xs : fin l → M}
+variable {l : ℕ} {φ ψ : L.BoundedFormula α l} {θ : L.BoundedFormula α l.succ}
 
-@[simp] lemma realize_bot :
-  (⊥ : L.bounded_formula α l).realize v xs ↔ false :=
-iff.rfl
+variable {v : α → M} {xs : Finₓ l → M}
 
-@[simp] lemma realize_not :
-  φ.not.realize v xs ↔ ¬ φ.realize v xs :=
-iff.rfl
+@[simp]
+theorem realize_bot : (⊥ : L.BoundedFormula α l).realize v xs ↔ False :=
+  Iff.rfl
 
-@[simp] lemma realize_bd_equal (t₁ t₂ : L.term (α ⊕ fin l)) :
-  (t₁.bd_equal t₂).realize v xs ↔
-    (t₁.realize (sum.elim v xs) = t₂.realize (sum.elim v xs)) :=
-iff.rfl
+@[simp]
+theorem realize_not : φ.Not.realize v xs ↔ ¬φ.realize v xs :=
+  Iff.rfl
 
-@[simp] lemma realize_top :
-  (⊤ : L.bounded_formula α l).realize v xs ↔ true :=
-by simp [has_top.top]
+@[simp]
+theorem realize_bd_equal (t₁ t₂ : L.Term (Sum α (Finₓ l))) :
+    (t₁.bdEqual t₂).realize v xs ↔ t₁.realize (Sum.elim v xs) = t₂.realize (Sum.elim v xs) :=
+  Iff.rfl
 
-@[simp] lemma realize_inf : (φ ⊓ ψ).realize v xs ↔ (φ.realize v xs ∧ ψ.realize v xs) :=
-by simp [has_inf.inf, realize]
+@[simp]
+theorem realize_top : (⊤ : L.BoundedFormula α l).realize v xs ↔ True := by
+  simp [HasTop.top]
 
-@[simp] lemma realize_imp : (φ.imp ψ).realize v xs ↔ (φ.realize v xs → ψ.realize v xs) :=
-by simp only [realize]
+@[simp]
+theorem realize_inf : (φ⊓ψ).realize v xs ↔ φ.realize v xs ∧ ψ.realize v xs := by
+  simp [HasInf.inf, realize]
 
-@[simp] lemma realize_rel {k : ℕ} {R : L.relations k} {ts : fin k → L.term _} :
-  (R.bounded_formula ts).realize v xs ↔ rel_map R (λ i, (ts i).realize (sum.elim v xs)) :=
-iff.rfl
+@[simp]
+theorem realize_imp : (φ.imp ψ).realize v xs ↔ φ.realize v xs → ψ.realize v xs := by
+  simp only [realize]
 
-@[simp] lemma realize_sup : (φ ⊔ ψ).realize v xs ↔ (φ.realize v xs ∨ ψ.realize v xs) :=
-begin
-  simp only [realize, has_sup.sup, realize_not, eq_iff_iff],
-  tauto,
-end
+@[simp]
+theorem realize_rel {k : ℕ} {R : L.Relations k} {ts : Finₓ k → L.Term _} :
+    (R.BoundedFormula ts).realize v xs ↔ RelMap R fun i => (ts i).realize (Sum.elim v xs) :=
+  Iff.rfl
 
-@[simp] lemma realize_all : (all θ).realize v xs ↔ ∀ (a : M), (θ.realize v (fin.snoc xs a)) :=
-iff.rfl
+@[simp]
+theorem realize_sup : (φ⊔ψ).realize v xs ↔ φ.realize v xs ∨ ψ.realize v xs := by
+  simp only [realize, HasSup.sup, realize_not, eq_iff_iff]
+  tauto
 
-@[simp] lemma realize_ex : θ.ex.realize v xs ↔ ∃ (a : M), (θ.realize v (fin.snoc xs a)) :=
-begin
-  rw [bounded_formula.ex, realize_not, realize_all, not_forall],
-  simp_rw [realize_not, not_not],
-end
+@[simp]
+theorem realize_all : (all θ).realize v xs ↔ ∀ a : M, θ.realize v (Finₓ.snoc xs a) :=
+  Iff.rfl
 
-@[simp] lemma realize_iff : (φ.iff ψ).realize v xs ↔ (φ.realize v xs ↔ ψ.realize v xs) :=
-by simp only [bounded_formula.iff, realize_inf, realize_imp, and_imp, ← iff_def]
+@[simp]
+theorem realize_ex : θ.ex.realize v xs ↔ ∃ a : M, θ.realize v (Finₓ.snoc xs a) := by
+  rw [bounded_formula.ex, realize_not, realize_all, not_forall]
+  simp_rw [realize_not, not_not]
 
-lemma realize_relabel {m n : ℕ}
-  {φ : L.bounded_formula α n} {g : α → (β ⊕ fin m)} {v : β → M} {xs : fin (m + n) → M} :
-  (φ.relabel g).realize v xs ↔
-    φ.realize (sum.elim v (xs ∘ (fin.cast_add n)) ∘ g) (xs ∘ (fin.nat_add m)) :=
-begin
-  induction φ with _ _ _ _ _ _ _ _ _ _ _ ih1 ih2 n' _ ih3,
-  { refl },
-  { simp [realize, relabel] },
-  { simp [realize, relabel] },
-  { simp [realize, relabel, ih1, ih2] },
-  { simp only [ih3, realize, relabel],
-    refine forall_congr (λ a, (iff_eq_eq.mpr (congr (congr rfl (congr (congr rfl (congr rfl
-      (funext (λ i, (dif_pos _).trans rfl)))) rfl)) _))),
-    { ext i,
-      by_cases h : i.val < n',
-      { exact (dif_pos (nat.add_lt_add_left h m)).trans (dif_pos h).symm },
-      { exact (dif_neg (λ h', h (nat.lt_of_add_lt_add_left h'))).trans (dif_neg h).symm } } }
-end
+@[simp]
+theorem realize_iff : (φ.Iff ψ).realize v xs ↔ (φ.realize v xs ↔ ψ.realize v xs) := by
+  simp only [bounded_formula.iff, realize_inf, realize_imp, and_imp, ← iff_def]
 
-end bounded_formula
+theorem realize_relabel {m n : ℕ} {φ : L.BoundedFormula α n} {g : α → Sum β (Finₓ m)} {v : β → M}
+    {xs : Finₓ (m + n) → M} :
+    (φ.relabel g).realize v xs ↔ φ.realize (Sum.elim v (xs ∘ Finₓ.castAdd n) ∘ g) (xs ∘ Finₓ.natAdd m) := by
+  induction' φ with _ _ _ _ _ _ _ _ _ _ _ ih1 ih2 n' _ ih3
+  · rfl
+    
+  · simp [realize, relabel]
+    
+  · simp [realize, relabel]
+    
+  · simp [realize, relabel, ih1, ih2]
+    
+  · simp only [ih3, realize, relabel]
+    refine'
+      forall_congrₓ fun a =>
+        iff_eq_eq.mpr (congr (congr rfl (congr (congr rfl (congr rfl (funext fun i => (dif_pos _).trans rfl))) rfl)) _)
+    · ext i
+      by_cases' h : i.val < n'
+      · exact (dif_pos (Nat.add_lt_add_leftₓ h m)).trans (dif_pos h).symm
+        
+      · exact (dif_neg fun h' => h (Nat.lt_of_add_lt_add_leftₓ h')).trans (dif_neg h).symm
+        
+      
+    
+
+end BoundedFormula
 
 attribute [protected] bounded_formula.falsum bounded_formula.equal bounded_formula.rel
+
 attribute [protected] bounded_formula.imp bounded_formula.all
 
-localized "infix ` =' `:88 := first_order.language.term.bd_equal" in first_order
-  -- input \~- or \simeq
-localized "infixr ` ⟹ `:62 := first_order.language.bounded_formula.imp" in first_order
-  -- input \==>
-localized "prefix `∀'`:110 := first_order.language.bounded_formula.all" in first_order
-localized "prefix `∼`:max := first_order.language.bounded_formula.not" in first_order
-  -- input \~, the ASCII character ~ has too low precedence
-localized "infix ` ⇔ `:61 := first_order.language.bounded_formula.iff" in first_order -- input \<=>
-localized "prefix `∃'`:110 := first_order.language.bounded_formula.ex" in first_order -- input \ex
+-- mathport name: «expr =' »
+localized [FirstOrder] infixl:88 " =' " => FirstOrder.Language.Term.bdEqual
 
-namespace formula
+-- mathport name: «expr ⟹ »
+-- input \~- or \simeq
+localized [FirstOrder] infixr:62 " ⟹ " => FirstOrder.Language.BoundedFormula.imp
+
+-- mathport name: «expr∀' »
+-- input \==>
+localized [FirstOrder] prefix:110 "∀'" => FirstOrder.Language.BoundedFormula.all
+
+-- mathport name: «expr∼ »
+localized [FirstOrder] prefix:arg "∼" => FirstOrder.Language.BoundedFormula.not
+
+-- mathport name: «expr ⇔ »
+-- input \~, the ASCII character ~ has too low precedence
+localized [FirstOrder] infixl:61 " ⇔ " => FirstOrder.Language.BoundedFormula.iff
+
+-- mathport name: «expr∃' »
+-- input \<=>
+localized [FirstOrder] prefix:110 "∃'" => FirstOrder.Language.BoundedFormula.ex
+
+-- input \ex
+namespace Formula
 
 /-- Relabels a formula's variables along a particular function. -/
-def relabel (g : α → β) : L.formula α → L.formula β :=
-bounded_formula.relabel (sum.inl ∘ g)
+def relabel (g : α → β) : L.Formula α → L.Formula β :=
+  BoundedFormula.relabelₓ (Sum.inl ∘ g)
 
 /-- The graph of a function as a first-order formula. -/
-def graph (f : L.functions n) : L.formula (fin (n + 1)) :=
-equal (var 0) (func f (λ i, var i.succ))
+def graph (f : L.Functions n) : L.Formula (Finₓ (n + 1)) :=
+  equal (var 0) (func f fun i => var i.succ)
 
 /-- The negation of a formula. -/
-protected def not (φ : L.formula α) : L.formula α := φ.not
+protected def not (φ : L.Formula α) : L.Formula α :=
+  φ.Not
 
 /-- The implication between formulas, as a formula. -/
-protected def imp : L.formula α → L.formula α → L.formula α := bounded_formula.imp
+protected def imp : L.Formula α → L.Formula α → L.Formula α :=
+  bounded_formula.imp
 
 /-- The biimplication between formulas, as a formula. -/
-protected def iff (φ ψ : L.formula α) : L.formula α := φ.iff ψ
+protected def iff (φ ψ : L.Formula α) : L.Formula α :=
+  φ.Iff ψ
 
 /-- A formula can be evaluated as true or false by giving values to each free variable. -/
-def realize (φ : L.formula α) (v : α → M) : Prop :=
-φ.realize v default
+def Realize (φ : L.Formula α) (v : α → M) : Prop :=
+  φ.realize v default
 
-variables {M} {φ ψ : L.formula α} {v : α → M}
-
-@[simp] lemma realize_not :
-  (φ.not).realize v ↔ ¬ φ.realize v :=
-iff.rfl
-
-@[simp] lemma realize_bot :
-  (⊥ : L.formula α).realize v ↔ false :=
-iff.rfl
-
-@[simp] lemma realize_top :
-  (⊤ : L.formula α).realize v ↔ true :=
-bounded_formula.realize_top
-
-@[simp] lemma realize_inf : (φ ⊓ ψ).realize v ↔ (φ.realize v ∧ ψ.realize v) :=
-bounded_formula.realize_inf
-
-@[simp] lemma realize_imp : (φ.imp ψ).realize v ↔ (φ.realize v → ψ.realize v) :=
-bounded_formula.realize_imp
-
-@[simp] lemma realize_rel {k : ℕ} {R : L.relations k} {ts : fin k → L.term α} :
-  (R.formula ts).realize v ↔ rel_map R (λ i, (ts i).realize v) :=
-bounded_formula.realize_rel.trans (by simp)
-
-@[simp] lemma realize_sup : (φ ⊔ ψ).realize v ↔ (φ.realize v ∨ ψ.realize v) :=
-bounded_formula.realize_sup
-
-@[simp] lemma realize_iff : (φ.iff ψ).realize v ↔ (φ.realize v ↔ ψ.realize v) :=
-bounded_formula.realize_iff
-
-@[simp] lemma realize_relabel {φ : L.formula α} {g : α → β} {v : β → M} :
-  (φ.relabel g).realize v ↔ φ.realize (v ∘ g) :=
-begin
-  rw [realize, realize, relabel, bounded_formula.realize_relabel,
-    iff_eq_eq],
-  refine congr (congr rfl _) (funext fin_zero_elim),
-  ext,
-  simp,
-end
+variable {M} {φ ψ : L.Formula α} {v : α → M}
 
 @[simp]
-lemma realize_equal {t₁ t₂ : L.term α} {x : α → M} :
-  (t₁.equal t₂).realize x ↔ t₁.realize x = t₂.realize x :=
-by simp [term.equal, realize]
+theorem realize_not : φ.Not.realize v ↔ ¬φ.realize v :=
+  Iff.rfl
 
 @[simp]
-lemma realize_graph {f : L.functions n} {x : fin n → M} {y : M} :
-  (formula.graph f).realize (fin.cons y x : _ → M) ↔ fun_map f x = y :=
-begin
-  simp only [formula.graph, term.realize, realize_equal, fin.cons_zero, fin.cons_succ],
-  rw eq_comm,
-end
+theorem realize_bot : (⊥ : L.Formula α).realize v ↔ False :=
+  Iff.rfl
 
-end formula
+@[simp]
+theorem realize_top : (⊤ : L.Formula α).realize v ↔ True :=
+  bounded_formula.realize_top
+
+@[simp]
+theorem realize_inf : (φ⊓ψ).realize v ↔ φ.realize v ∧ ψ.realize v :=
+  bounded_formula.realize_inf
+
+@[simp]
+theorem realize_imp : (φ.imp ψ).realize v ↔ φ.realize v → ψ.realize v :=
+  bounded_formula.realize_imp
+
+@[simp]
+theorem realize_rel {k : ℕ} {R : L.Relations k} {ts : Finₓ k → L.Term α} :
+    (R.Formula ts).realize v ↔ RelMap R fun i => (ts i).realize v :=
+  BoundedFormula.realize_rel.trans
+    (by
+      simp )
+
+@[simp]
+theorem realize_sup : (φ⊔ψ).realize v ↔ φ.realize v ∨ ψ.realize v :=
+  bounded_formula.realize_sup
+
+@[simp]
+theorem realize_iff : (φ.Iff ψ).realize v ↔ (φ.realize v ↔ ψ.realize v) :=
+  bounded_formula.realize_iff
+
+@[simp]
+theorem realize_relabel {φ : L.Formula α} {g : α → β} {v : β → M} : (φ.relabel g).realize v ↔ φ.realize (v ∘ g) := by
+  rw [realize, realize, relabel, bounded_formula.realize_relabel, iff_eq_eq]
+  refine' congr (congr rfl _) (funext finZeroElim)
+  ext
+  simp
+
+@[simp]
+theorem realize_equal {t₁ t₂ : L.Term α} {x : α → M} : (t₁.equal t₂).realize x ↔ t₁.realize x = t₂.realize x := by
+  simp [term.equal, realize]
+
+@[simp]
+theorem realize_graph {f : L.Functions n} {x : Finₓ n → M} {y : M} :
+    (Formula.graph f).realize (Finₓ.cons y x : _ → M) ↔ funMap f x = y := by
+  simp only [formula.graph, term.realize, realize_equal, Finₓ.cons_zero, Finₓ.cons_succ]
+  rw [eq_comm]
+
+end Formula
 
 variable (M)
 
 /-- A sentence can be evaluated as true or false in a structure. -/
-@[reducible] def realize_sentence (φ : L.sentence) : Prop :=
-φ.realize (default : _ → M)
+@[reducible]
+def RealizeSentence (φ : L.Sentence) : Prop :=
+  φ.realize (default : _ → M)
 
-infix ` ⊨ `:51 := realize_sentence -- input using \|= or \vDash, but not using \models
+-- mathport name: «expr ⊨ »
+infixl:51 " ⊨ " => RealizeSentence
 
 /-- A model of a theory is a structure in which every sentence is realized as true. -/
-@[reducible] def Theory.model (T : L.Theory) : Prop :=
-∀ φ ∈ T, realize_sentence M φ
+-- input using \|= or \vDash, but not using \models
+@[reducible]
+def Theory.Model (T : L.Theory) : Prop :=
+  ∀, ∀ φ ∈ T, ∀, RealizeSentence M φ
 
-infix ` ⊨ `:51 := Theory.model -- input using \|= or \vDash, but not using \models
+-- mathport name: «expr ⊨ »
+infixl:51 " ⊨ " => Theory.Model
 
+-- input using \|= or \vDash, but not using \models
 variable {M}
 
-lemma Theory.model.mono {T T' : L.Theory} (h : T'.model M) (hs : T ⊆ T') :
-  T.model M :=
-λ φ hφ, h φ (hs hφ)
+theorem Theory.Model.mono {T T' : L.Theory} (h : T'.Model M) (hs : T ⊆ T') : T.Model M := fun φ hφ => h φ (hs hφ)
 
-namespace bounded_formula
+namespace BoundedFormula
 
-@[simp] lemma realize_alls {φ : L.bounded_formula α n} {v : α → M} :
-  φ.alls.realize v ↔
-    ∀ (xs : fin n → M), (φ.realize v xs) :=
-begin
-  induction n with n ih,
-  { exact unique.forall_iff.symm },
-  { simp only [alls, ih, realize],
-    exact ⟨λ h xs, (fin.snoc_init_self xs) ▸ h _ _, λ h xs x, h (fin.snoc xs x)⟩ }
-end
+@[simp]
+theorem realize_alls {φ : L.BoundedFormula α n} {v : α → M} : φ.alls.realize v ↔ ∀ xs : Finₓ n → M, φ.realize v xs := by
+  induction' n with n ih
+  · exact unique.forall_iff.symm
+    
+  · simp only [alls, ih, realize]
+    exact ⟨fun h xs => Finₓ.snoc_init_self xs ▸ h _ _, fun h xs x => h (Finₓ.snoc xs x)⟩
+    
 
-@[simp] lemma realize_exs {φ : L.bounded_formula α n} {v : α → M} :
-  φ.exs.realize v ↔ ∃ (xs : fin n → M), (φ.realize v xs) :=
-begin
-  induction n with n ih,
-  { exact unique.exists_iff.symm },
-  { simp only [bounded_formula.exs, ih, realize_ex],
-    split,
-    { rintros ⟨xs, x, h⟩,
-      exact ⟨_, h⟩ },
-    { rintros ⟨xs, h⟩,
-      rw ← fin.snoc_init_self xs at h,
-      exact ⟨_, _, h⟩ } }
-end
+@[simp]
+theorem realize_exs {φ : L.BoundedFormula α n} {v : α → M} : φ.exs.realize v ↔ ∃ xs : Finₓ n → M, φ.realize v xs := by
+  induction' n with n ih
+  · exact unique.exists_iff.symm
+    
+  · simp only [bounded_formula.exs, ih, realize_ex]
+    constructor
+    · rintro ⟨xs, x, h⟩
+      exact ⟨_, h⟩
+      
+    · rintro ⟨xs, h⟩
+      rw [← Finₓ.snoc_init_self xs] at h
+      exact ⟨_, _, h⟩
+      
+    
 
-end bounded_formula
+end BoundedFormula
 
-@[simp] lemma equiv.realize_bounded_formula (g : M ≃[L] N) (φ : L.bounded_formula α n)
-  {v : α → M} {xs : fin n → M} :
-  φ.realize (g ∘ v) (g ∘ xs) ↔ φ.realize v xs :=
-begin
-  induction φ with _ _ _ _ _ _ _ _ _ _ _ ih1 ih2 _ _ ih3,
-  { refl },
-  { simp only [bounded_formula.realize, ← sum.comp_elim, equiv.realize_term, g.injective.eq_iff] },
-  { simp only [bounded_formula.realize, ← sum.comp_elim, equiv.realize_term, g.map_rel], },
-  { rw [bounded_formula.realize, ih1, ih2, bounded_formula.realize] },
-  { rw [bounded_formula.realize, bounded_formula.realize],
-    split,
-    { intros h a,
-      have h' := h (g a),
-      rw [← fin.comp_snoc, ih3] at h',
-      exact h' },
-    { intros h a,
-      have h' := h (g.symm a),
-      rw [← ih3, fin.comp_snoc, g.apply_symm_apply] at h',
-      exact h' }}
-end
+@[simp]
+theorem Equiv.realize_bounded_formula (g : M ≃[L] N) (φ : L.BoundedFormula α n) {v : α → M} {xs : Finₓ n → M} :
+    φ.realize (g ∘ v) (g ∘ xs) ↔ φ.realize v xs := by
+  induction' φ with _ _ _ _ _ _ _ _ _ _ _ ih1 ih2 _ _ ih3
+  · rfl
+    
+  · simp only [bounded_formula.realize, ← Sum.comp_elim, equiv.realize_term, g.injective.eq_iff]
+    
+  · simp only [bounded_formula.realize, ← Sum.comp_elim, equiv.realize_term, g.map_rel]
+    
+  · rw [bounded_formula.realize, ih1, ih2, bounded_formula.realize]
+    
+  · rw [bounded_formula.realize, bounded_formula.realize]
+    constructor
+    · intro h a
+      have h' := h (g a)
+      rw [← Finₓ.comp_snoc, ih3] at h'
+      exact h'
+      
+    · intro h a
+      have h' := h (g.symm a)
+      rw [← ih3, Finₓ.comp_snoc, g.apply_symm_apply] at h'
+      exact h'
+      
+    
 
-@[simp] lemma equiv.realize_formula (g : M ≃[L] N) (φ : L.formula α) {v : α → M}  :
-  φ.realize (g ∘ v) ↔ φ.realize v :=
-begin
-  rw [formula.realize, formula.realize, ← g.realize_bounded_formula φ,
-    iff_eq_eq],
-  exact congr rfl (funext fin_zero_elim),
-end
+@[simp]
+theorem Equiv.realize_formula (g : M ≃[L] N) (φ : L.Formula α) {v : α → M} : φ.realize (g ∘ v) ↔ φ.realize v := by
+  rw [formula.realize, formula.realize, ← g.realize_bounded_formula φ, iff_eq_eq]
+  exact congr rfl (funext finZeroElim)
 
 namespace Theory
+
 variable (T : L.Theory)
 
 /-- A theory is satisfiable if a structure models it. -/
-def is_satisfiable : Prop :=
-∃ (M : Type (max u v)) [nonempty M] [str : L.Structure M], @Theory.model L M str T
+def IsSatisfiable : Prop :=
+  ∃ (M : Type max u v)(_ : Nonempty M)(str : L.Structure M), @Theory.Model L M str T
 
 /-- A theory is finitely satisfiable if all of its finite subtheories are satisfiable. -/
-def is_finitely_satisfiable : Prop :=
-∀ (T0 : finset L.sentence), (T0 : L.Theory) ⊆ T → (T0 : L.Theory).is_satisfiable
+def IsFinitelySatisfiable : Prop :=
+  ∀ T0 : Finset L.Sentence, (T0 : L.Theory) ⊆ T → (T0 : L.Theory).IsSatisfiable
 
-variables {T} {T' : L.Theory}
+variable {T} {T' : L.Theory}
 
 /-- Given that a theory is satisfiable, selects a model using choice. -/
-def is_satisfiable.some_model (h : T.is_satisfiable) : Type* := classical.some h
+def IsSatisfiable.SomeModel (h : T.IsSatisfiable) : Type _ :=
+  Classical.some h
 
-instance is_satisfiable.nonempty_some_model (h : T.is_satisfiable) :
-  nonempty (h.some_model) :=
-classical.some (classical.some_spec h)
+instance IsSatisfiable.nonempty_some_model (h : T.IsSatisfiable) : Nonempty h.SomeModel :=
+  Classical.some (Classical.some_spec h)
 
-noncomputable instance is_satisfiable.inhabited_some_model (h : T.is_satisfiable) :
-  inhabited (h.some_model) := classical.inhabited_of_nonempty'
+noncomputable instance IsSatisfiable.inhabitedSomeModel (h : T.IsSatisfiable) : Inhabited h.SomeModel :=
+  Classical.inhabitedOfNonempty'
 
-noncomputable instance is_satisfiable.some_model_structure (h : T.is_satisfiable) :
-  L.Structure (h.some_model) :=
-classical.some (classical.some_spec (classical.some_spec h))
+noncomputable instance IsSatisfiable.someModelStructure (h : T.IsSatisfiable) : L.Structure h.SomeModel :=
+  Classical.some (Classical.some_spec (Classical.some_spec h))
 
-lemma is_satisfiable.some_model_models (h : T.is_satisfiable) :
-  T.model h.some_model :=
-classical.some_spec (classical.some_spec (classical.some_spec h))
+theorem IsSatisfiable.some_model_models (h : T.IsSatisfiable) : T.Model h.SomeModel :=
+  Classical.some_spec (Classical.some_spec (Classical.some_spec h))
 
-lemma model.is_satisfiable (M : Type (max u v)) [n : nonempty M]
-  [S : L.Structure M] (h : T.model M) : T.is_satisfiable :=
-⟨M, n, S, h⟩
+theorem Model.is_satisfiable (M : Type max u v) [n : Nonempty M] [S : L.Structure M] (h : T.Model M) :
+    T.IsSatisfiable :=
+  ⟨M, n, S, h⟩
 
-lemma is_satisfiable.mono (h : T'.is_satisfiable) (hs : T ⊆ T') :
-  T.is_satisfiable :=
-⟨h.some_model, h.nonempty_some_model, h.some_model_structure,
-  h.some_model_models.mono hs⟩
+theorem IsSatisfiable.mono (h : T'.IsSatisfiable) (hs : T ⊆ T') : T.IsSatisfiable :=
+  ⟨h.SomeModel, h.nonempty_some_model, h.someModelStructure, h.some_model_models.mono hs⟩
 
-lemma is_satisfiable.is_finitely_satisfiable (h : T.is_satisfiable) :
-  T.is_finitely_satisfiable :=
-λ _, h.mono
+theorem IsSatisfiable.is_finitely_satisfiable (h : T.IsSatisfiable) : T.IsFinitelySatisfiable := fun _ => h.mono
 
 /-- A theory models a (bounded) formula when any of its nonempty models realizes that formula on all
   inputs.-/
-def models_bounded_formula (T : L.Theory) (φ : L.bounded_formula α n) : Prop :=
-  ∀ (M : Type (max u v)) [nonempty M] [str : L.Structure M] (v : α → M) (xs : fin n → M),
-    @Theory.model L M str T → @bounded_formula.realize L M str α n φ v xs
+def ModelsBoundedFormula (T : L.Theory) (φ : L.BoundedFormula α n) : Prop :=
+  ∀ M : Type max u v [Nonempty M] [str : L.Structure M] v : α → M xs : Finₓ n → M,
+    @Theory.Model L M str T → @BoundedFormula.Realizeₓ L M str α n φ v xs
 
-infix ` ⊨ `:51 := models_bounded_formula -- input using \|= or \vDash, but not using \models
+-- mathport name: «expr ⊨ »
+infixl:51 " ⊨ " => ModelsBoundedFormula
 
-lemma models_formula_iff {T : L.Theory} {φ : L.formula α} :
-  T ⊨ φ ↔ ∀ (M : Type (max u v)) [nonempty M] [str : L.Structure M] (v : α → M),
-    @Theory.model L M str T → @formula.realize L M str α φ v :=
-forall_congr (λ M, forall_congr (λ ne, forall_congr (λ str, forall_congr (λ v, unique.forall_iff))))
+-- input using \|= or \vDash, but not using \models
+theorem models_formula_iff {T : L.Theory} {φ : L.Formula α} :
+    T ⊨ φ ↔
+      ∀ M : Type max u v [Nonempty M] [str : L.Structure M] v : α → M,
+        @Theory.Model L M str T → @Formula.Realize L M str α φ v :=
+  forall_congrₓ fun M => forall_congrₓ fun ne => forall_congrₓ fun str => forall_congrₓ fun v => Unique.forall_iff
 
-lemma models_sentence_iff {T : L.Theory} {φ : L.sentence} :
-  T ⊨ φ ↔ ∀ (M : Type (max u v)) [nonempty M] [str : L.Structure M],
-    @Theory.model L M str T → @realize_sentence L M str φ :=
-begin
-  rw [models_formula_iff],
-  exact forall_congr (λ M, forall_congr (λ ne, forall_congr (λ str, unique.forall_iff)))
-end
+theorem models_sentence_iff {T : L.Theory} {φ : L.Sentence} :
+    T ⊨ φ ↔
+      ∀ M : Type max u v [Nonempty M] [str : L.Structure M], @Theory.Model L M str T → @RealizeSentence L M str φ :=
+  by
+  rw [models_formula_iff]
+  exact forall_congrₓ fun M => forall_congrₓ fun ne => forall_congrₓ fun str => Unique.forall_iff
 
 /-- Two (bounded) formulas are semantically equivalent over a theory `T` when they have the same
 interpretation in every model of `T`. (This is also known as logical equivalence, which also has a
 proof-theoretic definition.) -/
-def semantically_equivalent (T : L.Theory) (φ ψ : L.bounded_formula α n) : Prop :=
-T ⊨ φ.iff ψ
+def SemanticallyEquivalent (T : L.Theory) (φ ψ : L.BoundedFormula α n) : Prop :=
+  T ⊨ φ.Iff ψ
 
-lemma semantically_equivalent.realize_bd_iff {φ ψ : L.bounded_formula α n}
-  {M : Type (max u v)} [ne : nonempty M] [str : L.Structure M] (hM : T.model M)
-  (h : T.semantically_equivalent φ ψ) {v : α → M} {xs : (fin n → M)} :
-  φ.realize v xs ↔ ψ.realize v xs :=
-bounded_formula.realize_iff.1 (h M v xs hM)
+theorem SemanticallyEquivalent.realize_bd_iff {φ ψ : L.BoundedFormula α n} {M : Type max u v} [ne : Nonempty M]
+    [str : L.Structure M] (hM : T.Model M) (h : T.SemanticallyEquivalent φ ψ) {v : α → M} {xs : Finₓ n → M} :
+    φ.realize v xs ↔ ψ.realize v xs :=
+  BoundedFormula.realize_iff.1 (h M v xs hM)
 
-lemma semantically_equivalent.some_model_realize_bd_iff {φ ψ : L.bounded_formula α n}
-  (hsat : T.is_satisfiable) (h : T.semantically_equivalent φ ψ)
-  {v : α → (hsat.some_model)} {xs : (fin n → (hsat.some_model))} :
-  φ.realize v xs ↔ ψ.realize v xs :=
-h.realize_bd_iff hsat.some_model_models
+theorem SemanticallyEquivalent.some_model_realize_bd_iff {φ ψ : L.BoundedFormula α n} (hsat : T.IsSatisfiable)
+    (h : T.SemanticallyEquivalent φ ψ) {v : α → hsat.SomeModel} {xs : Finₓ n → hsat.SomeModel} :
+    φ.realize v xs ↔ ψ.realize v xs :=
+  h.realize_bd_iff hsat.some_model_models
 
-lemma semantically_equivalent.realize_iff {φ ψ : L.formula α}
-  {M : Type (max u v)} [ne : nonempty M] [str : L.Structure M] (hM : T.model M)
-  (h : T.semantically_equivalent φ ψ) {v : α → M} :
-  φ.realize v ↔ ψ.realize v :=
-h.realize_bd_iff hM
+theorem SemanticallyEquivalent.realize_iff {φ ψ : L.Formula α} {M : Type max u v} [ne : Nonempty M]
+    [str : L.Structure M] (hM : T.Model M) (h : T.SemanticallyEquivalent φ ψ) {v : α → M} : φ.realize v ↔ ψ.realize v :=
+  h.realize_bd_iff hM
 
-lemma semantically_equivalent.some_model_realize_iff {φ ψ : L.formula α}
-  (hsat : T.is_satisfiable) (h : T.semantically_equivalent φ ψ) {v : α → (hsat.some_model)} :
-  φ.realize v ↔ ψ.realize v :=
-h.realize_iff hsat.some_model_models
+theorem SemanticallyEquivalent.some_model_realize_iff {φ ψ : L.Formula α} (hsat : T.IsSatisfiable)
+    (h : T.SemanticallyEquivalent φ ψ) {v : α → hsat.SomeModel} : φ.realize v ↔ ψ.realize v :=
+  h.realize_iff hsat.some_model_models
 
 /-- Semantic equivalence forms an equivalence relation on formulas. -/
-def semantically_equivalent_setoid (T : L.Theory) : setoid (L.bounded_formula α n) :=
-{ r := semantically_equivalent T,
-  iseqv := ⟨λ φ M ne str v xs hM, by simp,
-    λ φ ψ h M ne str v xs hM, begin
-      haveI := ne,
-      rw [bounded_formula.realize_iff, iff.comm, ← bounded_formula.realize_iff],
-      exact h M v xs hM,
-    end, λ φ ψ θ h1 h2 M ne str v xs hM, begin
-      haveI := ne,
-      have h1' := h1 M v xs hM,
-      have h2' := h2 M v xs hM,
-      rw [bounded_formula.realize_iff] at *,
-      exact ⟨h2'.1 ∘ h1'.1, h1'.2 ∘ h2'.2⟩,
-    end⟩ }
+def semanticallyEquivalentSetoid (T : L.Theory) : Setoidₓ (L.BoundedFormula α n) where
+  R := SemanticallyEquivalent T
+  iseqv :=
+    ⟨fun φ M ne str v xs hM => by
+      simp , fun φ ψ h M ne str v xs hM => by
+      have := Ne
+      rw [bounded_formula.realize_iff, Iff.comm, ← bounded_formula.realize_iff]
+      exact h M v xs hM, fun φ ψ θ h1 h2 M ne str v xs hM => by
+      have := Ne
+      have h1' := h1 M v xs hM
+      have h2' := h2 M v xs hM
+      rw [bounded_formula.realize_iff] at *
+      exact ⟨h2'.1 ∘ h1'.1, h1'.2 ∘ h2'.2⟩⟩
 
 end Theory
 
-namespace bounded_formula
-variables {T : L.Theory} (φ ψ : L.bounded_formula α n)
+namespace BoundedFormula
 
-lemma semantically_equivalent_not_not :
-  T.semantically_equivalent φ φ.not.not :=
-λ M ne str v xs hM, by simp
+variable {T : L.Theory} (φ ψ : L.BoundedFormula α n)
 
-lemma imp_semantically_equivalent_not_sup :
-  T.semantically_equivalent (φ.imp ψ) (φ.not ⊔ ψ) :=
-λ M ne str v xs hM, by simp [imp_iff_not_or]
+theorem semantically_equivalent_not_not : T.SemanticallyEquivalent φ φ.Not.Not := fun M ne str v xs hM => by
+  simp
 
-lemma sup_semantically_equivalent_not_inf_not :
-  T.semantically_equivalent (φ ⊔ ψ) (φ.not ⊓ ψ.not).not :=
-λ M ne str v xs hM, by simp [imp_iff_not_or]
+theorem imp_semantically_equivalent_not_sup : T.SemanticallyEquivalent (φ.imp ψ) (φ.Not⊔ψ) := fun M ne str v xs hM => by
+  simp [imp_iff_not_or]
 
-lemma inf_semantically_equivalent_not_sup_not :
-  T.semantically_equivalent (φ ⊓ ψ) (φ.not ⊔ ψ.not).not :=
-λ M ne str v xs hM, by simp [and_iff_not_or_not]
+theorem sup_semantically_equivalent_not_inf_not : T.SemanticallyEquivalent (φ⊔ψ) (φ.Not⊓ψ.Not).Not :=
+  fun M ne str v xs hM => by
+  simp [imp_iff_not_or]
 
-end bounded_formula
+theorem inf_semantically_equivalent_not_sup_not : T.SemanticallyEquivalent (φ⊓ψ) (φ.Not⊔ψ.Not).Not :=
+  fun M ne str v xs hM => by
+  simp [and_iff_not_or_not]
 
-namespace formula
-variables {T : L.Theory} (φ ψ : L.formula α)
+end BoundedFormula
 
-lemma semantically_equivalent_not_not :
-  T.semantically_equivalent φ φ.not.not :=
-φ.semantically_equivalent_not_not
+namespace Formula
 
-lemma imp_semantically_equivalent_not_sup :
-  T.semantically_equivalent (φ.imp ψ) (φ.not ⊔ ψ) :=
-φ.imp_semantically_equivalent_not_sup ψ
+variable {T : L.Theory} (φ ψ : L.Formula α)
 
-lemma sup_semantically_equivalent_not_inf_not :
-  T.semantically_equivalent (φ ⊔ ψ) (φ.not ⊓ ψ.not).not :=
-φ.sup_semantically_equivalent_not_inf_not ψ
+theorem semantically_equivalent_not_not : T.SemanticallyEquivalent φ φ.Not.Not :=
+  φ.semantically_equivalent_not_not
 
-lemma inf_semantically_equivalent_not_sup_not :
-  T.semantically_equivalent (φ ⊓ ψ) (φ.not ⊔ ψ.not).not :=
-φ.inf_semantically_equivalent_not_sup_not ψ
-end formula
+theorem imp_semantically_equivalent_not_sup : T.SemanticallyEquivalent (φ.imp ψ) (φ.Not⊔ψ) :=
+  φ.imp_semantically_equivalent_not_sup ψ
 
-end language
-end first_order
+theorem sup_semantically_equivalent_not_inf_not : T.SemanticallyEquivalent (φ⊔ψ) (φ.Not⊓ψ.Not).Not :=
+  φ.sup_semantically_equivalent_not_inf_not ψ
+
+theorem inf_semantically_equivalent_not_sup_not : T.SemanticallyEquivalent (φ⊓ψ) (φ.Not⊔ψ.Not).Not :=
+  φ.inf_semantically_equivalent_not_sup_not ψ
+
+end Formula
+
+end Language
+
+end FirstOrder
+

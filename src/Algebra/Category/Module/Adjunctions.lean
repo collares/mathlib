@@ -3,11 +3,11 @@ Copyright (c) 2021 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison, Johan Commelin
 -/
-import algebra.category.Module.monoidal
-import category_theory.monoidal.functorial
-import category_theory.monoidal.types
-import linear_algebra.direct_sum.finsupp
-import category_theory.linear.linear_functor
+import Mathbin.Algebra.Category.Module.Monoidal
+import Mathbin.CategoryTheory.Monoidal.Functorial
+import Mathbin.CategoryTheory.Monoidal.Types
+import Mathbin.LinearAlgebra.DirectSum.Finsupp
+import Mathbin.CategoryTheory.Linear.LinearFunctor
 
 /-!
 The functor of forming finitely supported functions on a type with values in a `[ring R]`
@@ -15,308 +15,313 @@ is the left adjoint of
 the forgetful functor from `R`-modules to types.
 -/
 
-noncomputable theory
 
-open category_theory
+noncomputable section
 
-namespace Module
+open CategoryTheory
+
+namespace ModuleCat
 
 universe u
 
-open_locale classical
+open_locale Classical
 
-variables (R : Type u)
+variable (R : Type u)
 
 section
-variables [ring R]
 
-/--
-The free functor `Type u ⥤ Module R` sending a type `X` to the
+variable [Ringₓ R]
+
+/-- The free functor `Type u ⥤ Module R` sending a type `X` to the
 free `R`-module with generators `x : X`, implemented as the type `X →₀ R`.
 -/
 @[simps]
-def free : Type u ⥤ Module R :=
-{ obj := λ X, Module.of R (X →₀ R),
-  map := λ X Y f, finsupp.lmap_domain _ _ f,
-  map_id' := by { intros, exact finsupp.lmap_domain_id _ _ },
-  map_comp' := by { intros, exact finsupp.lmap_domain_comp _ _ _ _, } }
+def free : Type u ⥤ ModuleCat R where
+  obj := fun X => ModuleCat.of R (X →₀ R)
+  map := fun X Y f => Finsupp.lmapDomain _ _ f
+  map_id' := by
+    intros
+    exact Finsupp.lmap_domain_id _ _
+  map_comp' := by
+    intros
+    exact Finsupp.lmap_domain_comp _ _ _ _
 
-/--
-The free-forgetful adjunction for R-modules.
+/-- The free-forgetful adjunction for R-modules.
 -/
-def adj : free R ⊣ forget (Module.{u} R) :=
-adjunction.mk_of_hom_equiv
-{ hom_equiv := λ X M, (finsupp.lift M R X).to_equiv.symm,
-  hom_equiv_naturality_left_symm' := λ _ _ M f g,
-  finsupp.lhom_ext' (λ x, linear_map.ext_ring
-    (finsupp.sum_map_domain_index_add_monoid_hom (λ y, ((smul_add_hom R M).flip) (g y))).symm) }
+def adj : free R ⊣ forget (ModuleCat.{u} R) :=
+  Adjunction.mkOfHomEquiv
+    { homEquiv := fun X M => (Finsupp.lift M R X).toEquiv.symm,
+      hom_equiv_naturality_left_symm' := fun _ _ M f g =>
+        Finsupp.lhom_ext' fun x =>
+          LinearMap.ext_ring (Finsupp.sum_map_domain_index_add_monoid_hom fun y => (smulAddHom R M).flip (g y)).symm }
 
-instance : is_right_adjoint (forget (Module.{u} R)) := ⟨_, adj R⟩
+instance : IsRightAdjoint (forget (ModuleCat.{u} R)) :=
+  ⟨_, adj R⟩
 
 end
 
-namespace free
-variables [comm_ring R]
-local attribute [ext] tensor_product.ext
+namespace Free
+
+variable [CommRingₓ R]
+
+attribute [local ext] TensorProduct.ext
 
 /-- (Implementation detail) The unitor for `free R`. -/
-def ε : 𝟙_ (Module.{u} R) ⟶ (free R).obj (𝟙_ (Type u)) :=
-finsupp.lsingle punit.star
+def ε : 𝟙_ (ModuleCat.{u} R) ⟶ (free R).obj (𝟙_ (Type u)) :=
+  Finsupp.lsingle PUnit.unit
 
 /-- (Implementation detail) The tensorator for `free R`. -/
 def μ (α β : Type u) : (free R).obj α ⊗ (free R).obj β ⟶ (free R).obj (α ⊗ β) :=
-(finsupp_tensor_finsupp' R α β).to_linear_map
+  (finsuppTensorFinsupp' R α β).toLinearMap
 
-lemma μ_natural {X Y X' Y' : Type u} (f : X ⟶ Y) (g : X' ⟶ Y') :
-  ((free R).map f ⊗ (free R).map g) ≫ (μ R Y Y') =
-    (μ R X X') ≫ (free R).map (f ⊗ g) :=
-begin
-  intros,
-  ext x x' ⟨y, y'⟩,
-  dsimp [μ],
-  simp_rw [finsupp.map_domain_single, finsupp_tensor_finsupp'_single_tmul_single, mul_one,
-    finsupp.map_domain_single, category_theory.tensor_apply],
-end
+theorem μ_natural {X Y X' Y' : Type u} (f : X ⟶ Y) (g : X' ⟶ Y') :
+    (free R).map f ⊗ (free R).map g ≫ μ R Y Y' = μ R X X' ≫ (free R).map (f ⊗ g) := by
+  intros
+  ext x x' ⟨y, y'⟩
+  dsimp [μ]
+  simp_rw [Finsupp.map_domain_single, finsupp_tensor_finsupp'_single_tmul_single, mul_oneₓ, Finsupp.map_domain_single,
+    CategoryTheory.tensor_apply]
 
-lemma left_unitality (X : Type u) :
-  (λ_ ((free R).obj X)).hom =
-  (ε R ⊗ 𝟙 ((free R).obj X)) ≫ μ R (𝟙_ (Type u)) X ≫ map (free R).obj (λ_ X).hom :=
-begin
-  intros,
-  ext,
-  dsimp [ε, μ],
-  simp_rw [finsupp_tensor_finsupp'_single_tmul_single,
-    Module.monoidal_category.left_unitor_hom_apply, finsupp.smul_single', mul_one,
-    finsupp.map_domain_single, category_theory.left_unitor_hom_apply],
-end
+theorem left_unitality (X : Type u) :
+    (λ_ ((free R).obj X)).Hom = ε R ⊗ 𝟙 ((free R).obj X) ≫ μ R (𝟙_ (Type u)) X ≫ map (free R).obj (λ_ X).Hom := by
+  intros
+  ext
+  dsimp [ε, μ]
+  simp_rw [finsupp_tensor_finsupp'_single_tmul_single, ModuleCat.monoidalCategory.left_unitor_hom_apply,
+    Finsupp.smul_single', mul_oneₓ, Finsupp.map_domain_single, CategoryTheory.left_unitor_hom_apply]
 
-lemma right_unitality (X : Type u) :
-  (ρ_ ((free R).obj X)).hom =
-  (𝟙 ((free R).obj X) ⊗ ε R) ≫ μ R X (𝟙_ (Type u)) ≫ map (free R).obj (ρ_ X).hom :=
-begin
-  intros,
-  ext,
-  dsimp [ε, μ],
-  simp_rw [finsupp_tensor_finsupp'_single_tmul_single,
-    Module.monoidal_category.right_unitor_hom_apply, finsupp.smul_single', mul_one,
-    finsupp.map_domain_single, category_theory.right_unitor_hom_apply],
-end
+theorem right_unitality (X : Type u) :
+    (ρ_ ((free R).obj X)).Hom = 𝟙 ((free R).obj X) ⊗ ε R ≫ μ R X (𝟙_ (Type u)) ≫ map (free R).obj (ρ_ X).Hom := by
+  intros
+  ext
+  dsimp [ε, μ]
+  simp_rw [finsupp_tensor_finsupp'_single_tmul_single, ModuleCat.monoidalCategory.right_unitor_hom_apply,
+    Finsupp.smul_single', mul_oneₓ, Finsupp.map_domain_single, CategoryTheory.right_unitor_hom_apply]
 
-lemma associativity (X Y Z : Type u) :
-  (μ R X Y ⊗ 𝟙 ((free R).obj Z)) ≫ μ R (X ⊗ Y) Z ≫ map (free R).obj (α_ X Y Z).hom =
-  (α_ ((free R).obj X) ((free R).obj Y) ((free R).obj Z)).hom ≫
-    (𝟙 ((free R).obj X) ⊗ μ R Y Z) ≫ μ R X (Y ⊗ Z) :=
-begin
-  intros,
-  ext,
-  dsimp [μ],
-  simp_rw [finsupp_tensor_finsupp'_single_tmul_single, finsupp.map_domain_single, mul_one,
-    category_theory.associator_hom_apply],
-end
+theorem associativity (X Y Z : Type u) :
+    μ R X Y ⊗ 𝟙 ((free R).obj Z) ≫ μ R (X ⊗ Y) Z ≫ map (free R).obj (α_ X Y Z).Hom =
+      (α_ ((free R).obj X) ((free R).obj Y) ((free R).obj Z)).Hom ≫ 𝟙 ((free R).obj X) ⊗ μ R Y Z ≫ μ R X (Y ⊗ Z) :=
+  by
+  intros
+  ext
+  dsimp [μ]
+  simp_rw [finsupp_tensor_finsupp'_single_tmul_single, Finsupp.map_domain_single, mul_oneₓ,
+    CategoryTheory.associator_hom_apply]
 
 /-- The free R-module functor is lax monoidal. -/
 -- In fact, it's strong monoidal, but we don't yet have a typeclass for that.
-instance : lax_monoidal.{u} (free R).obj :=
-{ -- Send `R` to `punit →₀ R`
-  ε := ε R,
+instance : LaxMonoidal.{u} (free R).obj where
+  -- Send `R` to `punit →₀ R`
+  ε := ε R
   -- Send `(α →₀ R) ⊗ (β →₀ R)` to `α × β →₀ R`
-  μ := μ R,
-  μ_natural' := λ X Y X' Y' f g, μ_natural R f g,
-  left_unitality' := left_unitality R,
-  right_unitality' := right_unitality R,
-  associativity' := associativity R, }
+  μ := μ R
+  μ_natural' := fun X Y X' Y' f g => μ_natural R f g
+  left_unitality' := left_unitality R
+  right_unitality' := right_unitality R
+  associativity' := associativity R
 
-end free
+end Free
 
-end Module
+end ModuleCat
 
-namespace category_theory
+namespace CategoryTheory
 
-universes v u
+universe v u
 
-/--
-`Free R C` is a type synonym for `C`, which, given `[comm_ring R]` and `[category C]`,
+/-- `Free R C` is a type synonym for `C`, which, given `[comm_ring R]` and `[category C]`,
 we will equip with a category structure where the morphisms are formal `R`-linear combinations
 of the morphisms in `C`.
 -/
 @[nolint unused_arguments has_inhabited_instance]
-def Free (R : Type*) (C : Type u) := C
+def Free (R : Type _) (C : Type u) :=
+  C
 
-/--
-Consider an object of `C` as an object of the `R`-linear completion.
+/-- Consider an object of `C` as an object of the `R`-linear completion.
 -/
-def Free.of (R : Type*) {C : Type u} (X : C) : Free R C := X
+def Free.of (R : Type _) {C : Type u} (X : C) : Free R C :=
+  X
 
-variables (R : Type*) [comm_ring R] (C : Type u) [category.{v} C]
+variable (R : Type _) [CommRingₓ R] (C : Type u) [Category.{v} C]
 
-open finsupp
+open Finsupp
 
 -- Conceptually, it would be nice to construct this via "transport of enrichment",
 -- using the fact that `Module.free R : Type ⥤ Module R` and `Module.forget` are both lax monoidal.
 -- This still seems difficult, so we just do it by hand.
-instance category_Free : category (Free R C) :=
-{ hom := λ (X Y : C), (X ⟶ Y) →₀ R,
-  id := λ (X : C), finsupp.single (𝟙 X) 1,
-  comp := λ (X Y Z : C) f g, f.sum (λ f' s, g.sum (λ g' t, finsupp.single (f' ≫ g') (s * t))),
-  assoc' := λ W X Y Z f g h,
-  begin
-    dsimp,
+instance categoryFree : Category (Free R C) where
+  Hom := fun X Y : C => (X ⟶ Y) →₀ R
+  id := fun X : C => Finsupp.single (𝟙 X) 1
+  comp := fun f g => f.Sum fun f' s => g.Sum fun g' t => Finsupp.single (f' ≫ g') (s * t)
+  assoc' := fun W X Y Z f g h => by
+    dsimp
     -- This imitates the proof of associativity for `monoid_algebra`.
-    simp only [sum_sum_index, sum_single_index,
-      single_zero, single_add, eq_self_iff_true, forall_true_iff, forall_3_true_iff,
-      add_mul, mul_add, category.assoc, mul_assoc, zero_mul, mul_zero, sum_zero, sum_add],
-  end }.
+    simp only [sum_sum_index, sum_single_index, single_zero, single_add, eq_self_iff_true, forall_true_iff,
+      forall_3_true_iff, add_mulₓ, mul_addₓ, category.assoc, mul_assoc, zero_mul, mul_zero, sum_zero, sum_add]
 
 namespace Free
 
 section
-local attribute [simp] category_theory.category_Free
+
+attribute [local simp] CategoryTheory.categoryFree
 
 @[simp]
-lemma single_comp_single {X Y Z : C} (f : X ⟶ Y) (g : Y ⟶ Z) (r s : R) :
-  (single f r ≫ single g s : (Free.of R X) ⟶ (Free.of R Z)) = single (f ≫ g) (r * s) :=
-by { dsimp, simp, }
+theorem single_comp_single {X Y Z : C} (f : X ⟶ Y) (g : Y ⟶ Z) (r s : R) :
+    (single f r ≫ single g s : Free.of R X ⟶ Free.of R Z) = single (f ≫ g) (r * s) := by
+  dsimp
+  simp
 
-instance : preadditive (Free R C) :=
-{ hom_group := λ X Y, finsupp.add_comm_group,
-  add_comp' := λ X Y Z f f' g, begin
-    dsimp,
-    rw [finsupp.sum_add_index];
-    { simp [add_mul], }
-  end,
-  comp_add' := λ X Y Z f g g', begin
-    dsimp,
-    rw ← finsupp.sum_add,
-    congr, ext r h,
-    rw [finsupp.sum_add_index];
-    { simp [mul_add], },
-  end, }
+instance : Preadditive (Free R C) where
+  homGroup := fun X Y => Finsupp.addCommGroup
+  add_comp' := fun X Y Z f f' g => by
+    dsimp
+    rw [Finsupp.sum_add_index] <;>
+      · simp [add_mulₓ]
+        
+  comp_add' := fun X Y Z f g g' => by
+    dsimp
+    rw [← Finsupp.sum_add]
+    congr
+    ext r h
+    rw [Finsupp.sum_add_index] <;>
+      · simp [mul_addₓ]
+        
 
-instance : linear R (Free R C) :=
-{ hom_module := λ X Y, finsupp.module (X ⟶ Y) R,
-  smul_comp' := λ X Y Z r f g, begin
-    dsimp,
-    rw [finsupp.sum_smul_index];
-    simp [finsupp.smul_sum, mul_assoc],
-  end,
-  comp_smul' := λ X Y Z f r g, begin
-    dsimp,
-    simp_rw [finsupp.smul_sum],
-    congr, ext h s,
-    rw [finsupp.sum_smul_index];
-    simp [finsupp.smul_sum, mul_left_comm],
-  end, }
+instance : Linear R (Free R C) where
+  homModule := fun X Y => Finsupp.module (X ⟶ Y) R
+  smul_comp' := fun X Y Z r f g => by
+    dsimp
+    rw [Finsupp.sum_smul_index] <;> simp [Finsupp.smul_sum, mul_assoc]
+  comp_smul' := fun X Y Z f r g => by
+    dsimp
+    simp_rw [Finsupp.smul_sum]
+    congr
+    ext h s
+    rw [Finsupp.sum_smul_index] <;> simp [Finsupp.smul_sum, mul_left_commₓ]
 
 end
 
-/--
-A category embeds into its `R`-linear completion.
+/-- A category embeds into its `R`-linear completion.
 -/
 @[simps]
-def embedding : C ⥤ Free R C :=
-{ obj := λ X, X,
-  map := λ X Y f, finsupp.single f 1,
-  map_id' := λ X, rfl,
-  map_comp' := λ X Y Z f g, by simp, }
+def embedding : C ⥤ Free R C where
+  obj := fun X => X
+  map := fun X Y f => Finsupp.single f 1
+  map_id' := fun X => rfl
+  map_comp' := fun X Y Z f g => by
+    simp
 
-variables (R) {C} {D : Type u} [category.{v} D] [preadditive D] [linear R D]
+variable (R) {C} {D : Type u} [Category.{v} D] [Preadditive D] [Linear R D]
 
-open preadditive linear
+open Preadditive Linear
 
-/--
-A functor to a preadditive category lifts to a functor from its `R`-linear completion.
+/-- A functor to a preadditive category lifts to a functor from its `R`-linear completion.
 -/
 @[simps]
-def lift (F : C ⥤ D) : Free R C ⥤ D :=
-{ obj := λ X, F.obj X,
-  map := λ X Y f, f.sum (λ f' r, r • (F.map f')),
-  map_id' := by { dsimp [category_theory.category_Free], simp },
-  map_comp' := λ X Y Z f g, begin
-    apply finsupp.induction_linear f,
-    { simp, },
-    { intros f₁ f₂ w₁ w₂,
-      rw add_comp,
-      rw [finsupp.sum_add_index, finsupp.sum_add_index],
-      { simp [w₁, w₂, add_comp], },
-      { simp, },
-      { intros, simp only [add_smul], },
-      { simp, },
-      { intros, simp only [add_smul], }, },
-    { intros f' r,
-      apply finsupp.induction_linear g,
-      { simp, },
-      { intros f₁ f₂ w₁ w₂,
-        rw comp_add,
-        rw [finsupp.sum_add_index, finsupp.sum_add_index],
-        { simp [w₁, w₂, add_comp], },
-        { simp, },
-        { intros, simp only [add_smul], },
-        { simp, },
-        { intros, simp only [add_smul], }, },
-      { intros g' s,
-        erw single_comp_single,
-        simp [mul_comm r s, mul_smul], } }
-  end, }
+def lift (F : C ⥤ D) : Free R C ⥤ D where
+  obj := fun X => F.obj X
+  map := fun X Y f => f.Sum fun f' r => r • F.map f'
+  map_id' := by
+    dsimp [CategoryTheory.categoryFree]
+    simp
+  map_comp' := fun X Y Z f g => by
+    apply Finsupp.induction_linear f
+    · simp
+      
+    · intro f₁ f₂ w₁ w₂
+      rw [add_comp]
+      rw [Finsupp.sum_add_index, Finsupp.sum_add_index]
+      · simp [w₁, w₂, add_comp]
+        
+      · simp
+        
+      · intros
+        simp only [add_smul]
+        
+      · simp
+        
+      · intros
+        simp only [add_smul]
+        
+      
+    · intro f' r
+      apply Finsupp.induction_linear g
+      · simp
+        
+      · intro f₁ f₂ w₁ w₂
+        rw [comp_add]
+        rw [Finsupp.sum_add_index, Finsupp.sum_add_index]
+        · simp [w₁, w₂, add_comp]
+          
+        · simp
+          
+        · intros
+          simp only [add_smul]
+          
+        · simp
+          
+        · intros
+          simp only [add_smul]
+          
+        
+      · intro g' s
+        erw [single_comp_single]
+        simp [mul_comm r s, mul_smul]
+        
+      
 
 @[simp]
-lemma lift_map_single (F : C ⥤ D) {X Y : C} (f : X ⟶ Y) (r : R) :
-  (lift R F).map (single f r) = r • F.map f :=
-by simp
+theorem lift_map_single (F : C ⥤ D) {X Y : C} (f : X ⟶ Y) (r : R) : (lift R F).map (single f r) = r • F.map f := by
+  simp
 
-instance lift_additive (F : C ⥤ D) : (lift R F).additive :=
-{ map_add' := λ X Y f g, begin
-    dsimp,
-    rw finsupp.sum_add_index; simp [add_smul]
-  end, }
+instance lift_additive (F : C ⥤ D) : (lift R F).Additive where
+  map_add' := fun X Y f g => by
+    dsimp
+    rw [Finsupp.sum_add_index] <;> simp [add_smul]
 
-instance lift_linear (F : C ⥤ D) : (lift R F).linear R :=
-{ map_smul' := λ X Y f r, begin
-    dsimp,
-    rw finsupp.sum_smul_index;
-    simp [finsupp.smul_sum, mul_smul],
-  end, }
+instance lift_linear (F : C ⥤ D) : (lift R F).Linear R where
+  map_smul' := fun X Y f r => by
+    dsimp
+    rw [Finsupp.sum_smul_index] <;> simp [Finsupp.smul_sum, mul_smul]
 
-/--
-The embedding into the `R`-linear completion, followed by the lift,
+/-- The embedding into the `R`-linear completion, followed by the lift,
 is isomorphic to the original functor.
 -/
-def embedding_lift_iso (F : C ⥤ D) : embedding R C ⋙ lift R F ≅ F :=
-nat_iso.of_components
-  (λ X, iso.refl _)
-  (by tidy)
+def embeddingLiftIso (F : C ⥤ D) : embedding R C ⋙ lift R F ≅ F :=
+  NatIso.ofComponents (fun X => Iso.refl _)
+    (by
+      tidy)
 
-/--
-Two `R`-linear functors out of the `R`-linear completion are isomorphic iff their
+/-- Two `R`-linear functors out of the `R`-linear completion are isomorphic iff their
 compositions with the embedding functor are isomorphic.
 -/
 @[ext]
-def ext {F G : Free R C ⥤ D} [F.additive] [F.linear R] [G.additive] [G.linear R]
-  (α : embedding R C ⋙ F ≅ embedding R C ⋙ G) : F ≅ G :=
-nat_iso.of_components
-  (λ X, α.app X)
-  begin
-    intros X Y f,
-    apply finsupp.induction_linear f,
-    { simp, },
-    { intros f₁ f₂ w₁ w₂,
-      simp only [F.map_add, G.map_add, add_comp, comp_add, w₁, w₂], },
-    { intros f' r,
-      rw [iso.app_hom, iso.app_hom, ←smul_single_one, F.map_smul, G.map_smul, smul_comp, comp_smul],
-      change r • (embedding R C ⋙ F).map f' ≫ _ = r • _ ≫ (embedding R C ⋙ G).map f',
-      rw α.hom.naturality f',
-      apply_instance, -- Why are these not picked up automatically when we rewrite?
-      apply_instance, }
-  end
+def ext {F G : Free R C ⥤ D} [F.Additive] [F.Linear R] [G.Additive] [G.Linear R]
+    (α : embedding R C ⋙ F ≅ embedding R C ⋙ G) : F ≅ G :=
+  NatIso.ofComponents (fun X => α.app X)
+    (by
+      intro X Y f
+      apply Finsupp.induction_linear f
+      · simp
+        
+      · intro f₁ f₂ w₁ w₂
+        simp only [F.map_add, G.map_add, add_comp, comp_add, w₁, w₂]
+        
+      · intro f' r
+        rw [iso.app_hom, iso.app_hom, ← smul_single_one, F.map_smul, G.map_smul, smul_comp, comp_smul]
+        change r • (embedding R C ⋙ F).map f' ≫ _ = r • _ ≫ (embedding R C ⋙ G).map f'
+        rw [α.hom.naturality f']
+        infer_instance
+        -- Why are these not picked up automatically when we rewrite?
+        infer_instance
+        )
 
-/--
-`Free.lift` is unique amongst `R`-linear functors `Free R C ⥤ D`
+/-- `Free.lift` is unique amongst `R`-linear functors `Free R C ⥤ D`
 which compose with `embedding ℤ C` to give the original functor.
 -/
-def lift_unique (F : C ⥤ D) (L : Free R C ⥤ D) [L.additive] [L.linear R]
-  (α : embedding R C ⋙ L ≅ F) :
-  L ≅ lift R F :=
-ext R (α.trans (embedding_lift_iso R F).symm)
+def liftUnique (F : C ⥤ D) (L : Free R C ⥤ D) [L.Additive] [L.Linear R] (α : embedding R C ⋙ L ≅ F) : L ≅ lift R F :=
+  ext R (α.trans (embeddingLiftIso R F).symm)
 
 end Free
 
-end category_theory
+end CategoryTheory
+

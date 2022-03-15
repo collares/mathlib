@@ -3,10 +3,10 @@ Copyright (c) 2019 Patrick MAssot. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Patrick Massot
 -/
-import topology.uniform_space.absolute_value
-import topology.instances.real
-import topology.instances.rat
-import topology.uniform_space.completion
+import Mathbin.Topology.UniformSpace.AbsoluteValue
+import Mathbin.Topology.Instances.Real
+import Mathbin.Topology.Instances.Rat
+import Mathbin.Topology.UniformSpace.Completion
 
 /-!
 # Comparison of Cauchy reals and Bourbaki reals
@@ -50,67 +50,79 @@ does use ℝ).
 real numbers, completion, uniform spaces
 -/
 
-open set function filter cau_seq uniform_space
+
+open Set Function Filter CauSeq UniformSpace
 
 /-- The metric space uniform structure on ℚ (which presupposes the existence
 of real numbers) agrees with the one coming directly from (abs : ℚ → ℚ). -/
-lemma rat.uniform_space_eq :
-  is_absolute_value.uniform_space (abs : ℚ → ℚ) = metric_space.to_uniform_space' :=
-begin
-  ext s,
-  erw [metric.mem_uniformity_dist, is_absolute_value.mem_uniformity],
-  split ; rintro ⟨ε, ε_pos, h⟩,
-  { use [ε, by exact_mod_cast ε_pos],
-    intros a b hab,
-    apply h,
-    rw [rat.dist_eq, abs_sub_comm] at hab,
-    exact_mod_cast hab },
-  { obtain ⟨ε', h', h''⟩ : ∃ ε' : ℚ, 0 < ε' ∧ (ε' : ℝ) < ε, from exists_pos_rat_lt ε_pos,
-    use [ε', h'],
-    intros a b hab,
-    apply h,
-    rw [rat.dist_eq, abs_sub_comm],
-    refine lt_trans _ h'',
-    exact_mod_cast hab }
-end
+theorem Rat.uniform_space_eq : IsAbsoluteValue.uniformSpace (abs : ℚ → ℚ) = MetricSpace.toUniformSpace' := by
+  ext s
+  erw [Metric.mem_uniformity_dist, IsAbsoluteValue.mem_uniformity]
+  constructor <;> rintro ⟨ε, ε_pos, h⟩
+  · use ε, by
+      exact_mod_cast ε_pos
+    intro a b hab
+    apply h
+    rw [Rat.dist_eq, abs_sub_comm] at hab
+    exact_mod_cast hab
+    
+  · obtain ⟨ε', h', h''⟩ : ∃ ε' : ℚ, 0 < ε' ∧ (ε' : ℝ) < ε
+    exact exists_pos_rat_lt ε_pos
+    use ε', h'
+    intro a b hab
+    apply h
+    rw [Rat.dist_eq, abs_sub_comm]
+    refine' lt_transₓ _ h''
+    exact_mod_cast hab
+    
 
 /-- Cauchy reals packaged as a completion of ℚ using the absolute value route. -/
-noncomputable
-def rational_cau_seq_pkg : @abstract_completion ℚ $ is_absolute_value.uniform_space (abs : ℚ → ℚ) :=
-{ space := ℝ,
-  coe := (coe : ℚ → ℝ),
-  uniform_struct := by apply_instance,
-  complete :=  by apply_instance,
-  separation :=  by apply_instance,
-  uniform_inducing := by { rw rat.uniform_space_eq,
-                           exact rat.uniform_embedding_coe_real.to_uniform_inducing },
-  dense := rat.dense_embedding_coe_real.dense }
+noncomputable def rationalCauSeqPkg : @AbstractCompletion ℚ <| IsAbsoluteValue.uniformSpace (abs : ℚ → ℚ) where
+  Space := ℝ
+  coe := (coe : ℚ → ℝ)
+  uniformStruct := by
+    infer_instance
+  complete := by
+    infer_instance
+  separation := by
+    infer_instance
+  UniformInducing := by
+    rw [Rat.uniform_space_eq]
+    exact rat.uniform_embedding_coe_real.to_uniform_inducing
+  dense := Rat.dense_embedding_coe_real.dense
 
-namespace compare_reals
+namespace CompareReals
+
 /-- Type wrapper around ℚ to make sure the absolute value uniform space instance is picked up
 instead of the metric space one. We proved in rat.uniform_space_eq that they are equal,
 but they are not definitionaly equal, so it would confuse the type class system (and probably
 also human readers). -/
-@[derive comm_ring, derive inhabited] def Q := ℚ
+def Q :=
+  ℚ deriving CommRingₓ, Inhabited
 
-instance : uniform_space Q := is_absolute_value.uniform_space (abs : ℚ → ℚ)
+instance : UniformSpace Q :=
+  IsAbsoluteValue.uniformSpace (abs : ℚ → ℚ)
 
 /-- Real numbers constructed as in Bourbaki. -/
-@[derive inhabited]
-def Bourbakiℝ : Type := completion Q
+def Bourbakiℝ : Type :=
+  Completion Q deriving Inhabited
 
-instance bourbaki.uniform_space: uniform_space Bourbakiℝ := completion.uniform_space Q
+instance Bourbaki.uniformSpace : UniformSpace Bourbakiℝ :=
+  Completion.uniformSpace Q
 
 /-- Bourbaki reals packaged as a completion of Q using the general theory. -/
-def Bourbaki_pkg : abstract_completion Q := completion.cpkg
+def bourbakiPkg : AbstractCompletion Q :=
+  completion.cpkg
 
 /-- The equivalence between Bourbaki and Cauchy reals-/
-noncomputable def compare_equiv : Bourbakiℝ ≃ ℝ :=
-Bourbaki_pkg.compare_equiv rational_cau_seq_pkg
+noncomputable def compareEquiv : Bourbakiℝ ≃ ℝ :=
+  bourbakiPkg.compareEquiv rationalCauSeqPkg
 
-lemma compare_uc : uniform_continuous (compare_equiv) :=
-Bourbaki_pkg.uniform_continuous_compare_equiv _
+theorem compare_uc : UniformContinuous compareEquiv :=
+  bourbakiPkg.uniform_continuous_compare_equiv _
 
-lemma compare_uc_symm : uniform_continuous (compare_equiv).symm :=
-Bourbaki_pkg.uniform_continuous_compare_equiv_symm _
-end compare_reals
+theorem compare_uc_symm : UniformContinuous compareEquiv.symm :=
+  bourbakiPkg.uniform_continuous_compare_equiv_symm _
+
+end CompareReals
+

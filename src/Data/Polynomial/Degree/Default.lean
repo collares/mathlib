@@ -1,1 +1,2 @@
-import data.polynomial.degree.lemmas
+import Mathbin.Data.Polynomial.Degree.Lemmas
+

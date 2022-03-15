@@ -3,10 +3,9 @@ Copyright (c) 2020 Kenny Lau. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau
 -/
-
-import data.equiv.ring
-import group_theory.group_action.group
-import ring_theory.subring.basic
+import Mathbin.Data.Equiv.Ring
+import Mathbin.GroupTheory.GroupAction.Group
+import Mathbin.RingTheory.Subring.Basic
 
 /-!
 # Group action on rings
@@ -27,106 +26,102 @@ group action, invariant subring
 
 -/
 
-universes u v
-open_locale big_operators
+
+universe u v
+
+open_locale BigOperators
 
 /-- Typeclass for multiplicative actions by monoids on semirings.
 
 This combines `distrib_mul_action` with `mul_distrib_mul_action`. -/
-class mul_semiring_action (M : Type u) (R : Type v) [monoid M] [semiring R]
-  extends distrib_mul_action M R :=
-(smul_one : ∀ (g : M), (g • 1 : R) = 1)
-(smul_mul : ∀ (g : M) (x y : R), g • (x * y) = (g • x) * (g • y))
+class MulSemiringAction (M : Type u) (R : Type v) [Monoidₓ M] [Semiringₓ R] extends DistribMulAction M R where
+  smul_one : ∀ g : M, (g • 1 : R) = 1
+  smul_mul : ∀ g : M x y : R, g • (x * y) = g • x * g • y
 
-section semiring
+section Semiringₓ
 
-variables (M G : Type u) [monoid M] [group G]
-variables (A R S F : Type v) [add_monoid A] [semiring R] [comm_semiring S] [division_ring F]
+variable (M G : Type u) [Monoidₓ M] [Groupₓ G]
+
+variable (A R S F : Type v) [AddMonoidₓ A] [Semiringₓ R] [CommSemiringₓ S] [DivisionRing F]
 
 -- note we could not use `extends` since these typeclasses are made with `old_structure_cmd`
-@[priority 100]
-instance mul_semiring_action.to_mul_distrib_mul_action [h : mul_semiring_action M R] :
-  mul_distrib_mul_action M R :=
-{ ..h }
+instance (priority := 100) MulSemiringAction.toMulDistribMulAction [h : MulSemiringAction M R] :
+    MulDistribMulAction M R :=
+  { h with }
 
 /-- Each element of the monoid defines a semiring homomorphism. -/
 @[simps]
-def mul_semiring_action.to_ring_hom [mul_semiring_action M R] (x : M) : R →+* R :=
-{ .. mul_distrib_mul_action.to_monoid_hom R x,
-  .. distrib_mul_action.to_add_monoid_hom R x }
+def MulSemiringAction.toRingHom [MulSemiringAction M R] (x : M) : R →+* R :=
+  { MulDistribMulAction.toMonoidHom R x, DistribMulAction.toAddMonoidHom R x with }
 
-theorem to_ring_hom_injective [mul_semiring_action M R] [has_faithful_scalar M R] :
-  function.injective (mul_semiring_action.to_ring_hom M R) :=
-λ m₁ m₂ h, eq_of_smul_eq_smul $ λ r, ring_hom.ext_iff.1 h r
+theorem to_ring_hom_injective [MulSemiringAction M R] [HasFaithfulScalar M R] :
+    Function.Injective (MulSemiringAction.toRingHom M R) := fun m₁ m₂ h =>
+  eq_of_smul_eq_smul fun r => RingHom.ext_iff.1 h r
 
 /-- Each element of the group defines a semiring isomorphism. -/
 @[simps]
-def mul_semiring_action.to_ring_equiv [mul_semiring_action G R] (x : G) : R ≃+* R :=
-{ .. distrib_mul_action.to_add_equiv R x,
-  .. mul_semiring_action.to_ring_hom G R x }
+def MulSemiringAction.toRingEquiv [MulSemiringAction G R] (x : G) : R ≃+* R :=
+  { DistribMulAction.toAddEquiv R x, MulSemiringAction.toRingHom G R x with }
 
 section
-variables {M G R}
+
+variable {M G R}
 
 /-- A stronger version of `submonoid.distrib_mul_action`. -/
-instance submonoid.mul_semiring_action [mul_semiring_action M R] (H : submonoid M) :
-  mul_semiring_action H R :=
-{ smul := (•),
-  .. H.mul_distrib_mul_action,
-  .. H.distrib_mul_action }
+instance Submonoid.mulSemiringAction [MulSemiringAction M R] (H : Submonoid M) : MulSemiringAction H R :=
+  { H.MulDistribMulAction, H.DistribMulAction with smul := (· • ·) }
 
 /-- A stronger version of `subgroup.distrib_mul_action`. -/
-instance subgroup.mul_semiring_action [mul_semiring_action G R] (H : subgroup G) :
-  mul_semiring_action H R :=
-H.to_submonoid.mul_semiring_action
+instance Subgroup.mulSemiringAction [MulSemiringAction G R] (H : Subgroup G) : MulSemiringAction H R :=
+  H.toSubmonoid.MulSemiringAction
 
 /-- A stronger version of `subsemiring.distrib_mul_action`. -/
-instance subsemiring.mul_semiring_action {R'} [semiring R'] [mul_semiring_action R' R]
-  (H : subsemiring R') :
-  mul_semiring_action H R :=
-H.to_submonoid.mul_semiring_action
+instance Subsemiring.mulSemiringAction {R'} [Semiringₓ R'] [MulSemiringAction R' R] (H : Subsemiring R') :
+    MulSemiringAction H R :=
+  H.toSubmonoid.MulSemiringAction
 
 /-- A stronger version of `subring.distrib_mul_action`. -/
-instance subring.mul_semiring_action {R'} [ring R'] [mul_semiring_action R' R]
-  (H : subring R') :
-  mul_semiring_action H R :=
-H.to_subsemiring.mul_semiring_action
+instance Subring.mulSemiringAction {R'} [Ringₓ R'] [MulSemiringAction R' R] (H : Subring R') : MulSemiringAction H R :=
+  H.toSubsemiring.MulSemiringAction
 
 end
 
-section simp_lemmas
+section SimpLemmas
 
-variables {M G A R F}
+variable {M G A R F}
 
 attribute [simp] smul_one smul_mul' smul_zero smul_add
 
 /-- Note that `smul_inv'` refers to the group case, and `smul_inv` has an additional inverse
 on `x`. -/
-@[simp] lemma smul_inv'' [mul_semiring_action M F] (x : M) (m : F) : x • m⁻¹ = (x • m)⁻¹ :=
-(mul_semiring_action.to_ring_hom M F x).map_inv _
+@[simp]
+theorem smul_inv'' [MulSemiringAction M F] (x : M) (m : F) : x • m⁻¹ = (x • m)⁻¹ :=
+  (MulSemiringAction.toRingHom M F x).map_inv _
 
-end simp_lemmas
+end SimpLemmas
 
-end semiring
+end Semiringₓ
 
-section ring
+section Ringₓ
 
-variables (M : Type u) [monoid M] {R : Type v} [ring R] [mul_semiring_action M R]
-variables (S : subring R)
-open mul_action
+variable (M : Type u) [Monoidₓ M] {R : Type v} [Ringₓ R] [MulSemiringAction M R]
+
+variable (S : Subring R)
+
+open MulAction
 
 /-- A typeclass for subrings invariant under a `mul_semiring_action`. -/
-class is_invariant_subring : Prop :=
-(smul_mem : ∀ (m : M) {x : R}, x ∈ S → m • x ∈ S)
+class IsInvariantSubring : Prop where
+  smul_mem : ∀ m : M {x : R}, x ∈ S → m • x ∈ S
 
-instance is_invariant_subring.to_mul_semiring_action [is_invariant_subring M S] :
-  mul_semiring_action M S :=
-{ smul := λ m x, ⟨m • x, is_invariant_subring.smul_mem m x.2⟩,
-  one_smul := λ s, subtype.eq $ one_smul M s,
-  mul_smul := λ m₁ m₂ s, subtype.eq $ mul_smul m₁ m₂ s,
-  smul_add := λ m s₁ s₂, subtype.eq $ smul_add m s₁ s₂,
-  smul_zero := λ m, subtype.eq $ smul_zero m,
-  smul_one := λ m, subtype.eq $ smul_one m,
-  smul_mul := λ m s₁ s₂, subtype.eq $ smul_mul' m s₁ s₂ }
+instance IsInvariantSubring.toMulSemiringAction [IsInvariantSubring M S] : MulSemiringAction M S where
+  smul := fun m x => ⟨m • x, IsInvariantSubring.smul_mem m x.2⟩
+  one_smul := fun s => Subtype.eq <| one_smul M s
+  mul_smul := fun m₁ m₂ s => Subtype.eq <| mul_smul m₁ m₂ s
+  smul_add := fun m s₁ s₂ => Subtype.eq <| smul_add m s₁ s₂
+  smul_zero := fun m => Subtype.eq <| smul_zero m
+  smul_one := fun m => Subtype.eq <| smul_one m
+  smul_mul := fun m s₁ s₂ => Subtype.eq <| smul_mul' m s₁ s₂
 
-end ring
+end Ringₓ
+

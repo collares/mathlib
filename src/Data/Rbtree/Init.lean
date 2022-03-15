@@ -5,215 +5,226 @@ Authors: Leonardo de Moura
 -/
 
 -- This file used to be a part of `prelude`
-universes u v
+universe u v
 
-inductive rbnode (α : Type u)
-| leaf                                                     : rbnode
-| red_node   (lchild : rbnode) (val : α) (rchild : rbnode) : rbnode
-| black_node (lchild : rbnode) (val : α) (rchild : rbnode) : rbnode
+inductive Rbnode (α : Type u)
+  | leaf : Rbnode
+  | red_node (lchild : Rbnode) (val : α) (rchild : Rbnode) : Rbnode
+  | black_node (lchild : Rbnode) (val : α) (rchild : Rbnode) : Rbnode
 
-namespace rbnode
-variables {α : Type u} {β : Type v}
+namespace Rbnode
 
-inductive color
-| red | black
+variable {α : Type u} {β : Type v}
 
-open color nat
+inductive Color
+  | red
+  | black
 
-instance color.decidable_eq : decidable_eq color :=
-λ a b, color.cases_on a
-  (color.cases_on b (is_true rfl) (is_false (λ h, color.no_confusion h)))
-  (color.cases_on b (is_false (λ h, color.no_confusion h)) (is_true rfl))
+open Color Nat
 
-def depth (f : nat → nat → nat) : rbnode α → nat
-| leaf               := 0
-| (red_node l _ r)   := succ (f (depth l) (depth r))
-| (black_node l _ r) := succ (f (depth l) (depth r))
+instance Color.decidableEq : DecidableEq Color := fun a b =>
+  Color.casesOn a (Color.casesOn b (isTrue rfl) (isFalse fun h => Color.noConfusion h))
+    (Color.casesOn b (isFalse fun h => Color.noConfusion h) (isTrue rfl))
 
-protected def min : rbnode α → option α
-| leaf                  := none
-| (red_node leaf v _)   := some v
-| (black_node leaf v _) := some v
-| (red_node l v _)      := min l
-| (black_node l v _)    := min l
+def depth (f : Nat → Nat → Nat) : Rbnode α → Nat
+  | leaf => 0
+  | red_node l _ r => succ (f (depth l) (depth r))
+  | black_node l _ r => succ (f (depth l) (depth r))
 
-protected def max : rbnode α → option α
-| leaf                  := none
-| (red_node _ v leaf)   := some v
-| (black_node _ v leaf) := some v
-| (red_node _ v r)      := max r
-| (black_node _ v r)    := max r
+protected def min : Rbnode α → Option α
+  | leaf => none
+  | red_node leaf v _ => some v
+  | black_node leaf v _ => some v
+  | red_node l v _ => min l
+  | black_node l v _ => min l
 
-def fold (f : α → β → β) : rbnode α → β → β
-| leaf b               := b
-| (red_node l v r)   b := fold r (f v (fold l b))
-| (black_node l v r) b := fold r (f v (fold l b))
+protected def max : Rbnode α → Option α
+  | leaf => none
+  | red_node _ v leaf => some v
+  | black_node _ v leaf => some v
+  | red_node _ v r => max r
+  | black_node _ v r => max r
 
-def rev_fold (f : α → β → β) : rbnode α → β → β
-| leaf b               := b
-| (red_node l v r)   b := rev_fold l (f v (rev_fold r b))
-| (black_node l v r) b := rev_fold l (f v (rev_fold r b))
+def fold (f : α → β → β) : Rbnode α → β → β
+  | leaf, b => b
+  | red_node l v r, b => fold r (f v (fold l b))
+  | black_node l v r, b => fold r (f v (fold l b))
 
-def balance1 : rbnode α → α → rbnode α → α → rbnode α → rbnode α
-| (red_node l x r₁) y r₂  v t := red_node (black_node l x r₁) y (black_node r₂ v t)
-| l₁ y (red_node l₂ x r)  v t := red_node (black_node l₁ y l₂) x (black_node r v t)
-| l  y r                  v t := black_node (red_node l y r) v t
+def revFold (f : α → β → β) : Rbnode α → β → β
+  | leaf, b => b
+  | red_node l v r, b => rev_fold l (f v (rev_fold r b))
+  | black_node l v r, b => rev_fold l (f v (rev_fold r b))
 
-def balance1_node : rbnode α → α → rbnode α → rbnode α
-| (red_node l x r)   v t := balance1 l x r v t
-| (black_node l x r) v t := balance1 l x r v t
-| leaf               v t := t  /- dummy value -/
+def balance1 : Rbnode α → α → Rbnode α → α → Rbnode α → Rbnode α
+  | red_node l x r₁, y, r₂, v, t => red_node (black_node l x r₁) y (black_node r₂ v t)
+  | l₁, y, red_node l₂ x r, v, t => red_node (black_node l₁ y l₂) x (black_node r v t)
+  | l, y, r, v, t => black_node (red_node l y r) v t
 
-def balance2 : rbnode α → α → rbnode α → α → rbnode α → rbnode α
-| (red_node l x₁ r₁) y r₂  v t := red_node (black_node t v l) x₁ (black_node r₁ y r₂)
-| l₁ y (red_node l₂ x₂ r₂) v t := red_node (black_node t v l₁) y (black_node l₂ x₂ r₂)
-| l  y r                   v t := black_node t v (red_node l y r)
+def balance1Node : Rbnode α → α → Rbnode α → Rbnode α
+  | red_node l x r, v, t => balance1 l x r v t
+  | black_node l x r, v, t => balance1 l x r v t
+  | leaf, v, t => t
 
-def balance2_node : rbnode α → α → rbnode α → rbnode α
-| (red_node l x r)   v t := balance2 l x r v t
-| (black_node l x r) v t := balance2 l x r v t
-| leaf               v t := t /- dummy -/
+-- dummy value
+def balance2 : Rbnode α → α → Rbnode α → α → Rbnode α → Rbnode α
+  | red_node l x₁ r₁, y, r₂, v, t => red_node (black_node t v l) x₁ (black_node r₁ y r₂)
+  | l₁, y, red_node l₂ x₂ r₂, v, t => red_node (black_node t v l₁) y (black_node l₂ x₂ r₂)
+  | l, y, r, v, t => black_node t v (red_node l y r)
 
-def get_color : rbnode α → color
-| (red_node _ _ _) := red
-| _                := black
+def balance2Node : Rbnode α → α → Rbnode α → Rbnode α
+  | red_node l x r, v, t => balance2 l x r v t
+  | black_node l x r, v, t => balance2 l x r v t
+  | leaf, v, t => t
 
-section insert
+-- dummy
+def getColor : Rbnode α → Color
+  | red_node _ _ _ => red
+  | _ => black
 
-variables (lt : α → α → Prop) [decidable_rel lt]
+section Insert
 
-def ins : rbnode α → α → rbnode α
-| leaf             x  := red_node leaf x leaf
-| (red_node a y b) x  :=
-   match cmp_using lt x y with
-   | ordering.lt := red_node (ins a x) y b
-   | ordering.eq := red_node a x b
-   | ordering.gt := red_node a y (ins b x)
-   end
-| (black_node a y b) x :=
-    match cmp_using lt x y with
-    | ordering.lt :=
-      if a.get_color = red then balance1_node (ins a x) y b
-      else black_node (ins a x) y b
-    | ordering.eq := black_node a x b
-    | ordering.gt :=
-      if b.get_color = red then balance2_node (ins b x) y a
-      else black_node a y (ins b x)
-    end
+variable (lt : α → α → Prop) [DecidableRel lt]
 
-def mk_insert_result : color → rbnode α → rbnode α
-| red (red_node l v r)   := black_node l v r
-| _   t                  := t
+def ins : Rbnode α → α → Rbnode α
+  | leaf, x => red_node leaf x leaf
+  | red_node a y b, x =>
+    match cmpUsing lt x y with
+    | Ordering.lt => red_node (ins a x) y b
+    | Ordering.eq => red_node a x b
+    | Ordering.gt => red_node a y (ins b x)
+  | black_node a y b, x =>
+    match cmpUsing lt x y with
+    | Ordering.lt => if a.getColor = red then balance1Node (ins a x) y b else black_node (ins a x) y b
+    | Ordering.eq => black_node a x b
+    | Ordering.gt => if b.getColor = red then balance2Node (ins b x) y a else black_node a y (ins b x)
 
-def insert (t : rbnode α) (x : α) : rbnode α :=
-mk_insert_result (get_color t) (ins lt t x)
+def mkInsertResult : Color → Rbnode α → Rbnode α
+  | red, red_node l v r => black_node l v r
+  | _, t => t
 
-end insert
+def insert (t : Rbnode α) (x : α) : Rbnode α :=
+  mkInsertResult (getColor t) (ins lt t x)
 
-section membership
+end Insert
+
+section Membership
 
 variable (lt : α → α → Prop)
 
-def mem : α → rbnode α → Prop
-| a leaf               := false
-| a (red_node l v r)   := mem a l ∨ (¬ lt a v ∧ ¬ lt v a) ∨ mem a r
-| a (black_node l v r) := mem a l ∨ (¬ lt a v ∧ ¬ lt v a) ∨ mem a r
+def Mem : α → Rbnode α → Prop
+  | a, leaf => False
+  | a, red_node l v r => mem a l ∨ ¬lt a v ∧ ¬lt v a ∨ mem a r
+  | a, black_node l v r => mem a l ∨ ¬lt a v ∧ ¬lt v a ∨ mem a r
 
-def mem_exact : α → rbnode α → Prop
-| a leaf               := false
-| a (red_node l v r)   := mem_exact a l ∨ a = v ∨ mem_exact a r
-| a (black_node l v r) := mem_exact a l ∨ a = v ∨ mem_exact a r
+def MemExact : α → Rbnode α → Prop
+  | a, leaf => False
+  | a, red_node l v r => mem_exact a l ∨ a = v ∨ mem_exact a r
+  | a, black_node l v r => mem_exact a l ∨ a = v ∨ mem_exact a r
 
-variable [decidable_rel lt]
+variable [DecidableRel lt]
 
-def find : rbnode α → α → option α
-| leaf             x := none
-| (red_node a y b) x :=
-  match cmp_using lt x y with
-  | ordering.lt := find a x
-  | ordering.eq := some y
-  | ordering.gt := find b x
-  end
-| (black_node a y b) x :=
-  match cmp_using lt x y with
-  | ordering.lt := find a x
-  | ordering.eq := some y
-  | ordering.gt := find b x
-  end
+def find : Rbnode α → α → Option α
+  | leaf, x => none
+  | red_node a y b, x =>
+    match cmpUsing lt x y with
+    | Ordering.lt => find a x
+    | Ordering.eq => some y
+    | Ordering.gt => find b x
+  | black_node a y b, x =>
+    match cmpUsing lt x y with
+    | Ordering.lt => find a x
+    | Ordering.eq => some y
+    | Ordering.gt => find b x
 
-end membership
+end Membership
 
-inductive well_formed (lt : α → α → Prop) : rbnode α → Prop
-| leaf_wff : well_formed leaf
-| insert_wff {n n' : rbnode α} {x : α} [decidable_rel lt] :
-  well_formed n → n' = insert lt n x → well_formed n'
+inductive WellFormed (lt : α → α → Prop) : Rbnode α → Prop
+  | leaf_wff : well_formed leaf
+  | insert_wff {n n' : Rbnode α} {x : α} [DecidableRel lt] : well_formed n → n' = insert lt n x → well_formed n'
 
-end rbnode
+end Rbnode
 
-open rbnode
+open Rbnode
 
+-- ././Mathport/Syntax/Translate/Basic.lean:210:40: warning: unsupported option auto_param.check_exists
 set_option auto_param.check_exists false
 
-def rbtree (α : Type u) (lt : α → α → Prop . rbtree.default_lt) : Type u :=
-{t : rbnode α // t.well_formed lt }
+def Rbtree (α : Type u)
+    (lt : α → α → Prop := by
+      run_tac
+        rbtree.default_lt) :
+    Type u :=
+  { t : Rbnode α // t.WellFormed lt }
 
-def mk_rbtree (α : Type u) (lt : α → α → Prop . rbtree.default_lt) : rbtree α lt :=
-⟨leaf, well_formed.leaf_wff⟩
+def mkRbtree (α : Type u)
+    (lt : α → α → Prop := by
+      run_tac
+        rbtree.default_lt) :
+    Rbtree α lt :=
+  ⟨leaf, WellFormed.leaf_wff⟩
 
-namespace rbtree
-variables {α : Type u} {β : Type v} {lt : α → α → Prop}
+namespace Rbtree
 
-protected def mem (a : α) (t : rbtree α lt) : Prop :=
-rbnode.mem lt a t.val
+variable {α : Type u} {β : Type v} {lt : α → α → Prop}
 
-instance : has_mem α (rbtree α lt) :=
-⟨rbtree.mem⟩
+protected def Mem (a : α) (t : Rbtree α lt) : Prop :=
+  Rbnode.Mem lt a t.val
 
-def mem_exact (a : α) (t : rbtree α lt) : Prop :=
-rbnode.mem_exact a t.val
+instance : HasMem α (Rbtree α lt) :=
+  ⟨Rbtree.Mem⟩
 
-def depth (f : nat → nat → nat) (t : rbtree α lt) : nat :=
-t.val.depth f
+def MemExact (a : α) (t : Rbtree α lt) : Prop :=
+  Rbnode.MemExact a t.val
 
-def fold (f : α → β → β) : rbtree α lt → β →  β
-| ⟨t, _⟩ b := t.fold f b
+def depth (f : Nat → Nat → Nat) (t : Rbtree α lt) : Nat :=
+  t.val.depth f
 
-def rev_fold (f : α → β → β) : rbtree α lt → β →  β
-| ⟨t, _⟩ b := t.rev_fold f b
+def fold (f : α → β → β) : Rbtree α lt → β → β
+  | ⟨t, _⟩, b => t.fold f b
 
-def empty : rbtree α lt → bool
-| ⟨leaf, _⟩ := tt
-| _         := ff
+def revFold (f : α → β → β) : Rbtree α lt → β → β
+  | ⟨t, _⟩, b => t.revFold f b
 
-def to_list : rbtree α lt → list α
-| ⟨t, _⟩ := t.rev_fold (::) []
+def empty : Rbtree α lt → Bool
+  | ⟨leaf, _⟩ => true
+  | _ => false
 
-protected def min : rbtree α lt → option α
-| ⟨t, _⟩ := t.min
+def toList : Rbtree α lt → List α
+  | ⟨t, _⟩ => t.revFold (· :: ·) []
 
-protected def max : rbtree α lt → option α
-| ⟨t, _⟩ := t.max
+protected def min : Rbtree α lt → Option α
+  | ⟨t, _⟩ => t.min
 
-instance [has_repr α] : has_repr (rbtree α lt) :=
-⟨λ t, "rbtree_of " ++ repr t.to_list⟩
+protected def max : Rbtree α lt → Option α
+  | ⟨t, _⟩ => t.max
 
-variables [decidable_rel lt]
+instance [HasRepr α] : HasRepr (Rbtree α lt) :=
+  ⟨fun t => "rbtree_of " ++ reprₓ t.toList⟩
 
-def insert : rbtree α lt → α → rbtree α lt
-| ⟨t, w⟩   x := ⟨t.insert lt x, well_formed.insert_wff w rfl⟩
+variable [DecidableRel lt]
 
-def find : rbtree α lt → α → option α
-| ⟨t, _⟩ x := t.find lt x
+def insert : Rbtree α lt → α → Rbtree α lt
+  | ⟨t, w⟩, x => ⟨t.insert lt x, WellFormed.insert_wff w rfl⟩
 
-def contains (t : rbtree α lt) (a : α) : bool :=
-(t.find a).is_some
+def find : Rbtree α lt → α → Option α
+  | ⟨t, _⟩, x => t.find lt x
 
-def from_list (l : list α) (lt : α → α → Prop . rbtree.default_lt) [decidable_rel lt] :
-  rbtree α lt :=
-l.foldl insert (mk_rbtree α lt)
+def contains (t : Rbtree α lt) (a : α) : Bool :=
+  (t.find a).isSome
 
-end rbtree
+def fromList (l : List α)
+    (lt : α → α → Prop := by
+      run_tac
+        rbtree.default_lt)
+    [DecidableRel lt] : Rbtree α lt :=
+  l.foldl insert (mkRbtree α lt)
 
-def rbtree_of {α : Type u} (l : list α) (lt : α → α → Prop . rbtree.default_lt) [decidable_rel lt] :
-  rbtree α lt :=
-rbtree.from_list l lt
+end Rbtree
+
+def rbtreeOf {α : Type u} (l : List α)
+    (lt : α → α → Prop := by
+      run_tac
+        rbtree.default_lt)
+    [DecidableRel lt] : Rbtree α lt :=
+  Rbtree.fromList l lt
+

@@ -3,7 +3,7 @@ Copyright (c) 2019 Simon Hudon. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Simon Hudon, Keeley Hoek, Floris van Doorn
 -/
-import data.list.defs
+import Mathbin.Data.List.Defs
 
 /-!
 # Definitions for `string`
@@ -11,48 +11,50 @@ import data.list.defs
 This file defines a bunch of functions for the `string` datatype.
 -/
 
-namespace string
+
+namespace Stringₓ
 
 /-- `s.split_on c` tokenizes `s : string` on `c : char`. -/
-def split_on (s : string) (c : char) : list string :=
-split (= c) s
+def splitOn (s : Stringₓ) (c : Charₓ) : List Stringₓ :=
+  split (· = c) s
 
 /-- `string.map_tokens c f s` tokenizes `s : string` on `c : char`, maps `f` over each token, and
 then reassembles the string by intercalating the separator token `c` over the mapped tokens. -/
-def map_tokens (c : char) (f : string → string) : string → string :=
-intercalate (singleton c) ∘ list.map f ∘ split (= c)
+def mapTokens (c : Charₓ) (f : Stringₓ → Stringₓ) : Stringₓ → Stringₓ :=
+  intercalate (singleton c) ∘ List.map f ∘ split (· = c)
 
 /-- Tests whether the first string is a prefix of the second string. -/
-def is_prefix_of (x y : string) : bool :=
-x.to_list.is_prefix_of y.to_list
+def isPrefixOf (x y : Stringₓ) : Bool :=
+  x.toList.isPrefixOf y.toList
 
 /-- Tests whether the first string is a suffix of the second string. -/
-def is_suffix_of (x y : string) : bool :=
-x.to_list.is_suffix_of y.to_list
+def isSuffixOf (x y : Stringₓ) : Bool :=
+  x.toList.isSuffixOf y.toList
 
 /-- `x.starts_with y` is true if `y` is a prefix of `x`, and is false otherwise. -/
-abbreviation starts_with (x y : string) : bool :=
-y.is_prefix_of x
+abbrev startsWith (x y : Stringₓ) : Bool :=
+  y.isPrefixOf x
 
 /-- `x.ends_with y` is true if `y` is a suffix of `x`, and is false otherwise. -/
-abbreviation ends_with (x y : string) : bool :=
-y.is_suffix_of x
+abbrev endsWith (x y : Stringₓ) : Bool :=
+  y.isSuffixOf x
 
 /-- `get_rest s t` returns `some r` if `s = t ++ r`.
   If `t` is not a prefix of `s`, returns `none` -/
-def get_rest (s t : string) : option string :=
-list.as_string <$> s.to_list.get_rest t.to_list
+def getRest (s t : Stringₓ) : Option Stringₓ :=
+  List.asStringₓ <$> s.toList.getRest t.toList
 
 /-- Removes the first `n` elements from the string `s` -/
-def popn (s : string) (n : nat) : string :=
-(s.mk_iterator.nextn n).next_to_string
+def popn (s : Stringₓ) (n : Nat) : Stringₓ :=
+  (s.mkIterator.nextn n).nextToString
 
 /-- `is_nat s` is true iff `s` is a nonempty sequence of digits. -/
-def is_nat (s : string) : bool :=
-¬ s.is_empty ∧ s.to_list.all (λ c, to_bool c.is_digit)
+def isNat (s : Stringₓ) : Bool :=
+  ¬s.isEmpty ∧ s.toList.all fun c => toBool c.IsDigit
 
 /-- Produce the head character from the string `s`, if `s` is not empty, otherwise 'A'. -/
-def head (s : string) : char :=
-s.mk_iterator.curr
+def head (s : Stringₓ) : Charₓ :=
+  s.mkIterator.curr
 
-end string
+end Stringₓ
+

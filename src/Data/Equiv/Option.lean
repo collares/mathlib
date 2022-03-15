@@ -3,8 +3,8 @@ Copyright (c) 2021 Eric Wieser. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Eric Wieser
 -/
-import data.equiv.basic
-import control.equiv_functor
+import Mathbin.Data.Equiv.Basic
+import Mathbin.Control.EquivFunctor
 
 /-!
 # Equivalences for `option α`
@@ -17,114 +17,129 @@ We define
   both sides.
 -/
 
-namespace equiv
 
-variables {α β γ : Type*}
+namespace Equivₓ
 
-section option_congr
+variable {α β γ : Type _}
+
+section OptionCongr
 
 /-- A universe-polymorphic version of `equiv_functor.map_equiv option e`. -/
 @[simps apply]
-def option_congr (e : α ≃ β) : option α ≃ option β :=
-{ to_fun := option.map e,
-  inv_fun := option.map e.symm,
-  left_inv := λ x, (option.map_map _ _ _).trans $
-    e.symm_comp_self.symm ▸ congr_fun option.map_id x,
-  right_inv := λ x, (option.map_map _ _ _).trans $
-    e.self_comp_symm.symm ▸ congr_fun option.map_id x }
+def optionCongr (e : α ≃ β) : Option α ≃ Option β where
+  toFun := Option.map e
+  invFun := Option.map e.symm
+  left_inv := fun x => (Option.map_mapₓ _ _ _).trans <| e.symm_comp_self.symm ▸ congr_funₓ Option.map_id x
+  right_inv := fun x => (Option.map_mapₓ _ _ _).trans <| e.self_comp_symm.symm ▸ congr_funₓ Option.map_id x
 
-@[simp] lemma option_congr_refl : option_congr (equiv.refl α) = equiv.refl _ :=
-ext $ congr_fun option.map_id
+@[simp]
+theorem option_congr_refl : optionCongr (Equivₓ.refl α) = Equivₓ.refl _ :=
+  ext <| congr_funₓ Option.map_id
 
-@[simp] lemma option_congr_symm (e : α ≃ β) : (option_congr e).symm = option_congr e.symm := rfl
+@[simp]
+theorem option_congr_symm (e : α ≃ β) : (optionCongr e).symm = optionCongr e.symm :=
+  rfl
 
-@[simp] lemma option_congr_trans (e₁ : α ≃ β) (e₂ : β ≃ γ) :
-  (option_congr e₁).trans (option_congr e₂) = option_congr (e₁.trans e₂) :=
-ext $ option.map_map _ _
+@[simp]
+theorem option_congr_trans (e₁ : α ≃ β) (e₂ : β ≃ γ) :
+    (optionCongr e₁).trans (optionCongr e₂) = optionCongr (e₁.trans e₂) :=
+  ext <| Option.map_mapₓ _ _
 
 /-- When `α` and `β` are in the same universe, this is the same as the result of
 `equiv_functor.map_equiv`. -/
-lemma option_congr_eq_equiv_function_map_equiv {α β : Type*} (e : α ≃ β) :
-  option_congr e = equiv_functor.map_equiv option e := rfl
+theorem option_congr_eq_equiv_function_map_equiv {α β : Type _} (e : α ≃ β) :
+    optionCongr e = EquivFunctor.mapEquiv Option e :=
+  rfl
 
-end option_congr
+end OptionCongr
 
-section remove_none
-variables (e : option α ≃ option β)
+section RemoveNone
+
+variable (e : Option α ≃ Option β)
 
 private def remove_none_aux (x : α) : β :=
-if h : (e (some x)).is_some
-  then option.get h
-  else option.get $ show (e none).is_some, from
-  begin
-    rw ←option.ne_none_iff_is_some,
-    intro hn,
-    rw [option.not_is_some_iff_eq_none, ←hn] at h,
-    simpa only using e.injective h,
-  end
+  if h : (e (some x)).isSome then Option.getₓ h
+  else
+    Option.getₓ <|
+      show (e none).isSome by
+        rw [← Option.ne_none_iff_is_some]
+        intro hn
+        rw [Option.not_is_some_iff_eq_none, ← hn] at h
+        simpa only using e.injective h
 
-private lemma remove_none_aux_some {x : α} (h : ∃ x', e (some x) = some x') :
-  some (remove_none_aux e x) = e (some x) :=
-by simp [remove_none_aux, option.is_some_iff_exists.mpr h]
+private theorem remove_none_aux_some {x : α} (h : ∃ x', e (some x) = some x') : some (removeNoneAux e x) = e (some x) :=
+  by
+  simp [remove_none_aux, option.is_some_iff_exists.mpr h]
 
-private lemma remove_none_aux_none {x : α} (h : e (some x) = none) :
-  some (remove_none_aux e x) = e none :=
-by simp [remove_none_aux, option.not_is_some_iff_eq_none.mpr h]
+private theorem remove_none_aux_none {x : α} (h : e (some x) = none) : some (removeNoneAux e x) = e none := by
+  simp [remove_none_aux, option.not_is_some_iff_eq_none.mpr h]
 
-private lemma remove_none_aux_inv (x : α) : remove_none_aux e.symm (remove_none_aux e x) = x :=
-option.some_injective _ begin
-  cases h1 : e.symm (some (remove_none_aux e x)); cases h2 : (e (some x)),
-  { rw remove_none_aux_none _ h1,
-    exact (e.eq_symm_apply.mpr h2).symm },
-  { rw remove_none_aux_some _ ⟨_, h2⟩ at h1,
-    simpa using h1, },
-  { rw remove_none_aux_none _ h2 at h1,
-    simpa using h1, },
-  { rw remove_none_aux_some _ ⟨_, h1⟩,
-    rw remove_none_aux_some _ ⟨_, h2⟩,
-    simp },
-end
+private theorem remove_none_aux_inv (x : α) : removeNoneAux e.symm (removeNoneAux e x) = x :=
+  Option.some_injective _
+    (by
+      cases h1 : e.symm (some (remove_none_aux e x)) <;> cases h2 : e (some x)
+      · rw [remove_none_aux_none _ h1]
+        exact (e.eq_symm_apply.mpr h2).symm
+        
+      · rw [remove_none_aux_some _ ⟨_, h2⟩] at h1
+        simpa using h1
+        
+      · rw [remove_none_aux_none _ h2] at h1
+        simpa using h1
+        
+      · rw [remove_none_aux_some _ ⟨_, h1⟩]
+        rw [remove_none_aux_some _ ⟨_, h2⟩]
+        simp
+        )
 
 /-- Given an equivalence between two `option` types, eliminate `none` from that equivalence by
 mapping `e.symm none` to `e none`. -/
-def remove_none : α ≃ β :=
-{ to_fun := remove_none_aux e,
-  inv_fun := remove_none_aux e.symm,
-  left_inv := remove_none_aux_inv e,
-  right_inv := remove_none_aux_inv e.symm, }
+def removeNone : α ≃ β where
+  toFun := removeNoneAux e
+  invFun := removeNoneAux e.symm
+  left_inv := remove_none_aux_inv e
+  right_inv := remove_none_aux_inv e.symm
 
 @[simp]
-lemma remove_none_symm : (remove_none e).symm = remove_none e.symm := rfl
+theorem remove_none_symm : (removeNone e).symm = removeNone e.symm :=
+  rfl
 
-lemma remove_none_some {x : α} (h : ∃ x', e (some x) = some x') :
-  some (remove_none e x) = e (some x) := remove_none_aux_some e h
+theorem remove_none_some {x : α} (h : ∃ x', e (some x) = some x') : some (removeNone e x) = e (some x) :=
+  remove_none_aux_some e h
 
-lemma remove_none_none {x : α} (h : e (some x) = none) :
-  some (remove_none e x) = e none := remove_none_aux_none e h
-
-@[simp] lemma option_symm_apply_none_iff : e.symm none = none ↔ e none = none :=
-⟨λ h, by simpa using (congr_arg e h).symm, λ h, by simpa using (congr_arg e.symm h).symm⟩
-
-lemma some_remove_none_iff {x : α} :
-  some (remove_none e x) = e none ↔ e.symm none = some x :=
-begin
-  cases h : e (some x) with a,
-  { rw remove_none_none _ h,
-    simpa using (congr_arg e.symm h).symm },
-  { rw remove_none_some _ ⟨a, h⟩,
-    have := (congr_arg e.symm h),
-    rw [symm_apply_apply] at this,
-    simp only [false_iff, apply_eq_iff_eq],
-    simp [this] }
-end
+theorem remove_none_none {x : α} (h : e (some x) = none) : some (removeNone e x) = e none :=
+  remove_none_aux_none e h
 
 @[simp]
-lemma remove_none_option_congr (e : α ≃ β) : remove_none e.option_congr = e :=
-equiv.ext $ λ x, option.some_injective _ $ remove_none_some _ ⟨e x, by simp [equiv_functor.map]⟩
+theorem option_symm_apply_none_iff : e.symm none = none ↔ e none = none :=
+  ⟨fun h => by
+    simpa using (congr_argₓ e h).symm, fun h => by
+    simpa using (congr_argₓ e.symm h).symm⟩
 
-end remove_none
+theorem some_remove_none_iff {x : α} : some (removeNone e x) = e none ↔ e.symm none = some x := by
+  cases' h : e (some x) with a
+  · rw [remove_none_none _ h]
+    simpa using (congr_argₓ e.symm h).symm
+    
+  · rw [remove_none_some _ ⟨a, h⟩]
+    have := congr_argₓ e.symm h
+    rw [symm_apply_apply] at this
+    simp only [false_iffₓ, apply_eq_iff_eq]
+    simp [this]
+    
 
-lemma option_congr_injective : function.injective (option_congr : α ≃ β → option α ≃ option β) :=
-function.left_inverse.injective remove_none_option_congr
+@[simp]
+theorem remove_none_option_congr (e : α ≃ β) : removeNone e.optionCongr = e :=
+  Equivₓ.ext fun x =>
+    Option.some_injective _ <|
+      remove_none_some _
+        ⟨e x, by
+          simp [EquivFunctor.map]⟩
 
-end equiv
+end RemoveNone
+
+theorem option_congr_injective : Function.Injective (optionCongr : α ≃ β → Option α ≃ Option β) :=
+  Function.LeftInverse.injective remove_none_option_congr
+
+end Equivₓ
+

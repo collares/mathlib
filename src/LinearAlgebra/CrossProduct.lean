@@ -3,11 +3,10 @@ Copyright (c) 2021 Martin Dvorak. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Martin Dvorak, Kyle Miller, Eric Wieser
 -/
-
-import data.matrix.notation
-import linear_algebra.bilinear_map
-import linear_algebra.matrix.determinant
-import algebra.lie.basic
+import Mathbin.Data.Matrix.Notation
+import Mathbin.LinearAlgebra.BilinearMap
+import Mathbin.LinearAlgebra.Matrix.Determinant
+import Mathbin.Algebra.Lie.Basic
 
 /-!
 # Cross products
@@ -36,126 +35,109 @@ The locale `matrix` gives the following notation:
 crossproduct
 -/
 
-open matrix
-open_locale matrix
 
-variables {R : Type*} [comm_ring R]
+open Matrix
+
+open_locale Matrix
+
+variable {R : Type _} [CommRingₓ R]
 
 /-- The cross product of two vectors in $R^3$ for $R$ a commutative ring. -/
-def cross_product : (fin 3 → R) →ₗ[R] (fin 3 → R) →ₗ[R] (fin 3 → R) :=
-begin
-  apply linear_map.mk₂ R (λ (a b : fin 3 → R),
-    ![a 1 * b 2 - a 2 * b 1,
-      a 2 * b 0 - a 0 * b 2,
-      a 0 * b 1 - a 1 * b 0]),
-  { intros,
-    simp [vec3_add (_ : R), add_comm, add_assoc, add_left_comm, add_mul, sub_eq_add_neg] },
-  { intros,
-    simp [smul_vec3 (_ : R) (_ : R), mul_comm, mul_assoc, mul_left_comm, mul_add, sub_eq_add_neg] },
-  { intros,
-    simp [vec3_add (_ : R), add_comm, add_assoc, add_left_comm, mul_add, sub_eq_add_neg] },
-  { intros,
-    simp [smul_vec3 (_ : R) (_ : R), mul_comm, mul_assoc, mul_left_comm, mul_add, sub_eq_add_neg] },
-end
+def crossProduct : (Finₓ 3 → R) →ₗ[R] (Finₓ 3 → R) →ₗ[R] Finₓ 3 → R := by
+  apply LinearMap.mk₂ R fun a b : Finₓ 3 → R => ![a 1 * b 2 - a 2 * b 1, a 2 * b 0 - a 0 * b 2, a 0 * b 1 - a 1 * b 0]
+  · intros
+    simp [vec3_add (_ : R), add_commₓ, add_assocₓ, add_left_commₓ, add_mulₓ, sub_eq_add_neg]
+    
+  · intros
+    simp [smul_vec3 (_ : R) (_ : R), mul_comm, mul_assoc, mul_left_commₓ, mul_addₓ, sub_eq_add_neg]
+    
+  · intros
+    simp [vec3_add (_ : R), add_commₓ, add_assocₓ, add_left_commₓ, mul_addₓ, sub_eq_add_neg]
+    
+  · intros
+    simp [smul_vec3 (_ : R) (_ : R), mul_comm, mul_assoc, mul_left_commₓ, mul_addₓ, sub_eq_add_neg]
+    
 
-localized "infixl ` ×₃ `: 74 := cross_product" in matrix
+-- mathport name: «expr ×₃ »
+localized [Matrix] infixl:74 " ×₃ " => crossProduct
 
-lemma cross_apply (a b : fin 3 → R) :
-  a ×₃ b = ![a 1 * b 2 - a 2 * b 1,
-             a 2 * b 0 - a 0 * b 2,
-             a 0 * b 1 - a 1 * b 0] :=
-rfl
+theorem cross_apply (a b : Finₓ 3 → R) :
+    a ×₃ b = ![a 1 * b 2 - a 2 * b 1, a 2 * b 0 - a 0 * b 2, a 0 * b 1 - a 1 * b 0] :=
+  rfl
 
-section products_properties
+section ProductsProperties
 
-@[simp] lemma cross_anticomm (v w : fin 3 → R) :
-  - (v ×₃ w) = w ×₃ v :=
-by simp [cross_apply, mul_comm]
+@[simp]
+theorem cross_anticomm (v w : Finₓ 3 → R) : -(v ×₃ w) = w ×₃ v := by
+  simp [cross_apply, mul_comm]
+
 alias cross_anticomm ← neg_cross
 
-@[simp] lemma cross_anticomm' (v w : fin 3 → R) :
-  v ×₃ w + w ×₃ v = 0 :=
-by rw [add_eq_zero_iff_eq_neg, cross_anticomm]
+@[simp]
+theorem cross_anticomm' (v w : Finₓ 3 → R) : v ×₃ w + w ×₃ v = 0 := by
+  rw [add_eq_zero_iff_eq_neg, cross_anticomm]
 
-@[simp] lemma cross_self (v : fin 3 → R) :
-  v ×₃ v = 0 :=
-by simp [cross_apply, mul_comm]
+@[simp]
+theorem cross_self (v : Finₓ 3 → R) : v ×₃ v = 0 := by
+  simp [cross_apply, mul_comm]
 
 /-- The cross product of two vectors is perpendicular to the first vector. -/
-@[simp] lemma dot_self_cross (v w : fin 3 → R) :
-  v ⬝ᵥ (v ×₃ w) = 0 :=
-by simp [cross_apply, vec3_dot_product, mul_sub, mul_assoc, mul_left_comm]
+@[simp]
+theorem dot_self_cross (v w : Finₓ 3 → R) : v ⬝ᵥ v ×₃ w = 0 := by
+  simp [cross_apply, vec3_dot_product, mul_sub, mul_assoc, mul_left_commₓ]
 
 /-- The cross product of two vectors is perpendicular to the second vector. -/
-@[simp] lemma dot_cross_self (v w : fin 3 → R) :
-  w ⬝ᵥ (v ×₃ w) = 0 :=
-by rw [← cross_anticomm, matrix.dot_product_neg, dot_self_cross, neg_zero]
+@[simp]
+theorem dot_cross_self (v w : Finₓ 3 → R) : w ⬝ᵥ v ×₃ w = 0 := by
+  rw [← cross_anticomm, Matrix.dot_product_neg, dot_self_cross, neg_zero]
 
 /-- Cyclic permutations preserve the triple product. See also `triple_product_eq_det`. -/
-lemma triple_product_permutation (u v w : fin 3 → R) :
-  u ⬝ᵥ (v ×₃ w) = v ⬝ᵥ (w ×₃ u) :=
-begin
-  simp only [cross_apply, vec3_dot_product,
-    matrix.head_cons, matrix.cons_vec_bit0_eq_alt0, matrix.empty_append, matrix.cons_val_one,
-    matrix.cons_vec_alt0, matrix.cons_append, matrix.cons_val_zero],
-  ring,
-end
+theorem triple_product_permutation (u v w : Finₓ 3 → R) : u ⬝ᵥ v ×₃ w = v ⬝ᵥ w ×₃ u := by
+  simp only [cross_apply, vec3_dot_product, Matrix.head_cons, Matrix.cons_vec_bit0_eq_alt0, Matrix.empty_append,
+    Matrix.cons_val_one, Matrix.cons_vec_alt0, Matrix.cons_append, Matrix.cons_val_zero]
+  ring
 
 /-- The triple product of `u`, `v`, and `w` is equal to the determinant of the matrix
     with those vectors as its rows. -/
-theorem triple_product_eq_det (u v w : fin 3 → R) :
-  u ⬝ᵥ (v ×₃ w) = matrix.det ![u, v, w] :=
-begin
-  simp only [vec3_dot_product, cross_apply, matrix.det_fin_three,
-    matrix.head_cons, matrix.cons_vec_bit0_eq_alt0, matrix.empty_vec_alt0, matrix.cons_vec_alt0,
-    matrix.vec_head_vec_alt0, fin.fin_append_apply_zero, matrix.empty_append, matrix.cons_append,
-    matrix.cons_val', matrix.cons_val_one, matrix.cons_val_zero],
-  ring,
-end
+theorem triple_product_eq_det (u v w : Finₓ 3 → R) : u ⬝ᵥ v ×₃ w = Matrix.det ![u, v, w] := by
+  simp only [vec3_dot_product, cross_apply, Matrix.det_fin_three, Matrix.head_cons, Matrix.cons_vec_bit0_eq_alt0,
+    Matrix.empty_vec_alt0, Matrix.cons_vec_alt0, Matrix.vec_head_vec_alt0, Finₓ.fin_append_apply_zero,
+    Matrix.empty_append, Matrix.cons_append, Matrix.cons_val', Matrix.cons_val_one, Matrix.cons_val_zero]
+  ring
 
 /-- The scalar quadruple product identity, related to the Binet-Cauchy identity. -/
-theorem cross_dot_cross (u v w x : fin 3 → R) :
-  (u ×₃ v) ⬝ᵥ (w ×₃ x) = (u ⬝ᵥ w) * (v ⬝ᵥ x) - (u ⬝ᵥ x) * (v ⬝ᵥ w) :=
-begin
-  simp only [vec3_dot_product, cross_apply, cons_append, cons_vec_bit0_eq_alt0,
-    cons_val_one, cons_vec_alt0, linear_map.mk₂_apply, cons_val_zero, head_cons, empty_append],
-  ring_nf,
-end
+theorem cross_dot_cross (u v w x : Finₓ 3 → R) : u ×₃ v ⬝ᵥ w ×₃ x = u ⬝ᵥ w * v ⬝ᵥ x - u ⬝ᵥ x * v ⬝ᵥ w := by
+  simp only [vec3_dot_product, cross_apply, cons_append, cons_vec_bit0_eq_alt0, cons_val_one, cons_vec_alt0,
+    LinearMap.mk₂_apply, cons_val_zero, head_cons, empty_append]
+  ring_nf
 
-end products_properties
+end ProductsProperties
 
-section leibniz_properties
+section LeibnizProperties
 
+-- ././Mathport/Syntax/Translate/Tactic/Basic.lean:29:26: unsupported: too many args
 /-- The cross product satisfies the Leibniz lie property. -/
-lemma leibniz_cross (u v w : fin 3 → R) :
-  u ×₃ (v ×₃ w) = (u ×₃ v) ×₃ w + v ×₃ (u ×₃ w) :=
-begin
-  dsimp only [cross_apply],
-  ext i,
-  fin_cases i; norm_num; ring,
-end
+theorem leibniz_cross (u v w : Finₓ 3 → R) : u ×₃ (v ×₃ w) = u ×₃ v ×₃ w + v ×₃ (u ×₃ w) := by
+  dsimp only [cross_apply]
+  ext i
+  fin_cases i <;> norm_num <;> ring
 
 /-- The three-dimensional vectors together with the operations + and ×₃ form a Lie ring.
     Note we do not make this an instance as a conflicting one already exists
     via `lie_ring.of_associative_ring`. -/
-def cross.lie_ring : lie_ring (fin 3 → R) :=
-{ bracket := λ u v, u ×₃ v,
-  add_lie := linear_map.map_add₂ _,
-  lie_add := λ u, linear_map.map_add _,
-  lie_self := cross_self,
-  leibniz_lie := leibniz_cross,
-  ..pi.add_comm_group }
+def Cross.lieRing : LieRing (Finₓ 3 → R) :=
+  { Pi.addCommGroup with bracket := fun u v => u ×₃ v, add_lie := LinearMap.map_add₂ _,
+    lie_add := fun u => LinearMap.map_add _, lie_self := cross_self, leibniz_lie := leibniz_cross }
 
-local attribute [instance] cross.lie_ring
+attribute [local instance] Cross.lieRing
 
-lemma cross_cross (u v w : fin 3 → R) :
-  (u ×₃ v) ×₃ w = u ×₃ (v ×₃ w) - v ×₃ (u ×₃ w) :=
-lie_lie u v w
+theorem cross_cross (u v w : Finₓ 3 → R) : u ×₃ v ×₃ w = u ×₃ (v ×₃ w) - v ×₃ (u ×₃ w) :=
+  lie_lie u v w
 
 /-- Jacobi identity: For a cross product of three vectors,
     their sum over the three even permutations is equal to the zero vector. -/
-theorem jacobi_cross (u v w : fin 3 → R) :
-  u ×₃ (v ×₃ w) + v ×₃ (w ×₃ u) + w ×₃ (u ×₃ v) = 0 :=
-lie_jacobi u v w
+theorem jacobi_cross (u v w : Finₓ 3 → R) : u ×₃ (v ×₃ w) + v ×₃ (w ×₃ u) + w ×₃ (u ×₃ v) = 0 :=
+  lie_jacobi u v w
 
-end leibniz_properties
+end LeibnizProperties
+

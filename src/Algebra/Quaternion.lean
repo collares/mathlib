@@ -3,10 +3,10 @@ Copyright (c) 2020 Yury Kudryashov. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yury Kudryashov
 -/
-import tactic.ring_exp
-import algebra.algebra.basic
-import algebra.ring.opposite
-import data.equiv.ring
+import Mathbin.Tactic.RingExp
+import Mathbin.Algebra.Algebra.Basic
+import Mathbin.Algebra.Ring.Opposite
+import Mathbin.Data.Equiv.Ring
 
 /-!
 # Quaternions
@@ -47,61 +47,96 @@ are computable.
 quaternion
 -/
 
+
 /-- Quaternion algebra over a type with fixed coefficients $a=i^2$ and $b=j^2$.
 Implemented as a structure with four fields: `re`, `im_i`, `im_j`, and `im_k`. -/
 @[nolint unused_arguments, ext]
-structure quaternion_algebra (R : Type*) (a b : R) :=
-mk {} :: (re : R) (im_i : R) (im_j : R) (im_k : R)
+structure QuaternionAlgebra (R : Type _) (a b : R) where mk {} ::
+  re : R
+  imI : R
+  imJ : R
+  imK : R
 
-localized "notation `ℍ[` R`,` a`,` b `]` := quaternion_algebra R a b" in quaternion
+-- mathport name: «exprℍ[ , , ]»
+localized [Quaternion] notation "ℍ[" R "," a "," b "]" => QuaternionAlgebra R a b
 
-namespace quaternion_algebra
+namespace QuaternionAlgebra
 
-@[simp] lemma mk.eta {R : Type*} {c₁ c₂} : ∀ a : ℍ[R, c₁, c₂], mk a.1 a.2 a.3 a.4 = a
-| ⟨a₁, a₂, a₃, a₄⟩ := rfl
+@[simp]
+theorem mk.eta {R : Type _} {c₁ c₂} : ∀ a : ℍ[R,c₁,c₂], mk a.1 a.2 a.3 a.4 = a
+  | ⟨a₁, a₂, a₃, a₄⟩ => rfl
 
-variables {R : Type*} [comm_ring R] {c₁ c₂ : R} (r x y z : R) (a b c : ℍ[R, c₁, c₂])
+variable {R : Type _} [CommRingₓ R] {c₁ c₂ : R} (r x y z : R) (a b c : ℍ[R,c₁,c₂])
 
-instance : has_coe_t R (ℍ[R, c₁, c₂]) := ⟨λ x, ⟨x, 0, 0, 0⟩⟩
+instance : CoeTₓ R ℍ[R,c₁,c₂] :=
+  ⟨fun x => ⟨x, 0, 0, 0⟩⟩
 
-@[simp] lemma coe_re : (x : ℍ[R, c₁, c₂]).re = x := rfl
-@[simp] lemma coe_im_i : (x : ℍ[R, c₁, c₂]).im_i = 0 := rfl
-@[simp] lemma coe_im_j : (x : ℍ[R, c₁, c₂]).im_j = 0 := rfl
-@[simp] lemma coe_im_k : (x : ℍ[R, c₁, c₂]).im_k = 0 := rfl
+@[simp]
+theorem coe_re : (x : ℍ[R,c₁,c₂]).re = x :=
+  rfl
 
-lemma coe_injective : function.injective (coe : R → ℍ[R, c₁, c₂]) :=
-λ x y h, congr_arg re h
+@[simp]
+theorem coe_im_i : (x : ℍ[R,c₁,c₂]).imI = 0 :=
+  rfl
 
-@[simp] lemma coe_inj {x y : R} : (x : ℍ[R, c₁, c₂]) = y ↔ x = y := coe_injective.eq_iff
+@[simp]
+theorem coe_im_j : (x : ℍ[R,c₁,c₂]).imJ = 0 :=
+  rfl
 
-@[simps] instance : has_zero ℍ[R, c₁, c₂] := ⟨⟨0, 0, 0, 0⟩⟩
+@[simp]
+theorem coe_im_k : (x : ℍ[R,c₁,c₂]).imK = 0 :=
+  rfl
 
-@[simp, norm_cast] lemma coe_zero : ((0 : R) : ℍ[R, c₁, c₂]) = 0 := rfl
+theorem coe_injective : Function.Injective (coe : R → ℍ[R,c₁,c₂]) := fun x y h => congr_argₓ re h
 
-instance : inhabited ℍ[R, c₁, c₂] := ⟨0⟩
+@[simp]
+theorem coe_inj {x y : R} : (x : ℍ[R,c₁,c₂]) = y ↔ x = y :=
+  coe_injective.eq_iff
 
-@[simps] instance : has_one ℍ[R, c₁, c₂] := ⟨⟨1, 0, 0, 0⟩⟩
+@[simps]
+instance : Zero ℍ[R,c₁,c₂] :=
+  ⟨⟨0, 0, 0, 0⟩⟩
 
-@[simp, norm_cast] lemma coe_one : ((1 : R) : ℍ[R, c₁, c₂]) = 1 := rfl
+@[simp, norm_cast]
+theorem coe_zero : ((0 : R) : ℍ[R,c₁,c₂]) = 0 :=
+  rfl
 
-@[simps] instance : has_add ℍ[R, c₁, c₂] :=
-⟨λ a b, ⟨a.1 + b.1, a.2 + b.2, a.3 + b.3, a.4 + b.4⟩⟩
+instance : Inhabited ℍ[R,c₁,c₂] :=
+  ⟨0⟩
 
-@[simp] lemma mk_add_mk (a₁ a₂ a₃ a₄ b₁ b₂ b₃ b₄ : R) :
-  (mk a₁ a₂ a₃ a₄ : ℍ[R, c₁, c₂]) + mk b₁ b₂ b₃ b₄ = mk (a₁ + b₁) (a₂ + b₂) (a₃ + b₃) (a₄ + b₄) :=
-rfl
+@[simps]
+instance : One ℍ[R,c₁,c₂] :=
+  ⟨⟨1, 0, 0, 0⟩⟩
 
-@[simps] instance : has_neg ℍ[R, c₁, c₂] := ⟨λ a, ⟨-a.1, -a.2, -a.3, -a.4⟩⟩
+@[simp, norm_cast]
+theorem coe_one : ((1 : R) : ℍ[R,c₁,c₂]) = 1 :=
+  rfl
 
-@[simp] lemma neg_mk (a₁ a₂ a₃ a₄ : R) : -(mk a₁ a₂ a₃ a₄ : ℍ[R, c₁, c₂]) = ⟨-a₁, -a₂, -a₃, -a₄⟩ :=
-rfl
+@[simps]
+instance : Add ℍ[R,c₁,c₂] :=
+  ⟨fun a b => ⟨a.1 + b.1, a.2 + b.2, a.3 + b.3, a.4 + b.4⟩⟩
 
-@[simps] instance : has_sub ℍ[R, c₁, c₂] :=
-⟨λ a b, ⟨a.1 - b.1, a.2 - b.2, a.3 - b.3, a.4 - b.4⟩⟩
+@[simp]
+theorem mk_add_mk (a₁ a₂ a₃ a₄ b₁ b₂ b₃ b₄ : R) :
+    (mk a₁ a₂ a₃ a₄ : ℍ[R,c₁,c₂]) + mk b₁ b₂ b₃ b₄ = mk (a₁ + b₁) (a₂ + b₂) (a₃ + b₃) (a₄ + b₄) :=
+  rfl
 
-@[simp] lemma mk_sub_mk (a₁ a₂ a₃ a₄ b₁ b₂ b₃ b₄ : R) :
-  (mk a₁ a₂ a₃ a₄ : ℍ[R, c₁, c₂]) - mk b₁ b₂ b₃ b₄ = mk (a₁ - b₁) (a₂ - b₂) (a₃ - b₃) (a₄ - b₄) :=
-rfl
+@[simps]
+instance : Neg ℍ[R,c₁,c₂] :=
+  ⟨fun a => ⟨-a.1, -a.2, -a.3, -a.4⟩⟩
+
+@[simp]
+theorem neg_mk (a₁ a₂ a₃ a₄ : R) : -(mk a₁ a₂ a₃ a₄ : ℍ[R,c₁,c₂]) = ⟨-a₁, -a₂, -a₃, -a₄⟩ :=
+  rfl
+
+@[simps]
+instance : Sub ℍ[R,c₁,c₂] :=
+  ⟨fun a b => ⟨a.1 - b.1, a.2 - b.2, a.3 - b.3, a.4 - b.4⟩⟩
+
+@[simp]
+theorem mk_sub_mk (a₁ a₂ a₃ a₄ b₁ b₂ b₃ b₄ : R) :
+    (mk a₁ a₂ a₃ a₄ : ℍ[R,c₁,c₂]) - mk b₁ b₂ b₃ b₄ = mk (a₁ - b₁) (a₂ - b₂) (a₃ - b₃) (a₄ - b₄) :=
+  rfl
 
 /-- Multiplication is given by
 
@@ -112,464 +147,713 @@ rfl
 * `k * k = -c₁ * c₂`;
 * `i * k = c₁ * j`, `k * i = `-c₁ * j`;
 * `j * k = -c₂ * i`, `k * j = c₂ * i`.  -/
-@[simps] instance : has_mul ℍ[R, c₁, c₂] := ⟨λ a b,
-  ⟨a.1 * b.1 + c₁ * a.2 * b.2 + c₂ * a.3 * b.3 - c₁ * c₂ * a.4 * b.4,
-   a.1 * b.2 + a.2 * b.1 - c₂ * a.3 * b.4 + c₂ * a.4 * b.3,
-   a.1 * b.3 + c₁ * a.2 * b.4 + a.3 * b.1 - c₁ *  a.4 * b.2,
-   a.1 * b.4 + a.2 * b.3 - a.3 * b.2 + a.4 * b.1⟩⟩
-
-@[simp] lemma mk_mul_mk (a₁ a₂ a₃ a₄ b₁ b₂ b₃ b₄ : R) :
-  (mk a₁ a₂ a₃ a₄ : ℍ[R, c₁, c₂]) * mk b₁ b₂ b₃ b₄ =
-    ⟨a₁ * b₁ + c₁ * a₂ * b₂ + c₂ * a₃ * b₃ - c₁ * c₂ * a₄ * b₄,
-     a₁ * b₂ + a₂ * b₁ - c₂ * a₃ * b₄ + c₂ * a₄ * b₃,
-     a₁ * b₃ + c₁ * a₂ * b₄ + a₃ * b₁ - c₁ *  a₄ * b₂,
-     a₁ * b₄ + a₂ * b₃ - a₃ * b₂ + a₄ * b₁⟩ := rfl
-
-instance : ring ℍ[R, c₁, c₂] :=
-by refine_struct
-  { add := (+),
-    zero := (0 : ℍ[R, c₁, c₂]),
-    neg := has_neg.neg,
-    sub := has_sub.sub,
-    mul := (*),
-    one := 1,
-    nsmul := @nsmul_rec _ ⟨(0 : ℍ[R, c₁, c₂])⟩ ⟨(+)⟩,
-    zsmul := @zsmul_rec _ ⟨(0 : ℍ[R, c₁, c₂])⟩ ⟨(+)⟩ ⟨has_neg.neg⟩,
-    npow := @npow_rec _ ⟨(1 : ℍ[R, c₁, c₂])⟩ ⟨(*)⟩ };
-  intros; try { refl }; ext; simp; ring_exp
-
-instance : algebra R ℍ[R, c₁, c₂] :=
-{ smul := λ r a, ⟨r * a.1, r * a.2, r * a.3, r * a.4⟩,
-  to_fun := coe,
-  map_one' := rfl,
-  map_zero' := rfl,
-  map_mul' := λ x y, by ext; simp,
-  map_add' := λ x y, by ext; simp,
-  smul_def' := λ r x, by ext; simp,
-  commutes' := λ r x, by ext; simp [mul_comm] }
-
-@[simp] lemma smul_re : (r • a).re = r • a.re := rfl
-@[simp] lemma smul_im_i : (r • a).im_i = r • a.im_i := rfl
-@[simp] lemma smul_im_j : (r • a).im_j = r • a.im_j := rfl
-@[simp] lemma smul_im_k : (r • a).im_k = r • a.im_k := rfl
-
-@[simp] lemma smul_mk (re im_i im_j im_k : R) :
-  r • (⟨re, im_i, im_j, im_k⟩ : ℍ[R, c₁, c₂]) = ⟨r • re, r • im_i, r • im_j, r • im_k⟩ := rfl
-
-lemma algebra_map_eq (r : R) : algebra_map R ℍ[R,c₁,c₂] r = ⟨r, 0, 0, 0⟩ := rfl
-
-section
-variables (R c₁ c₂)
-
-/-- `quaternion_algebra.re` as a `linear_map`-/
-@[simps] def re_lm : ℍ[R, c₁, c₂] →ₗ[R] R :=
-{ to_fun := re, map_add' := λ x y, rfl, map_smul' := λ r x, rfl }
-
-/-- `quaternion_algebra.im_i` as a `linear_map`-/
-@[simps] def im_i_lm : ℍ[R, c₁, c₂] →ₗ[R] R :=
-{ to_fun := im_i, map_add' := λ x y, rfl, map_smul' := λ r x, rfl }
-
-/-- `quaternion_algebra.im_j` as a `linear_map`-/
-@[simps] def im_j_lm : ℍ[R, c₁, c₂] →ₗ[R] R :=
-{ to_fun := im_j, map_add' := λ x y, rfl, map_smul' := λ r x, rfl }
-
-/-- `quaternion_algebra.im_k` as a `linear_map`-/
-@[simps] def im_k_lm : ℍ[R, c₁, c₂] →ₗ[R] R :=
-{ to_fun := im_k, map_add' := λ x y, rfl, map_smul' := λ r x, rfl }
-
-end
-
-@[norm_cast, simp] lemma coe_add : ((x + y : R) : ℍ[R, c₁, c₂]) = x + y :=
-(algebra_map R ℍ[R, c₁, c₂]).map_add x y
-
-@[norm_cast, simp] lemma coe_sub : ((x - y : R) : ℍ[R, c₁, c₂]) = x - y :=
-(algebra_map R ℍ[R, c₁, c₂]).map_sub x y
-
-@[norm_cast, simp] lemma coe_neg : ((-x : R) : ℍ[R, c₁, c₂]) = -x :=
-(algebra_map R ℍ[R, c₁, c₂]).map_neg x
-
-@[norm_cast, simp] lemma coe_mul : ((x * y : R) : ℍ[R, c₁, c₂]) = x * y :=
-(algebra_map R ℍ[R, c₁, c₂]).map_mul x y
-
-lemma coe_commutes : ↑r * a = a * r := algebra.commutes r a
-
-lemma coe_commute : commute ↑r a := coe_commutes r a
-
-lemma coe_mul_eq_smul : ↑r * a = r • a := (algebra.smul_def r a).symm
-
-lemma mul_coe_eq_smul : a * r = r • a :=
-by rw [← coe_commutes, coe_mul_eq_smul]
-
-@[norm_cast, simp] lemma coe_algebra_map : ⇑(algebra_map R ℍ[R, c₁, c₂]) = coe := rfl
-
-lemma smul_coe : x • (y : ℍ[R, c₁, c₂]) = ↑(x * y) := by rw [coe_mul, coe_mul_eq_smul]
-
-/-- Quaternion conjugate. -/
-def conj : ℍ[R, c₁, c₂] ≃ₗ[R] ℍ[R, c₁, c₂] :=
-linear_equiv.of_involutive
-{ to_fun := λ a, ⟨a.1, -a.2, -a.3, -a.4⟩,
-  map_add' := λ a b, by ext; simp [neg_add],
-  map_smul' := λ r a, by ext; simp } $
-λ a, by simp
-
-@[simp] lemma re_conj : (conj a).re = a.re := rfl
-@[simp] lemma im_i_conj : (conj a).im_i = - a.im_i := rfl
-@[simp] lemma im_j_conj : (conj a).im_j = - a.im_j := rfl
-@[simp] lemma im_k_conj : (conj a).im_k = - a.im_k := rfl
-
-@[simp] lemma conj_mk (a₁ a₂ a₃ a₄ : R) :
-  conj (mk a₁ a₂ a₃ a₄ : ℍ[R, c₁, c₂]) = ⟨a₁, -a₂, -a₃, -a₄⟩ :=
-rfl
-
-@[simp] lemma conj_conj : a.conj.conj = a := ext _ _ rfl (neg_neg _) (neg_neg _) (neg_neg _)
-
-lemma conj_add : (a + b).conj = a.conj + b.conj := conj.map_add a b
-
-@[simp] lemma conj_mul : (a * b).conj = b.conj * a.conj := by ext; simp; ring_exp
-
-lemma conj_conj_mul : (a.conj * b).conj = b.conj * a :=
-by rw [conj_mul, conj_conj]
-
-lemma conj_mul_conj : (a * b.conj).conj = b * a.conj :=
-by rw [conj_mul, conj_conj]
-
-lemma self_add_conj' : a + a.conj = ↑(2 * a.re) := by ext; simp [two_mul]
-
-lemma self_add_conj : a + a.conj = 2 * a.re :=
-by simp only [self_add_conj', two_mul, coe_add]
-
-lemma conj_add_self' : a.conj + a = ↑(2 * a.re) := by rw [add_comm, self_add_conj']
-
-lemma conj_add_self : a.conj + a = 2 * a.re := by rw [add_comm, self_add_conj]
-
-lemma conj_eq_two_re_sub : a.conj = ↑(2 * a.re) - a := eq_sub_iff_add_eq.2 a.conj_add_self'
-
-lemma commute_conj_self : commute a.conj a :=
-begin
-  rw [a.conj_eq_two_re_sub],
-  exact (coe_commute (2 * a.re) a).sub_left (commute.refl a)
-end
-
-lemma commute_self_conj : commute a a.conj :=
-a.commute_conj_self.symm
-
-lemma commute_conj_conj {a b : ℍ[R, c₁, c₂]} (h : commute a b) : commute a.conj b.conj :=
-calc a.conj * b.conj = (b * a).conj    : (conj_mul b a).symm
-                 ... = (a * b).conj    : by rw h.eq
-                 ... = b.conj * a.conj : conj_mul a b
-
-@[simp] lemma conj_coe : conj (x : ℍ[R, c₁, c₂]) = x := by ext; simp
-
-lemma conj_smul : conj (r • a) = r • conj a := conj.map_smul r a
-
-@[simp] lemma conj_one : conj (1 : ℍ[R, c₁, c₂]) = 1 := conj_coe 1
-
-lemma eq_re_of_eq_coe {a : ℍ[R, c₁, c₂]} {x : R} (h : a = x) : a = a.re :=
-by rw [h, coe_re]
-
-lemma eq_re_iff_mem_range_coe {a : ℍ[R, c₁, c₂]} :
-  a = a.re ↔ a ∈ set.range (coe : R → ℍ[R, c₁, c₂]) :=
-⟨λ h, ⟨a.re, h.symm⟩, λ ⟨x, h⟩, eq_re_of_eq_coe h.symm⟩
+@[simps]
+instance : Mul ℍ[R,c₁,c₂] :=
+  ⟨fun a b =>
+    ⟨a.1 * b.1 + c₁ * a.2 * b.2 + c₂ * a.3 * b.3 - c₁ * c₂ * a.4 * b.4,
+      a.1 * b.2 + a.2 * b.1 - c₂ * a.3 * b.4 + c₂ * a.4 * b.3, a.1 * b.3 + c₁ * a.2 * b.4 + a.3 * b.1 - c₁ * a.4 * b.2,
+      a.1 * b.4 + a.2 * b.3 - a.3 * b.2 + a.4 * b.1⟩⟩
 
 @[simp]
-lemma conj_fixed {R : Type*} [comm_ring R] [no_zero_divisors R] [char_zero R]
-  {c₁ c₂ : R} {a : ℍ[R, c₁, c₂]} :
-  conj a = a ↔ a = a.re :=
-by simp [ext_iff, neg_eq_iff_add_eq_zero, add_self_eq_zero]
+theorem mk_mul_mk (a₁ a₂ a₃ a₄ b₁ b₂ b₃ b₄ : R) :
+    (mk a₁ a₂ a₃ a₄ : ℍ[R,c₁,c₂]) * mk b₁ b₂ b₃ b₄ =
+      ⟨a₁ * b₁ + c₁ * a₂ * b₂ + c₂ * a₃ * b₃ - c₁ * c₂ * a₄ * b₄, a₁ * b₂ + a₂ * b₁ - c₂ * a₃ * b₄ + c₂ * a₄ * b₃,
+        a₁ * b₃ + c₁ * a₂ * b₄ + a₃ * b₁ - c₁ * a₄ * b₂, a₁ * b₄ + a₂ * b₃ - a₃ * b₂ + a₄ * b₁⟩ :=
+  rfl
+
+instance : Ringₓ ℍ[R,c₁,c₂] := by
+  refine_struct
+      { add := (· + ·), zero := (0 : ℍ[R,c₁,c₂]), neg := Neg.neg, sub := Sub.sub, mul := (· * ·), one := 1,
+        nsmul := @nsmulRec _ ⟨(0 : ℍ[R,c₁,c₂])⟩ ⟨(· + ·)⟩, zsmul := @zsmulRec _ ⟨(0 : ℍ[R,c₁,c₂])⟩ ⟨(· + ·)⟩ ⟨Neg.neg⟩,
+        npow := @npowRec _ ⟨(1 : ℍ[R,c₁,c₂])⟩ ⟨(· * ·)⟩ } <;>
+    intros <;>
+      try
+          rfl <;>
+        ext <;> simp <;> ring_exp
+
+instance : Algebra R ℍ[R,c₁,c₂] where
+  smul := fun r a => ⟨r * a.1, r * a.2, r * a.3, r * a.4⟩
+  toFun := coe
+  map_one' := rfl
+  map_zero' := rfl
+  map_mul' := fun x y => by
+    ext <;> simp
+  map_add' := fun x y => by
+    ext <;> simp
+  smul_def' := fun r x => by
+    ext <;> simp
+  commutes' := fun r x => by
+    ext <;> simp [mul_comm]
+
+@[simp]
+theorem smul_re : (r • a).re = r • a.re :=
+  rfl
+
+@[simp]
+theorem smul_im_i : (r • a).imI = r • a.imI :=
+  rfl
+
+@[simp]
+theorem smul_im_j : (r • a).imJ = r • a.imJ :=
+  rfl
+
+@[simp]
+theorem smul_im_k : (r • a).imK = r • a.imK :=
+  rfl
+
+@[simp]
+theorem smul_mk (re im_i im_j im_k : R) :
+    r • (⟨re, im_i, im_j, im_k⟩ : ℍ[R,c₁,c₂]) = ⟨r • re, r • im_i, r • im_j, r • im_k⟩ :=
+  rfl
+
+theorem algebra_map_eq (r : R) : algebraMap R ℍ[R,c₁,c₂] r = ⟨r, 0, 0, 0⟩ :=
+  rfl
+
+section
+
+variable (R c₁ c₂)
+
+/-- `quaternion_algebra.re` as a `linear_map`-/
+@[simps]
+def reLm : ℍ[R,c₁,c₂] →ₗ[R] R where
+  toFun := re
+  map_add' := fun x y => rfl
+  map_smul' := fun r x => rfl
+
+/-- `quaternion_algebra.im_i` as a `linear_map`-/
+@[simps]
+def imILm : ℍ[R,c₁,c₂] →ₗ[R] R where
+  toFun := imI
+  map_add' := fun x y => rfl
+  map_smul' := fun r x => rfl
+
+/-- `quaternion_algebra.im_j` as a `linear_map`-/
+@[simps]
+def imJLm : ℍ[R,c₁,c₂] →ₗ[R] R where
+  toFun := imJ
+  map_add' := fun x y => rfl
+  map_smul' := fun r x => rfl
+
+/-- `quaternion_algebra.im_k` as a `linear_map`-/
+@[simps]
+def imKLm : ℍ[R,c₁,c₂] →ₗ[R] R where
+  toFun := imK
+  map_add' := fun x y => rfl
+  map_smul' := fun r x => rfl
+
+end
+
+@[norm_cast, simp]
+theorem coe_add : ((x + y : R) : ℍ[R,c₁,c₂]) = x + y :=
+  (algebraMap R ℍ[R,c₁,c₂]).map_add x y
+
+@[norm_cast, simp]
+theorem coe_sub : ((x - y : R) : ℍ[R,c₁,c₂]) = x - y :=
+  (algebraMap R ℍ[R,c₁,c₂]).map_sub x y
+
+@[norm_cast, simp]
+theorem coe_neg : ((-x : R) : ℍ[R,c₁,c₂]) = -x :=
+  (algebraMap R ℍ[R,c₁,c₂]).map_neg x
+
+@[norm_cast, simp]
+theorem coe_mul : ((x * y : R) : ℍ[R,c₁,c₂]) = x * y :=
+  (algebraMap R ℍ[R,c₁,c₂]).map_mul x y
+
+theorem coe_commutes : ↑r * a = a * r :=
+  Algebra.commutes r a
+
+theorem coe_commute : Commute (↑r) a :=
+  coe_commutes r a
+
+theorem coe_mul_eq_smul : ↑r * a = r • a :=
+  (Algebra.smul_def r a).symm
+
+theorem mul_coe_eq_smul : a * r = r • a := by
+  rw [← coe_commutes, coe_mul_eq_smul]
+
+@[norm_cast, simp]
+theorem coe_algebra_map : ⇑(algebraMap R ℍ[R,c₁,c₂]) = coe :=
+  rfl
+
+theorem smul_coe : x • (y : ℍ[R,c₁,c₂]) = ↑(x * y) := by
+  rw [coe_mul, coe_mul_eq_smul]
+
+/-- Quaternion conjugate. -/
+def conj : ℍ[R,c₁,c₂] ≃ₗ[R] ℍ[R,c₁,c₂] :=
+  (LinearEquiv.ofInvolutive
+      { toFun := fun a => ⟨a.1, -a.2, -a.3, -a.4⟩,
+        map_add' := fun a b => by
+          ext <;> simp [neg_add],
+        map_smul' := fun r a => by
+          ext <;> simp })
+    fun a => by
+    simp
+
+@[simp]
+theorem re_conj : (conj a).re = a.re :=
+  rfl
+
+@[simp]
+theorem im_i_conj : (conj a).imI = -a.imI :=
+  rfl
+
+@[simp]
+theorem im_j_conj : (conj a).imJ = -a.imJ :=
+  rfl
+
+@[simp]
+theorem im_k_conj : (conj a).imK = -a.imK :=
+  rfl
+
+@[simp]
+theorem conj_mk (a₁ a₂ a₃ a₄ : R) : conj (mk a₁ a₂ a₃ a₄ : ℍ[R,c₁,c₂]) = ⟨a₁, -a₂, -a₃, -a₄⟩ :=
+  rfl
+
+@[simp]
+theorem conj_conj : a.conj.conj = a :=
+  ext _ _ rfl (neg_negₓ _) (neg_negₓ _) (neg_negₓ _)
+
+theorem conj_add : (a + b).conj = a.conj + b.conj :=
+  conj.map_add a b
+
+@[simp]
+theorem conj_mul : (a * b).conj = b.conj * a.conj := by
+  ext <;> simp <;> ring_exp
+
+theorem conj_conj_mul : (a.conj * b).conj = b.conj * a := by
+  rw [conj_mul, conj_conj]
+
+theorem conj_mul_conj : (a * b.conj).conj = b * a.conj := by
+  rw [conj_mul, conj_conj]
+
+theorem self_add_conj' : a + a.conj = ↑(2 * a.re) := by
+  ext <;> simp [two_mul]
+
+theorem self_add_conj : a + a.conj = 2 * a.re := by
+  simp only [self_add_conj', two_mul, coe_add]
+
+theorem conj_add_self' : a.conj + a = ↑(2 * a.re) := by
+  rw [add_commₓ, self_add_conj']
+
+theorem conj_add_self : a.conj + a = 2 * a.re := by
+  rw [add_commₓ, self_add_conj]
+
+theorem conj_eq_two_re_sub : a.conj = ↑(2 * a.re) - a :=
+  eq_sub_iff_add_eq.2 a.conj_add_self'
+
+theorem commute_conj_self : Commute a.conj a := by
+  rw [a.conj_eq_two_re_sub]
+  exact (coe_commute (2 * a.re) a).sub_left (Commute.refl a)
+
+theorem commute_self_conj : Commute a a.conj :=
+  a.commute_conj_self.symm
+
+theorem commute_conj_conj {a b : ℍ[R,c₁,c₂]} (h : Commute a b) : Commute a.conj b.conj :=
+  calc
+    a.conj * b.conj = (b * a).conj := (conj_mul b a).symm
+    _ = (a * b).conj := by
+      rw [h.eq]
+    _ = b.conj * a.conj := conj_mul a b
+    
+
+@[simp]
+theorem conj_coe : conj (x : ℍ[R,c₁,c₂]) = x := by
+  ext <;> simp
+
+theorem conj_smul : conj (r • a) = r • conj a :=
+  conj.map_smul r a
+
+@[simp]
+theorem conj_one : conj (1 : ℍ[R,c₁,c₂]) = 1 :=
+  conj_coe 1
+
+theorem eq_re_of_eq_coe {a : ℍ[R,c₁,c₂]} {x : R} (h : a = x) : a = a.re := by
+  rw [h, coe_re]
+
+theorem eq_re_iff_mem_range_coe {a : ℍ[R,c₁,c₂]} : a = a.re ↔ a ∈ Set.Range (coe : R → ℍ[R,c₁,c₂]) :=
+  ⟨fun h => ⟨a.re, h.symm⟩, fun ⟨x, h⟩ => eq_re_of_eq_coe h.symm⟩
+
+@[simp]
+theorem conj_fixed {R : Type _} [CommRingₓ R] [NoZeroDivisors R] [CharZero R] {c₁ c₂ : R} {a : ℍ[R,c₁,c₂]} :
+    conj a = a ↔ a = a.re := by
+  simp [ext_iff, neg_eq_iff_add_eq_zero, add_self_eq_zero]
 
 -- Can't use `rw ← conj_fixed` in the proof without additional assumptions
+theorem conj_mul_eq_coe : conj a * a = (conj a * a).re := by
+  ext <;> simp <;> ring_exp
 
-lemma conj_mul_eq_coe : conj a * a = (conj a * a).re := by ext; simp; ring_exp
+theorem mul_conj_eq_coe : a * conj a = (a * conj a).re := by
+  rw [a.commute_self_conj.eq]
+  exact a.conj_mul_eq_coe
 
-lemma mul_conj_eq_coe : a * conj a = (a * conj a).re :=
-by { rw a.commute_self_conj.eq, exact a.conj_mul_eq_coe }
+theorem conj_zero : conj (0 : ℍ[R,c₁,c₂]) = 0 :=
+  conj.map_zero
 
-lemma conj_zero : conj (0 : ℍ[R, c₁, c₂]) = 0 := conj.map_zero
+theorem conj_neg : (-a).conj = -a.conj :=
+  (conj : ℍ[R,c₁,c₂] ≃ₗ[R] _).map_neg a
 
-lemma conj_neg : (-a).conj = -a.conj := (conj : ℍ[R, c₁, c₂] ≃ₗ[R] _).map_neg a
+theorem conj_sub : (a - b).conj = a.conj - b.conj :=
+  (conj : ℍ[R,c₁,c₂] ≃ₗ[R] _).map_sub a b
 
-lemma conj_sub : (a - b).conj = a.conj - b.conj := (conj : ℍ[R, c₁, c₂] ≃ₗ[R] _).map_sub a b
+instance : StarRing ℍ[R,c₁,c₂] where
+  star := conj
+  star_involutive := conj_conj
+  star_add := conj_add
+  star_mul := conj_mul
 
-instance : star_ring ℍ[R, c₁, c₂] :=
-{ star := conj,
-  star_involutive := conj_conj,
-  star_add := conj_add,
-  star_mul := conj_mul }
+@[simp]
+theorem star_def (a : ℍ[R,c₁,c₂]) : star a = conj a :=
+  rfl
 
-@[simp] lemma star_def (a : ℍ[R, c₁, c₂]) : star a = conj a := rfl
-
-open mul_opposite
+open MulOpposite
 
 /-- Quaternion conjugate as an `alg_equiv` to the opposite ring. -/
-def conj_ae : ℍ[R, c₁, c₂] ≃ₐ[R] (ℍ[R, c₁, c₂]ᵐᵒᵖ) :=
-{ to_fun := op ∘ conj,
-  inv_fun := conj ∘ unop,
-  map_mul' := λ x y, by simp,
-  commutes' := λ r, by simp,
-  .. conj.to_add_equiv.trans op_add_equiv }
+def conjAe : ℍ[R,c₁,c₂] ≃ₐ[R] ℍ[R,c₁,c₂]ᵐᵒᵖ :=
+  { conj.toAddEquiv.trans opAddEquiv with toFun := op ∘ conj, invFun := conj ∘ unop,
+    map_mul' := fun x y => by
+      simp ,
+    commutes' := fun r => by
+      simp }
 
-@[simp] lemma coe_conj_ae : ⇑(conj_ae : ℍ[R, c₁, c₂] ≃ₐ[R] _) = op ∘ conj := rfl
+@[simp]
+theorem coe_conj_ae : ⇑(conjAe : ℍ[R,c₁,c₂] ≃ₐ[R] _) = op ∘ conj :=
+  rfl
 
-end quaternion_algebra
+end QuaternionAlgebra
 
 /-- Space of quaternions over a type. Implemented as a structure with four fields:
 `re`, `im_i`, `im_j`, and `im_k`. -/
-def quaternion (R : Type*) [has_one R] [has_neg R] := quaternion_algebra R (-1) (-1)
+def Quaternion (R : Type _) [One R] [Neg R] :=
+  QuaternionAlgebra R (-1) (-1)
 
-localized "notation `ℍ[` R `]` := quaternion R" in quaternion
+-- mathport name: «exprℍ[ ]»
+localized [Quaternion] notation "ℍ[" R "]" => Quaternion R
 
-namespace quaternion
+namespace Quaternion
 
-variables {R : Type*} [comm_ring R] (r x y z : R) (a b c : ℍ[R])
+variable {R : Type _} [CommRingₓ R] (r x y z : R) (a b c : ℍ[R])
 
-export quaternion_algebra (re im_i im_j im_k)
+export QuaternionAlgebra (re imI imJ imK)
 
-instance : has_coe_t R ℍ[R] := quaternion_algebra.has_coe_t
-instance : ring ℍ[R] := quaternion_algebra.ring
-instance : inhabited ℍ[R] := quaternion_algebra.inhabited
-instance : algebra R ℍ[R] := quaternion_algebra.algebra
-instance : star_ring ℍ[R] := quaternion_algebra.star_ring
+instance : CoeTₓ R ℍ[R] :=
+  QuaternionAlgebra.hasCoeT
 
-@[ext] lemma ext : a.re = b.re → a.im_i = b.im_i → a.im_j = b.im_j → a.im_k = b.im_k → a = b :=
-quaternion_algebra.ext a b
+instance : Ringₓ ℍ[R] :=
+  QuaternionAlgebra.ring
 
-lemma ext_iff {a b : ℍ[R]} :
-  a = b ↔ a.re = b.re ∧ a.im_i = b.im_i ∧ a.im_j = b.im_j ∧ a.im_k = b.im_k :=
-quaternion_algebra.ext_iff a b
+instance : Inhabited ℍ[R] :=
+  QuaternionAlgebra.inhabited
 
-@[simp, norm_cast] lemma coe_re : (x : ℍ[R]).re = x := rfl
-@[simp, norm_cast] lemma coe_im_i : (x : ℍ[R]).im_i = 0 := rfl
-@[simp, norm_cast] lemma coe_im_j : (x : ℍ[R]).im_j = 0 := rfl
-@[simp, norm_cast] lemma coe_im_k : (x : ℍ[R]).im_k = 0 := rfl
+instance : Algebra R ℍ[R] :=
+  QuaternionAlgebra.algebra
 
-@[simp] lemma zero_re : (0 : ℍ[R]).re = 0 := rfl
-@[simp] lemma zero_im_i : (0 : ℍ[R]).im_i = 0 := rfl
-@[simp] lemma zero_im_j : (0 : ℍ[R]).im_j = 0 := rfl
-@[simp] lemma zero_im_k : (0 : ℍ[R]).im_k = 0 := rfl
-@[simp, norm_cast] lemma coe_zero : ((0 : R) : ℍ[R]) = 0 := rfl
+instance : StarRing ℍ[R] :=
+  QuaternionAlgebra.starRing
 
-@[simp] lemma one_re : (1 : ℍ[R]).re = 1 := rfl
-@[simp] lemma one_im_i : (1 : ℍ[R]).im_i = 0 := rfl
-@[simp] lemma one_im_j : (1 : ℍ[R]).im_j = 0 := rfl
-@[simp] lemma one_im_k : (1 : ℍ[R]).im_k = 0 := rfl
-@[simp, norm_cast] lemma coe_one : ((1 : R) : ℍ[R]) = 1 := rfl
+@[ext]
+theorem ext : a.re = b.re → a.imI = b.imI → a.imJ = b.imJ → a.imK = b.imK → a = b :=
+  QuaternionAlgebra.ext a b
 
-@[simp] lemma add_re : (a + b).re = a.re + b.re := rfl
-@[simp] lemma add_im_i : (a + b).im_i = a.im_i + b.im_i := rfl
-@[simp] lemma add_im_j : (a + b).im_j = a.im_j + b.im_j := rfl
-@[simp] lemma add_im_k : (a + b).im_k = a.im_k + b.im_k := rfl
-@[simp, norm_cast] lemma coe_add : ((x + y : R) : ℍ[R]) = x + y := quaternion_algebra.coe_add x y
+theorem ext_iff {a b : ℍ[R]} : a = b ↔ a.re = b.re ∧ a.imI = b.imI ∧ a.imJ = b.imJ ∧ a.imK = b.imK :=
+  QuaternionAlgebra.ext_iff a b
 
-@[simp] lemma neg_re : (-a).re = -a.re := rfl
-@[simp] lemma neg_im_i : (-a).im_i = -a.im_i := rfl
-@[simp] lemma neg_im_j : (-a).im_j = -a.im_j := rfl
-@[simp] lemma neg_im_k : (-a).im_k = -a.im_k := rfl
-@[simp, norm_cast] lemma coe_neg : ((-x : R) : ℍ[R]) = -x := quaternion_algebra.coe_neg x
+@[simp, norm_cast]
+theorem coe_re : (x : ℍ[R]).re = x :=
+  rfl
 
-@[simp] lemma sub_re : (a - b).re = a.re - b.re := rfl
-@[simp] lemma sub_im_i : (a - b).im_i = a.im_i - b.im_i := rfl
-@[simp] lemma sub_im_j : (a - b).im_j = a.im_j - b.im_j := rfl
-@[simp] lemma sub_im_k : (a - b).im_k = a.im_k - b.im_k := rfl
-@[simp, norm_cast] lemma coe_sub : ((x - y : R) : ℍ[R]) = x - y := quaternion_algebra.coe_sub x y
+@[simp, norm_cast]
+theorem coe_im_i : (x : ℍ[R]).imI = 0 :=
+  rfl
 
-@[simp] lemma mul_re :
-  (a * b).re = a.re * b.re - a.im_i * b.im_i - a.im_j * b.im_j - a.im_k * b.im_k :=
-(quaternion_algebra.has_mul_mul_re a b).trans $
-  by simp only [one_mul, neg_mul, sub_eq_add_neg, neg_neg]
+@[simp, norm_cast]
+theorem coe_im_j : (x : ℍ[R]).imJ = 0 :=
+  rfl
 
-@[simp] lemma mul_im_i :
-  (a * b).im_i = a.re * b.im_i + a.im_i * b.re + a.im_j * b.im_k - a.im_k * b.im_j :=
-(quaternion_algebra.has_mul_mul_im_i a b).trans $
-  by simp only [one_mul, neg_mul, sub_eq_add_neg, neg_neg]
+@[simp, norm_cast]
+theorem coe_im_k : (x : ℍ[R]).imK = 0 :=
+  rfl
 
-@[simp] lemma mul_im_j :
-  (a * b).im_j = a.re * b.im_j - a.im_i * b.im_k + a.im_j * b.re + a.im_k * b.im_i :=
-(quaternion_algebra.has_mul_mul_im_j a b).trans $
-  by simp only [one_mul, neg_mul, sub_eq_add_neg, neg_neg]
+@[simp]
+theorem zero_re : (0 : ℍ[R]).re = 0 :=
+  rfl
 
-@[simp] lemma mul_im_k :
-  (a * b).im_k = a.re * b.im_k + a.im_i * b.im_j - a.im_j * b.im_i + a.im_k * b.re :=
-(quaternion_algebra.has_mul_mul_im_k a b).trans $
-  by simp only [one_mul, neg_mul, sub_eq_add_neg, neg_neg]
+@[simp]
+theorem zero_im_i : (0 : ℍ[R]).imI = 0 :=
+  rfl
 
-@[simp, norm_cast] lemma coe_mul : ((x * y : R) : ℍ[R]) = x * y := quaternion_algebra.coe_mul x y
+@[simp]
+theorem zero_im_j : (0 : ℍ[R]).imJ = 0 :=
+  rfl
 
-lemma coe_injective : function.injective (coe : R → ℍ[R]) := quaternion_algebra.coe_injective
+@[simp]
+theorem zero_im_k : (0 : ℍ[R]).imK = 0 :=
+  rfl
 
-@[simp] lemma coe_inj {x y : R} : (x : ℍ[R]) = y ↔ x = y := coe_injective.eq_iff
+@[simp, norm_cast]
+theorem coe_zero : ((0 : R) : ℍ[R]) = 0 :=
+  rfl
 
-@[simp] lemma smul_re : (r • a).re = r • a.re := rfl
-@[simp] lemma smul_im_i : (r • a).im_i = r • a.im_i := rfl
-@[simp] lemma smul_im_j : (r • a).im_j = r • a.im_j := rfl
-@[simp] lemma smul_im_k : (r • a).im_k = r • a.im_k := rfl
+@[simp]
+theorem one_re : (1 : ℍ[R]).re = 1 :=
+  rfl
 
-lemma coe_commutes : ↑r * a = a * r := quaternion_algebra.coe_commutes r a
+@[simp]
+theorem one_im_i : (1 : ℍ[R]).imI = 0 :=
+  rfl
 
-lemma coe_commute : commute ↑r a := quaternion_algebra.coe_commute r a
+@[simp]
+theorem one_im_j : (1 : ℍ[R]).imJ = 0 :=
+  rfl
 
-lemma coe_mul_eq_smul : ↑r * a = r • a := quaternion_algebra.coe_mul_eq_smul r a
+@[simp]
+theorem one_im_k : (1 : ℍ[R]).imK = 0 :=
+  rfl
 
-lemma mul_coe_eq_smul : a * r = r • a := quaternion_algebra.mul_coe_eq_smul r a
+@[simp, norm_cast]
+theorem coe_one : ((1 : R) : ℍ[R]) = 1 :=
+  rfl
 
-@[simp] lemma algebra_map_def : ⇑(algebra_map R ℍ[R]) = coe := rfl
+@[simp]
+theorem add_re : (a + b).re = a.re + b.re :=
+  rfl
 
-lemma smul_coe : x • (y : ℍ[R]) = ↑(x * y) := quaternion_algebra.smul_coe x y
+@[simp]
+theorem add_im_i : (a + b).imI = a.imI + b.imI :=
+  rfl
+
+@[simp]
+theorem add_im_j : (a + b).imJ = a.imJ + b.imJ :=
+  rfl
+
+@[simp]
+theorem add_im_k : (a + b).imK = a.imK + b.imK :=
+  rfl
+
+@[simp, norm_cast]
+theorem coe_add : ((x + y : R) : ℍ[R]) = x + y :=
+  QuaternionAlgebra.coe_add x y
+
+@[simp]
+theorem neg_re : (-a).re = -a.re :=
+  rfl
+
+@[simp]
+theorem neg_im_i : (-a).imI = -a.imI :=
+  rfl
+
+@[simp]
+theorem neg_im_j : (-a).imJ = -a.imJ :=
+  rfl
+
+@[simp]
+theorem neg_im_k : (-a).imK = -a.imK :=
+  rfl
+
+@[simp, norm_cast]
+theorem coe_neg : ((-x : R) : ℍ[R]) = -x :=
+  QuaternionAlgebra.coe_neg x
+
+@[simp]
+theorem sub_re : (a - b).re = a.re - b.re :=
+  rfl
+
+@[simp]
+theorem sub_im_i : (a - b).imI = a.imI - b.imI :=
+  rfl
+
+@[simp]
+theorem sub_im_j : (a - b).imJ = a.imJ - b.imJ :=
+  rfl
+
+@[simp]
+theorem sub_im_k : (a - b).imK = a.imK - b.imK :=
+  rfl
+
+@[simp, norm_cast]
+theorem coe_sub : ((x - y : R) : ℍ[R]) = x - y :=
+  QuaternionAlgebra.coe_sub x y
+
+@[simp]
+theorem mul_re : (a * b).re = a.re * b.re - a.imI * b.imI - a.imJ * b.imJ - a.imK * b.imK :=
+  (QuaternionAlgebra.has_mul_mul_re a b).trans <| by
+    simp only [one_mulₓ, neg_mul, sub_eq_add_neg, neg_negₓ]
+
+@[simp]
+theorem mul_im_i : (a * b).imI = a.re * b.imI + a.imI * b.re + a.imJ * b.imK - a.imK * b.imJ :=
+  (QuaternionAlgebra.has_mul_mul_im_i a b).trans <| by
+    simp only [one_mulₓ, neg_mul, sub_eq_add_neg, neg_negₓ]
+
+@[simp]
+theorem mul_im_j : (a * b).imJ = a.re * b.imJ - a.imI * b.imK + a.imJ * b.re + a.imK * b.imI :=
+  (QuaternionAlgebra.has_mul_mul_im_j a b).trans <| by
+    simp only [one_mulₓ, neg_mul, sub_eq_add_neg, neg_negₓ]
+
+@[simp]
+theorem mul_im_k : (a * b).imK = a.re * b.imK + a.imI * b.imJ - a.imJ * b.imI + a.imK * b.re :=
+  (QuaternionAlgebra.has_mul_mul_im_k a b).trans <| by
+    simp only [one_mulₓ, neg_mul, sub_eq_add_neg, neg_negₓ]
+
+@[simp, norm_cast]
+theorem coe_mul : ((x * y : R) : ℍ[R]) = x * y :=
+  QuaternionAlgebra.coe_mul x y
+
+theorem coe_injective : Function.Injective (coe : R → ℍ[R]) :=
+  QuaternionAlgebra.coe_injective
+
+@[simp]
+theorem coe_inj {x y : R} : (x : ℍ[R]) = y ↔ x = y :=
+  coe_injective.eq_iff
+
+@[simp]
+theorem smul_re : (r • a).re = r • a.re :=
+  rfl
+
+@[simp]
+theorem smul_im_i : (r • a).imI = r • a.imI :=
+  rfl
+
+@[simp]
+theorem smul_im_j : (r • a).imJ = r • a.imJ :=
+  rfl
+
+@[simp]
+theorem smul_im_k : (r • a).imK = r • a.imK :=
+  rfl
+
+theorem coe_commutes : ↑r * a = a * r :=
+  QuaternionAlgebra.coe_commutes r a
+
+theorem coe_commute : Commute (↑r) a :=
+  QuaternionAlgebra.coe_commute r a
+
+theorem coe_mul_eq_smul : ↑r * a = r • a :=
+  QuaternionAlgebra.coe_mul_eq_smul r a
+
+theorem mul_coe_eq_smul : a * r = r • a :=
+  QuaternionAlgebra.mul_coe_eq_smul r a
+
+@[simp]
+theorem algebra_map_def : ⇑(algebraMap R ℍ[R]) = coe :=
+  rfl
+
+theorem smul_coe : x • (y : ℍ[R]) = ↑(x * y) :=
+  QuaternionAlgebra.smul_coe x y
 
 /-- Quaternion conjugate. -/
-def conj : ℍ[R] ≃ₗ[R]  ℍ[R] := quaternion_algebra.conj
+def conj : ℍ[R] ≃ₗ[R] ℍ[R] :=
+  QuaternionAlgebra.conj
 
-@[simp] lemma conj_re : a.conj.re = a.re := rfl
-@[simp] lemma conj_im_i : a.conj.im_i = - a.im_i := rfl
-@[simp] lemma conj_im_j : a.conj.im_j = - a.im_j := rfl
-@[simp] lemma conj_im_k : a.conj.im_k = - a.im_k := rfl
+@[simp]
+theorem conj_re : a.conj.re = a.re :=
+  rfl
 
-@[simp] lemma conj_conj : a.conj.conj = a := a.conj_conj
+@[simp]
+theorem conj_im_i : a.conj.imI = -a.imI :=
+  rfl
 
-@[simp] lemma conj_add : (a + b).conj = a.conj + b.conj := a.conj_add b
+@[simp]
+theorem conj_im_j : a.conj.imJ = -a.imJ :=
+  rfl
 
-@[simp] lemma conj_mul : (a * b).conj = b.conj * a.conj := a.conj_mul b
+@[simp]
+theorem conj_im_k : a.conj.imK = -a.imK :=
+  rfl
 
-lemma conj_conj_mul : (a.conj * b).conj = b.conj * a := a.conj_conj_mul b
+@[simp]
+theorem conj_conj : a.conj.conj = a :=
+  a.conj_conj
 
-lemma conj_mul_conj : (a * b.conj).conj = b * a.conj := a.conj_mul_conj b
+@[simp]
+theorem conj_add : (a + b).conj = a.conj + b.conj :=
+  a.conj_add b
 
-lemma self_add_conj' : a + a.conj = ↑(2 * a.re) := a.self_add_conj'
+@[simp]
+theorem conj_mul : (a * b).conj = b.conj * a.conj :=
+  a.conj_mul b
 
-lemma self_add_conj : a + a.conj = 2 * a.re := a.self_add_conj
+theorem conj_conj_mul : (a.conj * b).conj = b.conj * a :=
+  a.conj_conj_mul b
 
-lemma conj_add_self' : a.conj + a = ↑(2 * a.re) := a.conj_add_self'
+theorem conj_mul_conj : (a * b.conj).conj = b * a.conj :=
+  a.conj_mul_conj b
 
-lemma conj_add_self : a.conj + a = 2 * a.re := a.conj_add_self
+theorem self_add_conj' : a + a.conj = ↑(2 * a.re) :=
+  a.self_add_conj'
 
-lemma conj_eq_two_re_sub : a.conj = ↑(2 * a.re) - a := a.conj_eq_two_re_sub
+theorem self_add_conj : a + a.conj = 2 * a.re :=
+  a.self_add_conj
 
-lemma commute_conj_self : commute a.conj a := a.commute_conj_self
+theorem conj_add_self' : a.conj + a = ↑(2 * a.re) :=
+  a.conj_add_self'
 
-lemma commute_self_conj : commute a a.conj := a.commute_self_conj
+theorem conj_add_self : a.conj + a = 2 * a.re :=
+  a.conj_add_self
 
-lemma commute_conj_conj {a b : ℍ[R]} (h : commute a b) : commute a.conj b.conj :=
-quaternion_algebra.commute_conj_conj h
+theorem conj_eq_two_re_sub : a.conj = ↑(2 * a.re) - a :=
+  a.conj_eq_two_re_sub
 
-alias commute_conj_conj ← commute.quaternion_conj
+theorem commute_conj_self : Commute a.conj a :=
+  a.commute_conj_self
 
-@[simp] lemma conj_coe : conj (x : ℍ[R]) = x := quaternion_algebra.conj_coe x
+theorem commute_self_conj : Commute a a.conj :=
+  a.commute_self_conj
 
-@[simp] lemma conj_smul : conj (r • a) = r • conj a := a.conj_smul r
+theorem commute_conj_conj {a b : ℍ[R]} (h : Commute a b) : Commute a.conj b.conj :=
+  QuaternionAlgebra.commute_conj_conj h
 
-@[simp] lemma conj_one : conj (1 : ℍ[R]) = 1 := conj_coe 1
+alias commute_conj_conj ← Commute.quaternion_conj
 
-lemma eq_re_of_eq_coe {a : ℍ[R]} {x : R} (h : a = x) : a = a.re :=
-quaternion_algebra.eq_re_of_eq_coe h
+@[simp]
+theorem conj_coe : conj (x : ℍ[R]) = x :=
+  QuaternionAlgebra.conj_coe x
 
-lemma eq_re_iff_mem_range_coe {a : ℍ[R]} : a = a.re ↔ a ∈ set.range (coe : R → ℍ[R]) :=
-quaternion_algebra.eq_re_iff_mem_range_coe
+@[simp]
+theorem conj_smul : conj (r • a) = r • conj a :=
+  a.conj_smul r
 
-@[simp] lemma conj_fixed {R : Type*} [comm_ring R] [no_zero_divisors R] [char_zero R] {a : ℍ[R]} :
-  conj a = a ↔ a = a.re :=
-quaternion_algebra.conj_fixed
+@[simp]
+theorem conj_one : conj (1 : ℍ[R]) = 1 :=
+  conj_coe 1
 
-lemma conj_mul_eq_coe : conj a * a = (conj a * a).re := a.conj_mul_eq_coe
+theorem eq_re_of_eq_coe {a : ℍ[R]} {x : R} (h : a = x) : a = a.re :=
+  QuaternionAlgebra.eq_re_of_eq_coe h
 
-lemma mul_conj_eq_coe : a * conj a = (a * conj a).re := a.mul_conj_eq_coe
+theorem eq_re_iff_mem_range_coe {a : ℍ[R]} : a = a.re ↔ a ∈ Set.Range (coe : R → ℍ[R]) :=
+  QuaternionAlgebra.eq_re_iff_mem_range_coe
 
-@[simp] lemma conj_zero : conj (0:ℍ[R]) = 0 := quaternion_algebra.conj_zero
+@[simp]
+theorem conj_fixed {R : Type _} [CommRingₓ R] [NoZeroDivisors R] [CharZero R] {a : ℍ[R]} : conj a = a ↔ a = a.re :=
+  QuaternionAlgebra.conj_fixed
 
-@[simp] lemma conj_neg : (-a).conj = -a.conj := a.conj_neg
+theorem conj_mul_eq_coe : conj a * a = (conj a * a).re :=
+  a.conj_mul_eq_coe
 
-@[simp] lemma conj_sub : (a - b).conj = a.conj - b.conj := a.conj_sub b
+theorem mul_conj_eq_coe : a * conj a = (a * conj a).re :=
+  a.mul_conj_eq_coe
 
-open mul_opposite
+@[simp]
+theorem conj_zero : conj (0 : ℍ[R]) = 0 :=
+  QuaternionAlgebra.conj_zero
+
+@[simp]
+theorem conj_neg : (-a).conj = -a.conj :=
+  a.conj_neg
+
+@[simp]
+theorem conj_sub : (a - b).conj = a.conj - b.conj :=
+  a.conj_sub b
+
+open MulOpposite
 
 /-- Quaternion conjugate as an `alg_equiv` to the opposite ring. -/
-def conj_ae : ℍ[R] ≃ₐ[R] (ℍ[R]ᵐᵒᵖ) := quaternion_algebra.conj_ae
+def conjAe : ℍ[R] ≃ₐ[R] ℍ[R]ᵐᵒᵖ :=
+  QuaternionAlgebra.conjAe
 
-@[simp] lemma coe_conj_ae : ⇑(conj_ae : ℍ[R] ≃ₐ[R] ℍ[R]ᵐᵒᵖ) = op ∘ conj := rfl
+@[simp]
+theorem coe_conj_ae : ⇑(conjAe : ℍ[R] ≃ₐ[R] ℍ[R]ᵐᵒᵖ) = op ∘ conj :=
+  rfl
 
 /-- Square of the norm. -/
-def norm_sq : ℍ[R] →*₀ R :=
-{ to_fun := λ a, (a * a.conj).re,
-  map_zero' := by rw [conj_zero, zero_mul, zero_re],
-  map_one' := by rw [conj_one, one_mul, one_re],
-  map_mul' := λ x y, coe_injective $ by conv_lhs { rw [← mul_conj_eq_coe, conj_mul, mul_assoc,
-    ← mul_assoc y, y.mul_conj_eq_coe, coe_commutes, ← mul_assoc, x.mul_conj_eq_coe, ← coe_mul] } }
+def normSq : ℍ[R] →*₀ R where
+  toFun := fun a => (a * a.conj).re
+  map_zero' := by
+    rw [conj_zero, zero_mul, zero_re]
+  map_one' := by
+    rw [conj_one, one_mulₓ, one_re]
+  map_mul' := fun x y =>
+    coe_injective <| by
+      conv_lhs =>
+        rw [← mul_conj_eq_coe, conj_mul, mul_assoc, ← mul_assoc y, y.mul_conj_eq_coe, coe_commutes, ← mul_assoc,
+          x.mul_conj_eq_coe, ← coe_mul]
 
-lemma norm_sq_def : norm_sq a = (a * a.conj).re := rfl
+theorem norm_sq_def : normSq a = (a * a.conj).re :=
+  rfl
 
-lemma norm_sq_def' : norm_sq a = a.1^2 + a.2^2 + a.3^2 + a.4^2 :=
-by simp only [norm_sq_def, sq, mul_neg, sub_neg_eq_add,
-  mul_re, conj_re, conj_im_i, conj_im_j, conj_im_k]
+theorem norm_sq_def' : normSq a = a.1 ^ 2 + a.2 ^ 2 + a.3 ^ 2 + a.4 ^ 2 := by
+  simp only [norm_sq_def, sq, mul_neg, sub_neg_eq_add, mul_re, conj_re, conj_im_i, conj_im_j, conj_im_k]
 
-lemma norm_sq_coe : norm_sq (x : ℍ[R]) = x^2 :=
-by rw [norm_sq_def, conj_coe, ← coe_mul, coe_re, sq]
+theorem norm_sq_coe : normSq (x : ℍ[R]) = x ^ 2 := by
+  rw [norm_sq_def, conj_coe, ← coe_mul, coe_re, sq]
 
-@[simp] lemma norm_sq_neg : norm_sq (-a) = norm_sq a :=
-by simp only [norm_sq_def, conj_neg, neg_mul_neg]
+@[simp]
+theorem norm_sq_neg : normSq (-a) = normSq a := by
+  simp only [norm_sq_def, conj_neg, neg_mul_neg]
 
-lemma self_mul_conj : a * a.conj = norm_sq a := by rw [mul_conj_eq_coe, norm_sq_def]
+theorem self_mul_conj : a * a.conj = normSq a := by
+  rw [mul_conj_eq_coe, norm_sq_def]
 
-lemma conj_mul_self : a.conj * a = norm_sq a := by rw [← a.commute_self_conj.eq, self_mul_conj]
+theorem conj_mul_self : a.conj * a = normSq a := by
+  rw [← a.commute_self_conj.eq, self_mul_conj]
 
-lemma coe_norm_sq_add :
-  (norm_sq (a + b) : ℍ[R]) = norm_sq a + a * b.conj + b * a.conj + norm_sq b :=
-by simp [← self_mul_conj, mul_add, add_mul, add_assoc]
+theorem coe_norm_sq_add : (normSq (a + b) : ℍ[R]) = normSq a + a * b.conj + b * a.conj + normSq b := by
+  simp [← self_mul_conj, mul_addₓ, add_mulₓ, add_assocₓ]
 
-end quaternion
+end Quaternion
 
-namespace quaternion
+namespace Quaternion
 
-variables {R : Type*}
+variable {R : Type _}
 
-section linear_ordered_comm_ring
+section LinearOrderedCommRing
 
-variables [linear_ordered_comm_ring R] {a : ℍ[R]}
+variable [LinearOrderedCommRing R] {a : ℍ[R]}
 
-@[simp] lemma norm_sq_eq_zero : norm_sq a = 0 ↔ a = 0 :=
-begin
-  refine ⟨λ h, _, λ h, h.symm ▸ norm_sq.map_zero⟩,
-  rw [norm_sq_def', add_eq_zero_iff', add_eq_zero_iff', add_eq_zero_iff'] at h,
-  exact ext a 0 (pow_eq_zero h.1.1.1) (pow_eq_zero h.1.1.2) (pow_eq_zero h.1.2) (pow_eq_zero h.2),
-  all_goals { apply_rules [sq_nonneg, add_nonneg] }
-end
+@[simp]
+theorem norm_sq_eq_zero : normSq a = 0 ↔ a = 0 := by
+  refine' ⟨fun h => _, fun h => h.symm ▸ norm_sq.map_zero⟩
+  rw [norm_sq_def', add_eq_zero_iff', add_eq_zero_iff', add_eq_zero_iff'] at h
+  exact ext a 0 (pow_eq_zero h.1.1.1) (pow_eq_zero h.1.1.2) (pow_eq_zero h.1.2) (pow_eq_zero h.2)
+  all_goals
+    apply_rules [sq_nonneg, add_nonneg]
 
-lemma norm_sq_ne_zero : norm_sq a ≠ 0 ↔ a ≠ 0 := not_congr norm_sq_eq_zero
+theorem norm_sq_ne_zero : normSq a ≠ 0 ↔ a ≠ 0 :=
+  not_congr norm_sq_eq_zero
 
-@[simp] lemma norm_sq_nonneg : 0 ≤ norm_sq a :=
-by { rw norm_sq_def', apply_rules [sq_nonneg, add_nonneg] }
+@[simp]
+theorem norm_sq_nonneg : 0 ≤ normSq a := by
+  rw [norm_sq_def']
+  apply_rules [sq_nonneg, add_nonneg]
 
-@[simp] lemma norm_sq_le_zero : norm_sq a ≤ 0 ↔ a = 0 :=
-by simpa only [le_antisymm_iff, norm_sq_nonneg, and_true] using @norm_sq_eq_zero _ _ a
+@[simp]
+theorem norm_sq_le_zero : normSq a ≤ 0 ↔ a = 0 := by
+  simpa only [le_antisymm_iffₓ, norm_sq_nonneg, and_trueₓ] using @norm_sq_eq_zero _ _ a
 
-instance : nontrivial ℍ[R] :=
-{ exists_pair_ne := ⟨0, 1, mt (congr_arg re) zero_ne_one⟩, }
+instance : Nontrivial ℍ[R] where
+  exists_pair_ne := ⟨0, 1, mt (congr_argₓ re) zero_ne_one⟩
 
-instance : is_domain ℍ[R] :=
-{ eq_zero_or_eq_zero_of_mul_eq_zero := λ a b hab,
-    have norm_sq a * norm_sq b = 0, by rwa [← norm_sq.map_mul, norm_sq_eq_zero],
-    (eq_zero_or_eq_zero_of_mul_eq_zero this).imp norm_sq_eq_zero.1 norm_sq_eq_zero.1,
-  ..quaternion.nontrivial, }
+instance : IsDomain ℍ[R] :=
+  { Quaternion.nontrivial with
+    eq_zero_or_eq_zero_of_mul_eq_zero := fun a b hab =>
+      have : normSq a * normSq b = 0 := by
+        rwa [← norm_sq.map_mul, norm_sq_eq_zero]
+      (eq_zero_or_eq_zero_of_mul_eq_zero this).imp norm_sq_eq_zero.1 norm_sq_eq_zero.1 }
 
-end linear_ordered_comm_ring
+end LinearOrderedCommRing
 
-section field
+section Field
 
-variables [linear_ordered_field R] (a b : ℍ[R])
+variable [LinearOrderedField R] (a b : ℍ[R])
 
-@[simps { attrs := [] }]instance : has_inv ℍ[R] := ⟨λ a, (norm_sq a)⁻¹ • a.conj⟩
+@[simps (config := { attrs := [] })]
+instance : Inv ℍ[R] :=
+  ⟨fun a => (normSq a)⁻¹ • a.conj⟩
 
-instance : division_ring ℍ[R] :=
-{ inv := has_inv.inv,
-  inv_zero := by rw [has_inv_inv, conj_zero, smul_zero],
-  mul_inv_cancel := λ a ha, by rw [has_inv_inv, algebra.mul_smul_comm, self_mul_conj, smul_coe,
-    inv_mul_cancel (norm_sq_ne_zero.2 ha), coe_one],
-  .. quaternion.nontrivial,
-  .. quaternion.ring }
+instance : DivisionRing ℍ[R] :=
+  { Quaternion.nontrivial, Quaternion.ring with inv := Inv.inv,
+    inv_zero := by
+      rw [has_inv_inv, conj_zero, smul_zero],
+    mul_inv_cancel := fun a ha => by
+      rw [has_inv_inv, Algebra.mul_smul_comm, self_mul_conj, smul_coe, inv_mul_cancel (norm_sq_ne_zero.2 ha), coe_one] }
 
-@[simp] lemma norm_sq_inv : norm_sq a⁻¹ = (norm_sq a)⁻¹ :=
-monoid_with_zero_hom.map_inv norm_sq _
+@[simp]
+theorem norm_sq_inv : normSq a⁻¹ = (normSq a)⁻¹ :=
+  MonoidWithZeroHom.map_inv normSq _
 
-@[simp] lemma norm_sq_div : norm_sq (a / b) = norm_sq a / norm_sq b :=
-monoid_with_zero_hom.map_div norm_sq a b
+@[simp]
+theorem norm_sq_div : normSq (a / b) = normSq a / normSq b :=
+  MonoidWithZeroHom.map_div normSq a b
 
-end field
+end Field
 
-end quaternion
+end Quaternion
+

@@ -3,28 +3,34 @@ Copyright (c) 2020 Kenny Lau. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau
 -/
-
-import algebra.char_p.basic
-import algebra.ring.pi
+import Mathbin.Algebra.CharP.Basic
+import Mathbin.Algebra.Ring.Pi
 
 /-!
 # Characteristic of semirings of functions
 -/
 
-universes u v
 
-namespace char_p
+universe u v
 
-instance pi (ι : Type u) [hi : nonempty ι] (R : Type v) [semiring R] (p : ℕ) [char_p R p] :
-  char_p (ι → R) p :=
-⟨λ x, let ⟨i⟩ := hi in iff.symm $ (char_p.cast_eq_zero_iff R p x).symm.trans
-⟨λ h, funext $ λ j, show pi.eval_ring_hom (λ _, R) j (↑x : ι → R) = 0,
-    by rw [map_nat_cast, h],
-  λ h, map_nat_cast (pi.eval_ring_hom (λ _: ι, R) i) x ▸ by rw [h, ring_hom.map_zero]⟩⟩
+namespace CharP
+
+instance pi (ι : Type u) [hi : Nonempty ι] (R : Type v) [Semiringₓ R] (p : ℕ) [CharP R p] : CharP (ι → R) p :=
+  ⟨fun x =>
+    let ⟨i⟩ := hi
+    Iff.symm <|
+      (CharP.cast_eq_zero_iff R p x).symm.trans
+        ⟨fun h =>
+          funext fun j =>
+            show Pi.evalRingHom (fun _ => R) j (↑x : ι → R) = 0 by
+              rw [map_nat_cast, h],
+          fun h =>
+          map_nat_cast (Pi.evalRingHom (fun _ : ι => R) i) x ▸ by
+            rw [h, RingHom.map_zero]⟩⟩
 
 -- diamonds
-instance pi' (ι : Type u) [hi : nonempty ι] (R : Type v) [comm_ring R] (p : ℕ) [char_p R p] :
-  char_p (ι → R) p :=
-char_p.pi ι R p
+instance pi' (ι : Type u) [hi : Nonempty ι] (R : Type v) [CommRingₓ R] (p : ℕ) [CharP R p] : CharP (ι → R) p :=
+  CharP.pi ι R p
 
-end char_p
+end CharP
+

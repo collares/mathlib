@@ -3,9 +3,9 @@ Copyright (c) 2022 Yuma Mizuno. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yuma Mizuno
 -/
-import category_theory.discrete_category
-import category_theory.bicategory.functor
-import category_theory.bicategory.strict
+import Mathbin.CategoryTheory.DiscreteCategory
+import Mathbin.CategoryTheory.Bicategory.Functor
+import Mathbin.CategoryTheory.Bicategory.Strict
 
 /-!
 # Locally discrete bicategories
@@ -17,62 +17,64 @@ other words, the category consisting of the 1-morphisms between each pair of obj
 in `locally_discrete C` is defined as the discrete category associated with the type `X ⟶ Y`.
 -/
 
-namespace category_theory
 
-open bicategory discrete
-open_locale bicategory
+namespace CategoryTheory
 
-universes w₂ v v₁ v₂ u u₁ u₂
+open Bicategory Discrete
 
-variables (C : Type u)
+open_locale Bicategory
 
-/--
-A type alias for promoting any category to a bicategory,
+universe w₂ v v₁ v₂ u u₁ u₂
+
+variable (C : Type u)
+
+/-- A type alias for promoting any category to a bicategory,
 with the only 2-morphisms being equalities.
 -/
-def locally_discrete := C
+def LocallyDiscrete :=
+  C
 
-namespace locally_discrete
+namespace LocallyDiscrete
 
-instance : Π [inhabited C], inhabited (locally_discrete C) := id
+instance : ∀ [Inhabited C], Inhabited (LocallyDiscrete C) :=
+  id
 
-instance : Π [category_struct.{v} C], category_struct (locally_discrete C) := id
+instance : ∀ [CategoryStruct.{v} C], CategoryStruct (LocallyDiscrete C) :=
+  id
 
-variables {C} [category_struct.{v} C]
+variable {C} [CategoryStruct.{v} C]
 
-instance (X Y : locally_discrete C) : small_category (X ⟶ Y) :=
-category_theory.discrete_category (X ⟶ Y)
+instance (X Y : LocallyDiscrete C) : SmallCategory (X ⟶ Y) :=
+  CategoryTheory.discreteCategory (X ⟶ Y)
 
-end locally_discrete
+end LocallyDiscrete
 
-variables (C) [category.{v} C]
+variable (C) [Category.{v} C]
 
-/--
-The locally discrete bicategory on a category is a bicategory in which the objects and the
+/-- The locally discrete bicategory on a category is a bicategory in which the objects and the
 1-morphisms are the same as those in the underlying category, and the 2-morphisms are the
 equalities between 1-morphisms.
 -/
-instance locally_discrete_bicategory : bicategory (locally_discrete C) :=
-{ whisker_left  := λ X Y Z f g h η, eq_to_hom (congr_arg2 (≫) rfl (eq_of_hom η)),
-  whisker_right := λ X Y Z f g η h, eq_to_hom (congr_arg2 (≫) (eq_of_hom η) rfl),
-  associator := λ W X Y Z f g h, eq_to_iso (category.assoc f g h),
-  left_unitor  := λ X Y f, eq_to_iso (category.id_comp f),
-  right_unitor := λ X Y f, eq_to_iso (category.comp_id f) }
+instance locallyDiscreteBicategory : Bicategory (LocallyDiscrete C) where
+  whiskerLeft := fun X Y Z f g h η => eqToHom (congr_arg2ₓ (· ≫ ·) rfl (eq_of_hom η))
+  whiskerRight := fun X Y Z f g η h => eqToHom (congr_arg2ₓ (· ≫ ·) (eq_of_hom η) rfl)
+  associator := fun W X Y Z f g h => eqToIso (Category.assoc f g h)
+  leftUnitor := fun X Y f => eqToIso (Category.id_comp f)
+  rightUnitor := fun X Y f => eqToIso (Category.comp_id f)
 
 /-- A locally discrete bicategory is strict. -/
-instance locally_discrete_bicategory.strict : strict (locally_discrete C) := { }
+instance locallyDiscreteBicategory.strict : Strict (LocallyDiscrete C) :=
+  {  }
 
-variables {I : Type u₁} [category.{v₁} I] {B : Type u₂} [bicategory.{w₂ v₂} B] [strict B]
+variable {I : Type u₁} [Category.{v₁} I] {B : Type u₂} [Bicategory.{w₂, v₂} B] [Strict B]
 
-/--
-If `B` is a strict bicategory and `I` is a (1-)category, any functor (of 1-categories) `I ⥤ B` can
+/-- If `B` is a strict bicategory and `I` is a (1-)category, any functor (of 1-categories) `I ⥤ B` can
 be promoted to an oplax functor from `locally_discrete I` to `B`.
 -/
 @[simps]
-def functor.to_oplax_functor (F : I ⥤ B) : oplax_functor (locally_discrete I) B :=
-{ map₂ := λ i j f g η, eq_to_hom (congr_arg _ (eq_of_hom η)),
-  map_id := λ i, eq_to_hom (F.map_id i),
-  map_comp := λ i j k f g, eq_to_hom (F.map_comp f g),
-  .. F }
+def Functor.toOplaxFunctor (F : I ⥤ B) : OplaxFunctor (LocallyDiscrete I) B :=
+  { F with map₂ := fun i j f g η => eqToHom (congr_argₓ _ (eq_of_hom η)), map_id := fun i => eqToHom (F.map_id i),
+    map_comp := fun i j k f g => eqToHom (F.map_comp f g) }
 
-end category_theory
+end CategoryTheory
+

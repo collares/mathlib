@@ -1,1 +1,2 @@
-import data.sigma.basic
+import Mathbin.Data.Sigma.Basic
+

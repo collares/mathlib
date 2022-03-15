@@ -3,8 +3,8 @@ Copyright (c) 2017 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Patrick Massot, Scott Morrison, Mario Carneiro
 -/
-import category_theory.concrete_category.bundled_hom
-import topology.continuous_function.basic
+import Mathbin.CategoryTheory.ConcreteCategory.BundledHom
+import Mathbin.Topology.ContinuousFunction.Basic
 
 /-!
 # Category instance for topological spaces
@@ -15,84 +15,105 @@ discrete, resp. trivial, topology. For a proof that these functors are left, res
 to the forgetful functor, see `topology.category.Top.adjunctions`.
 -/
 
-open category_theory
-open topological_space
+
+open CategoryTheory
+
+open TopologicalSpace
 
 universe u
 
 /-- The category of topological spaces and continuous maps. -/
-def Top : Type (u+1) := bundled topological_space
+def Top : Type (u + 1) :=
+  Bundled TopologicalSpace
 
 namespace Top
 
-instance bundled_hom : bundled_hom @continuous_map :=
-⟨@continuous_map.to_fun, @continuous_map.id, @continuous_map.comp, @continuous_map.coe_injective⟩
+instance bundledHom : BundledHom @ContinuousMap :=
+  ⟨@ContinuousMap.toFun, @ContinuousMap.id, @ContinuousMap.comp, @ContinuousMap.coe_injective⟩
 
-attribute [derive [large_category, concrete_category]] Top
+deriving instance LargeCategory, ConcreteCategory for Top
 
-instance : has_coe_to_sort Top Type* := bundled.has_coe_to_sort
+instance : CoeSort Top (Type _) :=
+  bundled.has_coe_to_sort
 
-instance topological_space_unbundled (x : Top) : topological_space x := x.str
+instance topologicalSpaceUnbundled (x : Top) : TopologicalSpace x :=
+  x.str
 
-@[simp] lemma id_app (X : Top.{u}) (x : X) :
-  (𝟙 X : X → X) x = x := rfl
+@[simp]
+theorem id_app (X : Top.{u}) (x : X) : (𝟙 X : X → X) x = x :=
+  rfl
 
-@[simp] lemma comp_app {X Y Z : Top.{u}} (f : X ⟶ Y) (g : Y ⟶ Z) (x : X) :
-  (f ≫ g : X → Z) x = g (f x) := rfl
+@[simp]
+theorem comp_app {X Y Z : Top.{u}} (f : X ⟶ Y) (g : Y ⟶ Z) (x : X) : (f ≫ g : X → Z) x = g (f x) :=
+  rfl
 
 /-- Construct a bundled `Top` from the underlying type and the typeclass. -/
-def of (X : Type u) [topological_space X] : Top := ⟨X⟩
+def of (X : Type u) [TopologicalSpace X] : Top :=
+  ⟨X⟩
 
-instance (X : Top) : topological_space X := X.str
+instance (X : Top) : TopologicalSpace X :=
+  X.str
 
-@[simp] lemma coe_of (X : Type u) [topological_space X] : (of X : Type u) = X := rfl
+@[simp]
+theorem coe_of (X : Type u) [TopologicalSpace X] : (of X : Type u) = X :=
+  rfl
 
-instance : inhabited Top := ⟨Top.of empty⟩
+instance : Inhabited Top :=
+  ⟨Top.of Empty⟩
 
 /-- The discrete topology on any type. -/
-def discrete : Type u ⥤ Top.{u} :=
-{ obj := λ X, ⟨X, ⊥⟩,
-  map := λ X Y f, { to_fun := f, continuous_to_fun := continuous_bot } }
+def discrete : Type u ⥤ Top.{u} where
+  obj := fun X => ⟨X, ⊥⟩
+  map := fun X Y f => { toFun := f, continuous_to_fun := continuous_bot }
 
 /-- The trivial topology on any type. -/
-def trivial : Type u ⥤ Top.{u} :=
-{ obj := λ X, ⟨X, ⊤⟩,
-  map := λ X Y f, { to_fun := f, continuous_to_fun := continuous_top } }
+def trivial : Type u ⥤ Top.{u} where
+  obj := fun X => ⟨X, ⊤⟩
+  map := fun X Y f => { toFun := f, continuous_to_fun := continuous_top }
 
 /-- Any homeomorphisms induces an isomorphism in `Top`. -/
-@[simps] def iso_of_homeo {X Y : Top.{u}} (f : X ≃ₜ Y) : X ≅ Y :=
-{ hom := ⟨f⟩,
-  inv := ⟨f.symm⟩ }
+@[simps]
+def isoOfHomeo {X Y : Top.{u}} (f : X ≃ₜ Y) : X ≅ Y where
+  Hom := ⟨f⟩
+  inv := ⟨f.symm⟩
 
 /-- Any isomorphism in `Top` induces a homeomorphism. -/
-@[simps] def homeo_of_iso {X Y : Top.{u}} (f : X ≅ Y) : X ≃ₜ Y :=
-{ to_fun := f.hom,
-  inv_fun := f.inv,
-  left_inv := λ x, by simp,
-  right_inv := λ x, by simp,
-  continuous_to_fun := f.hom.continuous,
-  continuous_inv_fun := f.inv.continuous }
-
-@[simp] lemma of_iso_of_homeo {X Y : Top.{u}} (f : X ≃ₜ Y) : homeo_of_iso (iso_of_homeo f) = f :=
-by { ext, refl }
-
-@[simp] lemma of_homeo_of_iso {X Y : Top.{u}} (f : X ≅ Y) : iso_of_homeo (homeo_of_iso f) = f :=
-by { ext, refl }
+@[simps]
+def homeoOfIso {X Y : Top.{u}} (f : X ≅ Y) : X ≃ₜ Y where
+  toFun := f.Hom
+  invFun := f.inv
+  left_inv := fun x => by
+    simp
+  right_inv := fun x => by
+    simp
+  continuous_to_fun := f.Hom.Continuous
+  continuous_inv_fun := f.inv.Continuous
 
 @[simp]
-lemma open_embedding_iff_comp_is_iso {X Y Z : Top} (f : X ⟶ Y) (g : Y ⟶ Z) [is_iso g] :
-  open_embedding (f ≫ g) ↔ open_embedding f :=
-open_embedding_iff_open_embedding_compose f (Top.homeo_of_iso (as_iso g)).open_embedding
+theorem of_iso_of_homeo {X Y : Top.{u}} (f : X ≃ₜ Y) : homeoOfIso (isoOfHomeo f) = f := by
+  ext
+  rfl
 
 @[simp]
-lemma open_embedding_iff_is_iso_comp {X Y Z : Top} (f : X ⟶ Y) (g : Y ⟶ Z) [is_iso f] :
-  open_embedding (f ≫ g) ↔ open_embedding g :=
-begin
-  split,
-  { intro h,
-    convert h.comp (Top.homeo_of_iso (as_iso f).symm).open_embedding,
-    exact congr_arg _ (is_iso.inv_hom_id_assoc f g).symm },
-  { exact λ h, h.comp (Top.homeo_of_iso (as_iso f)).open_embedding }
-end
+theorem of_homeo_of_iso {X Y : Top.{u}} (f : X ≅ Y) : isoOfHomeo (homeoOfIso f) = f := by
+  ext
+  rfl
+
+@[simp]
+theorem open_embedding_iff_comp_is_iso {X Y Z : Top} (f : X ⟶ Y) (g : Y ⟶ Z) [IsIso g] :
+    OpenEmbedding (f ≫ g) ↔ OpenEmbedding f :=
+  open_embedding_iff_open_embedding_compose f (Top.homeoOfIso (asIso g)).OpenEmbedding
+
+@[simp]
+theorem open_embedding_iff_is_iso_comp {X Y Z : Top} (f : X ⟶ Y) (g : Y ⟶ Z) [IsIso f] :
+    OpenEmbedding (f ≫ g) ↔ OpenEmbedding g := by
+  constructor
+  · intro h
+    convert h.comp (Top.homeoOfIso (as_iso f).symm).OpenEmbedding
+    exact congr_argₓ _ (is_iso.inv_hom_id_assoc f g).symm
+    
+  · exact fun h => h.comp (Top.homeoOfIso (as_iso f)).OpenEmbedding
+    
 
 end Top
+

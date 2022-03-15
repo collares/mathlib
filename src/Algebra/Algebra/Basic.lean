@@ -3,10 +3,10 @@ Copyright (c) 2018 Kenny Lau. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau, Yury Kudryashov
 -/
-import algebra.module.basic
-import linear_algebra.span
-import tactic.abel
-import data.equiv.ring_aut
+import Mathbin.Algebra.Module.Basic
+import Mathbin.LinearAlgebra.Span
+import Mathbin.Tactic.Abel
+import Mathbin.Data.Equiv.RingAut
 
 /-!
 # Algebras over commutative semirings
@@ -96,53 +96,53 @@ the second approach only when you need to weaken a condition on either `R` or `A
 
 -/
 
-universes u v w u₁ v₁
 
-open_locale big_operators
+universe u v w u₁ v₁
 
-section prio
+open_locale BigOperators
+
+section Prio
+
+-- ././Mathport/Syntax/Translate/Basic.lean:210:40: warning: unsupported option extends_priority
 -- We set this priority to 0 later in this file
-set_option extends_priority 200 /- control priority of
-`instance [algebra R A] : has_scalar R A` -/
+set_option extends_priority 200
 
-/--
-An associative unital `R`-algebra is a semiring `A` equipped with a map into its center `R → A`.
+/-- An associative unital `R`-algebra is a semiring `A` equipped with a map into its center `R → A`.
 
 See the implementation notes in this file for discussion of the details of this definition.
 -/
+/- control priority of
+`instance [algebra R A] : has_scalar R A` -/
 @[nolint has_inhabited_instance]
-class algebra (R : Type u) (A : Type v) [comm_semiring R] [semiring A]
-  extends has_scalar R A, R →+* A :=
-(commutes' : ∀ r x, to_fun r * x = x * to_fun r)
-(smul_def' : ∀ r x, r • x = to_fun r * x)
-end prio
+class Algebra (R : Type u) (A : Type v) [CommSemiringₓ R] [Semiringₓ A] extends HasScalar R A, R →+* A where
+  commutes' : ∀ r x, to_fun r * x = x * to_fun r
+  smul_def' : ∀ r x, r • x = to_fun r * x
+
+end Prio
 
 /-- Embedding `R →+* A` given by `algebra` structure. -/
-def algebra_map (R : Type u) (A : Type v) [comm_semiring R] [semiring A] [algebra R A] : R →+* A :=
-algebra.to_ring_hom
+def algebraMap (R : Type u) (A : Type v) [CommSemiringₓ R] [Semiringₓ A] [Algebra R A] : R →+* A :=
+  Algebra.toRingHom
 
 /-- Creating an algebra from a morphism to the center of a semiring. -/
-def ring_hom.to_algebra' {R S} [comm_semiring R] [semiring S] (i : R →+* S)
-  (h : ∀ c x, i c * x = x * i c) :
-  algebra R S :=
-{ smul := λ c x, i c * x,
-  commutes' := h,
-  smul_def' := λ c x, rfl,
-  to_ring_hom := i}
+def RingHom.toAlgebra' {R S} [CommSemiringₓ R] [Semiringₓ S] (i : R →+* S) (h : ∀ c x, i c * x = x * i c) :
+    Algebra R S where
+  smul := fun c x => i c * x
+  commutes' := h
+  smul_def' := fun c x => rfl
+  toRingHom := i
 
 /-- Creating an algebra from a morphism to a commutative semiring. -/
-def ring_hom.to_algebra {R S} [comm_semiring R] [comm_semiring S] (i : R →+* S) :
-  algebra R S :=
-i.to_algebra' $ λ _, mul_comm _
+def RingHom.toAlgebra {R S} [CommSemiringₓ R] [CommSemiringₓ S] (i : R →+* S) : Algebra R S :=
+  i.toAlgebra' fun _ => mul_comm _
 
-lemma ring_hom.algebra_map_to_algebra {R S} [comm_semiring R] [comm_semiring S]
-  (i : R →+* S) :
-  @algebra_map R S _ _ i.to_algebra = i :=
-rfl
+theorem RingHom.algebra_map_to_algebra {R S} [CommSemiringₓ R] [CommSemiringₓ S] (i : R →+* S) :
+    @algebraMap R S _ _ i.toAlgebra = i :=
+  rfl
 
-namespace algebra
+namespace Algebra
 
-variables {R : Type u} {S : Type v} {A : Type w} {B : Type*}
+variable {R : Type u} {S : Type v} {A : Type w} {B : Type _}
 
 /-- Let `R` be a commutative semiring, let `A` be a semiring with a `module R` structure.
 If `(r • 1) * x = x * (r • 1) = r • x` for all `r : R` and `x : A`, then `A` is an `algebra`
@@ -150,16 +150,18 @@ over `R`.
 
 See note [reducible non-instances]. -/
 @[reducible]
-def of_module' [comm_semiring R] [semiring A] [module R A]
-  (h₁ : ∀ (r : R) (x : A), (r • 1) * x = r • x)
-  (h₂ : ∀ (r : R) (x : A), x * (r • 1) = r • x) : algebra R A :=
-{ to_fun := λ r, r • 1,
-  map_one' := one_smul _ _,
-  map_mul' := λ r₁ r₂, by rw [h₁, mul_smul],
-  map_zero' := zero_smul _ _,
-  map_add' := λ r₁ r₂, add_smul r₁ r₂ 1,
-  commutes' := λ r x, by simp only [h₁, h₂],
-  smul_def' := λ r x, by simp only [h₁] }
+def ofModule' [CommSemiringₓ R] [Semiringₓ A] [Module R A] (h₁ : ∀ r : R x : A, r • 1 * x = r • x)
+    (h₂ : ∀ r : R x : A, x * r • 1 = r • x) : Algebra R A where
+  toFun := fun r => r • 1
+  map_one' := one_smul _ _
+  map_mul' := fun r₁ r₂ => by
+    rw [h₁, mul_smul]
+  map_zero' := zero_smul _ _
+  map_add' := fun r₁ r₂ => add_smul r₁ r₂ 1
+  commutes' := fun r x => by
+    simp only [h₁, h₂]
+  smul_def' := fun r x => by
+    simp only [h₁]
 
 /-- Let `R` be a commutative semiring, let `A` be a semiring with a `module R` structure.
 If `(r • x) * y = x * (r • y) = r • (x * y)` for all `r : R` and `x y : A`, then `A`
@@ -167,1204 +169,1431 @@ is an `algebra` over `R`.
 
 See note [reducible non-instances]. -/
 @[reducible]
-def of_module [comm_semiring R] [semiring A] [module R A]
-  (h₁ : ∀ (r : R) (x y : A), (r • x) * y = r • (x * y))
-  (h₂ : ∀ (r : R) (x y : A), x * (r • y) = r • (x * y)) : algebra R A :=
-of_module' (λ r x, by rw [h₁, one_mul]) (λ r x, by rw [h₂, mul_one])
+def ofModule [CommSemiringₓ R] [Semiringₓ A] [Module R A] (h₁ : ∀ r : R x y : A, r • x * y = r • (x * y))
+    (h₂ : ∀ r : R x y : A, x * r • y = r • (x * y)) : Algebra R A :=
+  ofModule'
+    (fun r x => by
+      rw [h₁, one_mulₓ])
+    fun r x => by
+    rw [h₂, mul_oneₓ]
 
-section semiring
+section Semiringₓ
 
-variables [comm_semiring R] [comm_semiring S]
-variables [semiring A] [algebra R A] [semiring B] [algebra R B]
+variable [CommSemiringₓ R] [CommSemiringₓ S]
+
+variable [Semiringₓ A] [Algebra R A] [Semiringₓ B] [Algebra R B]
 
 /-- We keep this lemma private because it picks up the `algebra.to_has_scalar` instance
 which we set to priority 0 shortly. See `smul_def` below for the public version. -/
-private lemma smul_def'' (r : R) (x : A) : r • x = algebra_map R A r * x :=
-algebra.smul_def' r x
+private theorem smul_def'' (r : R) (x : A) : r • x = algebraMap R A r * x :=
+  Algebra.smul_def' r x
 
-/--
-To prove two algebra structures on a fixed `[comm_semiring R] [semiring A]` agree,
+/-- To prove two algebra structures on a fixed `[comm_semiring R] [semiring A]` agree,
 it suffices to check the `algebra_map`s agree.
 -/
 -- We'll later use this to show `algebra ℤ M` is a subsingleton.
 @[ext]
-lemma algebra_ext {R : Type*} [comm_semiring R] {A : Type*} [semiring A] (P Q : algebra R A)
-  (w : ∀ (r : R), by { haveI := P, exact algebra_map R A r } =
-    by { haveI := Q, exact algebra_map R A r }) :
-  P = Q :=
-begin
-  unfreezingI { rcases P with ⟨⟨P⟩⟩, rcases Q with ⟨⟨Q⟩⟩ },
-  congr,
-  { funext r a,
-    replace w := congr_arg (λ s, s * a) (w r),
-    simp only [←smul_def''] at w,
-    apply w, },
-  { ext r,
-    exact w r, },
-  { apply proof_irrel_heq, },
-  { apply proof_irrel_heq, },
-end
+theorem algebra_ext {R : Type _} [CommSemiringₓ R] {A : Type _} [Semiringₓ A] (P Q : Algebra R A)
+    (w :
+      ∀ r : R,
+        (have := P
+          algebraMap R A r) =
+          have := Q
+          algebraMap R A r) :
+    P = Q := by
+  rcases P with ⟨⟨P⟩⟩
+  rcases Q with ⟨⟨Q⟩⟩
+  congr
+  · funext r a
+    replace w := congr_argₓ (fun s => s * a) (w r)
+    simp only [← smul_def''] at w
+    apply w
+    
+  · ext r
+    exact w r
+    
+  · apply proof_irrel_heq
+    
+  · apply proof_irrel_heq
+    
 
-@[priority 200] -- see Note [lower instance priority]
-instance to_module : module R A :=
-{ one_smul := by simp [smul_def''],
-  mul_smul := by simp [smul_def'', mul_assoc],
-  smul_add := by simp [smul_def'', mul_add],
-  smul_zero := by simp [smul_def''],
-  add_smul := by simp [smul_def'', add_mul],
-  zero_smul := by simp [smul_def''] }
+-- see Note [lower instance priority]
+instance (priority := 200) toModule : Module R A where
+  one_smul := by
+    simp [smul_def'']
+  mul_smul := by
+    simp [smul_def'', mul_assoc]
+  smul_add := by
+    simp [smul_def'', mul_addₓ]
+  smul_zero := by
+    simp [smul_def'']
+  add_smul := by
+    simp [smul_def'', add_mulₓ]
+  zero_smul := by
+    simp [smul_def'']
 
 -- From now on, we don't want to use the following instance anymore.
 -- Unfortunately, leaving it in place causes deterministic timeouts later in mathlib.
-attribute [instance, priority 0] algebra.to_has_scalar
+attribute [instance] Algebra.toHasScalar
 
-lemma smul_def (r : R) (x : A) : r • x = algebra_map R A r * x :=
-algebra.smul_def' r x
+theorem smul_def (r : R) (x : A) : r • x = algebraMap R A r * x :=
+  Algebra.smul_def' r x
 
-lemma algebra_map_eq_smul_one (r : R) : algebra_map R A r = r • 1 :=
-calc algebra_map R A r = algebra_map R A r * 1 : (mul_one _).symm
-                   ... = r • 1                 : (algebra.smul_def r 1).symm
+theorem algebra_map_eq_smul_one (r : R) : algebraMap R A r = r • 1 :=
+  calc
+    algebraMap R A r = algebraMap R A r * 1 := (mul_oneₓ _).symm
+    _ = r • 1 := (Algebra.smul_def r 1).symm
+    
 
-lemma algebra_map_eq_smul_one' : ⇑(algebra_map R A) = λ r, r • (1 : A) :=
-funext algebra_map_eq_smul_one
+theorem algebra_map_eq_smul_one' : ⇑(algebraMap R A) = fun r => r • (1 : A) :=
+  funext algebra_map_eq_smul_one
 
 /-- `mul_comm` for `algebra`s when one element is from the base ring. -/
-theorem commutes (r : R) (x : A) : algebra_map R A r * x = x * algebra_map R A r :=
-algebra.commutes' r x
+theorem commutes (r : R) (x : A) : algebraMap R A r * x = x * algebraMap R A r :=
+  Algebra.commutes' r x
 
 /-- `mul_left_comm` for `algebra`s when one element is from the base ring. -/
-theorem left_comm (x : A) (r : R) (y : A) :
-  x * (algebra_map R A r * y) = algebra_map R A r * (x * y) :=
-by rw [← mul_assoc, ← commutes, mul_assoc]
+theorem left_comm (x : A) (r : R) (y : A) : x * (algebraMap R A r * y) = algebraMap R A r * (x * y) := by
+  rw [← mul_assoc, ← commutes, mul_assoc]
 
 /-- `mul_right_comm` for `algebra`s when one element is from the base ring. -/
-theorem right_comm (x : A) (r : R) (y : A) :
-  (x * algebra_map R A r) * y = (x * y) * algebra_map R A r :=
-by rw [mul_assoc, commutes, ←mul_assoc]
+theorem right_comm (x : A) (r : R) (y : A) : x * algebraMap R A r * y = x * y * algebraMap R A r := by
+  rw [mul_assoc, commutes, ← mul_assoc]
 
-instance _root_.is_scalar_tower.right : is_scalar_tower R A A :=
-⟨λ x y z, by rw [smul_eq_mul, smul_eq_mul, smul_def, smul_def, mul_assoc]⟩
+instance _root_.is_scalar_tower.right : IsScalarTower R A A :=
+  ⟨fun x y z => by
+    rw [smul_eq_mul, smul_eq_mul, smul_def, smul_def, mul_assoc]⟩
 
 /-- This is just a special case of the global `mul_smul_comm` lemma that requires less typeclass
 search (and was here first). -/
-@[simp] protected lemma mul_smul_comm (s : R) (x y : A) :
-  x * (s • y) = s • (x * y) :=
--- TODO: set up `is_scalar_tower.smul_comm_class` earlier so that we can actually prove this using
--- `mul_smul_comm s x y`.
-by rw [smul_def, smul_def, left_comm]
+@[simp]
+protected theorem mul_smul_comm (s : R) (x y : A) : x * s • y = s • (x * y) := by
+  -- TODO: set up `is_scalar_tower.smul_comm_class` earlier so that we can actually prove this using
+  -- `mul_smul_comm s x y`.
+  rw [smul_def, smul_def, left_comm]
 
 /-- This is just a special case of the global `smul_mul_assoc` lemma that requires less typeclass
 search (and was here first). -/
-@[simp] protected lemma smul_mul_assoc (r : R) (x y : A) :
-  (r • x) * y = r • (x * y) :=
-smul_mul_assoc r x y
+@[simp]
+protected theorem smul_mul_assoc (r : R) (x y : A) : r • x * y = r • (x * y) :=
+  smul_mul_assoc r x y
 
 section
-variables {r : R} {a : A}
 
-@[simp] lemma bit0_smul_one : bit0 r • (1 : A) = bit0 (r • (1 : A)) :=
-by simp [bit0, add_smul]
-lemma bit0_smul_one' : bit0 r • (1 : A) = r • 2 :=
-by simp [bit0, add_smul, smul_add]
-@[simp] lemma bit0_smul_bit0 : bit0 r • bit0 a = r • (bit0 (bit0 a)) :=
-by simp [bit0, add_smul, smul_add]
-@[simp] lemma bit0_smul_bit1 : bit0 r • bit1 a = r • (bit0 (bit1 a)) :=
-by simp [bit0, add_smul, smul_add]
-@[simp] lemma bit1_smul_one : bit1 r • (1 : A) = bit1 (r • (1 : A)) :=
-by simp [bit1, add_smul]
-lemma bit1_smul_one' : bit1 r • (1 : A) = r • 2 + 1 :=
-by simp [bit1, bit0, add_smul, smul_add]
-@[simp] lemma bit1_smul_bit0 : bit1 r • bit0 a = r • (bit0 (bit0 a)) + bit0 a :=
-by simp [bit1, add_smul, smul_add]
-@[simp] lemma bit1_smul_bit1 : bit1 r • bit1 a = r • (bit0 (bit1 a)) + bit1 a :=
-by { simp only [bit0, bit1, add_smul, smul_add, one_smul], abel }
+variable {r : R} {a : A}
+
+@[simp]
+theorem bit0_smul_one : bit0 r • (1 : A) = bit0 (r • (1 : A)) := by
+  simp [bit0, add_smul]
+
+theorem bit0_smul_one' : bit0 r • (1 : A) = r • 2 := by
+  simp [bit0, add_smul, smul_add]
+
+@[simp]
+theorem bit0_smul_bit0 : bit0 r • bit0 a = r • bit0 (bit0 a) := by
+  simp [bit0, add_smul, smul_add]
+
+@[simp]
+theorem bit0_smul_bit1 : bit0 r • bit1 a = r • bit0 (bit1 a) := by
+  simp [bit0, add_smul, smul_add]
+
+@[simp]
+theorem bit1_smul_one : bit1 r • (1 : A) = bit1 (r • (1 : A)) := by
+  simp [bit1, add_smul]
+
+theorem bit1_smul_one' : bit1 r • (1 : A) = r • 2 + 1 := by
+  simp [bit1, bit0, add_smul, smul_add]
+
+@[simp]
+theorem bit1_smul_bit0 : bit1 r • bit0 a = r • bit0 (bit0 a) + bit0 a := by
+  simp [bit1, add_smul, smul_add]
+
+@[simp]
+theorem bit1_smul_bit1 : bit1 r • bit1 a = r • bit0 (bit1 a) + bit1 a := by
+  simp only [bit0, bit1, add_smul, smul_add, one_smul]
+  abel
 
 end
 
-variables (R A)
+variable (R A)
 
-/--
-The canonical ring homomorphism `algebra_map R A : R →* A` for any `R`-algebra `A`,
+/-- The canonical ring homomorphism `algebra_map R A : R →* A` for any `R`-algebra `A`,
 packaged as an `R`-linear map.
 -/
-protected def linear_map : R →ₗ[R] A :=
-{ map_smul' := λ x y, by simp [algebra.smul_def],
-  ..algebra_map R A }
+protected def linearMap : R →ₗ[R] A :=
+  { algebraMap R A with
+    map_smul' := fun x y => by
+      simp [Algebra.smul_def] }
 
 @[simp]
-lemma linear_map_apply (r : R) : algebra.linear_map R A r = algebra_map R A r := rfl
+theorem linear_map_apply (r : R) : Algebra.linearMap R A r = algebraMap R A r :=
+  rfl
 
-lemma coe_linear_map : ⇑(algebra.linear_map R A) = algebra_map R A := rfl
+theorem coe_linear_map : ⇑(Algebra.linearMap R A) = algebraMap R A :=
+  rfl
 
-instance id : algebra R R := (ring_hom.id R).to_algebra
+instance id : Algebra R R :=
+  (RingHom.id R).toAlgebra
 
-variables {R A}
+variable {R A}
 
 namespace id
 
-@[simp] lemma map_eq_id : algebra_map R R = ring_hom.id _ := rfl
+@[simp]
+theorem map_eq_id : algebraMap R R = RingHom.id _ :=
+  rfl
 
-lemma map_eq_self (x : R) : algebra_map R R x = x := rfl
+theorem map_eq_self (x : R) : algebraMap R R x = x :=
+  rfl
 
-@[simp] lemma smul_eq_mul (x y : R) : x • y = x * y := rfl
+@[simp]
+theorem smul_eq_mul (x y : R) : x • y = x * y :=
+  rfl
 
 end id
 
-section prod
-variables (R A B)
+section Prod
 
-instance _root_.prod.algebra : algebra R (A × B) :=
-{ commutes' := by { rintro r ⟨a, b⟩, dsimp, rw [commutes r a, commutes r b] },
-  smul_def' := by { rintro r ⟨a, b⟩, dsimp, rw [smul_def r a, smul_def r b] },
-  .. prod.module,
-  .. ring_hom.prod (algebra_map R A) (algebra_map R B) }
+variable (R A B)
 
-variables {R A B}
+instance _root_.prod.algebra : Algebra R (A × B) :=
+  { Prod.module, RingHom.prod (algebraMap R A) (algebraMap R B) with
+    commutes' := by
+      rintro r ⟨a, b⟩
+      dsimp
+      rw [commutes r a, commutes r b],
+    smul_def' := by
+      rintro r ⟨a, b⟩
+      dsimp
+      rw [smul_def r a, smul_def r b] }
 
-@[simp] lemma algebra_map_prod_apply (r : R) :
-  algebra_map R (A × B) r = (algebra_map R A r, algebra_map R B r) := rfl
+variable {R A B}
 
-end prod
+@[simp]
+theorem algebra_map_prod_apply (r : R) : algebraMap R (A × B) r = (algebraMap R A r, algebraMap R B r) :=
+  rfl
+
+end Prod
 
 /-- Algebra over a subsemiring. This builds upon `subsemiring.module`. -/
-instance of_subsemiring (S : subsemiring R) : algebra S A :=
-{ smul := (•),
-  commutes' := λ r x, algebra.commutes r x,
-  smul_def' := λ r x, algebra.smul_def r x,
-  .. (algebra_map R A).comp S.subtype }
+instance ofSubsemiring (S : Subsemiring R) : Algebra S A :=
+  { (algebraMap R A).comp S.Subtype with smul := (· • ·), commutes' := fun r x => Algebra.commutes r x,
+    smul_def' := fun r x => Algebra.smul_def r x }
 
 /-- Algebra over a subring. This builds upon `subring.module`. -/
-instance of_subring {R A : Type*} [comm_ring R] [ring A] [algebra R A]
-  (S : subring R) : algebra S A :=
-{ smul := (•),
-  .. algebra.of_subsemiring S.to_subsemiring,
-  .. (algebra_map R A).comp S.subtype }
+instance ofSubring {R A : Type _} [CommRingₓ R] [Ringₓ A] [Algebra R A] (S : Subring R) : Algebra S A :=
+  { Algebra.ofSubsemiring S.toSubsemiring, (algebraMap R A).comp S.Subtype with smul := (· • ·) }
 
-lemma algebra_map_of_subring {R : Type*} [comm_ring R] (S : subring R) :
-  (algebra_map S R : S →+* R) = subring.subtype S := rfl
+theorem algebra_map_of_subring {R : Type _} [CommRingₓ R] (S : Subring R) :
+    (algebraMap S R : S →+* R) = Subring.subtype S :=
+  rfl
 
-lemma coe_algebra_map_of_subring {R : Type*} [comm_ring R] (S : subring R) :
-  (algebra_map S R : S → R) = subtype.val := rfl
+theorem coe_algebra_map_of_subring {R : Type _} [CommRingₓ R] (S : Subring R) :
+    (algebraMap S R : S → R) = Subtype.val :=
+  rfl
 
-lemma algebra_map_of_subring_apply {R : Type*} [comm_ring R] (S : subring R) (x : S) :
-  algebra_map S R x = x := rfl
+theorem algebra_map_of_subring_apply {R : Type _} [CommRingₓ R] (S : Subring R) (x : S) : algebraMap S R x = x :=
+  rfl
 
 /-- Explicit characterization of the submonoid map in the case of an algebra.
 `S` is made explicit to help with type inference -/
-def algebra_map_submonoid (S : Type*) [semiring S] [algebra R S]
-  (M : submonoid R) : (submonoid S) :=
-submonoid.map (algebra_map R S : R →* S) M
+def algebraMapSubmonoid (S : Type _) [Semiringₓ S] [Algebra R S] (M : Submonoid R) : Submonoid S :=
+  Submonoid.map (algebraMap R S : R →* S) M
 
-lemma mem_algebra_map_submonoid_of_mem [algebra R S] {M : submonoid R} (x : M) :
-  (algebra_map R S x) ∈ algebra_map_submonoid S M :=
-set.mem_image_of_mem (algebra_map R S) x.2
+theorem mem_algebra_map_submonoid_of_mem [Algebra R S] {M : Submonoid R} (x : M) :
+    algebraMap R S x ∈ algebraMapSubmonoid S M :=
+  Set.mem_image_of_mem (algebraMap R S) x.2
 
-end semiring
+end Semiringₓ
 
-section ring
-variables [comm_ring R]
+section Ringₓ
 
-variables (R)
+variable [CommRingₓ R]
+
+variable (R)
 
 /-- A `semiring` that is an `algebra` over a commutative ring carries a natural `ring` structure.
 See note [reducible non-instances]. -/
 @[reducible]
-def semiring_to_ring [semiring A] [algebra R A] : ring A :=
-{ ..module.add_comm_monoid_to_add_comm_group R,
-  ..(infer_instance : semiring A) }
+def semiringToRing [Semiringₓ A] [Algebra R A] : Ringₓ A :=
+  { Module.addCommMonoidToAddCommGroup R, (inferInstance : Semiringₓ A) with }
 
-variables {R}
+variable {R}
 
-lemma mul_sub_algebra_map_commutes [ring A] [algebra R A] (x : A) (r : R) :
-  x * (x - algebra_map R A r) = (x - algebra_map R A r) * x :=
-by rw [mul_sub, ←commutes, sub_mul]
+theorem mul_sub_algebra_map_commutes [Ringₓ A] [Algebra R A] (x : A) (r : R) :
+    x * (x - algebraMap R A r) = (x - algebraMap R A r) * x := by
+  rw [mul_sub, ← commutes, sub_mul]
 
-lemma mul_sub_algebra_map_pow_commutes [ring A] [algebra R A] (x : A) (r : R) (n : ℕ) :
-  x * (x - algebra_map R A r) ^ n = (x - algebra_map R A r) ^ n * x :=
-begin
-  induction n with n ih,
-  { simp },
-  { rw [pow_succ, ←mul_assoc, mul_sub_algebra_map_commutes,
-      mul_assoc, ih, ←mul_assoc], }
-end
+theorem mul_sub_algebra_map_pow_commutes [Ringₓ A] [Algebra R A] (x : A) (r : R) (n : ℕ) :
+    x * (x - algebraMap R A r) ^ n = (x - algebraMap R A r) ^ n * x := by
+  induction' n with n ih
+  · simp
+    
+  · rw [pow_succₓ, ← mul_assoc, mul_sub_algebra_map_commutes, mul_assoc, ih, ← mul_assoc]
+    
 
-end ring
+end Ringₓ
 
-end algebra
+end Algebra
 
-namespace no_zero_smul_divisors
+namespace NoZeroSmulDivisors
 
-variables {R A : Type*}
+variable {R A : Type _}
 
-open algebra
+open Algebra
 
-section ring
+section Ringₓ
 
-variables [comm_ring R]
+variable [CommRingₓ R]
 
 /-- If `algebra_map R A` is injective and `A` has no zero divisors,
 `R`-multiples in `A` are zero only if one of the factors is zero.
 
 Cannot be an instance because there is no `injective (algebra_map R A)` typeclass.
 -/
-lemma of_algebra_map_injective
-  [semiring A] [algebra R A] [no_zero_divisors A]
-  (h : function.injective (algebra_map R A)) : no_zero_smul_divisors R A :=
-⟨λ c x hcx, (mul_eq_zero.mp ((smul_def c x).symm.trans hcx)).imp_left
-  ((algebra_map R A).injective_iff.mp h _)⟩
+theorem of_algebra_map_injective [Semiringₓ A] [Algebra R A] [NoZeroDivisors A]
+    (h : Function.Injective (algebraMap R A)) : NoZeroSmulDivisors R A :=
+  ⟨fun c x hcx => (mul_eq_zero.mp ((smul_def c x).symm.trans hcx)).imp_left ((algebraMap R A).injective_iff.mp h _)⟩
 
-variables (R A)
-lemma algebra_map_injective [ring A] [nontrivial A]
-  [algebra R A] [no_zero_smul_divisors R A] :
-  function.injective (algebra_map R A) :=
-suffices function.injective (λ (c : R), c • (1 : A)),
-by { convert this, ext, rw [algebra.smul_def, mul_one] },
-smul_left_injective R one_ne_zero
+variable (R A)
 
-variables {R A}
-lemma iff_algebra_map_injective [ring A] [is_domain A] [algebra R A] :
-  no_zero_smul_divisors R A ↔ function.injective (algebra_map R A) :=
-⟨@@no_zero_smul_divisors.algebra_map_injective R A _ _ _ _,
- no_zero_smul_divisors.of_algebra_map_injective⟩
+theorem algebra_map_injective [Ringₓ A] [Nontrivial A] [Algebra R A] [NoZeroSmulDivisors R A] :
+    Function.Injective (algebraMap R A) :=
+  suffices Function.Injective fun c : R => c • (1 : A) by
+    convert this
+    ext
+    rw [Algebra.smul_def, mul_oneₓ]
+  smul_left_injective R one_ne_zero
 
-end ring
+variable {R A}
 
-section field
+theorem iff_algebra_map_injective [Ringₓ A] [IsDomain A] [Algebra R A] :
+    NoZeroSmulDivisors R A ↔ Function.Injective (algebraMap R A) :=
+  ⟨@NoZeroSmulDivisors.algebra_map_injective R A _ _ _ _, NoZeroSmulDivisors.of_algebra_map_injective⟩
 
-variables [field R] [semiring A] [algebra R A]
+end Ringₓ
 
-@[priority 100] -- see note [lower instance priority]
-instance algebra.no_zero_smul_divisors [nontrivial A] [no_zero_divisors A] :
-  no_zero_smul_divisors R A :=
-no_zero_smul_divisors.of_algebra_map_injective (algebra_map R A).injective
+section Field
 
-end field
+variable [Field R] [Semiringₓ A] [Algebra R A]
 
-end no_zero_smul_divisors
+-- see note [lower instance priority]
+instance (priority := 100) Algebra.no_zero_smul_divisors [Nontrivial A] [NoZeroDivisors A] : NoZeroSmulDivisors R A :=
+  NoZeroSmulDivisors.of_algebra_map_injective (algebraMap R A).Injective
 
-namespace mul_opposite
+end Field
 
-variables {R A : Type*} [comm_semiring R] [semiring A] [algebra R A]
+end NoZeroSmulDivisors
 
-instance : algebra R Aᵐᵒᵖ :=
-{ to_ring_hom := (algebra_map R A).to_opposite $ λ x y, algebra.commutes _ _,
-  smul_def' := λ c x, unop_injective $
-    by { dsimp, simp only [op_mul, algebra.smul_def, algebra.commutes, op_unop] },
-  commutes' := λ r, mul_opposite.rec $ λ x, by dsimp; simp only [← op_mul, algebra.commutes],
-  .. mul_opposite.has_scalar A R }
+namespace MulOpposite
 
-@[simp] lemma algebra_map_apply (c : R) : algebra_map R Aᵐᵒᵖ c = op (algebra_map R A c) := rfl
+variable {R A : Type _} [CommSemiringₓ R] [Semiringₓ A] [Algebra R A]
 
-end mul_opposite
-
-namespace module
-variables (R : Type u) (M : Type v) [comm_semiring R] [add_comm_monoid M] [module R M]
-
-instance : algebra R (module.End R M) :=
-algebra.of_module smul_mul_assoc (λ r f g, (smul_comm r f g).symm)
-
-lemma algebra_map_End_eq_smul_id (a : R) :
-  (algebra_map R (End R M)) a = a • linear_map.id := rfl
-
-@[simp] lemma algebra_map_End_apply (a : R) (m : M) :
-  (algebra_map R (End R M)) a m = a • m := rfl
-
-@[simp] lemma ker_algebra_map_End (K : Type u) (V : Type v)
-  [field K] [add_comm_group V] [module K V] (a : K) (ha : a ≠ 0) :
-  ((algebra_map K (End K V)) a).ker = ⊥ :=
-linear_map.ker_smul _ _ ha
-
-end module
-
-set_option old_structure_cmd true
-/-- Defining the homomorphism in the category R-Alg. -/
-@[nolint has_inhabited_instance]
-structure alg_hom (R : Type u) (A : Type v) (B : Type w)
-  [comm_semiring R] [semiring A] [semiring B] [algebra R A] [algebra R B] extends ring_hom A B :=
-(commutes' : ∀ r : R, to_fun (algebra_map R A r) = algebra_map R B r)
-
-run_cmd tactic.add_doc_string `alg_hom.to_ring_hom "Reinterpret an `alg_hom` as a `ring_hom`"
-
-infixr ` →ₐ `:25 := alg_hom _
-notation A ` →ₐ[`:25 R `] ` B := alg_hom R A B
-
-namespace alg_hom
-
-variables {R : Type u} {A : Type v} {B : Type w} {C : Type u₁} {D : Type v₁}
-
-section semiring
-
-variables [comm_semiring R] [semiring A] [semiring B] [semiring C] [semiring D]
-variables [algebra R A] [algebra R B] [algebra R C] [algebra R D]
-
-instance : has_coe_to_fun (A →ₐ[R] B) (λ _, A → B) := ⟨alg_hom.to_fun⟩
-
-initialize_simps_projections alg_hom (to_fun → apply)
-
-@[simp] lemma to_fun_eq_coe (f : A →ₐ[R] B) : f.to_fun = f := rfl
-
-instance : ring_hom_class (A →ₐ[R] B) A B :=
-{ coe := to_fun,
-  coe_injective' := λ f g h, by { cases f, cases g, congr' },
-  map_add := map_add',
-  map_zero := map_zero',
-  map_mul := map_mul',
-  map_one := map_one' }
-
-instance coe_ring_hom : has_coe (A →ₐ[R] B) (A →+* B) := ⟨alg_hom.to_ring_hom⟩
-
-instance coe_monoid_hom : has_coe (A →ₐ[R] B) (A →* B) := ⟨λ f, ↑(f : A →+* B)⟩
-
-instance coe_add_monoid_hom : has_coe (A →ₐ[R] B) (A →+ B) := ⟨λ f, ↑(f : A →+* B)⟩
-
-@[simp, norm_cast] lemma coe_mk {f : A → B} (h₁ h₂ h₃ h₄ h₅) :
-  ⇑(⟨f, h₁, h₂, h₃, h₄, h₅⟩ : A →ₐ[R] B) = f := rfl
-
--- make the coercion the simp-normal form
-@[simp] lemma to_ring_hom_eq_coe (f : A →ₐ[R] B) : f.to_ring_hom = f := rfl
-
-@[simp, norm_cast] lemma coe_to_ring_hom (f : A →ₐ[R] B) : ⇑(f : A →+* B) = f := rfl
-
-@[simp, norm_cast] lemma coe_to_monoid_hom (f : A →ₐ[R] B) : ⇑(f : A →* B) = f := rfl
-
-@[simp, norm_cast] lemma coe_to_add_monoid_hom (f : A →ₐ[R] B) : ⇑(f : A →+ B) = f := rfl
-
-variables (φ : A →ₐ[R] B)
-
-theorem coe_fn_injective : @function.injective (A →ₐ[R] B) (A → B) coe_fn := fun_like.coe_injective
-
-theorem coe_fn_inj {φ₁ φ₂ : A →ₐ[R] B} : (φ₁ : A → B) = φ₂ ↔ φ₁ = φ₂ := fun_like.coe_fn_eq
-
-theorem coe_ring_hom_injective : function.injective (coe : (A →ₐ[R] B) → (A →+* B)) :=
-λ φ₁ φ₂ H, coe_fn_injective $ show ((φ₁ : (A →+* B)) : A → B) = ((φ₂ : (A →+* B)) : A → B),
-  from congr_arg _ H
-
-theorem coe_monoid_hom_injective : function.injective (coe : (A →ₐ[R] B)  → (A →* B)) :=
-ring_hom.coe_monoid_hom_injective.comp coe_ring_hom_injective
-
-theorem coe_add_monoid_hom_injective : function.injective (coe : (A →ₐ[R] B)  → (A →+ B)) :=
-ring_hom.coe_add_monoid_hom_injective.comp coe_ring_hom_injective
-
-protected lemma congr_fun {φ₁ φ₂ : A →ₐ[R] B} (H : φ₁ = φ₂) (x : A) : φ₁ x = φ₂ x :=
-fun_like.congr_fun H x
-protected lemma congr_arg (φ : A →ₐ[R] B) {x y : A} (h : x = y) : φ x = φ y :=
-fun_like.congr_arg φ h
-
-@[ext]
-theorem ext {φ₁ φ₂ : A →ₐ[R] B} (H : ∀ x, φ₁ x = φ₂ x) : φ₁ = φ₂ := fun_like.ext _ _ H
-
-theorem ext_iff {φ₁ φ₂ : A →ₐ[R] B} : φ₁ = φ₂ ↔ ∀ x, φ₁ x = φ₂ x := fun_like.ext_iff
-
-@[simp] theorem mk_coe {f : A →ₐ[R] B} (h₁ h₂ h₃ h₄ h₅) :
-  (⟨f, h₁, h₂, h₃, h₄, h₅⟩ : A →ₐ[R] B) = f := ext $ λ _, rfl
+instance : Algebra R Aᵐᵒᵖ :=
+  { MulOpposite.hasScalar A R with toRingHom := (algebraMap R A).toOpposite fun x y => Algebra.commutes _ _,
+    smul_def' := fun c x =>
+      unop_injective <| by
+        dsimp
+        simp only [op_mul, Algebra.smul_def, Algebra.commutes, op_unop],
+    commutes' := fun r =>
+      MulOpposite.rec fun x => by
+        dsimp <;> simp only [← op_mul, Algebra.commutes] }
 
 @[simp]
-theorem commutes (r : R) : φ (algebra_map R A r) = algebra_map R B r := φ.commutes' r
+theorem algebra_map_apply (c : R) : algebraMap R Aᵐᵒᵖ c = op (algebraMap R A c) :=
+  rfl
 
-theorem comp_algebra_map : (φ : A →+* B).comp (algebra_map R A) = algebra_map R B :=
-ring_hom.ext $ φ.commutes
+end MulOpposite
 
-lemma map_add (r s : A) : φ (r + s) = φ r + φ s := map_add _ _ _
-lemma map_zero : φ 0 = 0 := map_zero _
-lemma map_mul (x y) : φ (x * y) = φ x * φ y := map_mul _ _ _
-lemma map_one : φ 1 = 1 := map_one _
-lemma map_pow (x : A) (n : ℕ) : φ (x ^ n) = (φ x) ^ n :=
-map_pow _ _ _
+namespace Module
 
-@[simp] lemma map_smul (r : R) (x : A) : φ (r • x) = r • φ x :=
-by simp only [algebra.smul_def, map_mul, commutes]
+variable (R : Type u) (M : Type v) [CommSemiringₓ R] [AddCommMonoidₓ M] [Module R M]
 
-lemma map_sum {ι : Type*} (f : ι → A) (s : finset ι) :
-  φ (∑ x in s, f x) = ∑ x in s, φ (f x) :=
-φ.to_ring_hom.map_sum f s
+instance : Algebra R (Module.End R M) :=
+  Algebra.ofModule smul_mul_assoc fun r f g => (smul_comm r f g).symm
 
-lemma map_finsupp_sum {α : Type*} [has_zero α] {ι : Type*} (f : ι →₀ α) (g : ι → α → A) :
-  φ (f.sum g) = f.sum (λ i a, φ (g i a)) :=
-φ.map_sum _ _
+theorem algebra_map_End_eq_smul_id (a : R) : (algebraMap R (End R M)) a = a • LinearMap.id :=
+  rfl
 
-lemma map_bit0 (x) : φ (bit0 x) = bit0 (φ x) := map_bit0 _ _
-lemma map_bit1 (x) : φ (bit1 x) = bit1 (φ x) := map_bit1 _ _
+@[simp]
+theorem algebra_map_End_apply (a : R) (m : M) : (algebraMap R (End R M)) a m = a • m :=
+  rfl
+
+@[simp]
+theorem ker_algebra_map_End (K : Type u) (V : Type v) [Field K] [AddCommGroupₓ V] [Module K V] (a : K) (ha : a ≠ 0) :
+    ((algebraMap K (End K V)) a).ker = ⊥ :=
+  LinearMap.ker_smul _ _ ha
+
+end Module
+
+/-- Defining the homomorphism in the category R-Alg. -/
+@[nolint has_inhabited_instance]
+structure AlgHom (R : Type u) (A : Type v) (B : Type w) [CommSemiringₓ R] [Semiringₓ A] [Semiringₓ B] [Algebra R A]
+  [Algebra R B] extends RingHom A B where
+  commutes' : ∀ r : R, to_fun (algebraMap R A r) = algebraMap R B r
+
+run_cmd
+  tactic.add_doc_string `alg_hom.to_ring_hom "Reinterpret an `alg_hom` as a `ring_hom`"
+
+-- mathport name: «expr →ₐ »
+infixr:25 " →ₐ " => AlgHom _
+
+-- mathport name: «expr →ₐ[ ] »
+notation:25 A " →ₐ[" R "] " B => AlgHom R A B
+
+namespace AlgHom
+
+variable {R : Type u} {A : Type v} {B : Type w} {C : Type u₁} {D : Type v₁}
+
+section Semiringₓ
+
+variable [CommSemiringₓ R] [Semiringₓ A] [Semiringₓ B] [Semiringₓ C] [Semiringₓ D]
+
+variable [Algebra R A] [Algebra R B] [Algebra R C] [Algebra R D]
+
+instance : CoeFun (A →ₐ[R] B) fun _ => A → B :=
+  ⟨AlgHom.toFun⟩
+
+initialize_simps_projections AlgHom (toFun → apply)
+
+@[simp]
+theorem to_fun_eq_coe (f : A →ₐ[R] B) : f.toFun = f :=
+  rfl
+
+instance : RingHomClass (A →ₐ[R] B) A B where
+  coe := toFun
+  coe_injective' := fun f g h => by
+    cases f
+    cases g
+    congr
+  map_add := map_add'
+  map_zero := map_zero'
+  map_mul := map_mul'
+  map_one := map_one'
+
+instance coeRingHom : Coe (A →ₐ[R] B) (A →+* B) :=
+  ⟨AlgHom.toRingHom⟩
+
+instance coeMonoidHom : Coe (A →ₐ[R] B) (A →* B) :=
+  ⟨fun f => ↑(f : A →+* B)⟩
+
+instance coeAddMonoidHom : Coe (A →ₐ[R] B) (A →+ B) :=
+  ⟨fun f => ↑(f : A →+* B)⟩
+
+@[simp, norm_cast]
+theorem coe_mk {f : A → B} h₁ h₂ h₃ h₄ h₅ : ⇑(⟨f, h₁, h₂, h₃, h₄, h₅⟩ : A →ₐ[R] B) = f :=
+  rfl
+
+-- make the coercion the simp-normal form
+@[simp]
+theorem to_ring_hom_eq_coe (f : A →ₐ[R] B) : f.toRingHom = f :=
+  rfl
+
+@[simp, norm_cast]
+theorem coe_to_ring_hom (f : A →ₐ[R] B) : ⇑(f : A →+* B) = f :=
+  rfl
+
+@[simp, norm_cast]
+theorem coe_to_monoid_hom (f : A →ₐ[R] B) : ⇑(f : A →* B) = f :=
+  rfl
+
+@[simp, norm_cast]
+theorem coe_to_add_monoid_hom (f : A →ₐ[R] B) : ⇑(f : A →+ B) = f :=
+  rfl
+
+variable (φ : A →ₐ[R] B)
+
+theorem coe_fn_injective : @Function.Injective (A →ₐ[R] B) (A → B) coeFn :=
+  FunLike.coe_injective
+
+theorem coe_fn_inj {φ₁ φ₂ : A →ₐ[R] B} : (φ₁ : A → B) = φ₂ ↔ φ₁ = φ₂ :=
+  FunLike.coe_fn_eq
+
+theorem coe_ring_hom_injective : Function.Injective (coe : (A →ₐ[R] B) → A →+* B) := fun φ₁ φ₂ H =>
+  coe_fn_injective <| show ((φ₁ : A →+* B) : A → B) = ((φ₂ : A →+* B) : A → B) from congr_argₓ _ H
+
+theorem coe_monoid_hom_injective : Function.Injective (coe : (A →ₐ[R] B) → A →* B) :=
+  RingHom.coe_monoid_hom_injective.comp coe_ring_hom_injective
+
+theorem coe_add_monoid_hom_injective : Function.Injective (coe : (A →ₐ[R] B) → A →+ B) :=
+  RingHom.coe_add_monoid_hom_injective.comp coe_ring_hom_injective
+
+protected theorem congr_fun {φ₁ φ₂ : A →ₐ[R] B} (H : φ₁ = φ₂) (x : A) : φ₁ x = φ₂ x :=
+  FunLike.congr_fun H x
+
+protected theorem congr_arg (φ : A →ₐ[R] B) {x y : A} (h : x = y) : φ x = φ y :=
+  FunLike.congr_arg φ h
+
+@[ext]
+theorem ext {φ₁ φ₂ : A →ₐ[R] B} (H : ∀ x, φ₁ x = φ₂ x) : φ₁ = φ₂ :=
+  FunLike.ext _ _ H
+
+theorem ext_iff {φ₁ φ₂ : A →ₐ[R] B} : φ₁ = φ₂ ↔ ∀ x, φ₁ x = φ₂ x :=
+  FunLike.ext_iff
+
+@[simp]
+theorem mk_coe {f : A →ₐ[R] B} h₁ h₂ h₃ h₄ h₅ : (⟨f, h₁, h₂, h₃, h₄, h₅⟩ : A →ₐ[R] B) = f :=
+  ext fun _ => rfl
+
+@[simp]
+theorem commutes (r : R) : φ (algebraMap R A r) = algebraMap R B r :=
+  φ.commutes' r
+
+theorem comp_algebra_map : (φ : A →+* B).comp (algebraMap R A) = algebraMap R B :=
+  RingHom.ext <| φ.commutes
+
+theorem map_add (r s : A) : φ (r + s) = φ r + φ s :=
+  map_add _ _ _
+
+theorem map_zero : φ 0 = 0 :=
+  map_zero _
+
+theorem map_mul x y : φ (x * y) = φ x * φ y :=
+  map_mul _ _ _
+
+theorem map_one : φ 1 = 1 :=
+  map_one _
+
+theorem map_pow (x : A) (n : ℕ) : φ (x ^ n) = φ x ^ n :=
+  map_pow _ _ _
+
+@[simp]
+theorem map_smul (r : R) (x : A) : φ (r • x) = r • φ x := by
+  simp only [Algebra.smul_def, map_mul, commutes]
+
+theorem map_sum {ι : Type _} (f : ι → A) (s : Finset ι) : φ (∑ x in s, f x) = ∑ x in s, φ (f x) :=
+  φ.toRingHom.map_sum f s
+
+theorem map_finsupp_sum {α : Type _} [Zero α] {ι : Type _} (f : ι →₀ α) (g : ι → α → A) :
+    φ (f.Sum g) = f.Sum fun i a => φ (g i a) :=
+  φ.map_sum _ _
+
+theorem map_bit0 x : φ (bit0 x) = bit0 (φ x) :=
+  map_bit0 _ _
+
+theorem map_bit1 x : φ (bit1 x) = bit1 (φ x) :=
+  map_bit1 _ _
 
 /-- If a `ring_hom` is `R`-linear, then it is an `alg_hom`. -/
-def mk' (f : A →+* B) (h : ∀ (c : R) x, f (c • x) = c • f x) : A →ₐ[R] B :=
-{ to_fun := f,
-  commutes' := λ c, by simp only [algebra.algebra_map_eq_smul_one, h, f.map_one],
-  .. f }
+def mk' (f : A →+* B) (h : ∀ c : R x, f (c • x) = c • f x) : A →ₐ[R] B :=
+  { f with toFun := f,
+    commutes' := fun c => by
+      simp only [Algebra.algebra_map_eq_smul_one, h, f.map_one] }
 
-@[simp] lemma coe_mk' (f : A →+* B) (h : ∀ (c : R) x, f (c • x) = c • f x) : ⇑(mk' f h) = f := rfl
+@[simp]
+theorem coe_mk' (f : A →+* B) (h : ∀ c : R x, f (c • x) = c • f x) : ⇑(mk' f h) = f :=
+  rfl
 
 section
 
-variables (R A)
+variable (R A)
+
 /-- Identity map as an `alg_hom`. -/
 protected def id : A →ₐ[R] A :=
-{ commutes' := λ _, rfl,
-  ..ring_hom.id A }
+  { RingHom.id A with commutes' := fun _ => rfl }
 
-@[simp] lemma coe_id : ⇑(alg_hom.id R A) = id := rfl
+@[simp]
+theorem coe_id : ⇑(AlgHom.id R A) = id :=
+  rfl
 
-@[simp] lemma id_to_ring_hom : (alg_hom.id R A : A →+* A) = ring_hom.id _ := rfl
+@[simp]
+theorem id_to_ring_hom : (AlgHom.id R A : A →+* A) = RingHom.id _ :=
+  rfl
 
 end
 
-lemma id_apply (p : A) : alg_hom.id R A p = p := rfl
+theorem id_apply (p : A) : AlgHom.id R A p = p :=
+  rfl
 
 /-- Composition of algebra homeomorphisms. -/
 def comp (φ₁ : B →ₐ[R] C) (φ₂ : A →ₐ[R] B) : A →ₐ[R] C :=
-{ commutes' := λ r : R, by rw [← φ₁.commutes, ← φ₂.commutes]; refl,
-  .. φ₁.to_ring_hom.comp ↑φ₂ }
+  { φ₁.toRingHom.comp ↑φ₂ with
+    commutes' := fun r : R => by
+      rw [← φ₁.commutes, ← φ₂.commutes] <;> rfl }
 
-@[simp] lemma coe_comp (φ₁ : B →ₐ[R] C) (φ₂ : A →ₐ[R] B) : ⇑(φ₁.comp φ₂) = φ₁ ∘ φ₂ := rfl
+@[simp]
+theorem coe_comp (φ₁ : B →ₐ[R] C) (φ₂ : A →ₐ[R] B) : ⇑(φ₁.comp φ₂) = φ₁ ∘ φ₂ :=
+  rfl
 
-lemma comp_apply (φ₁ : B →ₐ[R] C) (φ₂ : A →ₐ[R] B) (p : A) : φ₁.comp φ₂ p = φ₁ (φ₂ p) := rfl
+theorem comp_apply (φ₁ : B →ₐ[R] C) (φ₂ : A →ₐ[R] B) (p : A) : φ₁.comp φ₂ p = φ₁ (φ₂ p) :=
+  rfl
 
-lemma comp_to_ring_hom (φ₁ : B →ₐ[R] C) (φ₂ : A →ₐ[R] B) :
-  ⇑(φ₁.comp φ₂ : A →+* C) = (φ₁ : B →+* C).comp ↑φ₂ := rfl
+theorem comp_to_ring_hom (φ₁ : B →ₐ[R] C) (φ₂ : A →ₐ[R] B) : ⇑(φ₁.comp φ₂ : A →+* C) = (φ₁ : B →+* C).comp ↑φ₂ :=
+  rfl
 
-@[simp] theorem comp_id : φ.comp (alg_hom.id R A) = φ :=
-ext $ λ x, rfl
+@[simp]
+theorem comp_id : φ.comp (AlgHom.id R A) = φ :=
+  ext fun x => rfl
 
-@[simp] theorem id_comp : (alg_hom.id R B).comp φ = φ :=
-ext $ λ x, rfl
+@[simp]
+theorem id_comp : (AlgHom.id R B).comp φ = φ :=
+  ext fun x => rfl
 
-theorem comp_assoc (φ₁ : C →ₐ[R] D) (φ₂ : B →ₐ[R] C) (φ₃ : A →ₐ[R] B) :
-  (φ₁.comp φ₂).comp φ₃ = φ₁.comp (φ₂.comp φ₃) :=
-ext $ λ x, rfl
+theorem comp_assoc (φ₁ : C →ₐ[R] D) (φ₂ : B →ₐ[R] C) (φ₃ : A →ₐ[R] B) : (φ₁.comp φ₂).comp φ₃ = φ₁.comp (φ₂.comp φ₃) :=
+  ext fun x => rfl
 
 /-- R-Alg ⥤ R-Mod -/
-def to_linear_map : A →ₗ[R] B :=
-{ to_fun := φ,
-  map_add' := φ.map_add,
-  map_smul' := φ.map_smul }
+def toLinearMap : A →ₗ[R] B where
+  toFun := φ
+  map_add' := φ.map_add
+  map_smul' := φ.map_smul
 
-@[simp] lemma to_linear_map_apply (p : A) : φ.to_linear_map p = φ p := rfl
+@[simp]
+theorem to_linear_map_apply (p : A) : φ.toLinearMap p = φ p :=
+  rfl
 
-theorem to_linear_map_injective : function.injective (to_linear_map : _ → (A →ₗ[R] B)) :=
-λ φ₁ φ₂ h, ext $ linear_map.congr_fun h
+theorem to_linear_map_injective : Function.Injective (toLinearMap : _ → A →ₗ[R] B) := fun φ₁ φ₂ h =>
+  ext <| LinearMap.congr_fun h
 
-@[simp] lemma comp_to_linear_map (f : A →ₐ[R] B) (g : B →ₐ[R] C) :
-  (g.comp f).to_linear_map = g.to_linear_map.comp f.to_linear_map := rfl
+@[simp]
+theorem comp_to_linear_map (f : A →ₐ[R] B) (g : B →ₐ[R] C) :
+    (g.comp f).toLinearMap = g.toLinearMap.comp f.toLinearMap :=
+  rfl
 
-@[simp] lemma to_linear_map_id : to_linear_map (alg_hom.id R A) = linear_map.id :=
-linear_map.ext $ λ _, rfl
+@[simp]
+theorem to_linear_map_id : toLinearMap (AlgHom.id R A) = LinearMap.id :=
+  LinearMap.ext fun _ => rfl
 
 /-- Promote a `linear_map` to an `alg_hom` by supplying proofs about the behavior on `1` and `*`. -/
 @[simps]
-def of_linear_map (f : A →ₗ[R] B) (map_one : f 1 = 1) (map_mul : ∀ x y, f (x * y) = f x * f y) :
-  A →ₐ[R] B :=
-{ to_fun := f,
-  map_one' := map_one,
-  map_mul' := map_mul,
-  commutes' := λ c, by simp only [algebra.algebra_map_eq_smul_one, f.map_smul, map_one],
-  .. f.to_add_monoid_hom }
+def ofLinearMap (f : A →ₗ[R] B) (map_one : f 1 = 1) (map_mul : ∀ x y, f (x * y) = f x * f y) : A →ₐ[R] B :=
+  { f.toAddMonoidHom with toFun := f, map_one' := map_one, map_mul' := map_mul,
+    commutes' := fun c => by
+      simp only [Algebra.algebra_map_eq_smul_one, f.map_smul, map_one] }
 
-@[simp] lemma of_linear_map_to_linear_map (map_one) (map_mul) :
-  of_linear_map φ.to_linear_map map_one map_mul = φ :=
-by { ext, refl }
+@[simp]
+theorem of_linear_map_to_linear_map map_one map_mul : ofLinearMap φ.toLinearMap map_one map_mul = φ := by
+  ext
+  rfl
 
-@[simp] lemma to_linear_map_of_linear_map (f : A →ₗ[R] B) (map_one) (map_mul) :
-  to_linear_map (of_linear_map f map_one map_mul) = f :=
-by { ext, refl }
+@[simp]
+theorem to_linear_map_of_linear_map (f : A →ₗ[R] B) map_one map_mul : toLinearMap (ofLinearMap f map_one map_mul) = f :=
+  by
+  ext
+  rfl
 
-@[simp] lemma of_linear_map_id (map_one) (map_mul) :
-  of_linear_map linear_map.id map_one map_mul = alg_hom.id R A :=
-ext $ λ _, rfl
+@[simp]
+theorem of_linear_map_id map_one map_mul : ofLinearMap LinearMap.id map_one map_mul = AlgHom.id R A :=
+  ext fun _ => rfl
 
-lemma map_list_prod (s : list A) :
-  φ s.prod = (s.map φ).prod :=
-φ.to_ring_hom.map_list_prod s
+theorem map_list_prod (s : List A) : φ s.Prod = (s.map φ).Prod :=
+  φ.toRingHom.map_list_prod s
 
-section prod
+section Prod
 
 /-- First projection as `alg_hom`. -/
 def fst : A × B →ₐ[R] A :=
-{ commutes' := λ r, rfl, .. ring_hom.fst A B}
+  { RingHom.fst A B with commutes' := fun r => rfl }
 
 /-- Second projection as `alg_hom`. -/
 def snd : A × B →ₐ[R] B :=
-{ commutes' := λ r, rfl, .. ring_hom.snd A B}
+  { RingHom.snd A B with commutes' := fun r => rfl }
 
-end prod
+end Prod
 
-lemma algebra_map_eq_apply (f : A →ₐ[R] B) {y : R} {x : A} (h : algebra_map R A y = x) :
-  algebra_map R B y = f x :=
-h ▸ (f.commutes _).symm
+theorem algebra_map_eq_apply (f : A →ₐ[R] B) {y : R} {x : A} (h : algebraMap R A y = x) : algebraMap R B y = f x :=
+  h ▸ (f.commutes _).symm
 
-end semiring
+end Semiringₓ
 
-section comm_semiring
+section CommSemiringₓ
 
-variables [comm_semiring R] [comm_semiring A] [comm_semiring B]
-variables [algebra R A] [algebra R B] (φ : A →ₐ[R] B)
+variable [CommSemiringₓ R] [CommSemiringₓ A] [CommSemiringₓ B]
 
-lemma map_multiset_prod (s : multiset A) :
-  φ s.prod = (s.map φ).prod :=
-φ.to_ring_hom.map_multiset_prod s
+variable [Algebra R A] [Algebra R B] (φ : A →ₐ[R] B)
 
-lemma map_prod {ι : Type*} (f : ι → A) (s : finset ι) :
-  φ (∏ x in s, f x) = ∏ x in s, φ (f x) :=
-φ.to_ring_hom.map_prod f s
+theorem map_multiset_prod (s : Multiset A) : φ s.Prod = (s.map φ).Prod :=
+  φ.toRingHom.map_multiset_prod s
 
-lemma map_finsupp_prod {α : Type*} [has_zero α] {ι : Type*} (f : ι →₀ α) (g : ι → α → A) :
-  φ (f.prod g) = f.prod (λ i a, φ (g i a)) :=
-φ.map_prod _ _
+theorem map_prod {ι : Type _} (f : ι → A) (s : Finset ι) : φ (∏ x in s, f x) = ∏ x in s, φ (f x) :=
+  φ.toRingHom.map_prod f s
 
-end comm_semiring
+theorem map_finsupp_prod {α : Type _} [Zero α] {ι : Type _} (f : ι →₀ α) (g : ι → α → A) :
+    φ (f.Prod g) = f.Prod fun i a => φ (g i a) :=
+  φ.map_prod _ _
 
-section ring
+end CommSemiringₓ
 
-variables [comm_semiring R] [ring A] [ring B]
-variables [algebra R A] [algebra R B] (φ : A →ₐ[R] B)
+section Ringₓ
 
-lemma map_neg (x) : φ (-x) = -φ x := map_neg _ _
-lemma map_sub (x y) : φ (x - y) = φ x - φ y := map_sub _ _ _
+variable [CommSemiringₓ R] [Ringₓ A] [Ringₓ B]
 
-@[simp] lemma map_int_cast (n : ℤ) : φ n = n :=
-φ.to_ring_hom.map_int_cast n
+variable [Algebra R A] [Algebra R B] (φ : A →ₐ[R] B)
 
-end ring
+theorem map_neg x : φ (-x) = -φ x :=
+  map_neg _ _
 
-section division_ring
+theorem map_sub x y : φ (x - y) = φ x - φ y :=
+  map_sub _ _ _
 
-variables [comm_ring R] [division_ring A] [division_ring B]
-variables [algebra R A] [algebra R B] (φ : A →ₐ[R] B)
+@[simp]
+theorem map_int_cast (n : ℤ) : φ n = n :=
+  φ.toRingHom.map_int_cast n
 
-@[simp] lemma map_inv (x) : φ (x⁻¹) = (φ x)⁻¹ :=
-φ.to_ring_hom.map_inv x
+end Ringₓ
 
-@[simp] lemma map_div (x y) : φ (x / y) = φ x / φ y :=
-φ.to_ring_hom.map_div x y
+section DivisionRing
 
-end division_ring
+variable [CommRingₓ R] [DivisionRing A] [DivisionRing B]
 
-theorem injective_iff {R A B : Type*} [comm_semiring R] [ring A] [semiring B]
-  [algebra R A] [algebra R B] (f : A →ₐ[R] B) :
-  function.injective f ↔ (∀ x, f x = 0 → x = 0) :=
-ring_hom.injective_iff (f : A →+* B)
+variable [Algebra R A] [Algebra R B] (φ : A →ₐ[R] B)
 
-end alg_hom
+@[simp]
+theorem map_inv x : φ x⁻¹ = (φ x)⁻¹ :=
+  φ.toRingHom.map_inv x
 
-@[simp] lemma rat.smul_one_eq_coe {A : Type*} [division_ring A] [algebra ℚ A] (m : ℚ) :
-  m • (1 : A) = ↑m :=
-by rw [algebra.smul_def, mul_one, ring_hom.eq_rat_cast]
+@[simp]
+theorem map_div x y : φ (x / y) = φ x / φ y :=
+  φ.toRingHom.map_div x y
 
-set_option old_structure_cmd true
+end DivisionRing
+
+theorem injective_iff {R A B : Type _} [CommSemiringₓ R] [Ringₓ A] [Semiringₓ B] [Algebra R A] [Algebra R B]
+    (f : A →ₐ[R] B) : Function.Injective f ↔ ∀ x, f x = 0 → x = 0 :=
+  RingHom.injective_iff (f : A →+* B)
+
+end AlgHom
+
+@[simp]
+theorem Rat.smul_one_eq_coe {A : Type _} [DivisionRing A] [Algebra ℚ A] (m : ℚ) : m • (1 : A) = ↑m := by
+  rw [Algebra.smul_def, mul_oneₓ, RingHom.eq_rat_cast]
+
 /-- An equivalence of algebras is an equivalence of rings commuting with the actions of scalars. -/
-structure alg_equiv (R : Type u) (A : Type v) (B : Type w)
-  [comm_semiring R] [semiring A] [semiring B] [algebra R A] [algebra R B]
-  extends A ≃ B, A ≃* B, A ≃+ B, A ≃+* B :=
-(commutes' : ∀ r : R, to_fun (algebra_map R A r) = algebra_map R B r)
+structure AlgEquiv (R : Type u) (A : Type v) (B : Type w) [CommSemiringₓ R] [Semiringₓ A] [Semiringₓ B] [Algebra R A]
+  [Algebra R B] extends A ≃ B, A ≃* B, A ≃+ B, A ≃+* B where
+  commutes' : ∀ r : R, to_fun (algebraMap R A r) = algebraMap R B r
 
-attribute [nolint doc_blame] alg_equiv.to_ring_equiv
-attribute [nolint doc_blame] alg_equiv.to_equiv
-attribute [nolint doc_blame] alg_equiv.to_add_equiv
-attribute [nolint doc_blame] alg_equiv.to_mul_equiv
+attribute [nolint doc_blame] AlgEquiv.toRingEquiv
 
-notation A ` ≃ₐ[`:50 R `] ` A' := alg_equiv R A A'
+attribute [nolint doc_blame] AlgEquiv.toEquiv
 
-namespace alg_equiv
+attribute [nolint doc_blame] AlgEquiv.toAddEquiv
 
-variables {R : Type u} {A₁ : Type v} {A₂ : Type w} {A₃ : Type u₁}
+attribute [nolint doc_blame] AlgEquiv.toMulEquiv
 
-section semiring
+-- mathport name: «expr ≃ₐ[ ] »
+notation:50 A " ≃ₐ[" R "] " A' => AlgEquiv R A A'
 
-variables [comm_semiring R] [semiring A₁] [semiring A₂] [semiring A₃]
-variables [algebra R A₁] [algebra R A₂] [algebra R A₃]
-variables (e : A₁ ≃ₐ[R] A₂)
+namespace AlgEquiv
 
-instance : ring_equiv_class (A₁ ≃ₐ[R] A₂) A₁ A₂ :=
-{ coe := to_fun,
-  inv := inv_fun,
-  coe_injective' := λ f g h₁ h₂, by { cases f, cases g, congr' },
-  map_add := map_add',
-  map_mul := map_mul',
-  left_inv := left_inv,
-  right_inv := right_inv }
+variable {R : Type u} {A₁ : Type v} {A₂ : Type w} {A₃ : Type u₁}
 
-/--  Helper instance for when there's too many metavariables to apply
+section Semiringₓ
+
+variable [CommSemiringₓ R] [Semiringₓ A₁] [Semiringₓ A₂] [Semiringₓ A₃]
+
+variable [Algebra R A₁] [Algebra R A₂] [Algebra R A₃]
+
+variable (e : A₁ ≃ₐ[R] A₂)
+
+instance : RingEquivClass (A₁ ≃ₐ[R] A₂) A₁ A₂ where
+  coe := toFun
+  inv := invFun
+  coe_injective' := fun f g h₁ h₂ => by
+    cases f
+    cases g
+    congr
+  map_add := map_add'
+  map_mul := map_mul'
+  left_inv := left_inv
+  right_inv := right_inv
+
+/-- Helper instance for when there's too many metavariables to apply
 `fun_like.has_coe_to_fun` directly. -/
-instance : has_coe_to_fun (A₁ ≃ₐ[R] A₂) (λ _, A₁ → A₂) := ⟨alg_equiv.to_fun⟩
+instance : CoeFun (A₁ ≃ₐ[R] A₂) fun _ => A₁ → A₂ :=
+  ⟨AlgEquiv.toFun⟩
 
 @[ext]
-lemma ext {f g : A₁ ≃ₐ[R] A₂} (h : ∀ a, f a = g a) : f = g := fun_like.ext f g h
+theorem ext {f g : A₁ ≃ₐ[R] A₂} (h : ∀ a, f a = g a) : f = g :=
+  FunLike.ext f g h
 
-protected lemma congr_arg {f : A₁ ≃ₐ[R] A₂} {x x' : A₁} : x = x' → f x = f x' :=
-fun_like.congr_arg f
+protected theorem congr_arg {f : A₁ ≃ₐ[R] A₂} {x x' : A₁} : x = x' → f x = f x' :=
+  FunLike.congr_arg f
 
-protected lemma congr_fun {f g : A₁ ≃ₐ[R] A₂} (h : f = g) (x : A₁) : f x = g x :=
-fun_like.congr_fun h x
+protected theorem congr_fun {f g : A₁ ≃ₐ[R] A₂} (h : f = g) (x : A₁) : f x = g x :=
+  FunLike.congr_fun h x
 
-protected lemma ext_iff {f g : A₁ ≃ₐ[R] A₂} : f = g ↔ ∀ x, f x = g x := fun_like.ext_iff
+protected theorem ext_iff {f g : A₁ ≃ₐ[R] A₂} : f = g ↔ ∀ x, f x = g x :=
+  FunLike.ext_iff
 
-lemma coe_fun_injective : @function.injective (A₁ ≃ₐ[R] A₂) (A₁ → A₂) (λ e, (e : A₁ → A₂)) :=
-fun_like.coe_injective
+theorem coe_fun_injective : @Function.Injective (A₁ ≃ₐ[R] A₂) (A₁ → A₂) fun e => (e : A₁ → A₂) :=
+  FunLike.coe_injective
 
-instance has_coe_to_ring_equiv : has_coe (A₁ ≃ₐ[R] A₂) (A₁ ≃+* A₂) := ⟨alg_equiv.to_ring_equiv⟩
+instance hasCoeToRingEquiv : Coe (A₁ ≃ₐ[R] A₂) (A₁ ≃+* A₂) :=
+  ⟨AlgEquiv.toRingEquiv⟩
 
-@[simp] lemma coe_mk {to_fun inv_fun left_inv right_inv map_mul map_add commutes} :
-  ⇑(⟨to_fun, inv_fun, left_inv, right_inv, map_mul, map_add, commutes⟩ : A₁ ≃ₐ[R] A₂) = to_fun :=
-rfl
+@[simp]
+theorem coe_mk {to_fun inv_fun left_inv right_inv map_mul map_add commutes} :
+    ⇑(⟨to_fun, inv_fun, left_inv, right_inv, map_mul, map_add, commutes⟩ : A₁ ≃ₐ[R] A₂) = to_fun :=
+  rfl
 
-@[simp] theorem mk_coe (e : A₁ ≃ₐ[R] A₂) (e' h₁ h₂ h₃ h₄ h₅) :
-  (⟨e, e', h₁, h₂, h₃, h₄, h₅⟩ : A₁ ≃ₐ[R] A₂) = e := ext $ λ _, rfl
+@[simp]
+theorem mk_coe (e : A₁ ≃ₐ[R] A₂) e' h₁ h₂ h₃ h₄ h₅ : (⟨e, e', h₁, h₂, h₃, h₄, h₅⟩ : A₁ ≃ₐ[R] A₂) = e :=
+  ext fun _ => rfl
 
-@[simp] lemma to_fun_eq_coe (e : A₁ ≃ₐ[R] A₂) : e.to_fun = e := rfl
+@[simp]
+theorem to_fun_eq_coe (e : A₁ ≃ₐ[R] A₂) : e.toFun = e :=
+  rfl
 
-@[simp] lemma to_ring_equiv_eq_coe : e.to_ring_equiv = e := rfl
+@[simp]
+theorem to_ring_equiv_eq_coe : e.toRingEquiv = e :=
+  rfl
 
-@[simp, norm_cast] lemma coe_ring_equiv : ((e : A₁ ≃+* A₂) : A₁ → A₂) = e := rfl
-lemma coe_ring_equiv' : (e.to_ring_equiv : A₁ → A₂) = e := rfl
+@[simp, norm_cast]
+theorem coe_ring_equiv : ((e : A₁ ≃+* A₂) : A₁ → A₂) = e :=
+  rfl
 
-lemma coe_ring_equiv_injective : function.injective (coe : (A₁ ≃ₐ[R] A₂) → (A₁ ≃+* A₂)) :=
-λ e₁ e₂ h, ext $ ring_equiv.congr_fun h
+theorem coe_ring_equiv' : (e.toRingEquiv : A₁ → A₂) = e :=
+  rfl
 
-protected lemma map_add : ∀ x y, e (x + y) = e x + e y := map_add e
-protected lemma map_zero : e 0 = 0 := map_zero e
-protected lemma map_mul : ∀ x y, e (x * y) = (e x) * (e y) := map_mul e
-protected lemma map_one : e 1 = 1 := map_one e
+theorem coe_ring_equiv_injective : Function.Injective (coe : (A₁ ≃ₐ[R] A₂) → A₁ ≃+* A₂) := fun e₁ e₂ h =>
+  ext <| RingEquiv.congr_fun h
 
-@[simp] lemma commutes : ∀ (r : R), e (algebra_map R A₁ r) = algebra_map R A₂ r :=
+protected theorem map_add : ∀ x y, e (x + y) = e x + e y :=
+  map_add e
+
+protected theorem map_zero : e 0 = 0 :=
+  map_zero e
+
+protected theorem map_mul : ∀ x y, e (x * y) = e x * e y :=
+  map_mul e
+
+protected theorem map_one : e 1 = 1 :=
+  map_one e
+
+@[simp]
+theorem commutes : ∀ r : R, e (algebraMap R A₁ r) = algebraMap R A₂ r :=
   e.commutes'
 
-@[simp] lemma map_smul (r : R) (x : A₁) : e (r • x) = r • e x :=
-by simp only [algebra.smul_def, map_mul, commutes]
+@[simp]
+theorem map_smul (r : R) (x : A₁) : e (r • x) = r • e x := by
+  simp only [Algebra.smul_def, map_mul, commutes]
 
-lemma map_sum {ι : Type*} (f : ι → A₁) (s : finset ι) :
-  e (∑ x in s, f x) = ∑ x in s, e (f x) :=
-e.to_add_equiv.map_sum f s
+theorem map_sum {ι : Type _} (f : ι → A₁) (s : Finset ι) : e (∑ x in s, f x) = ∑ x in s, e (f x) :=
+  e.toAddEquiv.map_sum f s
 
-lemma map_finsupp_sum {α : Type*} [has_zero α] {ι : Type*} (f : ι →₀ α) (g : ι → α → A₁) :
-  e (f.sum g) = f.sum (λ i b, e (g i b)) :=
-e.map_sum _ _
+theorem map_finsupp_sum {α : Type _} [Zero α] {ι : Type _} (f : ι →₀ α) (g : ι → α → A₁) :
+    e (f.Sum g) = f.Sum fun i b => e (g i b) :=
+  e.map_sum _ _
 
 /-- Interpret an algebra equivalence as an algebra homomorphism.
 
 This definition is included for symmetry with the other `to_*_hom` projections.
 The `simp` normal form is to use the coercion of the `has_coe_to_alg_hom` instance. -/
-def to_alg_hom : A₁ →ₐ[R] A₂ :=
-{ map_one' := e.map_one, map_zero' := e.map_zero, ..e }
+def toAlgHom : A₁ →ₐ[R] A₂ :=
+  { e with map_one' := e.map_one, map_zero' := e.map_zero }
 
-instance has_coe_to_alg_hom : has_coe (A₁ ≃ₐ[R] A₂) (A₁ →ₐ[R] A₂) :=
-⟨to_alg_hom⟩
+instance hasCoeToAlgHom : Coe (A₁ ≃ₐ[R] A₂) (A₁ →ₐ[R] A₂) :=
+  ⟨toAlgHom⟩
 
-@[simp] lemma to_alg_hom_eq_coe : e.to_alg_hom = e := rfl
+@[simp]
+theorem to_alg_hom_eq_coe : e.toAlgHom = e :=
+  rfl
 
-@[simp, norm_cast] lemma coe_alg_hom : ((e : A₁ →ₐ[R] A₂) : A₁ → A₂) = e :=
-rfl
+@[simp, norm_cast]
+theorem coe_alg_hom : ((e : A₁ →ₐ[R] A₂) : A₁ → A₂) = e :=
+  rfl
 
-lemma coe_alg_hom_injective : function.injective (coe : (A₁ ≃ₐ[R] A₂) → (A₁ →ₐ[R] A₂)) :=
-λ e₁ e₂ h, ext $ alg_hom.congr_fun h
+theorem coe_alg_hom_injective : Function.Injective (coe : (A₁ ≃ₐ[R] A₂) → A₁ →ₐ[R] A₂) := fun e₁ e₂ h =>
+  ext <| AlgHom.congr_fun h
 
 /-- The two paths coercion can take to a `ring_hom` are equivalent -/
-lemma coe_ring_hom_commutes : ((e : A₁ →ₐ[R] A₂) : A₁ →+* A₂) = ((e : A₁ ≃+* A₂) : A₁ →+* A₂) :=
-rfl
+theorem coe_ring_hom_commutes : ((e : A₁ →ₐ[R] A₂) : A₁ →+* A₂) = ((e : A₁ ≃+* A₂) : A₁ →+* A₂) :=
+  rfl
 
-protected lemma map_pow : ∀ (x : A₁) (n : ℕ), e (x ^ n) = (e x) ^ n := e.to_alg_hom.map_pow
-protected lemma injective : function.injective e := equiv_like.injective e
-protected lemma surjective : function.surjective e := equiv_like.surjective e
-protected lemma bijective : function.bijective e := equiv_like.bijective e
+protected theorem map_pow : ∀ x : A₁ n : ℕ, e (x ^ n) = e x ^ n :=
+  e.toAlgHom.map_pow
+
+protected theorem injective : Function.Injective e :=
+  EquivLike.injective e
+
+protected theorem surjective : Function.Surjective e :=
+  EquivLike.surjective e
+
+protected theorem bijective : Function.Bijective e :=
+  EquivLike.bijective e
 
 /-- Algebra equivalences are reflexive. -/
-@[refl] def refl : A₁ ≃ₐ[R] A₁ := {commutes' := λ r, rfl, ..(1 : A₁ ≃+* A₁)}
+@[refl]
+def refl : A₁ ≃ₐ[R] A₁ :=
+  { (1 : A₁ ≃+* A₁) with commutes' := fun r => rfl }
 
-instance : inhabited (A₁ ≃ₐ[R] A₁) := ⟨refl⟩
+instance : Inhabited (A₁ ≃ₐ[R] A₁) :=
+  ⟨refl⟩
 
-@[simp] lemma refl_to_alg_hom : ↑(refl : A₁ ≃ₐ[R] A₁) = alg_hom.id R A₁ := rfl
+@[simp]
+theorem refl_to_alg_hom : ↑(refl : A₁ ≃ₐ[R] A₁) = AlgHom.id R A₁ :=
+  rfl
 
-@[simp] lemma coe_refl : ⇑(refl : A₁ ≃ₐ[R] A₁) = id := rfl
+@[simp]
+theorem coe_refl : ⇑(refl : A₁ ≃ₐ[R] A₁) = id :=
+  rfl
 
 /-- Algebra equivalences are symmetric. -/
 @[symm]
 def symm (e : A₁ ≃ₐ[R] A₂) : A₂ ≃ₐ[R] A₁ :=
-{ commutes' := λ r, by { rw ←e.to_ring_equiv.symm_apply_apply (algebra_map R A₁ r), congr,
-                         change _ = e _, rw e.commutes, },
-  ..e.to_ring_equiv.symm, }
+  { e.toRingEquiv.symm with
+    commutes' := fun r => by
+      rw [← e.to_ring_equiv.symm_apply_apply (algebraMap R A₁ r)]
+      congr
+      change _ = e _
+      rw [e.commutes] }
 
 /-- See Note [custom simps projection] -/
-def simps.symm_apply (e : A₁ ≃ₐ[R] A₂) : A₂ → A₁ := e.symm
+def Simps.symmApply (e : A₁ ≃ₐ[R] A₂) : A₂ → A₁ :=
+  e.symm
 
-initialize_simps_projections alg_equiv (to_fun → apply, inv_fun → symm_apply)
+initialize_simps_projections AlgEquiv (toFun → apply, invFun → symmApply)
 
-@[simp] lemma inv_fun_eq_symm {e : A₁ ≃ₐ[R] A₂} : e.inv_fun = e.symm := rfl
+@[simp]
+theorem inv_fun_eq_symm {e : A₁ ≃ₐ[R] A₂} : e.invFun = e.symm :=
+  rfl
 
-@[simp] lemma symm_symm (e : A₁ ≃ₐ[R] A₂) : e.symm.symm = e :=
-by { ext, refl, }
+@[simp]
+theorem symm_symm (e : A₁ ≃ₐ[R] A₂) : e.symm.symm = e := by
+  ext
+  rfl
 
-lemma symm_bijective : function.bijective (symm : (A₁ ≃ₐ[R] A₂) → (A₂ ≃ₐ[R] A₁)) :=
-equiv.bijective ⟨symm, symm, symm_symm, symm_symm⟩
+theorem symm_bijective : Function.Bijective (symm : (A₁ ≃ₐ[R] A₂) → A₂ ≃ₐ[R] A₁) :=
+  Equivₓ.bijective ⟨symm, symm, symm_symm, symm_symm⟩
 
-@[simp] lemma mk_coe' (e : A₁ ≃ₐ[R] A₂) (f h₁ h₂ h₃ h₄ h₅) :
-  (⟨f, e, h₁, h₂, h₃, h₄, h₅⟩ : A₂ ≃ₐ[R] A₁) = e.symm :=
-symm_bijective.injective $ ext $ λ x, rfl
+@[simp]
+theorem mk_coe' (e : A₁ ≃ₐ[R] A₂) f h₁ h₂ h₃ h₄ h₅ : (⟨f, e, h₁, h₂, h₃, h₄, h₅⟩ : A₂ ≃ₐ[R] A₁) = e.symm :=
+  symm_bijective.Injective <| ext fun x => rfl
 
-@[simp] theorem symm_mk (f f') (h₁ h₂ h₃ h₄ h₅) :
-  (⟨f, f', h₁, h₂, h₃, h₄, h₅⟩ : A₁ ≃ₐ[R] A₂).symm =
-  { to_fun := f', inv_fun := f,
-    ..(⟨f, f', h₁, h₂, h₃, h₄, h₅⟩ : A₁ ≃ₐ[R] A₂).symm } := rfl
+@[simp]
+theorem symm_mk f f' h₁ h₂ h₃ h₄ h₅ :
+    (⟨f, f', h₁, h₂, h₃, h₄, h₅⟩ : A₁ ≃ₐ[R] A₂).symm =
+      { (⟨f, f', h₁, h₂, h₃, h₄, h₅⟩ : A₁ ≃ₐ[R] A₂).symm with toFun := f', invFun := f } :=
+  rfl
 
 /-- Algebra equivalences are transitive. -/
 @[trans]
 def trans (e₁ : A₁ ≃ₐ[R] A₂) (e₂ : A₂ ≃ₐ[R] A₃) : A₁ ≃ₐ[R] A₃ :=
-{ commutes' := λ r, show e₂.to_fun (e₁.to_fun _) = _, by rw [e₁.commutes', e₂.commutes'],
-  ..(e₁.to_ring_equiv.trans e₂.to_ring_equiv), }
+  { e₁.toRingEquiv.trans e₂.toRingEquiv with
+    commutes' := fun r =>
+      show e₂.toFun (e₁.toFun _) = _ by
+        rw [e₁.commutes', e₂.commutes'] }
 
-@[simp] lemma apply_symm_apply (e : A₁ ≃ₐ[R] A₂) : ∀ x, e (e.symm x) = x :=
-  e.to_equiv.apply_symm_apply
+@[simp]
+theorem apply_symm_apply (e : A₁ ≃ₐ[R] A₂) : ∀ x, e (e.symm x) = x :=
+  e.toEquiv.apply_symm_apply
 
-@[simp] lemma symm_apply_apply (e : A₁ ≃ₐ[R] A₂) : ∀ x, e.symm (e x) = x :=
-  e.to_equiv.symm_apply_apply
+@[simp]
+theorem symm_apply_apply (e : A₁ ≃ₐ[R] A₂) : ∀ x, e.symm (e x) = x :=
+  e.toEquiv.symm_apply_apply
 
-@[simp] lemma symm_trans_apply (e₁ : A₁ ≃ₐ[R] A₂) (e₂ : A₂ ≃ₐ[R] A₃) (x : A₃) :
-  (e₁.trans e₂).symm x = e₁.symm (e₂.symm x) := rfl
+@[simp]
+theorem symm_trans_apply (e₁ : A₁ ≃ₐ[R] A₂) (e₂ : A₂ ≃ₐ[R] A₃) (x : A₃) : (e₁.trans e₂).symm x = e₁.symm (e₂.symm x) :=
+  rfl
 
-@[simp] lemma coe_trans (e₁ : A₁ ≃ₐ[R] A₂) (e₂ : A₂ ≃ₐ[R] A₃) :
-  ⇑(e₁.trans e₂) = e₂ ∘ e₁ := rfl
+@[simp]
+theorem coe_trans (e₁ : A₁ ≃ₐ[R] A₂) (e₂ : A₂ ≃ₐ[R] A₃) : ⇑(e₁.trans e₂) = e₂ ∘ e₁ :=
+  rfl
 
-lemma trans_apply (e₁ : A₁ ≃ₐ[R] A₂) (e₂ : A₂ ≃ₐ[R] A₃) (x : A₁) :
-  (e₁.trans e₂) x = e₂ (e₁ x) := rfl
+theorem trans_apply (e₁ : A₁ ≃ₐ[R] A₂) (e₂ : A₂ ≃ₐ[R] A₃) (x : A₁) : (e₁.trans e₂) x = e₂ (e₁ x) :=
+  rfl
 
-@[simp] lemma comp_symm (e : A₁ ≃ₐ[R] A₂) :
-  alg_hom.comp (e : A₁ →ₐ[R] A₂) ↑e.symm = alg_hom.id R A₂ :=
-by { ext, simp }
+@[simp]
+theorem comp_symm (e : A₁ ≃ₐ[R] A₂) : AlgHom.comp (e : A₁ →ₐ[R] A₂) ↑e.symm = AlgHom.id R A₂ := by
+  ext
+  simp
 
-@[simp] lemma symm_comp (e : A₁ ≃ₐ[R] A₂) :
-  alg_hom.comp ↑e.symm (e : A₁ →ₐ[R] A₂) = alg_hom.id R A₁ :=
-by { ext, simp }
+@[simp]
+theorem symm_comp (e : A₁ ≃ₐ[R] A₂) : AlgHom.comp ↑e.symm (e : A₁ →ₐ[R] A₂) = AlgHom.id R A₁ := by
+  ext
+  simp
 
-theorem left_inverse_symm (e : A₁ ≃ₐ[R] A₂) : function.left_inverse e.symm e := e.left_inv
+theorem left_inverse_symm (e : A₁ ≃ₐ[R] A₂) : Function.LeftInverse e.symm e :=
+  e.left_inv
 
-theorem right_inverse_symm (e : A₁ ≃ₐ[R] A₂) : function.right_inverse e.symm e := e.right_inv
+theorem right_inverse_symm (e : A₁ ≃ₐ[R] A₂) : Function.RightInverse e.symm e :=
+  e.right_inv
 
 /-- If `A₁` is equivalent to `A₁'` and `A₂` is equivalent to `A₂'`, then the type of maps
 `A₁ →ₐ[R] A₂` is equivalent to the type of maps `A₁' →ₐ[R] A₂'`. -/
-def arrow_congr {A₁' A₂' : Type*} [semiring A₁'] [semiring A₂'] [algebra R A₁'] [algebra R A₂']
-  (e₁ : A₁ ≃ₐ[R] A₁') (e₂ : A₂ ≃ₐ[R] A₂') : (A₁ →ₐ[R] A₂) ≃ (A₁' →ₐ[R] A₂') :=
-{ to_fun := λ f, (e₂.to_alg_hom.comp f).comp e₁.symm.to_alg_hom,
-  inv_fun := λ f, (e₂.symm.to_alg_hom.comp f).comp e₁.to_alg_hom,
-  left_inv := λ f, by { simp only [alg_hom.comp_assoc, to_alg_hom_eq_coe, symm_comp],
-    simp only [←alg_hom.comp_assoc, symm_comp, alg_hom.id_comp, alg_hom.comp_id] },
-  right_inv := λ f, by { simp only [alg_hom.comp_assoc, to_alg_hom_eq_coe, comp_symm],
-    simp only [←alg_hom.comp_assoc, comp_symm, alg_hom.id_comp, alg_hom.comp_id] } }
+def arrowCongr {A₁' A₂' : Type _} [Semiringₓ A₁'] [Semiringₓ A₂'] [Algebra R A₁'] [Algebra R A₂'] (e₁ : A₁ ≃ₐ[R] A₁')
+    (e₂ : A₂ ≃ₐ[R] A₂') : (A₁ →ₐ[R] A₂) ≃ (A₁' →ₐ[R] A₂') where
+  toFun := fun f => (e₂.toAlgHom.comp f).comp e₁.symm.toAlgHom
+  invFun := fun f => (e₂.symm.toAlgHom.comp f).comp e₁.toAlgHom
+  left_inv := fun f => by
+    simp only [AlgHom.comp_assoc, to_alg_hom_eq_coe, symm_comp]
+    simp only [← AlgHom.comp_assoc, symm_comp, AlgHom.id_comp, AlgHom.comp_id]
+  right_inv := fun f => by
+    simp only [AlgHom.comp_assoc, to_alg_hom_eq_coe, comp_symm]
+    simp only [← AlgHom.comp_assoc, comp_symm, AlgHom.id_comp, AlgHom.comp_id]
 
-lemma arrow_congr_comp {A₁' A₂' A₃' : Type*} [semiring A₁'] [semiring A₂'] [semiring A₃']
-  [algebra R A₁'] [algebra R A₂'] [algebra R A₃'] (e₁ : A₁ ≃ₐ[R] A₁') (e₂ : A₂ ≃ₐ[R] A₂')
-  (e₃ : A₃ ≃ₐ[R] A₃') (f : A₁ →ₐ[R] A₂) (g : A₂ →ₐ[R] A₃) :
-  arrow_congr e₁ e₃ (g.comp f) = (arrow_congr e₂ e₃ g).comp (arrow_congr e₁ e₂ f) :=
-by { ext, simp only [arrow_congr, equiv.coe_fn_mk, alg_hom.comp_apply],
-  congr, exact (e₂.symm_apply_apply _).symm }
-
-@[simp] lemma arrow_congr_refl :
-  arrow_congr alg_equiv.refl alg_equiv.refl = equiv.refl (A₁ →ₐ[R] A₂) :=
-by { ext, refl }
-
-@[simp] lemma arrow_congr_trans {A₁' A₂' A₃' : Type*} [semiring A₁'] [semiring A₂'] [semiring A₃']
-  [algebra R A₁'] [algebra R A₂'] [algebra R A₃'] (e₁ : A₁ ≃ₐ[R] A₂) (e₁' : A₁' ≃ₐ[R] A₂')
-  (e₂ : A₂ ≃ₐ[R] A₃) (e₂' : A₂' ≃ₐ[R] A₃') :
-  arrow_congr (e₁.trans e₂) (e₁'.trans e₂') = (arrow_congr e₁ e₁').trans (arrow_congr e₂ e₂') :=
-by { ext, refl }
-
-@[simp] lemma arrow_congr_symm {A₁' A₂' : Type*} [semiring A₁'] [semiring A₂']
-  [algebra R A₁'] [algebra R A₂'] (e₁ : A₁ ≃ₐ[R] A₁') (e₂ : A₂ ≃ₐ[R] A₂') :
-  (arrow_congr e₁ e₂).symm = arrow_congr e₁.symm e₂.symm :=
-by { ext, refl }
-
-/-- If an algebra morphism has an inverse, it is a algebra isomorphism. -/
-def of_alg_hom (f : A₁ →ₐ[R] A₂) (g : A₂ →ₐ[R] A₁) (h₁ : f.comp g = alg_hom.id R A₂)
-  (h₂ : g.comp f = alg_hom.id R A₁) : A₁ ≃ₐ[R] A₂ :=
-{ to_fun    := f,
-  inv_fun   := g,
-  left_inv  := alg_hom.ext_iff.1 h₂,
-  right_inv := alg_hom.ext_iff.1 h₁,
-  ..f }
-
-lemma coe_alg_hom_of_alg_hom (f : A₁ →ₐ[R] A₂) (g : A₂ →ₐ[R] A₁) (h₁ h₂) :
-  ↑(of_alg_hom f g h₁ h₂) = f := alg_hom.ext $ λ _, rfl
+theorem arrow_congr_comp {A₁' A₂' A₃' : Type _} [Semiringₓ A₁'] [Semiringₓ A₂'] [Semiringₓ A₃'] [Algebra R A₁']
+    [Algebra R A₂'] [Algebra R A₃'] (e₁ : A₁ ≃ₐ[R] A₁') (e₂ : A₂ ≃ₐ[R] A₂') (e₃ : A₃ ≃ₐ[R] A₃') (f : A₁ →ₐ[R] A₂)
+    (g : A₂ →ₐ[R] A₃) : arrowCongr e₁ e₃ (g.comp f) = (arrowCongr e₂ e₃ g).comp (arrowCongr e₁ e₂ f) := by
+  ext
+  simp only [arrow_congr, Equivₓ.coe_fn_mk, AlgHom.comp_apply]
+  congr
+  exact (e₂.symm_apply_apply _).symm
 
 @[simp]
-lemma of_alg_hom_coe_alg_hom (f : A₁ ≃ₐ[R] A₂) (g : A₂ →ₐ[R] A₁) (h₁ h₂) :
-  of_alg_hom ↑f g h₁ h₂ = f := ext $ λ _, rfl
+theorem arrow_congr_refl : arrowCongr AlgEquiv.refl AlgEquiv.refl = Equivₓ.refl (A₁ →ₐ[R] A₂) := by
+  ext
+  rfl
 
-lemma of_alg_hom_symm (f : A₁ →ₐ[R] A₂) (g : A₂ →ₐ[R] A₁) (h₁ h₂) :
-  (of_alg_hom f g h₁ h₂).symm = of_alg_hom g f h₂ h₁ := rfl
+@[simp]
+theorem arrow_congr_trans {A₁' A₂' A₃' : Type _} [Semiringₓ A₁'] [Semiringₓ A₂'] [Semiringₓ A₃'] [Algebra R A₁']
+    [Algebra R A₂'] [Algebra R A₃'] (e₁ : A₁ ≃ₐ[R] A₂) (e₁' : A₁' ≃ₐ[R] A₂') (e₂ : A₂ ≃ₐ[R] A₃) (e₂' : A₂' ≃ₐ[R] A₃') :
+    arrowCongr (e₁.trans e₂) (e₁'.trans e₂') = (arrowCongr e₁ e₁').trans (arrowCongr e₂ e₂') := by
+  ext
+  rfl
+
+@[simp]
+theorem arrow_congr_symm {A₁' A₂' : Type _} [Semiringₓ A₁'] [Semiringₓ A₂'] [Algebra R A₁'] [Algebra R A₂']
+    (e₁ : A₁ ≃ₐ[R] A₁') (e₂ : A₂ ≃ₐ[R] A₂') : (arrowCongr e₁ e₂).symm = arrowCongr e₁.symm e₂.symm := by
+  ext
+  rfl
+
+/-- If an algebra morphism has an inverse, it is a algebra isomorphism. -/
+def ofAlgHom (f : A₁ →ₐ[R] A₂) (g : A₂ →ₐ[R] A₁) (h₁ : f.comp g = AlgHom.id R A₂) (h₂ : g.comp f = AlgHom.id R A₁) :
+    A₁ ≃ₐ[R] A₂ :=
+  { f with toFun := f, invFun := g, left_inv := AlgHom.ext_iff.1 h₂, right_inv := AlgHom.ext_iff.1 h₁ }
+
+theorem coe_alg_hom_of_alg_hom (f : A₁ →ₐ[R] A₂) (g : A₂ →ₐ[R] A₁) h₁ h₂ : ↑(ofAlgHom f g h₁ h₂) = f :=
+  AlgHom.ext fun _ => rfl
+
+@[simp]
+theorem of_alg_hom_coe_alg_hom (f : A₁ ≃ₐ[R] A₂) (g : A₂ →ₐ[R] A₁) h₁ h₂ : ofAlgHom (↑f) g h₁ h₂ = f :=
+  ext fun _ => rfl
+
+theorem of_alg_hom_symm (f : A₁ →ₐ[R] A₂) (g : A₂ →ₐ[R] A₁) h₁ h₂ : (ofAlgHom f g h₁ h₂).symm = ofAlgHom g f h₂ h₁ :=
+  rfl
 
 /-- Promotes a bijective algebra homomorphism to an algebra equivalence. -/
-noncomputable def of_bijective (f : A₁ →ₐ[R] A₂) (hf : function.bijective f) : A₁ ≃ₐ[R] A₂ :=
-{ .. ring_equiv.of_bijective (f : A₁ →+* A₂) hf, .. f }
+noncomputable def ofBijective (f : A₁ →ₐ[R] A₂) (hf : Function.Bijective f) : A₁ ≃ₐ[R] A₂ :=
+  { RingEquiv.ofBijective (f : A₁ →+* A₂) hf, f with }
 
-@[simp] lemma coe_of_bijective {f : A₁ →ₐ[R] A₂} {hf : function.bijective f} :
-  (alg_equiv.of_bijective f hf : A₁ → A₂) = f := rfl
+@[simp]
+theorem coe_of_bijective {f : A₁ →ₐ[R] A₂} {hf : Function.Bijective f} : (AlgEquiv.ofBijective f hf : A₁ → A₂) = f :=
+  rfl
 
-lemma of_bijective_apply {f : A₁ →ₐ[R] A₂} {hf : function.bijective f} (a : A₁) :
-  (alg_equiv.of_bijective f hf) a = f a := rfl
+theorem of_bijective_apply {f : A₁ →ₐ[R] A₂} {hf : Function.Bijective f} (a : A₁) :
+    (AlgEquiv.ofBijective f hf) a = f a :=
+  rfl
 
 /-- Forgetting the multiplicative structures, an equivalence of algebras is a linear equivalence. -/
-@[simps apply] def to_linear_equiv (e : A₁ ≃ₐ[R] A₂) : A₁ ≃ₗ[R] A₂ :=
-{ to_fun    := e,
-  map_smul' := e.map_smul,
-  inv_fun   := e.symm,
-  .. e }
+@[simps apply]
+def toLinearEquiv (e : A₁ ≃ₐ[R] A₂) : A₁ ≃ₗ[R] A₂ :=
+  { e with toFun := e, map_smul' := e.map_smul, invFun := e.symm }
 
-@[simp] lemma to_linear_equiv_refl :
-  (alg_equiv.refl : A₁ ≃ₐ[R] A₁).to_linear_equiv = linear_equiv.refl R A₁ := rfl
+@[simp]
+theorem to_linear_equiv_refl : (AlgEquiv.refl : A₁ ≃ₐ[R] A₁).toLinearEquiv = LinearEquiv.refl R A₁ :=
+  rfl
 
-@[simp] lemma to_linear_equiv_symm (e : A₁ ≃ₐ[R] A₂) :
-  e.to_linear_equiv.symm = e.symm.to_linear_equiv := rfl
+@[simp]
+theorem to_linear_equiv_symm (e : A₁ ≃ₐ[R] A₂) : e.toLinearEquiv.symm = e.symm.toLinearEquiv :=
+  rfl
 
-@[simp] lemma to_linear_equiv_trans (e₁ : A₁ ≃ₐ[R] A₂) (e₂ : A₂ ≃ₐ[R] A₃) :
-  (e₁.trans e₂).to_linear_equiv = e₁.to_linear_equiv.trans e₂.to_linear_equiv := rfl
+@[simp]
+theorem to_linear_equiv_trans (e₁ : A₁ ≃ₐ[R] A₂) (e₂ : A₂ ≃ₐ[R] A₃) :
+    (e₁.trans e₂).toLinearEquiv = e₁.toLinearEquiv.trans e₂.toLinearEquiv :=
+  rfl
 
-theorem to_linear_equiv_injective : function.injective (to_linear_equiv : _ → (A₁ ≃ₗ[R] A₂)) :=
-λ e₁ e₂ h, ext $ linear_equiv.congr_fun h
+theorem to_linear_equiv_injective : Function.Injective (toLinearEquiv : _ → A₁ ≃ₗ[R] A₂) := fun e₁ e₂ h =>
+  ext <| LinearEquiv.congr_fun h
 
 /-- Interpret an algebra equivalence as a linear map. -/
-def to_linear_map : A₁ →ₗ[R] A₂ :=
-e.to_alg_hom.to_linear_map
+def toLinearMap : A₁ →ₗ[R] A₂ :=
+  e.toAlgHom.toLinearMap
 
-@[simp] lemma to_alg_hom_to_linear_map :
-  (e : A₁ →ₐ[R] A₂).to_linear_map = e.to_linear_map := rfl
+@[simp]
+theorem to_alg_hom_to_linear_map : (e : A₁ →ₐ[R] A₂).toLinearMap = e.toLinearMap :=
+  rfl
 
-@[simp] lemma to_linear_equiv_to_linear_map :
-  e.to_linear_equiv.to_linear_map = e.to_linear_map := rfl
+@[simp]
+theorem to_linear_equiv_to_linear_map : e.toLinearEquiv.toLinearMap = e.toLinearMap :=
+  rfl
 
-@[simp] lemma to_linear_map_apply (x : A₁) : e.to_linear_map x = e x := rfl
+@[simp]
+theorem to_linear_map_apply (x : A₁) : e.toLinearMap x = e x :=
+  rfl
 
-theorem to_linear_map_injective : function.injective (to_linear_map : _ → (A₁ →ₗ[R] A₂)) :=
-λ e₁ e₂ h, ext $ linear_map.congr_fun h
+theorem to_linear_map_injective : Function.Injective (toLinearMap : _ → A₁ →ₗ[R] A₂) := fun e₁ e₂ h =>
+  ext <| LinearMap.congr_fun h
 
-@[simp] lemma trans_to_linear_map (f : A₁ ≃ₐ[R] A₂) (g : A₂ ≃ₐ[R] A₃) :
-  (f.trans g).to_linear_map = g.to_linear_map.comp f.to_linear_map := rfl
+@[simp]
+theorem trans_to_linear_map (f : A₁ ≃ₐ[R] A₂) (g : A₂ ≃ₐ[R] A₃) :
+    (f.trans g).toLinearMap = g.toLinearMap.comp f.toLinearMap :=
+  rfl
 
-section of_linear_equiv
+section OfLinearEquiv
 
-variables (l : A₁ ≃ₗ[R] A₂)
-  (map_mul : ∀ x y : A₁, l (x * y) = l x * l y)
-  (commutes : ∀ r : R, l (algebra_map R A₁ r) = algebra_map R A₂ r)
+variable (l : A₁ ≃ₗ[R] A₂) (map_mul : ∀ x y : A₁, l (x * y) = l x * l y)
+  (commutes : ∀ r : R, l (algebraMap R A₁ r) = algebraMap R A₂ r)
 
-/--
-Upgrade a linear equivalence to an algebra equivalence,
+/-- Upgrade a linear equivalence to an algebra equivalence,
 given that it distributes over multiplication and action of scalars.
 -/
 @[simps apply]
-def of_linear_equiv : A₁ ≃ₐ[R] A₂ :=
-{ to_fun := l,
-  inv_fun := l.symm,
-  map_mul' := map_mul,
-  commutes' := commutes,
-  ..l }
+def ofLinearEquiv : A₁ ≃ₐ[R] A₂ :=
+  { l with toFun := l, invFun := l.symm, map_mul' := map_mul, commutes' := commutes }
 
 @[simp]
-lemma of_linear_equiv_symm :
-  (of_linear_equiv l map_mul commutes).symm = of_linear_equiv l.symm
-    ((of_linear_equiv l map_mul commutes).symm.map_mul)
-    ((of_linear_equiv l map_mul commutes).symm.commutes) :=
-rfl
+theorem of_linear_equiv_symm :
+    (ofLinearEquiv l map_mul commutes).symm =
+      ofLinearEquiv l.symm (ofLinearEquiv l map_mul commutes).symm.map_mul
+        (ofLinearEquiv l map_mul commutes).symm.commutes :=
+  rfl
 
-@[simp] lemma of_linear_equiv_to_linear_equiv (map_mul) (commutes) :
-  of_linear_equiv e.to_linear_equiv map_mul commutes = e :=
-by { ext, refl }
+@[simp]
+theorem of_linear_equiv_to_linear_equiv map_mul commutes : ofLinearEquiv e.toLinearEquiv map_mul commutes = e := by
+  ext
+  rfl
 
-@[simp] lemma to_linear_equiv_of_linear_equiv :
-  to_linear_equiv (of_linear_equiv l map_mul commutes) = l :=
-by { ext, refl }
+@[simp]
+theorem to_linear_equiv_of_linear_equiv : toLinearEquiv (ofLinearEquiv l map_mul commutes) = l := by
+  ext
+  rfl
 
-end of_linear_equiv
+end OfLinearEquiv
 
-@[simps mul one {attrs := []}] instance aut : group (A₁ ≃ₐ[R] A₁) :=
-{ mul := λ ϕ ψ, ψ.trans ϕ,
-  mul_assoc := λ ϕ ψ χ, rfl,
-  one := refl,
-  one_mul := λ ϕ, ext $ λ x, rfl,
-  mul_one := λ ϕ, ext $ λ x, rfl,
-  inv := symm,
-  mul_left_inv := λ ϕ, ext $ symm_apply_apply ϕ }
+@[simps (config := { attrs := [] }) mul one]
+instance aut : Groupₓ (A₁ ≃ₐ[R] A₁) where
+  mul := fun ϕ ψ => ψ.trans ϕ
+  mul_assoc := fun ϕ ψ χ => rfl
+  one := refl
+  one_mul := fun ϕ => ext fun x => rfl
+  mul_one := fun ϕ => ext fun x => rfl
+  inv := symm
+  mul_left_inv := fun ϕ => ext <| symm_apply_apply ϕ
 
-@[simp] lemma one_apply (x : A₁) : (1 : A₁ ≃ₐ[R] A₁) x = x := rfl
+@[simp]
+theorem one_apply (x : A₁) : (1 : A₁ ≃ₐ[R] A₁) x = x :=
+  rfl
 
-@[simp] lemma mul_apply (e₁ e₂ : A₁ ≃ₐ[R] A₁) (x : A₁) : (e₁ * e₂) x = e₁ (e₂ x) := rfl
+@[simp]
+theorem mul_apply (e₁ e₂ : A₁ ≃ₐ[R] A₁) (x : A₁) : (e₁ * e₂) x = e₁ (e₂ x) :=
+  rfl
 
 /-- An algebra isomorphism induces a group isomorphism between automorphism groups -/
 @[simps apply]
-def aut_congr (ϕ : A₁ ≃ₐ[R] A₂) : (A₁ ≃ₐ[R] A₁) ≃* (A₂ ≃ₐ[R] A₂) :=
-{ to_fun := λ ψ, ϕ.symm.trans (ψ.trans ϕ),
-  inv_fun := λ ψ, ϕ.trans (ψ.trans ϕ.symm),
-  left_inv := λ ψ, by { ext, simp_rw [trans_apply, symm_apply_apply] },
-  right_inv := λ ψ, by { ext, simp_rw [trans_apply, apply_symm_apply] },
-  map_mul' := λ ψ χ, by { ext, simp only [mul_apply, trans_apply, symm_apply_apply] } }
+def autCongr (ϕ : A₁ ≃ₐ[R] A₂) : (A₁ ≃ₐ[R] A₁) ≃* A₂ ≃ₐ[R] A₂ where
+  toFun := fun ψ => ϕ.symm.trans (ψ.trans ϕ)
+  invFun := fun ψ => ϕ.trans (ψ.trans ϕ.symm)
+  left_inv := fun ψ => by
+    ext
+    simp_rw [trans_apply, symm_apply_apply]
+  right_inv := fun ψ => by
+    ext
+    simp_rw [trans_apply, apply_symm_apply]
+  map_mul' := fun ψ χ => by
+    ext
+    simp only [mul_apply, trans_apply, symm_apply_apply]
 
-@[simp] lemma aut_congr_refl : aut_congr (alg_equiv.refl) = mul_equiv.refl (A₁ ≃ₐ[R] A₁) :=
-by { ext, refl }
+@[simp]
+theorem aut_congr_refl : autCongr AlgEquiv.refl = MulEquiv.refl (A₁ ≃ₐ[R] A₁) := by
+  ext
+  rfl
 
-@[simp] lemma aut_congr_symm (ϕ : A₁ ≃ₐ[R] A₂) : (aut_congr ϕ).symm = aut_congr ϕ.symm := rfl
+@[simp]
+theorem aut_congr_symm (ϕ : A₁ ≃ₐ[R] A₂) : (autCongr ϕ).symm = autCongr ϕ.symm :=
+  rfl
 
-@[simp] lemma aut_congr_trans (ϕ : A₁ ≃ₐ[R] A₂) (ψ : A₂ ≃ₐ[R] A₃) :
-  (aut_congr ϕ).trans (aut_congr ψ) = aut_congr (ϕ.trans ψ) := rfl
+@[simp]
+theorem aut_congr_trans (ϕ : A₁ ≃ₐ[R] A₂) (ψ : A₂ ≃ₐ[R] A₃) : (autCongr ϕ).trans (autCongr ψ) = autCongr (ϕ.trans ψ) :=
+  rfl
 
 /-- The tautological action by `A₁ ≃ₐ[R] A₁` on `A₁`.
 
 This generalizes `function.End.apply_mul_action`. -/
-instance apply_mul_semiring_action : mul_semiring_action (A₁ ≃ₐ[R] A₁) A₁ :=
-{ smul := ($),
-  smul_zero := alg_equiv.map_zero,
-  smul_add := alg_equiv.map_add,
-  smul_one := alg_equiv.map_one,
-  smul_mul := alg_equiv.map_mul,
-  one_smul := λ _, rfl,
-  mul_smul := λ _ _ _, rfl }
+instance applyMulSemiringAction : MulSemiringAction (A₁ ≃ₐ[R] A₁) A₁ where
+  smul := (· <| ·)
+  smul_zero := AlgEquiv.map_zero
+  smul_add := AlgEquiv.map_add
+  smul_one := AlgEquiv.map_one
+  smul_mul := AlgEquiv.map_mul
+  one_smul := fun _ => rfl
+  mul_smul := fun _ _ _ => rfl
 
-@[simp] protected lemma smul_def (f : A₁ ≃ₐ[R] A₁) (a : A₁) : f • a = f a := rfl
+@[simp]
+protected theorem smul_def (f : A₁ ≃ₐ[R] A₁) (a : A₁) : f • a = f a :=
+  rfl
 
-instance apply_has_faithful_scalar : has_faithful_scalar (A₁ ≃ₐ[R] A₁) A₁ :=
-⟨λ _ _, alg_equiv.ext⟩
+instance apply_has_faithful_scalar : HasFaithfulScalar (A₁ ≃ₐ[R] A₁) A₁ :=
+  ⟨fun _ _ => AlgEquiv.ext⟩
 
-instance apply_smul_comm_class : smul_comm_class R (A₁ ≃ₐ[R] A₁) A₁ :=
-{ smul_comm := λ r e a, (e.map_smul r a).symm }
+instance apply_smul_comm_class : SmulCommClass R (A₁ ≃ₐ[R] A₁) A₁ where
+  smul_comm := fun r e a => (e.map_smul r a).symm
 
-instance apply_smul_comm_class' : smul_comm_class (A₁ ≃ₐ[R] A₁) R A₁ :=
-{ smul_comm := λ e r a, (e.map_smul r a) }
+instance apply_smul_comm_class' : SmulCommClass (A₁ ≃ₐ[R] A₁) R A₁ where
+  smul_comm := fun e r a => e.map_smul r a
 
-@[simp] lemma algebra_map_eq_apply (e : A₁ ≃ₐ[R] A₂) {y : R} {x : A₁} :
-  (algebra_map R A₂ y = e x) ↔ (algebra_map R A₁ y = x) :=
-⟨λ h, by simpa using e.symm.to_alg_hom.algebra_map_eq_apply h,
- λ h, e.to_alg_hom.algebra_map_eq_apply h⟩
+@[simp]
+theorem algebra_map_eq_apply (e : A₁ ≃ₐ[R] A₂) {y : R} {x : A₁} : algebraMap R A₂ y = e x ↔ algebraMap R A₁ y = x :=
+  ⟨fun h => by
+    simpa using e.symm.to_alg_hom.algebra_map_eq_apply h, fun h => e.toAlgHom.algebra_map_eq_apply h⟩
 
-end semiring
+end Semiringₓ
 
-section comm_semiring
+section CommSemiringₓ
 
-variables [comm_semiring R] [comm_semiring A₁] [comm_semiring A₂]
-variables [algebra R A₁] [algebra R A₂] (e : A₁ ≃ₐ[R] A₂)
+variable [CommSemiringₓ R] [CommSemiringₓ A₁] [CommSemiringₓ A₂]
 
-lemma map_prod {ι : Type*} (f : ι → A₁) (s : finset ι) :
-  e (∏ x in s, f x) = ∏ x in s, e (f x) :=
-e.to_alg_hom.map_prod f s
+variable [Algebra R A₁] [Algebra R A₂] (e : A₁ ≃ₐ[R] A₂)
 
-lemma map_finsupp_prod {α : Type*} [has_zero α] {ι : Type*} (f : ι →₀ α) (g : ι → α → A₁) :
-  e (f.prod g) = f.prod (λ i a, e (g i a)) :=
-e.to_alg_hom.map_finsupp_prod f g
+theorem map_prod {ι : Type _} (f : ι → A₁) (s : Finset ι) : e (∏ x in s, f x) = ∏ x in s, e (f x) :=
+  e.toAlgHom.map_prod f s
 
-end comm_semiring
+theorem map_finsupp_prod {α : Type _} [Zero α] {ι : Type _} (f : ι →₀ α) (g : ι → α → A₁) :
+    e (f.Prod g) = f.Prod fun i a => e (g i a) :=
+  e.toAlgHom.map_finsupp_prod f g
 
-section ring
+end CommSemiringₓ
 
-variables [comm_ring R] [ring A₁] [ring A₂]
-variables [algebra R A₁] [algebra R A₂] (e : A₁ ≃ₐ[R] A₂)
+section Ringₓ
 
-protected lemma map_neg (x) : e (-x) = -e x := map_neg e x
-protected lemma map_sub (x y) : e (x - y) = e x - e y := map_sub e x y
+variable [CommRingₓ R] [Ringₓ A₁] [Ringₓ A₂]
 
-end ring
+variable [Algebra R A₁] [Algebra R A₂] (e : A₁ ≃ₐ[R] A₂)
 
-section division_ring
+protected theorem map_neg x : e (-x) = -e x :=
+  map_neg e x
 
-variables [comm_ring R] [division_ring A₁] [division_ring A₂]
-variables [algebra R A₁] [algebra R A₂] (e : A₁ ≃ₐ[R] A₂)
+protected theorem map_sub x y : e (x - y) = e x - e y :=
+  map_sub e x y
 
-@[simp] lemma map_inv (x) : e (x⁻¹) = (e x)⁻¹ :=
-e.to_alg_hom.map_inv x
+end Ringₓ
 
-@[simp] lemma map_div (x y) : e (x / y) = e x / e y :=
-e.to_alg_hom.map_div x y
+section DivisionRing
 
-end division_ring
+variable [CommRingₓ R] [DivisionRing A₁] [DivisionRing A₂]
 
-end alg_equiv
+variable [Algebra R A₁] [Algebra R A₂] (e : A₁ ≃ₐ[R] A₂)
 
-namespace mul_semiring_action
+@[simp]
+theorem map_inv x : e x⁻¹ = (e x)⁻¹ :=
+  e.toAlgHom.map_inv x
 
-variables {M G : Type*} (R A : Type*) [comm_semiring R] [semiring A] [algebra R A]
+@[simp]
+theorem map_div x y : e (x / y) = e x / e y :=
+  e.toAlgHom.map_div x y
+
+end DivisionRing
+
+end AlgEquiv
+
+namespace MulSemiringAction
+
+variable {M G : Type _} (R A : Type _) [CommSemiringₓ R] [Semiringₓ A] [Algebra R A]
 
 section
-variables [monoid M] [mul_semiring_action M A] [smul_comm_class M R A]
+
+variable [Monoidₓ M] [MulSemiringAction M A] [SmulCommClass M R A]
 
 /-- Each element of the monoid defines a algebra homomorphism.
 
 This is a stronger version of `mul_semiring_action.to_ring_hom` and
 `distrib_mul_action.to_linear_map`. -/
 @[simps]
-def to_alg_hom (m : M) : A →ₐ[R] A :=
-alg_hom.mk' (mul_semiring_action.to_ring_hom _ _ m) (smul_comm _)
+def toAlgHom (m : M) : A →ₐ[R] A :=
+  AlgHom.mk' (MulSemiringAction.toRingHom _ _ m) (smul_comm _)
 
-theorem to_alg_hom_injective [has_faithful_scalar M A] :
-  function.injective (mul_semiring_action.to_alg_hom R A : M → A →ₐ[R] A) :=
-λ m₁ m₂ h, eq_of_smul_eq_smul $ λ r, alg_hom.ext_iff.1 h r
+theorem to_alg_hom_injective [HasFaithfulScalar M A] :
+    Function.Injective (MulSemiringAction.toAlgHom R A : M → A →ₐ[R] A) := fun m₁ m₂ h =>
+  eq_of_smul_eq_smul fun r => AlgHom.ext_iff.1 h r
 
 end
 
 section
-variables [group G] [mul_semiring_action G A] [smul_comm_class G R A]
+
+variable [Groupₓ G] [MulSemiringAction G A] [SmulCommClass G R A]
 
 /-- Each element of the group defines a algebra equivalence.
 
 This is a stronger version of `mul_semiring_action.to_ring_equiv` and
 `distrib_mul_action.to_linear_equiv`. -/
 @[simps]
-def to_alg_equiv (g : G) : A ≃ₐ[R] A :=
-{ .. mul_semiring_action.to_ring_equiv _ _ g,
-  .. mul_semiring_action.to_alg_hom R A g }
+def toAlgEquiv (g : G) : A ≃ₐ[R] A :=
+  { MulSemiringAction.toRingEquiv _ _ g, MulSemiringAction.toAlgHom R A g with }
 
-theorem to_alg_equiv_injective [has_faithful_scalar G A] :
-  function.injective (mul_semiring_action.to_alg_equiv R A : G → A ≃ₐ[R] A) :=
-λ m₁ m₂ h, eq_of_smul_eq_smul $ λ r, alg_equiv.ext_iff.1 h r
+theorem to_alg_equiv_injective [HasFaithfulScalar G A] :
+    Function.Injective (MulSemiringAction.toAlgEquiv R A : G → A ≃ₐ[R] A) := fun m₁ m₂ h =>
+  eq_of_smul_eq_smul fun r => AlgEquiv.ext_iff.1 h r
 
 end
 
-end mul_semiring_action
+end MulSemiringAction
 
-section nat
+section Nat
 
-variables {R : Type*} [semiring R]
+variable {R : Type _} [Semiringₓ R]
 
+/-- Semiring ⥤ ℕ-Alg -/
 -- Lower the priority so that `algebra.id` is picked most of the time when working with
 -- `ℕ`-algebras. This is only an issue since `algebra.id` and `algebra_nat` are not yet defeq.
 -- TODO: fix this by adding an `of_nat` field to semirings.
-/-- Semiring ⥤ ℕ-Alg -/
-@[priority 99] instance algebra_nat : algebra ℕ R :=
-{ commutes' := nat.cast_commute,
-  smul_def' := λ _ _, nsmul_eq_mul _ _,
-  to_ring_hom := nat.cast_ring_hom R }
+instance (priority := 99) algebraNat : Algebra ℕ R where
+  commutes' := Nat.cast_commute
+  smul_def' := fun _ _ => nsmul_eq_mul _ _
+  toRingHom := Nat.castRingHom R
 
-instance nat_algebra_subsingleton : subsingleton (algebra ℕ R) :=
-⟨λ P Q, by { ext, simp, }⟩
+instance nat_algebra_subsingleton : Subsingleton (Algebra ℕ R) :=
+  ⟨fun P Q => by
+    ext
+    simp ⟩
 
-end nat
+end Nat
 
-namespace ring_hom
+namespace RingHom
 
-variables {R S : Type*}
+variable {R S : Type _}
 
 /-- Reinterpret a `ring_hom` as an `ℕ`-algebra homomorphism. -/
-def to_nat_alg_hom [semiring R] [semiring S] (f : R →+* S) :
-  R →ₐ[ℕ] S :=
-{ to_fun := f, commutes' := λ n, by simp, .. f }
+def toNatAlgHom [Semiringₓ R] [Semiringₓ S] (f : R →+* S) : R →ₐ[ℕ] S :=
+  { f with toFun := f,
+    commutes' := fun n => by
+      simp }
 
 /-- Reinterpret a `ring_hom` as a `ℤ`-algebra homomorphism. -/
-def to_int_alg_hom [ring R] [ring S] [algebra ℤ R] [algebra ℤ S] (f : R →+* S) :
-  R →ₐ[ℤ] S :=
-{ commutes' := λ n, by simp, .. f }
+def toIntAlgHom [Ringₓ R] [Ringₓ S] [Algebra ℤ R] [Algebra ℤ S] (f : R →+* S) : R →ₐ[ℤ] S :=
+  { f with
+    commutes' := fun n => by
+      simp }
 
-@[simp] lemma map_rat_algebra_map [ring R] [ring S] [algebra ℚ R] [algebra ℚ S] (f : R →+* S)
-  (r : ℚ) :
-  f (algebra_map ℚ R r) = algebra_map ℚ S r :=
-ring_hom.ext_iff.1 (subsingleton.elim (f.comp (algebra_map ℚ R)) (algebra_map ℚ S)) r
+@[simp]
+theorem map_rat_algebra_map [Ringₓ R] [Ringₓ S] [Algebra ℚ R] [Algebra ℚ S] (f : R →+* S) (r : ℚ) :
+    f (algebraMap ℚ R r) = algebraMap ℚ S r :=
+  RingHom.ext_iff.1 (Subsingleton.elimₓ (f.comp (algebraMap ℚ R)) (algebraMap ℚ S)) r
 
 /-- Reinterpret a `ring_hom` as a `ℚ`-algebra homomorphism. -/
-def to_rat_alg_hom [ring R] [ring S] [algebra ℚ R] [algebra ℚ S] (f : R →+* S) :
-  R →ₐ[ℚ] S :=
-{ commutes' := f.map_rat_algebra_map, .. f }
+def toRatAlgHom [Ringₓ R] [Ringₓ S] [Algebra ℚ R] [Algebra ℚ S] (f : R →+* S) : R →ₐ[ℚ] S :=
+  { f with commutes' := f.map_rat_algebra_map }
 
-end ring_hom
+end RingHom
 
-section rat
+section Rat
 
-instance algebra_rat {α} [division_ring α] [char_zero α] : algebra ℚ α :=
-(rat.cast_hom α).to_algebra' $ λ r x, r.cast_commute x
+instance algebraRat {α} [DivisionRing α] [CharZero α] : Algebra ℚ α :=
+  (Rat.castHom α).toAlgebra' fun r x => r.cast_commute x
 
-@[simp] theorem algebra_map_rat_rat : algebra_map ℚ ℚ = ring_hom.id ℚ :=
-subsingleton.elim _ _
+@[simp]
+theorem algebra_map_rat_rat : algebraMap ℚ ℚ = RingHom.id ℚ :=
+  Subsingleton.elimₓ _ _
 
 -- TODO[gh-6025]: make this an instance once safe to do so
-lemma algebra_rat_subsingleton {α} [semiring α] :
-  subsingleton (algebra ℚ α) :=
-⟨λ x y, algebra.algebra_ext x y $ ring_hom.congr_fun $ subsingleton.elim _ _⟩
+theorem algebra_rat_subsingleton {α} [Semiringₓ α] : Subsingleton (Algebra ℚ α) :=
+  ⟨fun x y => Algebra.algebra_ext x y <| RingHom.congr_fun <| Subsingleton.elimₓ _ _⟩
 
-end rat
+end Rat
 
-namespace algebra
-open module
+namespace Algebra
 
-variables (R : Type u) (A : Type v)
+open Module
 
-variables [comm_semiring R] [semiring A] [algebra R A]
+variable (R : Type u) (A : Type v)
+
+variable [CommSemiringₓ R] [Semiringₓ A] [Algebra R A]
 
 /-- `algebra_map` as an `alg_hom`. -/
-def of_id : R →ₐ[R] A :=
-{ commutes' := λ _, rfl, .. algebra_map R A }
-variables {R}
+def ofId : R →ₐ[R] A :=
+  { algebraMap R A with commutes' := fun _ => rfl }
 
-theorem of_id_apply (r) : of_id R A r = algebra_map R A r := rfl
+variable {R}
 
-end algebra
+theorem of_id_apply r : ofId R A r = algebraMap R A r :=
+  rfl
 
-section int
+end Algebra
 
-variables (R : Type*) [ring R]
+section Int
 
+variable (R : Type _) [Ringₓ R]
+
+/-- Ring ⥤ ℤ-Alg -/
 -- Lower the priority so that `algebra.id` is picked most of the time when working with
 -- `ℤ`-algebras. This is only an issue since `algebra.id ℤ` and `algebra_int ℤ` are not yet defeq.
 -- TODO: fix this by adding an `of_int` field to rings.
-/-- Ring ⥤ ℤ-Alg -/
-@[priority 99] instance algebra_int : algebra ℤ R :=
-{ commutes' := int.cast_commute,
-  smul_def' := λ _ _, zsmul_eq_mul _ _,
-  to_ring_hom := int.cast_ring_hom R }
+instance (priority := 99) algebraInt : Algebra ℤ R where
+  commutes' := Int.cast_commute
+  smul_def' := fun _ _ => zsmul_eq_mul _ _
+  toRingHom := Int.castRingHom R
 
 /-- A special case of `ring_hom.eq_int_cast'` that happens to be true definitionally -/
-@[simp] lemma algebra_map_int_eq : algebra_map ℤ R = int.cast_ring_hom R := rfl
+@[simp]
+theorem algebra_map_int_eq : algebraMap ℤ R = Int.castRingHom R :=
+  rfl
 
-variables {R}
+variable {R}
 
-instance int_algebra_subsingleton : subsingleton (algebra ℤ R) :=
-⟨λ P Q, by { ext, simp, }⟩
+instance int_algebra_subsingleton : Subsingleton (Algebra ℤ R) :=
+  ⟨fun P Q => by
+    ext
+    simp ⟩
 
-end int
+end Int
 
 /-!
 The R-algebra structure on `Π i : I, A i` when each `A i` is an R-algebra.
 
 We couldn't set this up back in `algebra.pi_instances` because this file imports it.
 -/
-namespace pi
 
-variable {I : Type u}     -- The indexing type
-variable {R : Type*}      -- The scalar type
-variable {f : I → Type v} -- The family of types already equipped with instances
-variables (x y : Π i, f i) (i : I)
-variables (I f)
 
-instance algebra {r : comm_semiring R}
-  [s : ∀ i, semiring (f i)] [∀ i, algebra R (f i)] :
-  algebra R (Π i : I, f i) :=
-{ commutes' := λ a f, begin ext, simp [algebra.commutes], end,
-  smul_def' := λ a f, begin ext, simp [algebra.smul_def], end,
-  ..(pi.ring_hom (λ i, algebra_map R (f i)) : R →+* Π i : I, f i) }
+namespace Pi
 
-@[simp] lemma algebra_map_apply {r : comm_semiring R}
-  [s : ∀ i, semiring (f i)] [∀ i, algebra R (f i)] (a : R) (i : I) :
-  algebra_map R (Π i, f i) a i = algebra_map R (f i) a := rfl
+variable {I : Type u}
+
+-- The indexing type
+variable {R : Type _}
+
+-- The scalar type
+variable {f : I → Type v}
+
+-- The family of types already equipped with instances
+variable (x y : ∀ i, f i) (i : I)
+
+variable (I f)
+
+instance algebra {r : CommSemiringₓ R} [s : ∀ i, Semiringₓ (f i)] [∀ i, Algebra R (f i)] : Algebra R (∀ i : I, f i) :=
+  { (Pi.ringHom fun i => algebraMap R (f i) : R →+* ∀ i : I, f i) with
+    commutes' := fun a f => by
+      ext
+      simp [Algebra.commutes],
+    smul_def' := fun a f => by
+      ext
+      simp [Algebra.smul_def] }
+
+@[simp]
+theorem algebra_map_apply {r : CommSemiringₓ R} [s : ∀ i, Semiringₓ (f i)] [∀ i, Algebra R (f i)] (a : R) (i : I) :
+    algebraMap R (∀ i, f i) a i = algebraMap R (f i) a :=
+  rfl
 
 -- One could also build a `Π i, R i`-algebra structure on `Π i, A i`,
 -- when each `A i` is an `R i`-algebra, although I'm not sure that it's useful.
-
-variables {I} (R) (f)
+variable {I} (R) (f)
 
 /-- `function.eval` as an `alg_hom`. The name matches `pi.eval_ring_hom`, `pi.eval_monoid_hom`,
 etc. -/
 @[simps]
-def eval_alg_hom {r : comm_semiring R} [Π i, semiring (f i)] [Π i, algebra R (f i)] (i : I) :
-  (Π i, f i) →ₐ[R] f i :=
-{ to_fun := λ f, f i, commutes' := λ r, rfl, .. pi.eval_ring_hom f i}
+def evalAlgHom {r : CommSemiringₓ R} [∀ i, Semiringₓ (f i)] [∀ i, Algebra R (f i)] (i : I) : (∀ i, f i) →ₐ[R] f i :=
+  { Pi.evalRingHom f i with toFun := fun f => f i, commutes' := fun r => rfl }
 
-variables (A B : Type*) [comm_semiring R] [semiring B] [algebra R B]
+variable (A B : Type _) [CommSemiringₓ R] [Semiringₓ B] [Algebra R B]
 
 /-- `function.const` as an `alg_hom`. The name matches `pi.const_ring_hom`, `pi.const_monoid_hom`,
 etc. -/
 @[simps]
-def const_alg_hom : B →ₐ[R] (A → B) :=
-{ to_fun := function.const _,
-  commutes' := λ r, rfl,
-  .. pi.const_ring_hom A B}
+def constAlgHom : B →ₐ[R] A → B :=
+  { Pi.constRingHom A B with toFun := Function.const _, commutes' := fun r => rfl }
 
 /-- When `R` is commutative and permits an `algebra_map`, `pi.const_ring_hom` is equal to that
 map. -/
-@[simp] lemma const_ring_hom_eq_algebra_map : const_ring_hom A R = algebra_map R (A → R) :=
-rfl
+@[simp]
+theorem const_ring_hom_eq_algebra_map : constRingHom A R = algebraMap R (A → R) :=
+  rfl
 
-@[simp] lemma const_alg_hom_eq_algebra_of_id : const_alg_hom R A R = algebra.of_id R (A → R) :=
-rfl
+@[simp]
+theorem const_alg_hom_eq_algebra_of_id : constAlgHom R A R = Algebra.ofId R (A → R) :=
+  rfl
 
-end pi
+end Pi
 
-namespace alg_equiv
+namespace AlgEquiv
 
 /-- A family of algebra equivalences `Π j, (A₁ j ≃ₐ A₂ j)` generates a
 multiplicative equivalence between `Π j, A₁ j` and `Π j, A₂ j`.
@@ -1373,156 +1602,167 @@ This is the `alg_equiv` version of `equiv.Pi_congr_right`, and the dependent ver
 `alg_equiv.arrow_congr`.
 -/
 @[simps apply]
-def Pi_congr_right {R ι : Type*} {A₁ A₂ : ι → Type*} [comm_semiring R]
-  [Π i, semiring (A₁ i)] [Π i, semiring (A₂ i)] [Π i, algebra R (A₁ i)] [Π i, algebra R (A₂ i)]
-  (e : Π i, A₁ i ≃ₐ[R] A₂ i) : (Π i, A₁ i) ≃ₐ[R] Π i, A₂ i :=
-{ to_fun := λ x j, e j (x j),
-  inv_fun := λ x j, (e j).symm (x j),
-  commutes' := λ r, by { ext i, simp },
-  .. @ring_equiv.Pi_congr_right ι A₁ A₂ _ _ (λ i, (e i).to_ring_equiv) }
+def piCongrRight {R ι : Type _} {A₁ A₂ : ι → Type _} [CommSemiringₓ R] [∀ i, Semiringₓ (A₁ i)] [∀ i, Semiringₓ (A₂ i)]
+    [∀ i, Algebra R (A₁ i)] [∀ i, Algebra R (A₂ i)] (e : ∀ i, A₁ i ≃ₐ[R] A₂ i) : (∀ i, A₁ i) ≃ₐ[R] ∀ i, A₂ i :=
+  { @RingEquiv.piCongrRight ι A₁ A₂ _ _ fun i => (e i).toRingEquiv with toFun := fun x j => e j (x j),
+    invFun := fun x j => (e j).symm (x j),
+    commutes' := fun r => by
+      ext i
+      simp }
 
 @[simp]
-lemma Pi_congr_right_refl {R ι : Type*} {A : ι → Type*} [comm_semiring R]
-  [Π i, semiring (A i)] [Π i, algebra R (A i)] :
-  Pi_congr_right (λ i, (alg_equiv.refl : A i ≃ₐ[R] A i)) = alg_equiv.refl := rfl
+theorem Pi_congr_right_refl {R ι : Type _} {A : ι → Type _} [CommSemiringₓ R] [∀ i, Semiringₓ (A i)]
+    [∀ i, Algebra R (A i)] : (piCongrRight fun i => (AlgEquiv.refl : A i ≃ₐ[R] A i)) = AlgEquiv.refl :=
+  rfl
 
 @[simp]
-lemma Pi_congr_right_symm {R ι : Type*} {A₁ A₂ : ι → Type*} [comm_semiring R]
-  [Π i, semiring (A₁ i)] [Π i, semiring (A₂ i)] [Π i, algebra R (A₁ i)] [Π i, algebra R (A₂ i)]
-  (e : Π i, A₁ i ≃ₐ[R] A₂ i) : (Pi_congr_right e).symm = (Pi_congr_right $ λ i, (e i).symm) := rfl
+theorem Pi_congr_right_symm {R ι : Type _} {A₁ A₂ : ι → Type _} [CommSemiringₓ R] [∀ i, Semiringₓ (A₁ i)]
+    [∀ i, Semiringₓ (A₂ i)] [∀ i, Algebra R (A₁ i)] [∀ i, Algebra R (A₂ i)] (e : ∀ i, A₁ i ≃ₐ[R] A₂ i) :
+    (piCongrRight e).symm = Pi_congr_right fun i => (e i).symm :=
+  rfl
 
 @[simp]
-lemma Pi_congr_right_trans {R ι : Type*} {A₁ A₂ A₃ : ι → Type*} [comm_semiring R]
-  [Π i, semiring (A₁ i)] [Π i, semiring (A₂ i)] [Π i, semiring (A₃ i)]
-  [Π i, algebra R (A₁ i)] [Π i, algebra R (A₂ i)] [Π i, algebra R (A₃ i)]
-  (e₁ : Π i, A₁ i ≃ₐ[R] A₂ i) (e₂ : Π i, A₂ i ≃ₐ[R] A₃ i) :
-  (Pi_congr_right e₁).trans (Pi_congr_right e₂) = (Pi_congr_right $ λ i, (e₁ i).trans (e₂ i)) :=
-rfl
+theorem Pi_congr_right_trans {R ι : Type _} {A₁ A₂ A₃ : ι → Type _} [CommSemiringₓ R] [∀ i, Semiringₓ (A₁ i)]
+    [∀ i, Semiringₓ (A₂ i)] [∀ i, Semiringₓ (A₃ i)] [∀ i, Algebra R (A₁ i)] [∀ i, Algebra R (A₂ i)]
+    [∀ i, Algebra R (A₃ i)] (e₁ : ∀ i, A₁ i ≃ₐ[R] A₂ i) (e₂ : ∀ i, A₂ i ≃ₐ[R] A₃ i) :
+    (piCongrRight e₁).trans (piCongrRight e₂) = Pi_congr_right fun i => (e₁ i).trans (e₂ i) :=
+  rfl
 
-end alg_equiv
+end AlgEquiv
 
-section is_scalar_tower
+section IsScalarTower
 
-variables {R : Type*} [comm_semiring R]
-variables (A : Type*) [semiring A] [algebra R A]
-variables {M : Type*} [add_comm_monoid M] [module A M] [module R M] [is_scalar_tower R A M]
-variables {N : Type*} [add_comm_monoid N] [module A N] [module R N] [is_scalar_tower R A N]
+variable {R : Type _} [CommSemiringₓ R]
 
-lemma algebra_compatible_smul (r : R) (m : M) : r • m = ((algebra_map R A) r) • m :=
-by rw [←(one_smul A m), ←smul_assoc, algebra.smul_def, mul_one, one_smul]
+variable (A : Type _) [Semiringₓ A] [Algebra R A]
 
-@[simp] lemma algebra_map_smul (r : R) (m : M) : ((algebra_map R A) r) • m = r • m :=
-(algebra_compatible_smul A r m).symm
+variable {M : Type _} [AddCommMonoidₓ M] [Module A M] [Module R M] [IsScalarTower R A M]
 
-lemma no_zero_smul_divisors.trans (R A M : Type*) [comm_ring R] [ring A] [is_domain A] [algebra R A]
-  [add_comm_group M] [module R M] [module A M] [is_scalar_tower R A M] [no_zero_smul_divisors R A]
-  [no_zero_smul_divisors A M] : no_zero_smul_divisors R M :=
-begin
-  refine ⟨λ r m h, _⟩,
-  rw [algebra_compatible_smul A r m] at h,
-  cases smul_eq_zero.1 h with H H,
-  { have : function.injective (algebra_map R A) :=
-      no_zero_smul_divisors.iff_algebra_map_injective.1 infer_instance,
-    left,
-    exact (ring_hom.injective_iff _).1 this _ H },
-  { right,
-    exact H }
-end
+variable {N : Type _} [AddCommMonoidₓ N] [Module A N] [Module R N] [IsScalarTower R A N]
+
+theorem algebra_compatible_smul (r : R) (m : M) : r • m = (algebraMap R A) r • m := by
+  rw [← one_smul A m, ← smul_assoc, Algebra.smul_def, mul_oneₓ, one_smul]
+
+@[simp]
+theorem algebra_map_smul (r : R) (m : M) : (algebraMap R A) r • m = r • m :=
+  (algebra_compatible_smul A r m).symm
+
+theorem NoZeroSmulDivisors.trans (R A M : Type _) [CommRingₓ R] [Ringₓ A] [IsDomain A] [Algebra R A] [AddCommGroupₓ M]
+    [Module R M] [Module A M] [IsScalarTower R A M] [NoZeroSmulDivisors R A] [NoZeroSmulDivisors A M] :
+    NoZeroSmulDivisors R M := by
+  refine' ⟨fun r m h => _⟩
+  rw [algebra_compatible_smul A r m] at h
+  cases' smul_eq_zero.1 h with H H
+  · have : Function.Injective (algebraMap R A) := NoZeroSmulDivisors.iff_algebra_map_injective.1 inferInstance
+    left
+    exact (RingHom.injective_iff _).1 this _ H
+    
+  · right
+    exact H
+    
 
 variable {A}
 
-@[priority 100] -- see Note [lower instance priority]
-instance is_scalar_tower.to_smul_comm_class : smul_comm_class R A M :=
-⟨λ r a m, by rw [algebra_compatible_smul A r (a • m), smul_smul, algebra.commutes, mul_smul,
-  ←algebra_compatible_smul]⟩
+-- see Note [lower instance priority]
+instance (priority := 100) IsScalarTower.to_smul_comm_class : SmulCommClass R A M :=
+  ⟨fun r a m => by
+    rw [algebra_compatible_smul A r (a • m), smul_smul, Algebra.commutes, mul_smul, ← algebra_compatible_smul]⟩
 
-@[priority 100] -- see Note [lower instance priority]
-instance is_scalar_tower.to_smul_comm_class' : smul_comm_class A R M :=
-smul_comm_class.symm _ _ _
+-- see Note [lower instance priority]
+instance (priority := 100) IsScalarTower.to_smul_comm_class' : SmulCommClass A R M :=
+  SmulCommClass.symm _ _ _
 
-lemma smul_algebra_smul_comm (r : R) (a : A) (m : M) : a • r • m = r • a • m :=
-smul_comm _ _ _
+theorem smul_algebra_smul_comm (r : R) (a : A) (m : M) : a • r • m = r • a • m :=
+  smul_comm _ _ _
 
-namespace linear_map
+namespace LinearMap
 
-instance coe_is_scalar_tower : has_coe (M →ₗ[A] N) (M →ₗ[R] N) :=
-⟨restrict_scalars R⟩
+instance coeIsScalarTower : Coe (M →ₗ[A] N) (M →ₗ[R] N) :=
+  ⟨restrictScalars R⟩
 
-variables (R) {A M N}
+variable (R) {A M N}
 
-@[simp, norm_cast squash] lemma coe_restrict_scalars_eq_coe (f : M →ₗ[A] N) :
-  (f.restrict_scalars R : M → N) = f := rfl
+@[simp, norm_cast squash]
+theorem coe_restrict_scalars_eq_coe (f : M →ₗ[A] N) : (f.restrictScalars R : M → N) = f :=
+  rfl
 
-@[simp, norm_cast squash] lemma coe_coe_is_scalar_tower (f : M →ₗ[A] N) :
-  ((f : M →ₗ[R] N) : M → N) = f := rfl
+@[simp, norm_cast squash]
+theorem coe_coe_is_scalar_tower (f : M →ₗ[A] N) : ((f : M →ₗ[R] N) : M → N) = f :=
+  rfl
 
 /-- `A`-linearly coerce a `R`-linear map from `M` to `A` to a function, given an algebra `A` over
 a commutative semiring `R` and `M` a module over `R`. -/
-def lto_fun (R : Type u) (M : Type v) (A : Type w)
-  [comm_semiring R] [add_comm_monoid M] [module R M] [comm_ring A] [algebra R A] :
-  (M →ₗ[R] A) →ₗ[A] (M → A) :=
-{ to_fun := linear_map.to_fun,
-  map_add' := λ f g, rfl,
-  map_smul' := λ c f, rfl }
+def ltoFun (R : Type u) (M : Type v) (A : Type w) [CommSemiringₓ R] [AddCommMonoidₓ M] [Module R M] [CommRingₓ A]
+    [Algebra R A] : (M →ₗ[R] A) →ₗ[A] M → A where
+  toFun := LinearMap.toFun
+  map_add' := fun f g => rfl
+  map_smul' := fun c f => rfl
 
-end linear_map
+end LinearMap
 
-end is_scalar_tower
+end IsScalarTower
 
 /-! TODO: The following lemmas no longer involve `algebra` at all, and could be moved closer
 to `algebra/module/submodule.lean`. Currently this is tricky because `ker`, `range`, `⊤`, and `⊥`
 are all defined in `linear_algebra/basic.lean`. -/
-section module
-open module
 
-variables (R S M N : Type*) [semiring R] [semiring S] [has_scalar R S]
-variables [add_comm_monoid M] [module R M] [module S M] [is_scalar_tower R S M]
-variables [add_comm_monoid N] [module R N] [module S N] [is_scalar_tower R S N]
 
-variables {S M N}
+section Module
+
+open Module
+
+variable (R S M N : Type _) [Semiringₓ R] [Semiringₓ S] [HasScalar R S]
+
+variable [AddCommMonoidₓ M] [Module R M] [Module S M] [IsScalarTower R S M]
+
+variable [AddCommMonoidₓ N] [Module R N] [Module S N] [IsScalarTower R S N]
+
+variable {S M N}
 
 @[simp]
-lemma linear_map.ker_restrict_scalars (f : M →ₗ[S] N) :
-  (f.restrict_scalars R).ker = f.ker.restrict_scalars R :=
-rfl
+theorem LinearMap.ker_restrict_scalars (f : M →ₗ[S] N) : (f.restrictScalars R).ker = f.ker.restrictScalars R :=
+  rfl
 
-end module
+end Module
 
-namespace submodule
+namespace Submodule
 
-variables (R A M : Type*)
-variables [comm_semiring R] [semiring A] [algebra R A] [add_comm_monoid M]
-variables [module R M] [module A M] [is_scalar_tower R A M]
+variable (R A M : Type _)
+
+variable [CommSemiringₓ R] [Semiringₓ A] [Algebra R A] [AddCommMonoidₓ M]
+
+variable [Module R M] [Module A M] [IsScalarTower R A M]
 
 /-- If `A` is an `R`-algebra such that the induced morhpsim `R →+* A` is surjective, then the
 `R`-module generated by a set `X` equals the `A`-module generated by `X`. -/
-lemma span_eq_restrict_scalars (X : set M) (hsur : function.surjective (algebra_map R A)) :
-  span R X = restrict_scalars R (span A X) :=
-begin
-  apply (span_le_restrict_scalars R A X).antisymm (λ m hm, _),
-  refine span_induction hm subset_span (zero_mem _) (λ _ _, add_mem _) (λ a m hm, _),
-  obtain ⟨r, rfl⟩ := hsur a,
+theorem span_eq_restrict_scalars (X : Set M) (hsur : Function.Surjective (algebraMap R A)) :
+    span R X = restrictScalars R (span A X) := by
+  apply (span_le_restrict_scalars R A X).antisymm fun m hm => _
+  refine' span_induction hm subset_span (zero_mem _) (fun _ _ => add_mem _) fun a m hm => _
+  obtain ⟨r, rfl⟩ := hsur a
   simpa [algebra_map_smul] using smul_mem _ r hm
-end
 
-end submodule
+end Submodule
 
-namespace alg_hom
+namespace AlgHom
 
-variables {R : Type u} {A : Type v} {B : Type w} {I : Type*}
+variable {R : Type u} {A : Type v} {B : Type w} {I : Type _}
 
-variables [comm_semiring R] [semiring A] [semiring B]
-variables [algebra R A] [algebra R B]
+variable [CommSemiringₓ R] [Semiringₓ A] [Semiringₓ B]
+
+variable [Algebra R A] [Algebra R B]
 
 /-- `R`-algebra homomorphism between the function spaces `I → A` and `I → B`, induced by an
 `R`-algebra homomorphism `f` between `A` and `B`. -/
-@[simps] protected def comp_left (f : A →ₐ[R] B) (I : Type*) : (I → A) →ₐ[R] (I → B) :=
-{ to_fun := λ h, f ∘ h,
-  commutes' := λ c, by { ext, exact f.commutes' c },
-  .. f.to_ring_hom.comp_left I }
+@[simps]
+protected def compLeft (f : A →ₐ[R] B) (I : Type _) : (I → A) →ₐ[R] I → B :=
+  { f.toRingHom.compLeft I with toFun := fun h => f ∘ h,
+    commutes' := fun c => by
+      ext
+      exact f.commutes' c }
 
-end alg_hom
+end AlgHom
 
-example {R A} [comm_semiring R] [semiring A]
-  [module R A] [smul_comm_class R A A] [is_scalar_tower R A A] : algebra R A :=
-algebra.of_module smul_mul_assoc mul_smul_comm
+example {R A} [CommSemiringₓ R] [Semiringₓ A] [Module R A] [SmulCommClass R A A] [IsScalarTower R A A] : Algebra R A :=
+  Algebra.ofModule smul_mul_assoc mul_smul_comm
+

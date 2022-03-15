@@ -3,9 +3,9 @@ Copyright (c) 2022 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import algebra.category.Module.abelian
-import category_theory.limits.shapes.images
-import category_theory.limits.types
+import Mathbin.Algebra.Category.Module.Abelian
+import Mathbin.CategoryTheory.Limits.Shapes.Images
+import Mathbin.CategoryTheory.Limits.Types
 
 /-!
 # The category of R-modules has images.
@@ -14,103 +14,108 @@ Note that we don't need to register any of the constructions here as instances, 
 from the fact that `Module R` is an abelian category.
 -/
 
-open category_theory
-open category_theory.limits
 
-universes u v
+open CategoryTheory
 
-namespace Module
+open CategoryTheory.Limits
 
-variables {R : Type u} [comm_ring R]
+universe u v
 
-variables {G H : Module.{v} R} (f : G ⟶ H)
+namespace ModuleCat
 
-local attribute [ext] subtype.ext_val
+variable {R : Type u} [CommRingₓ R]
 
-section -- implementation details of `has_image` for Module; use the API, not these
+variable {G H : ModuleCat.{v} R} (f : G ⟶ H)
+
+attribute [local ext] Subtype.ext_val
+
+section
+
 /-- The image of a morphism in `Module R` is just the bundling of `linear_map.range f` -/
-def image : Module R := Module.of R (linear_map.range f)
+-- implementation details of `has_image` for Module; use the API, not these
+def image : ModuleCat R :=
+  ModuleCat.of R (LinearMap.range f)
 
 /-- The inclusion of `image f` into the target -/
-def image.ι : image f ⟶ H := f.range.subtype
+def image.ι : image f ⟶ H :=
+  f.range.Subtype
 
-instance : mono (image.ι f) := concrete_category.mono_of_injective (image.ι f) subtype.val_injective
+instance : Mono (image.ι f) :=
+  ConcreteCategory.mono_of_injective (image.ι f) Subtype.val_injective
 
 /-- The corestriction map to the image -/
-def factor_thru_image : G ⟶ image f := f.range_restrict
+def factorThruImage : G ⟶ image f :=
+  f.range_restrict
 
-lemma image.fac : factor_thru_image f ≫ image.ι f = f :=
-by { ext, refl, }
+theorem image.fac : factorThruImage f ≫ image.ι f = f := by
+  ext
+  rfl
 
-local attribute [simp] image.fac
+attribute [local simp] image.fac
 
-variables {f}
+variable {f}
+
 /-- The universal property for the image factorisation -/
-noncomputable def image.lift (F' : mono_factorisation f) : image f ⟶ F'.I :=
-{ to_fun :=
-  (λ x, F'.e (classical.indefinite_description _ x.2).1 : image f → F'.I),
-  map_add' :=
-  begin
-    intros x y,
-    haveI := F'.m_mono,
-    apply (mono_iff_injective F'.m).1, apply_instance,
-    rw [linear_map.map_add],
-    change (F'.e ≫ F'.m) _ = (F'.e ≫ F'.m) _ + (F'.e ≫ F'.m) _,
-    rw [F'.fac],
-    rw (classical.indefinite_description (λ z, f z = _) _).2,
-    rw (classical.indefinite_description (λ z, f z = _) _).2,
-    rw (classical.indefinite_description (λ z, f z = _) _).2,
-    refl,
-  end,
-  map_smul' := λ c x,
-  begin
-    haveI := F'.m_mono,
-    apply (mono_iff_injective F'.m).1, apply_instance,
-    rw [linear_map.map_smul],
-    change (F'.e ≫ F'.m) _ = _ • (F'.e ≫ F'.m) _,
-    rw [F'.fac],
-    rw (classical.indefinite_description (λ z, f z = _) _).2,
-    rw (classical.indefinite_description (λ z, f z = _) _).2,
-    refl,
-  end }
+noncomputable def image.lift (F' : MonoFactorisation f) : image f ⟶ F'.i where
+  toFun := (fun x => F'.e (Classical.indefiniteDescription _ x.2).1 : image f → F'.i)
+  map_add' := by
+    intro x y
+    have := F'.m_mono
+    apply (mono_iff_injective F'.m).1
+    infer_instance
+    rw [LinearMap.map_add]
+    change (F'.e ≫ F'.m) _ = (F'.e ≫ F'.m) _ + (F'.e ≫ F'.m) _
+    rw [F'.fac]
+    rw [(Classical.indefiniteDescription (fun z => f z = _) _).2]
+    rw [(Classical.indefiniteDescription (fun z => f z = _) _).2]
+    rw [(Classical.indefiniteDescription (fun z => f z = _) _).2]
+    rfl
+  map_smul' := fun c x => by
+    have := F'.m_mono
+    apply (mono_iff_injective F'.m).1
+    infer_instance
+    rw [LinearMap.map_smul]
+    change (F'.e ≫ F'.m) _ = _ • (F'.e ≫ F'.m) _
+    rw [F'.fac]
+    rw [(Classical.indefiniteDescription (fun z => f z = _) _).2]
+    rw [(Classical.indefiniteDescription (fun z => f z = _) _).2]
+    rfl
 
-lemma image.lift_fac (F' : mono_factorisation f) : image.lift F' ≫ F'.m = image.ι f :=
-begin
-  ext x,
-  change (F'.e ≫ F'.m) _ = _,
-  rw [F'.fac, (classical.indefinite_description _ x.2).2],
-  refl,
-end
+theorem image.lift_fac (F' : MonoFactorisation f) : image.lift F' ≫ F'.m = image.ι f := by
+  ext x
+  change (F'.e ≫ F'.m) _ = _
+  rw [F'.fac, (Classical.indefiniteDescription _ x.2).2]
+  rfl
+
 end
 
 /-- The factorisation of any morphism in `Module R` through a mono. -/
-def mono_factorisation : mono_factorisation f :=
-{ I := image f,
-  m := image.ι f,
-  e := factor_thru_image f }
+def monoFactorisation : MonoFactorisation f where
+  i := image f
+  m := image.ι f
+  e := factorThruImage f
 
 /-- The factorisation of any morphism in `Module R` through a mono has the universal property of
 the image. -/
-noncomputable def is_image : is_image (mono_factorisation f) :=
-{ lift := image.lift,
-  lift_fac' := image.lift_fac }
+noncomputable def isImage : IsImage (monoFactorisation f) where
+  lift := image.lift
+  lift_fac' := image.lift_fac
 
-/--
-The categorical image of a morphism in `Module R`
+/-- The categorical image of a morphism in `Module R`
 agrees with the linear algebraic range.
 -/
-noncomputable def image_iso_range {G H : Module.{v} R} (f : G ⟶ H) :
-  limits.image f ≅ Module.of R f.range :=
-is_image.iso_ext (image.is_image f) (is_image f)
+noncomputable def imageIsoRange {G H : ModuleCat.{v} R} (f : G ⟶ H) : Limits.image f ≅ ModuleCat.of R f.range :=
+  IsImage.isoExt (Image.isImage f) (isImage f)
 
 @[simp, reassoc, elementwise]
-lemma image_iso_range_inv_image_ι {G H : Module.{v} R} (f : G ⟶ H) :
-  (image_iso_range f).inv ≫ limits.image.ι f = Module.of_hom f.range.subtype :=
-is_image.iso_ext_inv_m _ _
+theorem image_iso_range_inv_image_ι {G H : ModuleCat.{v} R} (f : G ⟶ H) :
+    (imageIsoRange f).inv ≫ Limits.image.ι f = ModuleCat.ofHom f.range.Subtype :=
+  IsImage.iso_ext_inv_m _ _
 
 @[simp, reassoc, elementwise]
-lemma image_iso_range_hom_subtype {G H : Module.{v} R} (f : G ⟶ H) :
-  (image_iso_range f).hom ≫ Module.of_hom f.range.subtype = limits.image.ι f :=
-by erw [←image_iso_range_inv_image_ι f, iso.hom_inv_id_assoc]
+theorem image_iso_range_hom_subtype {G H : ModuleCat.{v} R} (f : G ⟶ H) :
+    (imageIsoRange f).hom ≫ ModuleCat.ofHom f.range.Subtype = Limits.image.ι f := by
+  erw [← image_iso_range_inv_image_ι f, iso.hom_inv_id_assoc]
 
-end Module
+end ModuleCat
+

@@ -3,9 +3,8 @@ Copyright (c) 2019 Johannes Hölzl. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johannes Hölzl
 -/
-
-import algebra.char_p.basic
-import linear_algebra.finsupp_vector_space
+import Mathbin.Algebra.CharP.Basic
+import Mathbin.LinearAlgebra.FinsuppVectorSpace
 
 /-!
 # Multivariate polynomials over commutative rings
@@ -32,103 +31,96 @@ that the monomials form a basis.
 Generalise to noncommutative (semi)rings
 -/
 
-noncomputable theory
 
-open_locale classical
+noncomputable section
 
-open set linear_map submodule
-open_locale big_operators polynomial
+open_locale Classical
 
-universes u v
-variables (σ : Type u) (R : Type v) [comm_ring R] (p m : ℕ)
+open Set LinearMap Submodule
 
-namespace mv_polynomial
+open_locale BigOperators Polynomial
 
-section char_p
+universe u v
 
-instance [char_p R p] : char_p (mv_polynomial σ R) p :=
-{ cast_eq_zero_iff := λ n, by rw [← C_eq_coe_nat, ← C_0, C_inj, char_p.cast_eq_zero_iff R p] }
+variable (σ : Type u) (R : Type v) [CommRingₓ R] (p m : ℕ)
 
-end char_p
+namespace MvPolynomial
 
-section homomorphism
+section CharP
 
-lemma map_range_eq_map {R S : Type*} [comm_ring R] [comm_ring S] (p : mv_polynomial σ R)
-  (f : R →+* S) :
-  finsupp.map_range f f.map_zero p = map f p :=
-begin
+instance [CharP R p] : CharP (MvPolynomial σ R) p where
+  cast_eq_zero_iff := fun n => by
+    rw [← C_eq_coe_nat, ← C_0, C_inj, CharP.cast_eq_zero_iff R p]
+
+end CharP
+
+section Homomorphism
+
+theorem map_range_eq_map {R S : Type _} [CommRingₓ R] [CommRingₓ S] (p : MvPolynomial σ R) (f : R →+* S) :
+    Finsupp.mapRange f f.map_zero p = map f p := by
   -- `finsupp.map_range_finset_sum` expects `f : R →+ S`
-  change finsupp.map_range (f : R →+ S) (f : R →+ S).map_zero p = map f p,
-  rw [p.as_sum, finsupp.map_range_finset_sum, (map f).map_sum],
-  refine finset.sum_congr rfl (assume n _, _),
-  rw [map_monomial, ← single_eq_monomial, finsupp.map_range_single, single_eq_monomial,
-    f.coe_add_monoid_hom],
-end
+  change Finsupp.mapRange (f : R →+ S) (f : R →+ S).map_zero p = map f p
+  rw [p.as_sum, Finsupp.map_range_finset_sum, (map f).map_sum]
+  refine' Finset.sum_congr rfl fun n _ => _
+  rw [map_monomial, ← single_eq_monomial, Finsupp.map_range_single, single_eq_monomial, f.coe_add_monoid_hom]
 
-end homomorphism
+end Homomorphism
 
-section degree
+section Degree
 
 /-- The submodule of polynomials of total degree less than or equal to `m`.-/
-def restrict_total_degree : submodule R (mv_polynomial σ R) :=
-finsupp.supported _ _ {n | n.sum (λn e, e) ≤ m }
+def restrictTotalDegree : Submodule R (MvPolynomial σ R) :=
+  Finsupp.supported _ _ { n | (n.Sum fun n e => e) ≤ m }
 
 /-- The submodule of polynomials such that the degree with respect to each individual variable is
 less than or equal to `m`.-/
-def restrict_degree (m : ℕ) : submodule R (mv_polynomial σ R) :=
-finsupp.supported _ _ {n | ∀i, n i ≤ m }
+def restrictDegree (m : ℕ) : Submodule R (MvPolynomial σ R) :=
+  Finsupp.supported _ _ { n | ∀ i, n i ≤ m }
 
 variable {R}
 
-lemma mem_restrict_total_degree (p : mv_polynomial σ R) :
-  p ∈ restrict_total_degree σ R m ↔ p.total_degree ≤ m :=
-begin
-  rw [total_degree, finset.sup_le_iff],
-  refl
-end
+theorem mem_restrict_total_degree (p : MvPolynomial σ R) : p ∈ restrictTotalDegree σ R m ↔ p.totalDegree ≤ m := by
+  rw [total_degree, Finset.sup_le_iff]
+  rfl
 
-lemma mem_restrict_degree (p : mv_polynomial σ R) (n : ℕ) :
-  p ∈ restrict_degree σ R n ↔ (∀s ∈ p.support, ∀i, (s : σ →₀ ℕ) i ≤ n) :=
-begin
-  rw [restrict_degree, finsupp.mem_supported],
-  refl
-end
+theorem mem_restrict_degree (p : MvPolynomial σ R) (n : ℕ) :
+    p ∈ restrictDegree σ R n ↔ ∀, ∀ s ∈ p.support, ∀, ∀ i, (s : σ →₀ ℕ) i ≤ n := by
+  rw [restrict_degree, Finsupp.mem_supported]
+  rfl
 
-lemma mem_restrict_degree_iff_sup (p : mv_polynomial σ R) (n : ℕ) :
-  p ∈ restrict_degree σ R n ↔ ∀i, p.degrees.count i ≤ n :=
-begin
-  simp only [mem_restrict_degree, degrees, multiset.count_finset_sup, finsupp.count_to_multiset,
-    finset.sup_le_iff],
-  exact ⟨assume h n s hs, h s hs n, assume h s hs n, h n s hs⟩
-end
+theorem mem_restrict_degree_iff_sup (p : MvPolynomial σ R) (n : ℕ) :
+    p ∈ restrictDegree σ R n ↔ ∀ i, p.degrees.count i ≤ n := by
+  simp only [mem_restrict_degree, degrees, Multiset.count_finset_sup, Finsupp.count_to_multiset, Finset.sup_le_iff]
+  exact ⟨fun h n s hs => h s hs n, fun h s hs n => h n s hs⟩
 
-variables (σ R)
+variable (σ R)
 
 /-- The monomials form a basis on `mv_polynomial σ R`. -/
-def basis_monomials : basis (σ →₀ ℕ) R (mv_polynomial σ R) := finsupp.basis_single_one
+def basisMonomials : Basis (σ →₀ ℕ) R (MvPolynomial σ R) :=
+  Finsupp.basisSingleOne
 
-@[simp] lemma coe_basis_monomials :
-  (basis_monomials σ R : (σ →₀ ℕ) → mv_polynomial σ R) = λ s, monomial s 1 :=
-rfl
+@[simp]
+theorem coe_basis_monomials : (basisMonomials σ R : (σ →₀ ℕ) → MvPolynomial σ R) = fun s => monomial s 1 :=
+  rfl
 
-lemma linear_independent_X : linear_independent R (X : σ → mv_polynomial σ R) :=
-(basis_monomials σ R).linear_independent.comp
-  (λ s : σ, finsupp.single s 1) (finsupp.single_left_injective one_ne_zero)
+theorem linear_independent_X : LinearIndependent R (x : σ → MvPolynomial σ R) :=
+  (basisMonomials σ R).LinearIndependent.comp (fun s : σ => Finsupp.single s 1)
+    (Finsupp.single_left_injective one_ne_zero)
 
-end degree
+end Degree
 
-end mv_polynomial
+end MvPolynomial
 
-
-/- this is here to avoid import cycle issues -/
-namespace polynomial
+-- this is here to avoid import cycle issues
+namespace Polynomial
 
 /-- The monomials form a basis on `polynomial R`. -/
-noncomputable def basis_monomials : basis ℕ R R[X] :=
-finsupp.basis_single_one.map (to_finsupp_iso_alg R).to_linear_equiv.symm
+noncomputable def basisMonomials : Basis ℕ R R[X] :=
+  Finsupp.basisSingleOne.map (toFinsuppIsoAlg R).toLinearEquiv.symm
 
-@[simp] lemma coe_basis_monomials :
-  (basis_monomials R : ℕ → R[X]) = λ s, monomial s 1 :=
-_root_.funext $ λ n, to_finsupp_iso_symm_single
+@[simp]
+theorem coe_basis_monomials : (basisMonomials R : ℕ → R[X]) = fun s => monomial s 1 :=
+  _root_.funext fun n => to_finsupp_iso_symm_single
 
-end polynomial
+end Polynomial
+

@@ -3,9 +3,9 @@ Copyright (c) 2021 Oliver Nash. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Oliver Nash
 -/
-import algebra.lie.free
-import algebra.lie.quotient
-import data.matrix.basic
+import Mathbin.Algebra.Lie.Free
+import Mathbin.Algebra.Lie.Quotient
+import Mathbin.Data.Matrix.Basic
 
 /-!
 # Lie algebras from Cartan matrices
@@ -78,100 +78,109 @@ exceptional semisimple Lie algebras.
 lie algebra, semi-simple, cartan matrix
 -/
 
-universes u v w
 
-noncomputable theory
+universe u v w
 
-variables (R : Type u) {B : Type v} [comm_ring R] [decidable_eq B] [fintype B]
-variables (A : matrix B B ℤ)
+noncomputable section
 
-namespace cartan_matrix
+variable (R : Type u) {B : Type v} [CommRingₓ R] [DecidableEq B] [Fintype B]
 
-variables (B)
+variable (A : Matrix B B ℤ)
+
+namespace CartanMatrix
+
+variable (B)
 
 /-- The generators of the free Lie algebra from which we construct the Lie algebra of a Cartan
 matrix as a quotient. -/
-inductive generators
-| H : B → generators
-| E : B → generators
-| F : B → generators
+inductive Generators
+  | H : B → generators
+  | E : B → generators
+  | F : B → generators
 
-instance [inhabited B] : inhabited (generators B) := ⟨generators.H default⟩
+instance [Inhabited B] : Inhabited (Generators B) :=
+  ⟨Generators.H default⟩
 
-variables {B}
+variable {B}
 
-namespace relations
+namespace Relations
 
-open function
+open Function
 
-local notation `H` := free_lie_algebra.of R ∘ generators.H
-local notation `E` := free_lie_algebra.of R ∘ generators.E
-local notation `F` := free_lie_algebra.of R ∘ generators.F
-local notation `ad` := lie_algebra.ad R (free_lie_algebra R (generators B))
+-- mathport name: «exprH»
+local notation "H" => FreeLieAlgebra.of R ∘ generators.H
+
+-- mathport name: «exprE»
+local notation "E" => FreeLieAlgebra.of R ∘ generators.E
+
+-- mathport name: «exprF»
+local notation "F" => FreeLieAlgebra.of R ∘ generators.F
+
+-- mathport name: «exprad»
+local notation "ad" => LieAlgebra.ad R (FreeLieAlgebra R (Generators B))
 
 /-- The terms correpsonding to the `⁅H, H⁆`-relations. -/
-def HH : B × B → free_lie_algebra R (generators B) :=
-uncurry $ λ i j, ⁅H i, H j⁆
+def hH : B × B → FreeLieAlgebra R (Generators B) :=
+  uncurry fun i j => ⁅H i,H j⁆
 
 /-- The terms correpsonding to the `⁅E, F⁆`-relations. -/
-def EF : B × B → free_lie_algebra R (generators B) :=
-uncurry $ λ i j, if i = j then ⁅E i, F i⁆ - H i else ⁅E i, F j⁆
+def eF : B × B → FreeLieAlgebra R (Generators B) :=
+  uncurry fun i j => if i = j then ⁅E i,F i⁆ - H i else ⁅E i,F j⁆
 
 /-- The terms correpsonding to the `⁅H, E⁆`-relations. -/
-def HE : B × B → free_lie_algebra R (generators B) :=
-uncurry $ λ i j, ⁅H i, E j⁆ - (A i j) • E j
+def hE : B × B → FreeLieAlgebra R (Generators B) :=
+  uncurry fun i j => ⁅H i,E j⁆ - A i j • E j
 
 /-- The terms correpsonding to the `⁅H, F⁆`-relations. -/
-def HF : B × B → free_lie_algebra R (generators B) :=
-uncurry $ λ i j, ⁅H i, F j⁆ + (A i j) • F j
+def hF : B × B → FreeLieAlgebra R (Generators B) :=
+  uncurry fun i j => ⁅H i,F j⁆ + A i j • F j
 
 /-- The terms correpsonding to the `ad E`-relations.
 
 Note that we use `int.to_nat` so that we can take the power and that we do not bother
 restricting to the case `i ≠ j` since these relations are zero anyway. We also defensively
 ensure this with `ad_E_of_eq_eq_zero`. -/
-def ad_E : B × B → free_lie_algebra R (generators B) :=
-uncurry $ λ i j, (ad (E i))^(-A i j).to_nat $ ⁅E i, E j⁆
+def adE : B × B → FreeLieAlgebra R (Generators B) :=
+  uncurry fun i j => ad (E i) ^ (-A i j).toNat <| ⁅E i,E j⁆
 
 /-- The terms correpsonding to the `ad F`-relations.
 
 See also `ad_E` docstring. -/
-def ad_F : B × B → free_lie_algebra R (generators B) :=
-uncurry $ λ i j, (ad (F i))^(-A i j).to_nat $ ⁅F i, F j⁆
+def adF : B × B → FreeLieAlgebra R (Generators B) :=
+  uncurry fun i j => ad (F i) ^ (-A i j).toNat <| ⁅F i,F j⁆
 
-private lemma ad_E_of_eq_eq_zero (i : B) (h : A i i = 2) : ad_E R A ⟨i, i⟩ = 0 :=
-have h' : (-2 : ℤ).to_nat = 0, { refl, },
-by simp [ad_E, h, h']
+private theorem ad_E_of_eq_eq_zero (i : B) (h : A i i = 2) : adE R A ⟨i, i⟩ = 0 := by
+  have h' : (-2 : ℤ).toNat = 0 := by
+    rfl
+  simp [ad_E, h, h']
 
-private lemma ad_F_of_eq_eq_zero (i : B) (h : A i i = 2) : ad_F R A ⟨i, i⟩ = 0 :=
-have h' : (-2 : ℤ).to_nat = 0, { refl, },
-by simp [ad_F, h, h']
+private theorem ad_F_of_eq_eq_zero (i : B) (h : A i i = 2) : adF R A ⟨i, i⟩ = 0 := by
+  have h' : (-2 : ℤ).toNat = 0 := by
+    rfl
+  simp [ad_F, h, h']
 
 /-- The union of all the relations as a subset of the free Lie algebra. -/
-def to_set : set (free_lie_algebra R (generators B)) :=
-(set.range $ HH R) ∪
-(set.range $ EF R) ∪
-(set.range $ HE R A) ∪
-(set.range $ HF R A) ∪
-(set.range $ ad_E R A) ∪
-(set.range $ ad_F R A)
+def ToSet : Set (FreeLieAlgebra R (Generators B)) :=
+  (Set.Range <| hH R) ∪ (Set.Range <| eF R) ∪ (Set.Range <| hE R A) ∪ (Set.Range <| hF R A) ∪ (Set.Range <| adE R A) ∪
+    (Set.Range <| adF R A)
 
 /-- The ideal of the free Lie algebra generated by the relations. -/
-def to_ideal : lie_ideal R (free_lie_algebra R (generators B)) :=
-lie_submodule.lie_span R _ $ to_set R A
+def toIdeal : LieIdeal R (FreeLieAlgebra R (Generators B)) :=
+  LieSubmodule.lieSpan R _ <| ToSet R A
 
-end relations
+end Relations
 
-end cartan_matrix
+end CartanMatrix
 
+-- ././Mathport/Syntax/Translate/Basic.lean:980:9: unsupported derive handler lie_algebra R
 /-- The Lie algebra corresponding to a Cartan matrix.
 
 Note that it is defined for any matrix of integers. Its value for non-Cartan matrices should be
 regarded as junk. -/
-@[derive [inhabited, lie_ring, lie_algebra R]]
-def matrix.to_lie_algebra := free_lie_algebra R _ ⧸ cartan_matrix.relations.to_ideal R A
+def Matrix.ToLieAlgebra :=
+  FreeLieAlgebra R _ ⧸ CartanMatrix.Relations.toIdeal R A deriving Inhabited, LieRing, [anonymous]
 
-namespace cartan_matrix
+namespace CartanMatrix
 
 /-- The Cartan matrix of type e₆. See [bourbaki1968] plate V, page 277.
 
@@ -182,12 +191,9 @@ The corresponding Dynkin diagram is:
 o --- o --- o --- o --- o
 ```
 -/
-def E₆ : matrix (fin 6) (fin 6) ℤ := ![![ 2,  0, -1,  0,  0,  0],
-                                       ![ 0,  2,  0, -1,  0,  0],
-                                       ![-1,  0,  2, -1,  0,  0],
-                                       ![ 0, -1, -1,  2, -1,  0],
-                                       ![ 0,  0,  0, -1,  2, -1],
-                                       ![ 0,  0,  0,  0, -1,  2]]
+def e₆ : Matrix (Finₓ 6) (Finₓ 6) ℤ :=
+  ![![2, 0, -1, 0, 0, 0], ![0, 2, 0, -1, 0, 0], ![-1, 0, 2, -1, 0, 0], ![0, -1, -1, 2, -1, 0], ![0, 0, 0, -1, 2, -1],
+    ![0, 0, 0, 0, -1, 2]]
 
 /-- The Cartan matrix of type e₇. See [bourbaki1968] plate VI, page 281.
 
@@ -198,13 +204,9 @@ The corresponding Dynkin diagram is:
 o --- o --- o --- o --- o --- o
 ```
 -/
-def E₇ : matrix (fin 7) (fin 7) ℤ := ![![ 2,  0, -1,  0,  0,  0,  0],
-                                       ![ 0,  2,  0, -1,  0,  0,  0],
-                                       ![-1,  0,  2, -1,  0,  0,  0],
-                                       ![ 0, -1, -1,  2, -1,  0,  0],
-                                       ![ 0,  0,  0, -1,  2, -1,  0],
-                                       ![ 0,  0,  0,  0, -1,  2, -1],
-                                       ![ 0,  0,  0,  0,  0, -1,  2]]
+def e₇ : Matrix (Finₓ 7) (Finₓ 7) ℤ :=
+  ![![2, 0, -1, 0, 0, 0, 0], ![0, 2, 0, -1, 0, 0, 0], ![-1, 0, 2, -1, 0, 0, 0], ![0, -1, -1, 2, -1, 0, 0],
+    ![0, 0, 0, -1, 2, -1, 0], ![0, 0, 0, 0, -1, 2, -1], ![0, 0, 0, 0, 0, -1, 2]]
 
 /-- The Cartan matrix of type e₈. See [bourbaki1968] plate VII, page 285.
 
@@ -215,14 +217,9 @@ The corresponding Dynkin diagram is:
 o --- o --- o --- o --- o --- o --- o
 ```
 -/
-def E₈ : matrix (fin 8) (fin 8) ℤ := ![![ 2,  0, -1,  0,  0,  0,  0,  0],
-                                       ![ 0,  2,  0, -1,  0,  0,  0,  0],
-                                       ![-1,  0,  2, -1,  0,  0,  0,  0],
-                                       ![ 0, -1, -1,  2, -1,  0,  0,  0],
-                                       ![ 0,  0,  0, -1,  2, -1,  0,  0],
-                                       ![ 0,  0,  0,  0, -1,  2, -1,  0],
-                                       ![ 0,  0,  0,  0,  0, -1,  2, -1],
-                                       ![ 0,  0,  0,  0,  0,  0, -1,  2]]
+def e₈ : Matrix (Finₓ 8) (Finₓ 8) ℤ :=
+  ![![2, 0, -1, 0, 0, 0, 0, 0], ![0, 2, 0, -1, 0, 0, 0, 0], ![-1, 0, 2, -1, 0, 0, 0, 0], ![0, -1, -1, 2, -1, 0, 0, 0],
+    ![0, 0, 0, -1, 2, -1, 0, 0], ![0, 0, 0, 0, -1, 2, -1, 0], ![0, 0, 0, 0, 0, -1, 2, -1], ![0, 0, 0, 0, 0, 0, -1, 2]]
 
 /-- The Cartan matrix of type f₄. See [bourbaki1968] plate VIII, page 288.
 
@@ -231,10 +228,8 @@ The corresponding Dynkin diagram is:
 o --- o =>= o --- o
 ```
 -/
-def F₄ : matrix (fin 4) (fin 4) ℤ := ![![ 2, -1,  0,  0],
-                                       ![-1,  2, -2,  0],
-                                       ![ 0, -1,  2, -1],
-                                       ![ 0,  0, -1,  2]]
+def f₄ : Matrix (Finₓ 4) (Finₓ 4) ℤ :=
+  ![![2, -1, 0, 0], ![-1, 2, -2, 0], ![0, -1, 2, -1], ![0, 0, -1, 2]]
 
 /-- The Cartan matrix of type g₂. See [bourbaki1968] plate IX, page 290.
 
@@ -244,26 +239,32 @@ o ≡>≡ o
 ```
 Actually we are using the transpose of Bourbaki's matrix. This is to make this matrix consistent
 with `cartan_matrix.F₄`, in the sense that all non-zero values below the diagonal are -1. -/
-def G₂ : matrix (fin 2) (fin 2) ℤ := ![![ 2, -3],
-                                       ![-1,  2]]
+def g₂ : Matrix (Finₓ 2) (Finₓ 2) ℤ :=
+  ![![2, -3], ![-1, 2]]
 
-end cartan_matrix
+end CartanMatrix
 
-namespace lie_algebra
+namespace LieAlgebra
 
 /-- The exceptional split Lie algebra of type e₆. -/
-abbreviation e₆ := cartan_matrix.E₆.to_lie_algebra R
+abbrev E₆ :=
+  CartanMatrix.e₆.ToLieAlgebra R
 
 /-- The exceptional split Lie algebra of type e₇. -/
-abbreviation e₇ := cartan_matrix.E₇.to_lie_algebra R
+abbrev E₇ :=
+  CartanMatrix.e₇.ToLieAlgebra R
 
 /-- The exceptional split Lie algebra of type e₈. -/
-abbreviation e₈ := cartan_matrix.E₈.to_lie_algebra R
+abbrev E₈ :=
+  CartanMatrix.e₈.ToLieAlgebra R
 
 /-- The exceptional split Lie algebra of type f₄. -/
-abbreviation f₄ := cartan_matrix.F₄.to_lie_algebra R
+abbrev F₄ :=
+  CartanMatrix.f₄.ToLieAlgebra R
 
 /-- The exceptional split Lie algebra of type g₂. -/
-abbreviation g₂ := cartan_matrix.G₂.to_lie_algebra R
+abbrev G₂ :=
+  CartanMatrix.g₂.ToLieAlgebra R
 
-end lie_algebra
+end LieAlgebra
+
